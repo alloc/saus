@@ -1,0 +1,16 @@
+{
+  "name": "react-basic",
+  "private": true,
+  "scripts": {
+    "dev": "stite dev",
+    "build": "stite build"
+  },
+  "devDependencies": {
+    "@stite/react": "^0.1.0",
+    "@types/node": "^16.10.2",
+    "stite": "^0.1.0"
+  },
+  "dependencies": {
+    "navaid": "^1.2.0"
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Pikachu",
+    "image": "https://static.wikia.nocookie.net/pokemon/images/0/0d/025Pikachu.png/revision/latest/scale-to-width-down/700?cb=20200620223403"
+  },
+  {
+    "name": "Bulbasaur",
+    "image": "https://static.wikia.nocookie.net/pokemon/images/2/21/001Bulbasaur.png/revision/latest/scale-to-width-down/700?cb=20200620223551"
+  },
+  {
+    "name": "Charmander",
+    "image": "https://static.wikia.nocookie.net/pokemon/images/7/73/004Charmander.png/revision/latest/scale-to-width-down/700?cb=20200620223744"
+  },
+  {
+    "name": "Squirtle",
+    "image": "https://static.wikia.nocookie.net/pokemon/images/3/39/007Squirtle.png/revision/latest/scale-to-width-down/699?cb=20200620223922"
+  }
+]

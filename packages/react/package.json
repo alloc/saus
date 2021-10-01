@@ -1,0 +1,32 @@
+{
+  "name": "@stite/react",
+  "version": "0.1.0",
+  "description": "React renderer for Stite",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p . --incremental",
+    "dev": "pnpm build --parallel --filter=stite --filter=./packages -- -w",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*",
+    "stite": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.25",
+    "@types/react-dom": "^17.0.9",
+    "stite": "^0.1.0"
+  },
+  "dependencies": {
+    "@types/babel__core": "^7.1.16",
+    "@vitejs/plugin-react": "^1.0.1",
+    "ts-morph": "^12.0.0"
+  }
+}
