@@ -1,5 +1,7 @@
+import fs from 'fs'
 import * as babel from '@babel/core'
 import { types as t, NodePath } from '@babel/core'
+import MagicString from 'magic-string'
 
 export { babel, t, NodePath }
 
@@ -79,7 +81,9 @@ export function resolveReferences(
   })
 }
 
-export function isChainedCall(path: NodePath) {
+export function isChainedCall(
+  path: NodePath
+): path is NodePath<t.MemberExpression> {
   return (
     path.isMemberExpression() &&
     path.parentKey === 'callee' &&
@@ -92,14 +96,11 @@ export function flattenCallChain(
   calls: NodePath<t.CallExpression>[] = []
 ) {
   if (path.isCallExpression()) {
-    calls.unshift(path)
     flattenCallChain(path.get('callee'), calls)
+    calls.push(path)
   } else if (isChainedCall(path)) {
-    const parentPath = path.parentPath as NodePath<t.MemberExpression>
-    flattenCallChain(
-      parentPath.get('object') as NodePath<t.CallExpression>,
-      calls
-    )
+    flattenCallChain(path.get('object'), calls)
+    calls.push(path.parentPath as NodePath<t.CallExpression>)
   }
   return calls
 }
@@ -136,4 +137,44 @@ export function getFirstAncestor(
     parentPath = parentPath.parentPath
   }
   return parentPath
+}
+
+export class File {
+  program!: NodePath<t.Program>
+
+  constructor(
+    readonly filename: string,
+    readonly source = fs.readFileSync(filename, 'utf8')
+  ) {
+    const syntaxPlugins = /\.tsx?$/.test(filename)
+      ? [['@babel/syntax-typescript', { isTSX: filename.endsWith('x') }]]
+      : []
+
+    const visitor: babel.Visitor = {
+      Program: path => {
+        this.program = path
+        path.stop()
+      },
+    }
+
+    babel.transformSync(source, {
+      filename,
+      plugins: [...syntaxPlugins, { visitor }],
+    })
+  }
+
+  extract(path: NodePath) {
+    const { node } = path
+    if (node.start == null || node.end == null) {
+      throw Error('Missing node start/end')
+    }
+    if (!this.program.isAncestor(path)) {
+      throw Error('Given node is not from this file')
+    }
+    const { source, filename } = this
+    const str = new MagicString(source, { filename } as any)
+    str.remove(0, node.start)
+    str.remove(node.end, source.length)
+    return str
+  }
 }

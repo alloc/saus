@@ -1,11 +1,24 @@
 import React from 'react'
 import navaid, { Router as NavAid } from 'navaid'
-import { RouteModule } from 'stite'
-import routes from './routes'
+import { routes, RouteModule } from 'stite/client'
 
 let router: NavAid | undefined
 let setPage: (page: JSX.Element) => void
 let nextPage: Promise<void> | undefined
+
+// SPA effect by hi-jacking clicks to anchor elements.
+if (!import.meta.env.SSR) {
+  document.addEventListener('click', event => {
+    const target = event.target as HTMLElement
+    if (target.tagName === 'A') {
+      const href = target.getAttribute('href')
+      if (href?.startsWith('/')) {
+        event.preventDefault()
+        visit(href)
+      }
+    }
+  })
+}
 
 export function visit(path: string, replace?: boolean) {
   if (import.meta.env.SSR) {
@@ -14,7 +27,7 @@ export function visit(path: string, replace?: boolean) {
     router.route(path, replace)
   } else {
     router = navaid()
-    for (const route of Object.keys(routes)) {
+    for (const route of Object.keys(routes).reverse()) {
       router.on(route, (params = {}) => {
         // The initial route is pre-rendered, so we can bail out.
         if (nextPage == null) {

@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "esModuleInterop": true,
-    "jsx": "react",
     "module": "esnext",
-    "types": ["node", "stite/client"]
+    "types": ["./routes"]
   }
 }

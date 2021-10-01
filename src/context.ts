@@ -1,7 +1,7 @@
 import path from 'path'
 import regexParam from 'regexparam'
 import * as vite from 'vite'
-import { readStiteYaml } from './config'
+import { readstiteYaml } from './config'
 import { UserConfig, SourceDescription } from './vite'
 
 let context!: Context
@@ -27,7 +27,7 @@ export interface Context {
   /** Generated clients by route */
   clients: Record<string, Client>
   /** The route used when no route is matched */
-  defaultRoute?: () => Promise<RouteModule>
+  defaultRoute?: RouteLoader
   /** Path to the render module */
   renderPath: string
   /** The renderers for specific routes */
@@ -38,13 +38,15 @@ export interface Context {
 
 export interface RouteModule extends Record<string, any> {}
 
+export type RouteLoader = () => Promise<RouteModule>
+
 export type RouteParams = Record<string, string> & { error?: any }
 
 export type RouteConfig = {
   route: string
   keys: string[]
   pattern: RegExp
-  import: () => Promise<RouteModule>
+  import: RouteLoader
   query?: () => string[] | Promise<string[]>
 }
 
@@ -209,7 +211,7 @@ export async function loadContext(
   const logger = vite.createLogger(logLevel)
 
   // Load "stite.yaml"
-  const { render: renderPath, routes: routesPath } = readStiteYaml(root, logger)
+  const { render: renderPath, routes: routesPath } = readstiteYaml(root, logger)
 
   // Load "vite.config.ts"
   const loadResult = await vite.loadConfigFromFile(
@@ -220,8 +222,13 @@ export async function loadContext(
   )
 
   // Inject the logger
-  const config = loadResult ? loadResult.config : {}
-  config.customLogger = logger
+  const userConfig = loadResult ? loadResult.config : {}
+  const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
+    customLogger: logger,
+    ssr: {
+      noExternal: ['stite/client'],
+    },
+  })
 
   return {
     root,

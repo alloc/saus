@@ -68,7 +68,16 @@ export function clientPlugin(context: Context): Plugin {
         {
           injectTo: 'body',
           tag: 'script',
-          attrs: { src: clientUrl, type: 'module' },
+          attrs: { id: 'stite_DATA', type: 'application/json' },
+          children: JSON.stringify(client.state),
+        },
+        {
+          injectTo: 'body',
+          tag: 'script',
+          attrs: {
+            type: 'module',
+            src: clientUrl,
+          },
         },
         ...Array.from(
           cssUrls,
@@ -76,7 +85,7 @@ export function clientPlugin(context: Context): Plugin {
             ({
               injectTo: 'head',
               tag: 'link',
-              attrs: { href },
+              attrs: { href, rel: 'stylesheet' },
             } as const)
         ),
       ]

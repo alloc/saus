@@ -3,15 +3,15 @@ import { resolve } from 'path'
 import yaml from 'yaml'
 import { Logger } from 'vite'
 
-export interface StiteConfig {
+export interface stiteConfig {
   routes: string
   render: string
 }
 
 const stiteYamlFile = 'stite.yaml'
 
-export function readStiteYaml(root: string, logger: Logger) {
-  let config: StiteConfig
+export function readstiteYaml(root: string, logger: Logger) {
+  let config: stiteConfig
   try {
     config = yaml.parse(fs.readFileSync(resolve(root, stiteYamlFile), 'utf8'))
   } catch (e: any) {

@@ -4,14 +4,12 @@ import './App.css'
 export function App(props: { children: JSX.Element }) {
   return (
     <>
-      <Header />
+      <header>
+        <img src="/logo.png" />
+      </header>
       <main>
         <Router>{props.children}</Router>
       </main>
     </>
   )
-}
-
-function Header() {
-  return <header></header>
 }

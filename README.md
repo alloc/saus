@@ -85,7 +85,7 @@ render(async (route, params, module) => {
 
 ## Developing
 
-Run `stite dev` to start a Vite dev server with Stite plugins injected.
+Run `stite dev` to start a Vite dev server with stite plugins injected.
 
 ## Building
 

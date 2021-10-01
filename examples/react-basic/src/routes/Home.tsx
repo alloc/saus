@@ -4,11 +4,13 @@ export default function Home() {
   return (
     <>
       <h1>Home</h1>
-      {pokemon.map((p, i) => (
-        <a key={i} href={'/pokemon/' + p.name}>
-          {p.name}
-        </a>
-      ))}
+      <div>
+        {pokemon.map((name, i) => (
+          <a key={i} href={'/pokemon/' + name}>
+            {name}
+          </a>
+        ))}
+      </div>
     </>
   )
 }

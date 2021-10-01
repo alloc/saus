@@ -1,2 +1,2 @@
-routes: ./src/routes.ts
-render: ./src/node/render.tsx
+routes: ./src/node/routes.ts
+render: ./src/render.tsx

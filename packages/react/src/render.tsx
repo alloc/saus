@@ -86,7 +86,9 @@ function renderToString(root: ReactElement) {
       1,
       transformBody(children[bodyIndex] as ReactElement)
     )
-    root.props.children = children
+    root = React.cloneElement(root, {
+      children,
+    })
   } else if (root.type == 'body') {
     root = (
       <html>

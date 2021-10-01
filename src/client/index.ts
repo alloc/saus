@@ -1,11 +1,19 @@
-import type { ClientState } from '../context'
+/// <reference types="vite/client" />
+import type { ClientState, RouteModule, RouteParams } from '../context'
+import routes from './routes'
 
 declare const document: { querySelector: (selector: string) => any }
 
-const stateContainer = document.querySelector('#STITE_DATA')
-const state = JSON.parse(stateContainer.textContent) as ClientState
-stateContainer.remove()
+let state: ClientState
+let initialRoute: Promise<RouteModule>
 
-const initialRoute = import(state.routeModuleId /* @vite-ignore */)
+if (!import.meta.env.SSR) {
+  const stateContainer = document.querySelector('#stite_DATA')
+  stateContainer.remove()
 
-export { state, initialRoute }
+  state = JSON.parse(stateContainer.textContent)
+  initialRoute = import(state.routeModuleId /* @vite-ignore */)
+}
+
+export { state, routes, initialRoute }
+export type { ClientState, RouteModule, RouteParams }

@@ -1,7 +1,7 @@
 {
   "name": "@stite/react",
   "version": "0.1.0",
-  "description": "React renderer for Stite",
+  "description": "React renderer for stite",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "src/index.ts",
