@@ -8,7 +8,7 @@ import {
   RenderResult,
   RouteModule,
   RouteParams,
-} from 'stite'
+} from 'saus'
 import { getClientProvider } from './client'
 
 fixReactBug()

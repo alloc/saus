@@ -3,20 +3,20 @@ import { resolve } from 'path'
 import yaml from 'yaml'
 import { Logger } from 'vite'
 
-export interface stiteConfig {
+export interface sausConfig {
   routes: string
   render: string
 }
 
-const stiteYamlFile = 'stite.yaml'
+const sausYamlFile = 'saus.yaml'
 
-export function readstiteYaml(root: string, logger: Logger) {
-  let config: stiteConfig
+export function readsausYaml(root: string, logger: Logger) {
+  let config: sausConfig
   try {
-    config = yaml.parse(fs.readFileSync(resolve(root, stiteYamlFile), 'utf8'))
+    config = yaml.parse(fs.readFileSync(resolve(root, sausYamlFile), 'utf8'))
   } catch (e: any) {
     logger.error(
-      `Failed to load "${stiteYamlFile}"` +
+      `Failed to load "${sausYamlFile}"` +
         (e.message && e.code !== 'ENOENT' ? `: ${e.message}` : ''),
       { error: e }
     )

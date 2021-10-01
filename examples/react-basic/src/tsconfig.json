@@ -5,6 +5,6 @@
     "jsx": "react-jsx",
     "lib": ["dom", "esnext"],
     "resolveJsonModule": true,
-    "types": ["stite/client"]
+    "types": ["saus/client"]
   }
 }

@@ -1,6 +1,6 @@
-# stite
+# saus
 
-[![npm](https://img.shields.io/npm/v/stite.svg)](https://www.npmjs.com/package/stite)
+[![npm](https://img.shields.io/npm/v/saus.svg)](https://www.npmjs.com/package/saus)
 [![Code style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/alecdotbiz)
 
@@ -15,14 +15,14 @@ Nothing but a wrapper around Vite with pre-render support of multiple routes.
 First, we need to know your routes.
 
 ```yml
-# stite.yaml
+# saus.yaml
 routes: ./src/routes.ts
 ```
 
 Your routes module maps each route to a module. If the route is dynamic, it also needs a `query` function to know which pages should be generated.
 
 ```ts
-import { defineRoutes } from 'stite'
+import { defineRoutes } from 'saus'
 import fs from 'fs'
 
 export default defineRoutes({
@@ -50,14 +50,14 @@ routes['/']() // => [object Promise]
 Next, you need at least one renderer to generate your pages.
 
 ```yml
-# stite.yaml
+# saus.yaml
 render: ./src/node/render.tsx
 ```
 
-Popular frameworks usually have a `@stite/*` package you can use.
+Popular frameworks usually have a `@saus/*` package you can use.
 
 ```tsx
-import { render } from '@stite/react'
+import { render } from '@saus/react'
 
 render(async (route, params, module) => {
   const App = module.default
@@ -76,7 +76,7 @@ render(async (route, params, module) => {
 That said, you can integrate unsupported frameworks easily.
 
 ```tsx
-import {escape, render} from 'stite'
+import {escape, render} from 'saus'
 
 render(async (route, params, module) => {
   return escape`<html>${...}</html>`
@@ -85,8 +85,8 @@ render(async (route, params, module) => {
 
 ## Developing
 
-Run `stite dev` to start a Vite dev server with stite plugins injected.
+Run `saus dev` to start a Vite dev server with saus plugins injected.
 
 ## Building
 
-Run `stite build` to generate pages.
+Run `saus build` to generate pages.

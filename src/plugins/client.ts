@@ -4,14 +4,14 @@ import { Context, Client } from '../context'
 import { collectCss } from '../preload'
 import { Plugin } from '../vite'
 
-const clientPrefix = '/@stite/'
+const clientPrefix = '/@saus/'
 
 export function clientPlugin(context: Context): Plugin {
   let server: vite.ViteDevServer
   let client: Client
 
   return {
-    name: 'stite:client',
+    name: 'saus:client',
     // config: () => ({
     //   build: {
     //     rollupOptions: {
@@ -68,7 +68,7 @@ export function clientPlugin(context: Context): Plugin {
         {
           injectTo: 'body',
           tag: 'script',
-          attrs: { id: 'stite_DATA', type: 'application/json' },
+          attrs: { id: 'client_state', type: 'application/json' },
           children: JSON.stringify(client.state),
         },
         {

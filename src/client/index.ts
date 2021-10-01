@@ -8,7 +8,7 @@ let state: ClientState
 let initialRoute: Promise<RouteModule>
 
 if (!import.meta.env.SSR) {
-  const stateContainer = document.querySelector('#stite_DATA')
+  const stateContainer = document.querySelector('#client_state')
   stateContainer.remove()
 
   state = JSON.parse(stateContainer.textContent)

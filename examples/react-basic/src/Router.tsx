@@ -1,6 +1,6 @@
 import React from 'react'
 import navaid, { Router as NavAid } from 'navaid'
-import { routes, RouteModule } from 'stite/client'
+import { routes, RouteModule } from 'saus/client'
 
 let router: NavAid | undefined
 let setPage: (page: JSX.Element) => void

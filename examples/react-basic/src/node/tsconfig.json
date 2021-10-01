@@ -4,6 +4,6 @@
     "esModuleInterop": true,
     "jsx": "react",
     "module": "esnext",
-    "types": ["node", "stite/client"]
+    "types": ["node", "saus/client"]
   }
 }

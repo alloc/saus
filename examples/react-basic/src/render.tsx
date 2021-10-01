@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { render } from '@stite/react'
+import { render } from '@saus/react'
 import { App } from './App'
 
 render('/*', (module, params) => {

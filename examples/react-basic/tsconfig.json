@@ -7,6 +7,6 @@
     "noUnusedLocals": true,
     "strict": true,
     "target": "esnext",
-    "types": ["@stite/react"]
+    "types": ["@saus/react"]
   }
 }

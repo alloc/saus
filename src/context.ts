@@ -1,7 +1,7 @@
 import path from 'path'
 import regexParam from 'regexparam'
 import * as vite from 'vite'
-import { readstiteYaml } from './config'
+import { readsausYaml } from './config'
 import { UserConfig, SourceDescription } from './vite'
 
 let context!: Context
@@ -111,7 +111,7 @@ export type RenderPromise = {
   /**
    * Set the function that generates the client module, which is responsible
    * for hydrating the page. If you're using a framework package like
-   * `@stite/react`, you won't need to call this.
+   * `@saus/react`, you won't need to call this.
    */
   withClient(provider: ClientProvider): RenderPromise
 }
@@ -210,8 +210,8 @@ export async function loadContext(
 ): Promise<Context> {
   const logger = vite.createLogger(logLevel)
 
-  // Load "stite.yaml"
-  const { render: renderPath, routes: routesPath } = readstiteYaml(root, logger)
+  // Load "saus.yaml"
+  const { render: renderPath, routes: routesPath } = readsausYaml(root, logger)
 
   // Load "vite.config.ts"
   const loadResult = await vite.loadConfigFromFile(
@@ -226,7 +226,7 @@ export async function loadContext(
   const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
     customLogger: logger,
     ssr: {
-      noExternal: ['stite/client'],
+      noExternal: ['saus/client'],
     },
   })
 

@@ -1,13 +1,13 @@
 {
-  "name": "stite",
+  "name": "saus",
   "version": "0.1.0",
   "description": "Static sites for dummies",
   "author": "Alec Larson",
   "license": "MIT",
-  "repository": "alloc/stite",
+  "repository": "alloc/saus",
   "main": "dist/index.js",
   "types": "src/index.ts",
-  "bin": "bin/stite",
+  "bin": "bin/saus",
   "files": [
     "src",
     "dist"

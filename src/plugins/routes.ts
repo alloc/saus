@@ -9,7 +9,7 @@ const routesPath = path.resolve(__dirname, '../client/routes.ts')
 
 export function routesPlugin(context: Context): vite.Plugin {
   return {
-    name: 'stite:routes',
+    name: 'saus:routes',
     enforce: 'pre',
     async resolveId(id, importer) {
       if (importer == routesPath) {

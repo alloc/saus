@@ -1,7 +1,7 @@
 import fs from 'fs'
 import MagicString, { Bundle } from 'magic-string'
 import path from 'path'
-import { ClientProvider, endent } from 'stite'
+import { ClientProvider, endent } from 'saus'
 import {
   t,
   babel,
@@ -10,7 +10,7 @@ import {
   NodePath,
   resolveReferences,
   File,
-} from 'stite/babel'
+} from 'saus/babel'
 
 export const getClientProvider =
   (): ClientProvider =>
@@ -115,7 +115,7 @@ export const getClientProvider =
 
     const defaultImports = endent`
       import ReactDOM from "react-dom"
-      import { state as $$state, initialRoute as $$initialRoute } from "stite/client"
+      import { state as $$state, initialRoute as $$initialRoute } from "saus/client"
     `
 
     const hydrateBlock = endent`

@@ -1,4 +1,4 @@
-import { configureVite } from 'stite'
+import { configureVite } from 'saus'
 import reactVite from '@vitejs/plugin-react'
 import './global'
 
@@ -12,7 +12,7 @@ configureVite(config => {
   )
 })
 
-declare module 'stite' {
+declare module 'saus' {
   export interface UserConfig {
     babel?: import('@babel/core').TransformOptions
   }

@@ -62,16 +62,16 @@ importers:
 
   examples/react-basic:
     specifiers:
-      '@stite/react': ^0.1.0
+      '@saus/react': ^0.1.0
       '@types/node': ^16.10.2
       navaid: ^1.2.0
-      stite: ^0.1.0
+      saus: ^0.1.0
     dependencies:
       navaid: 1.2.0
     devDependencies:
-      '@stite/react': link:../../packages/react
+      '@saus/react': link:../../packages/react
       '@types/node': 16.10.2
-      stite: link:../..
+      saus: link:../..
 
   packages/react:
     specifiers:
@@ -79,7 +79,7 @@ importers:
       '@types/react': ^17.0.25
       '@types/react-dom': ^17.0.9
       '@vitejs/plugin-react': ^1.0.1
-      stite: ^0.1.0
+      saus: ^0.1.0
       ts-morph: ^12.0.0
     dependencies:
       '@types/babel__core': 7.1.16
@@ -88,7 +88,7 @@ importers:
     devDependencies:
       '@types/react': 17.0.25
       '@types/react-dom': 17.0.9
-      stite: link:../..
+      saus: link:../..
 
 packages:
   /@alloc/esbuild-jest/0.3.6_esbuild@0.8.57:

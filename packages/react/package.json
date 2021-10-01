@@ -1,7 +1,7 @@
 {
-  "name": "@stite/react",
+  "name": "@saus/react",
   "version": "0.1.0",
-  "description": "React renderer for stite",
+  "description": "React renderer for saus",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "src/index.ts",
@@ -11,18 +11,18 @@
   ],
   "scripts": {
     "build": "tsc -p . --incremental",
-    "dev": "pnpm build --parallel --filter=stite --filter=./packages -- -w",
+    "dev": "pnpm build --parallel --filter=saus --filter=./packages -- -w",
     "prepare": "yarn build"
   },
   "peerDependencies": {
     "react": "*",
     "react-dom": "*",
-    "stite": "*"
+    "saus": "*"
   },
   "devDependencies": {
     "@types/react": "^17.0.25",
     "@types/react-dom": "^17.0.9",
-    "stite": "^0.1.0"
+    "saus": "^0.1.0"
   },
   "dependencies": {
     "@types/babel__core": "^7.1.16",

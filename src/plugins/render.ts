@@ -17,7 +17,7 @@ export function renderPlugin(context: Context): Plugin {
   let renderers: Renderer<string>[]
 
   return {
-    name: 'stite:render',
+    name: 'saus:render',
     enforce: 'pre',
     contextUpdate(context) {
       reversedRoutes = [...context.routes].reverse()

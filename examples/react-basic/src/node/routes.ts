@@ -1,4 +1,4 @@
-import { defineRoutes } from 'stite'
+import { defineRoutes } from 'saus'
 import fs from 'fs'
 
 export default defineRoutes({
