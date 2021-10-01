@@ -1,25 +1,15 @@
-import fs from 'fs'
-import path from 'path'
 import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
   ClientState,
-  endent,
   logger,
-  md5Hex,
   render as addRenderHook,
   RenderPromise,
   RenderResult,
   RouteModule,
   RouteParams,
 } from 'stite'
-import {
-  t,
-  babel,
-  isChainedCall,
-  flattenCallChain,
-  NodePath,
-} from 'stite/babel'
+import { getClientProvider } from './client'
 
 fixReactBug()
 
@@ -33,22 +23,22 @@ type RenderHook<T> = (
 export function render(
   route: string,
   render: RenderHook<ReactElement | null | void>,
+  hash?: string,
   start?: number
 ): RenderPromise
 
 /** Set the fallback renderer. */
 export function render(
   render: RenderHook<ReactElement>,
+  hash?: string,
   start?: number
 ): RenderPromise
 
-export function render(arg1: any, arg2?: any, arg3?: any) {
-  let route: string | undefined
-  let promise: RenderPromise
-  if (typeof arg1 === 'string') {
-    const render = arg2 as RenderHook<ReactElement | null | void>
-    promise = addRenderHook(
-      (route = arg1),
+export function render(...args: [any, any, any, any?]) {
+  if (typeof args[0] === 'string') {
+    const render = args[1] as RenderHook<ReactElement | null | void>
+    return addRenderHook(
+      args[0],
       async (module, params, { state, didRender }) => {
         const root = await render(module, params, state)
         if (root) {
@@ -59,112 +49,24 @@ export function render(arg1: any, arg2?: any, arg3?: any) {
           }
         }
       },
-      arg3
-    )
+      args[2],
+      args[3]
+    ).withClient(getClientProvider())
   } else {
-    const render = arg1 as RenderHook<ReactElement>
-    promise = addRenderHook(async (module, params, { state, didRender }) => {
-      const root = await render(module, params, state)
-      try {
-        return renderToString(root)
-      } finally {
-        didRender()
-      }
-    }, arg2)
-  }
-  return promise.withClient((state, renderer, { renderPath }) => {
-    const { start, render } = renderer
-
-    const clientSkeleton = endent`
-      import ReactDOM from "react-dom"
-      import { getState as $$getState } from "stite/client"
-
-      const render = () => {}
-      const didRender = () => {}
-
-      const $$state = $$getState()
-      import($$state.routeModuleId).then(routeModule => {
-        ReactDOM.hydrate(
-          render(routeModule, $$state.routeParams, $$state),
-          document.getElementById("root")
-        )
-        didRender()
-      })
-    `
-
-    const renderCode = fs.readFileSync(renderPath, 'utf8')
-    const renderFile = babel.parseSync(renderCode, {
-      filename: renderPath,
-      plugins: [
-        ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(renderPath) }],
-      ],
-    })
-
-    let renderFn: t.ArrowFunctionExpression | undefined
-    let didRenderFn: t.ArrowFunctionExpression | undefined
-    if (t.isFile(renderFile)) {
-      const renderNode = renderFile.program.body.find(
-        node => node.start === start
-      )
-
-      babel.traverse(renderFile, {
-        Identifier(path) {
-          if (!path.findParent(parent => parent.node === renderNode)) return
-          const { node, parentPath } = path
-
-          // Parse the `render(...)` call
-          if (node.start === start && parentPath.isCallExpression()) {
-            parentPath.node.arguments.find(arg => {
-              if (t.isArrowFunctionExpression(arg)) {
-                renderFn = arg
-                return true
-              }
-            })
-            path.stop()
-          }
-
-          // Parse the `.then(...)` call
-          else if (isChainedCall(parentPath)) {
-            const callChain = flattenCallChain(parentPath)
-            debugger
-          }
-        },
-      })
-    }
-
-    const transformer: babel.Visitor = {
-      Program(path) {
-        const [renderStub, didRenderStub] = path
-          .get('body')
-          .filter(p =>
-            p.isVariableDeclaration()
-          ) as NodePath<t.VariableDeclaration>[]
-
-        if (renderFn) {
-          const { params, body } = renderFn
-          renderStub.traverse({
-            ArrowFunctionExpression(path) {
-              path.node.params = params
-              path.set('body', body)
-            },
-          })
+    const render = args[0] as RenderHook<ReactElement>
+    return addRenderHook(
+      async (module, params, { state, didRender }) => {
+        const root = await render(module, params, state)
+        try {
+          return renderToString(root)
+        } finally {
+          didRender()
         }
       },
-    }
-
-    const client = babel.transformSync(clientSkeleton, {
-      plugins: [{ visitor: transformer }],
-      sourceMaps: true,
-    })!
-
-    const hash = md5Hex(render.toString()).slice(0, 16)
-    return {
-      id: `client-${hash}.${path.extname(renderPath)}`,
-      state,
-      code: client.code!,
-      map: client.map,
-    }
-  })
+      args[1],
+      args[2]
+    ).withClient(getClientProvider())
+  }
 }
 
 function renderToString(root: ReactElement) {

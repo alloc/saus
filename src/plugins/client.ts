@@ -1,3 +1,4 @@
+import path from 'path'
 import * as vite from 'vite'
 import { Context, Client } from '../context'
 import { collectCss } from '../preload'
@@ -27,7 +28,16 @@ export function clientPlugin(context: Context): Plugin {
         url.startsWith(clientPrefix) && moduleGraph.invalidateModule(mod)
       })
     },
-    resolveId: id => (id.startsWith(clientPrefix) ? id : null),
+    resolveId(id, importer) {
+      if (id.startsWith(clientPrefix)) {
+        return id
+      }
+      if (importer?.startsWith(clientPrefix)) {
+        return this.resolve(id, context.renderPath, {
+          skipSelf: true,
+        })
+      }
+    },
     load(id) {
       if (id.startsWith(clientPrefix)) {
         return client
@@ -36,16 +46,30 @@ export function clientPlugin(context: Context): Plugin {
     transformIndexHtml: async (_html, ctx) => {
       client = context.clients[ctx.path]
 
-      // Transform the generated client.
+      // Cache the generated client.
       const clientUrl = clientPrefix + client.id
       await server.transformRequest(clientUrl)
 
+      // Cache the main route module.
+      const { routeModuleId } = client.state
+      await server.transformRequest(routeModuleId)
+
       // Find CSS modules to preload.
-      const clientModule = (await server.moduleGraph.getModuleByUrl(clientUrl))!
+      const { moduleGraph } = server
+      const clientModule = (await moduleGraph.getModuleByUrl(clientUrl))!
+      const routeModule = (await moduleGraph.getModuleByUrl(routeModuleId))!
       const cssUrls = collectCss(clientModule)
+      collectCss(routeModule, cssUrls)
+
+      // TODO: preload generated client in production
+      const isProduction = context.configEnv.mode === 'production'
 
       return [
-        { injectTo: 'body', tag: 'script', attrs: { src: clientUrl } },
+        {
+          injectTo: 'body',
+          tag: 'script',
+          attrs: { src: clientUrl, type: 'module' },
+        },
         ...Array.from(
           cssUrls,
           href =>

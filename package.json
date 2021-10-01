@@ -31,7 +31,6 @@
     "regexparam": "^1.0.0",
     "source-map-support": "^0.5.20",
     "ts-debounce": "^3.0.0",
-    "ts-morph": "^12.0.0",
     "vite": "^2.3.0",
     "yaml": "^1.10.2"
   },

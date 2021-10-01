@@ -1,10 +1,10 @@
 import * as vite from 'vite'
 import { klona } from 'klona'
 import { debounce } from 'ts-debounce'
-import { loadContext, loadModule, resetRenderHooks, Context } from '../context'
-import { clientPlugin } from '../plugins/client'
-import { renderPlugin } from '../plugins/render'
-import { routesPlugin } from '../plugins/routes'
+import { loadContext, loadModule, resetRenderHooks, Context } from './context'
+import { clientPlugin } from './plugins/client'
+import { renderPlugin } from './plugins/render'
+import { routesPlugin } from './plugins/routes'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const root = inlineConfig?.root || process.cwd()

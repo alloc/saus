@@ -8,10 +8,11 @@ export function collectCss(
   if (mod.url && !seen.has(mod.url)) {
     seen.add(mod.url)
     if (isCssModule(mod)) {
+      console.log('css found:', mod.url)
       urls.add(mod.url)
     }
     mod.importedModules.forEach(dep => {
-      collectCss(dep, preloadUrls, seen)
+      collectCss(dep, urls, seen)
     })
   }
   return urls

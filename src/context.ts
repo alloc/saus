@@ -76,16 +76,20 @@ export type RenderHook<T> = (
 const noop = () => {}
 
 export class Renderer<T> {
-  getClient?: ClientProvider
+  test!: (path: string) => boolean
   didRender = noop
-  test: (path: string) => boolean
+  getClient?: ClientProvider
+
   constructor(
-    readonly render: RenderHook<T>,
     readonly route: string,
+    readonly render: RenderHook<T>,
+    readonly hash?: string,
     readonly start?: number
   ) {
-    const regex = regexParam(route).pattern
-    this.test = regex.test.bind(regex)
+    if (route) {
+      const regex = regexParam(route).pattern
+      this.test = regex.test.bind(regex)
+    }
   }
 }
 
@@ -123,19 +127,24 @@ export type ConfigHook = (
 export function render(
   route: string,
   hook: RenderHook<string | null | void>,
+  hash?: string,
   start?: number
 ): RenderPromise
 
 /** Set the fallback renderer. */
-export function render(hook: RenderHook<string>, start?: number): RenderPromise
+export function render(
+  hook: RenderHook<string>,
+  hash?: string,
+  start?: number
+): RenderPromise
 
-export function render(arg1: any, arg2?: any, arg3?: any): RenderPromise {
+export function render(...args: [any, any, any]): RenderPromise {
   let renderer: Renderer<any>
-  if (typeof arg1 === 'string') {
-    renderer = new Renderer(arg2, arg1, arg3)
+  if (typeof args[0] === 'string') {
+    renderer = new Renderer(...args)
     context.renderers.push(renderer)
   } else {
-    renderer = new Renderer(arg1, '/*', arg2)
+    renderer = new Renderer('', ...args)
     context.defaultRenderer = renderer
   }
   return {

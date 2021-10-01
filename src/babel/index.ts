@@ -13,58 +13,63 @@ export function toStaticParams(params: Record<string, string>) {
 
 export function extractHydrateHook(file: NodePath<t.Program>) {}
 
-export function resolveReferences(stmts: NodePath<t.Statement>[]): NodePath[] {
-  if (!stmts.length) return []
+const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
+  Array.isArray(arg) ? arg : ([arg] as any)
 
-  const crawled = new Set<NodePath>()
-  const referenced = new Set<NodePath>()
-  stmts.forEach(collectFrom)
+export function resolveReferences(
+  fn: NodePath<t.ArrowFunctionExpression>
+): NodePath<t.Statement>[] {
+  const crawled = new Set<NodePath>([fn])
+  const referenced = new Set<NodePath<t.Statement>>()
 
-  function collectFrom(basePath: babel.NodePath) {
-    console.log('crawl: %O', basePath.getSource())
+  toArray(fn.get('body')).forEach(crawl)
+
+  function crawl(basePath: NodePath) {
     crawled.add(basePath)
     basePath.traverse({
       JSXIdentifier: onIdentifier,
       Identifier: onIdentifier,
     })
-    function onIdentifier(
-      path: babel.NodePath<t.Identifier | t.JSXIdentifier>
-    ) {
-      const { parentPath } = path
-      if (parentPath.isMemberExpression() || parentPath.isJSXClosingElement()) {
-        return
-      }
-      const { name } = path.node
-      if (path.isJSXIdentifier() && /^[a-z]/.test(name)) {
-        return
-      }
-      const binding = path.scope.getBinding(name)
-      if (!binding) {
-        return
-      }
-      const bindPath = binding.path
-      if (!getFirstAncestor(bindPath, p => referenced.has(p))) {
-        useNode(bindPath)
-        if (
-          !crawled.has(bindPath) &&
-          !getFirstAncestor(bindPath, p => crawled.has(p))
-        ) {
-          crawled.add(bindPath)
-          collectFrom(bindPath)
-        }
-      }
-    }
   }
 
-  function useNode(path: babel.NodePath | undefined) {
-    if (path && !referenced.has(path)) {
-      if (path.isStatement()) {
-        console.log('used: %O', path.getSource())
-        referenced.add(path)
-      }
-      const { parentPath } = path
-      if (parentPath && !parentPath.isProgram()) {
-        useNode(parentPath)
+  function onIdentifier(path: babel.NodePath<t.Identifier | t.JSXIdentifier>) {
+    const { parentPath } = path
+    if (parentPath.isMemberExpression() || parentPath.isJSXClosingElement()) {
+      return
+    }
+
+    const { name } = path.node
+    if (path.isJSXIdentifier() && /^[a-z]/.test(name)) {
+      return
+    }
+
+    const binding = path.scope.getBinding(name)
+    if (!binding) {
+      return // Undeclared variable
+    }
+
+    const bindPath = binding.path
+    if (getFirstAncestor(bindPath, p => referenced.has(p))) {
+      return // Inside a referenced statement
+    }
+
+    addReference(bindPath)
+
+    if (
+      crawled.has(bindPath) ||
+      getFirstAncestor(bindPath, p => crawled.has(p))
+    ) {
+      return // Already crawled
+    }
+
+    crawl(bindPath)
+  }
+
+  function addReference(path: babel.NodePath | null | undefined) {
+    if (path && !path.isDescendant(fn.parentPath)) {
+      path = path.getStatementParent()
+      if (path) {
+        referenced.add(path as NodePath<t.Statement>)
       }
     }
   }
@@ -128,7 +133,7 @@ export function getFirstAncestor(
 ) {
   let parentPath = path.parentPath
   while (parentPath && !test(parentPath)) {
-    parentPath = path.parentPath
+    parentPath = parentPath.parentPath
   }
   return parentPath
 }

@@ -4,7 +4,7 @@ import cac from 'cac'
 const cli = cac('stite')
 
 cli.command('dev').action(async () => {
-  const { createServer } = require('./dev') as typeof import('./dev/index')
+  const { createServer } = require('./dev') as typeof import('./dev')
   await createServer()
 })
 

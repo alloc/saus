@@ -9,7 +9,7 @@ import {
   RouteParams,
 } from '../context'
 import { matchRoute } from '../routes'
-import { injectRenderPosition } from '../transform'
+import { injectRenderMetadata } from '../transform'
 import { Plugin } from '../vite'
 
 export function renderPlugin(context: Context): Plugin {
@@ -28,7 +28,7 @@ export function renderPlugin(context: Context): Plugin {
         return babel.transformSync(code, {
           plugins: [
             ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
-            { visitor: { Program: injectRenderPosition } },
+            { visitor: { Program: injectRenderMetadata } },
           ],
           filename: id,
           sourceMaps: true,

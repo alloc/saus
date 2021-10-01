@@ -1,11 +1,14 @@
 import * as vite from 'vite'
-import { Project } from 'ts-morph'
+import { babel } from '../babel'
 import { Context } from '../context'
+import { SourceDescription } from '../vite'
 
 export function routesPlugin(context: Context): vite.Plugin {
   return {
     name: 'stite:routes',
-    async resolveId(id, importer) {
+    enforce: 'pre',
+    async resolveId(id, importer, _, ssr) {
+      if (ssr || importer?.endsWith('.html')) return
       const resolved = await this.resolve(id, importer, { skipSelf: true })
       if (resolved?.id === context.routesPath) {
         return clientRoutesId
@@ -21,8 +24,13 @@ export function routesPlugin(context: Context): vite.Plugin {
 
 const clientRoutesId = '/@stite/routes'
 
-function generateClientRoutes(context: Context) {
-  const project = new Project()
-  const routesModule = project.addSourceFileAtPath(context.routesPath)
-  return ''
+function generateClientRoutes({ routesPath }: Context) {
+  const syntaxPlugins = /\.tsx?$/.test(routesPath)
+    ? [['@babel/syntax-typescript', { isTSX: routesPath.endsWith('x') }]]
+    : []
+
+  return babel.transformFileSync(routesPath, {
+    filename: routesPath,
+    plugins: [...syntaxPlugins],
+  }) as SourceDescription
 }

@@ -1,52 +1,130 @@
-import { t, collectNodes, getImportDeclaration, NodePath } from 'stite/babel'
-import { logger } from 'stite'
+import fs from 'fs'
+import path from 'path'
+import { ClientProvider, endent } from 'stite'
+import {
+  t,
+  babel,
+  isChainedCall,
+  flattenCallChain,
+  NodePath,
+  resolveReferences,
+} from 'stite/babel'
 
-export function generateClient(program: NodePath<t.Program>) {
-  const importDecl = getImportDeclaration(program, '@stite/react')!
-  const renderSpec = importDecl
-    .getNamedImports()
-    .find(spec => 'render' === spec.getName())!
+export const getClientProvider =
+  (): ClientProvider =>
+  (state, renderer, { renderPath }) => {
+    const { hash, start } = renderer
 
-  // Find references to `render` import
-  const renderRefs = file
-    .getProject()
-    .getLanguageService()
-    .findReferencesAsNodes(
-      renderSpec.getAliasNode() || renderSpec.getNameNode()
-    )
+    const clientSkeleton = endent`
+      import ReactDOM from "react-dom"
+      import { state as $$state, initialRoute as $$initialRoute } from "stite/client"
 
-  const renderCalls = renderRefs
-    .map(renderRef => renderRef.getParentIfKind(ts.SyntaxKind.CallExpression))
-    .filter(Boolean) as CallExpression[]
+      const render = () => {}
+      const didRender = () => {}
 
-  let renderFn!: ArrowFunction
-  renderCalls.reverse().some(renderCall => {
-    const [routeString, renderArg] = renderCall.getArguments()
-    if (!Node.isStringLiteral(routeString)) {
-      logger.warn(`Route passed to "render" must be string literal`)
-      return false
-    }
-    if (route == routeString.getLiteralValue()) {
-      if (!Node.isArrowFunction(renderArg)) {
-        badSyntax(
-          `Expected "render" to receive an inline arrow function`,
-          renderCall
+      $$initialRoute.then(routeModule => {
+        ReactDOM.hydrate(
+          render(routeModule, $$state.routeParams, $$state),
+          document.getElementById("root")
         )
-      }
-      renderFn = renderArg
-      return true
+        didRender()
+      })
+    `
+
+    const renderCode = fs.readFileSync(renderPath, 'utf8')
+    const renderFile = babel.parseSync(renderCode, {
+      filename: renderPath,
+      plugins: /\.tsx?$/.test(renderPath)
+        ? [['@babel/syntax-typescript', { isTSX: renderPath.endsWith('x') }]]
+        : [],
+    })
+
+    let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
+    let didRenderFn: NodePath<t.ArrowFunctionExpression> | undefined
+    if (t.isFile(renderFile)) {
+      let renderStmt: NodePath<t.ExpressionStatement>
+      babel.traverse(renderFile, {
+        Program(path) {
+          renderStmt = path
+            .get('body')
+            .find(path => path.node.start === start) as any
+        },
+        Identifier(path) {
+          if (!path.isDescendant(renderStmt)) return
+          const { node, parentPath } = path
+
+          // Parse the `render(...)` call
+          if (node.start === start && parentPath.isCallExpression()) {
+            parentPath.get('arguments').find(arg => {
+              if (arg.isArrowFunctionExpression()) {
+                renderFn = arg
+                return true
+              }
+            })
+            path.stop()
+          }
+
+          // Parse the `.then(...)` call
+          else if (isChainedCall(parentPath)) {
+            const callChain = flattenCallChain(parentPath)
+            debugger
+          }
+        },
+      })
     }
-  })
 
-  // TODO: render the nodes used by <body>
-  collectNodes(renderFn.getBody())
-}
+    // This visitor inserts the `render` and `didRender` implementations,
+    // and any statements required by them.
+    const transformer: babel.Visitor = {
+      Program(path) {
+        const [renderStub, didRenderStub] = path
+          .get('body')
+          .filter(p =>
+            p.isVariableDeclaration()
+          ) as NodePath<t.VariableDeclaration>[]
 
-function badSyntax(reason: string, node: Node): never {
-  const err: any = SyntaxError(reason)
-  err.loc = {
-    line: node.getStartLineNumber(),
-    column: node.getPos() - node.getStartLinePos(),
+        let lastImportIdx = 0
+        path.node.body.forEach((stmt, i) => {
+          if (t.isImportDeclaration(stmt)) {
+            lastImportIdx = i
+          }
+        })
+
+        if (renderFn) {
+          const refs = resolveReferences(renderFn)
+          refs.forEach(ref => {
+            // Prepend `import` statements into the client.
+            if (ref.isImportDeclaration()) {
+              path.node.body.unshift(ref.node)
+              lastImportIdx++
+            }
+            // The rest should come after imports.
+            else {
+              path.node.body.splice(lastImportIdx + 1, 0, ref.node)
+            }
+          })
+
+          const { params, body } = renderFn.node
+          renderStub.traverse({
+            ArrowFunctionExpression(path) {
+              path.node.params = params
+              path.set('body', body)
+            },
+          })
+        }
+      },
+    }
+
+    const client = babel.transformSync(clientSkeleton, {
+      plugins: [{ visitor: transformer }],
+      sourceMaps: true,
+      comments: true,
+    })!
+
+    return {
+      id: `client-${hash}${path.extname(renderPath)}`,
+      state,
+      code: client.code!,
+      map: client.map,
+    }
   }
-  throw err
-}
