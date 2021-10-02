@@ -21,26 +21,21 @@ if (!import.meta.env.SSR) {
 }
 
 export function visit(path: string, replace?: boolean) {
-  if (import.meta.env.SSR) {
-    // no-op
-  } else if (router) {
-    router.route(path, replace)
-  } else {
-    router = navaid()
-    for (const route of Object.keys(routes).reverse()) {
-      router.on(route, (params = {}) => {
-        // The initial route is pre-rendered, so we can bail out.
-        if (nextPage == null) {
-          return (nextPage = Promise.resolve())
-        }
-        const page = (nextPage = routes[route]().then(module => {
-          if (page == nextPage) {
-            setPage(renderRoute(module, params))
-          }
-        }))
-      })
+  if (!import.meta.env.SSR) {
+    if (!router) {
+      router = navaid().listen()
+      for (const route of Object.keys(routes).reverse()) {
+        router.on(route, (params = {}) => {
+          const page = (nextPage = routes[route]().then(module => {
+            // Bail out if the route changed while loading.
+            if (page == nextPage) {
+              setPage(renderRoute(module, params))
+            }
+          }))
+        })
+      }
     }
-    router.listen()
+    router.route(path, replace)
   }
 }
 

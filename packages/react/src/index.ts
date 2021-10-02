@@ -1,8 +1,7 @@
-import { configureVite } from 'saus'
 import reactVite from '@vitejs/plugin-react'
-import './global'
+import { configureVite } from 'saus'
 
-export * from './render'
+export * from './node/render'
 
 configureVite(config => {
   config.plugins!.push(

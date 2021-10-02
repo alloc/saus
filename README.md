@@ -16,7 +16,7 @@ First, we need to know your routes.
 
 ```yml
 # saus.yaml
-routes: ./src/routes.ts
+routes: ./src/node/routes.ts
 ```
 
 Your routes module maps each route to a module. If the route is dynamic, it also needs a `query` function to know which pages should be generated.
@@ -25,12 +25,13 @@ Your routes module maps each route to a module. If the route is dynamic, it also
 import { defineRoutes } from 'saus'
 import fs from 'fs'
 
-export default defineRoutes({
+defineRoutes({
   '/': () => import('./routes/Home'),
   '/posts/:post': {
     render: () => import('./routes/Post'),
     query: () => fs.readdirSync('./data/posts'),
   },
+  404: () => import('./routes/NotFound'),
 })
 ```
 
@@ -51,7 +52,7 @@ Next, you need at least one renderer to generate your pages.
 
 ```yml
 # saus.yaml
-render: ./src/node/render.tsx
+render: ./src/render.tsx
 ```
 
 Popular frameworks usually have a `@saus/*` package you can use.

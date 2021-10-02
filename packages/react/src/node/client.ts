@@ -1,10 +1,8 @@
-import fs from 'fs'
-import MagicString, { Bundle } from 'magic-string'
 import path from 'path'
+import MagicString, { Bundle } from 'magic-string'
 import { ClientProvider, endent } from 'saus'
 import {
   t,
-  babel,
   isChainedCall,
   flattenCallChain,
   NodePath,
@@ -62,41 +60,15 @@ export const getClientProvider =
     const extracted = new Set<NodePath>()
 
     if (renderFn) {
-      renderFn.traverse({
-        JSXElement(path) {
-          if (!path.parentPath.isReturnStatement()) {
-            return
-          }
-          const rootElement = path
-          path.parentPath.traverse({
-            JSXElement(path) {
-              const tagName = path.get('openingElement').get('name')
-              if (!tagName.isJSXIdentifier()) {
-                return
-              }
-              if (tagName.equals('name', 'head')) {
-                return path.skip()
-              }
-              if (tagName.equals('name', 'body')) {
-                path.stop()
-                rootElement.replaceWith(
-                  t.jsxFragment(
-                    t.jsxOpeningFragment(),
-                    t.jsxClosingFragment(),
-                    path.node.children
-                  )
-                )
-              }
-            },
-          })
-        },
-      })
       const refs = resolveReferences(renderFn)
       refs.forEach(ref => {
         clientBundle.addSource(renderFile.extract(ref))
         extracted.add(ref)
       })
+
       const renderDecl = renderFile.extract(renderFn)
+      serverToClientRender(renderDecl, renderFn)
+
       renderDecl.prepend('const render = ')
       clientBundle.addSource(renderDecl)
     }
@@ -141,3 +113,43 @@ export const getClientProvider =
       map,
     }
   }
+
+// The client only needs to hydrate the <body> tree,
+// so <html> and <head> can (and should) be removed.
+function serverToClientRender(
+  output: MagicString,
+  renderFn: NodePath<t.ArrowFunctionExpression>
+) {
+  renderFn.traverse({
+    JSXElement(path) {
+      if (!path.parentPath.isReturnStatement()) {
+        return
+      }
+      const rootElement = path
+      path.parentPath.traverse({
+        JSXElement(path) {
+          const tagName = path.get('openingElement').get('name')
+          if (!tagName.isJSXIdentifier()) {
+            return
+          }
+          if (tagName.equals('name', 'head')) {
+            return path.skip()
+          }
+          if (tagName.equals('name', 'body')) {
+            const { children } = path.node
+            path.stop()
+
+            // Replace <body> (and any parent elements) with React fragment.
+            output.overwrite(rootElement.node.start!, children[0].start!, '<>')
+            output.overwrite(
+              children[children.length - 1].end!,
+              rootElement.get('closingElement').node!.end!,
+              '</>'
+            )
+          }
+        },
+      })
+      path.stop()
+    },
+  })
+}

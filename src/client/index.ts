@@ -12,7 +12,7 @@ if (!import.meta.env.SSR) {
   stateContainer.remove()
 
   state = JSON.parse(stateContainer.textContent)
-  initialRoute = import(state.routeModuleId /* @vite-ignore */)
+  initialRoute = import(/* @vite-ignore */ state.routeModuleId)
 }
 
 export { state, routes, initialRoute }
