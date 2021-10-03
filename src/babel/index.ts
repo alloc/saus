@@ -139,7 +139,11 @@ export function getFirstAncestor(
   return parentPath
 }
 
-export class File {
+export function parseFile(filename: string, source?: string) {
+  return new File(filename, source)
+}
+
+class File {
   program!: NodePath<t.Program>
 
   constructor(

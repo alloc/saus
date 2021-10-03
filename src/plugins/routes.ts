@@ -2,29 +2,29 @@ import fs from 'fs'
 import path from 'path'
 import * as vite from 'vite'
 import { babel, t, NodePath } from '../babel'
-import { Context } from '../context'
+import { SausContext } from '../context'
 import { SourceDescription } from '../vite'
 
-const routesPath = path.resolve(__dirname, '../../client/routes.ts')
+const routesPathStub = path.resolve(__dirname, '../../client/routes.ts')
 
-export function routesPlugin(context: Context): vite.Plugin {
+export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
   return {
     name: 'saus:routes',
     enforce: 'pre',
     async resolveId(id, importer) {
-      if (importer == routesPath) {
-        return this.resolve(id, context.routesPath, { skipSelf: true })
+      if (importer == routesPathStub) {
+        return this.resolve(id, routesPath, { skipSelf: true })
       }
     },
     load(id) {
-      if (id == routesPath) {
-        return generateClientRoutes(context)
+      if (id == routesPathStub) {
+        return generateClientRoutes(routesPath)
       }
     },
   }
 }
 
-function generateClientRoutes({ routesPath }: Context) {
+function generateClientRoutes(routesPath: string) {
   const routesModule = babel.parseSync(fs.readFileSync(routesPath, 'utf8'), {
     filename: routesPath,
     plugins: /\.tsx?$/.test(routesPath)
@@ -47,19 +47,19 @@ function generateClientRoutes({ routesPath }: Context) {
               exports.push(property.node)
             }
 
-            // { import: () => import(...) }
+            // { load: () => import(...) }
             else if (value.isObjectExpression()) {
-              const importProp = value
+              const loadProp = value
                 .get('properties')
                 .find(
                   property =>
                     property.isObjectProperty() &&
-                    property.get('key').isIdentifier({ name: 'import' })
+                    property.get('key').isIdentifier({ name: 'load' })
                 )
 
-              if (importProp?.isObjectProperty())
+              if (loadProp?.isObjectProperty())
                 exports.push(
-                  t.objectProperty(property.node.key, importProp.node.value)
+                  t.objectProperty(property.node.key, loadProp.node.value)
                 )
             }
           }

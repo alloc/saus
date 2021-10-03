@@ -1,10 +1,20 @@
 import * as vite from 'vite'
 import { klona } from 'klona'
 import { debounce } from 'ts-debounce'
-import { loadContext, loadModule, resetRenderHooks, Context } from './context'
+import { watch } from 'chokidar'
+import {
+  SausContext,
+  createLoader,
+  loadConfigHooks,
+  loadContext,
+  loadRenderHooks,
+  loadRoutes,
+  resetRenderHooks,
+} from './context'
 import { clientPlugin } from './plugins/client'
-import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
+import { servePlugin } from './plugins/serve'
+import { renderMetaPlugin } from './plugins/renderMeta'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const root = inlineConfig?.root || process.cwd()
@@ -34,7 +44,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     serverPromise = serverPromise
       .then(async oldServer => {
         await oldServer?.close()
-        return startServer(context, restart, onError, oldServer?.moduleGraph)
+        return startServer(context, restart, onError, true)
       })
       .catch(onError)
   }
@@ -49,129 +59,94 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 }
 
 async function startServer(
-  context: Context,
+  context: SausContext,
   restart: () => void,
   onError: (e: any) => void,
-  moduleGraph?: vite.ModuleGraph
+  isRestart?: boolean
 ) {
-  await loadConfigHooks(context, moduleGraph)
+  const loader = await createLoader(context)
+  await loadConfigHooks(context, loader)
+  await loader.close()
 
+  const contextPaths = [context.renderPath, context.routesPath]
   const config = vite.mergeConfig(klona(context.config), <vite.UserConfig>{
     configFile: false,
     plugins: [
-      renderPlugin(context), // SSR renderer
+      servePlugin(context), // Page renderer
       clientPlugin(context), // Client hydration
       routesPlugin(context), // Routes module
+      renderMetaPlugin(context), // Render metadata
     ],
+    server: {
+      watch: {
+        ignored: contextPaths,
+      },
+    },
   })
 
   context.configHooks.forEach(hook => {
     hook(config, context)
   })
 
+  // Listen immediately to ensure `buildStart` hook is called.
   const server = await vite.createServer(config)
-  await server.listen(undefined, !!moduleGraph)
+  await server.listen(undefined, isRestart)
 
+  // Load the routes after config hooks are applied.
   context.routes = []
-  await loadRoutes(context, server.ssrLoadModule)
+  await loadRoutes(context, server)
 
+  // Load the renderers after config hooks are applied.
   resetRenderHooks(context)
-  await loadRenderHooks(context, server.ssrLoadModule)
+  await loadRenderHooks(context, server)
 
+  // Tell plugins to update local state derived from Saus context.
   emitContextUpdate(server, context)
 
-  const contextPaths = [context.renderPath, context.routesPath]
-  const renderModule = server.moduleGraph.getModuleById(context.renderPath)!
-
-  server.watcher.add(contextPaths)
-  server.watcher.on(
+  // Watch our context paths, so routes and renderers are hot-updated.
+  const watcher = watch(contextPaths).on(
     'change',
     debounce(file => {
-      if (file === context.renderPath || isImportedBy(file, renderModule)) {
+      if (file === context.renderPath) {
         resetRenderHooks(context, true)
-        return (
-          loadRenderHooks(context, server.ssrLoadModule)
+        return loadRenderHooks(context, server)
+          .then(() => {
             // Restart if a config hook is added.
-            .then(() =>
-              context.configHooks.length
-                ? restart()
-                : emitContextUpdate(server, context)
-            )
-            .catch(onError)
-        )
+            if (context.configHooks.length) {
+              return restart()
+            }
+            emitContextUpdate(server, context)
+            server.watcher.emit('change', file)
+          })
+          .catch(onError)
       }
       if (file === context.routesPath) {
         context.routes = []
-        return loadRoutes(context, server.ssrLoadModule)
-          .then(() => emitContextUpdate(server, context))
+        return loadRoutes(context, server)
+          .then(() => {
+            emitContextUpdate(server, context)
+            server.watcher.emit('change', file)
+          })
           .catch(onError)
       }
-    }, 100)
+    }, 30)
   )
+
+  server.httpServer!.on('close', () => {
+    console.log('httpServer.close')
+    watcher.close()
+  })
 
   return server
 }
 
-function loadRoutes(context: Context, load: (url: string) => Promise<any>) {
-  return loadModule(context.routesPath, context, load)
-}
-
-function loadRenderHooks(
-  context: Context,
-  load: (url: string) => Promise<any>
-) {
-  return loadModule(context.renderPath, context, load)
-}
-
-async function loadConfigHooks(
-  context: Context,
-  moduleGraph?: vite.ModuleGraph
-) {
-  const loader = await vite.createServer({
-    ...context.config,
-    configFile: false,
-    logLevel: 'error',
-    server: { middlewareMode: 'ssr' },
-  })
-  if (moduleGraph) {
-    // Avoid re-evaluating unchanged modules.
-    loader.moduleGraph.idToModuleMap = moduleGraph.idToModuleMap
-    loader.moduleGraph.urlToModuleMap = moduleGraph.urlToModuleMap
-    loader.moduleGraph.fileToModulesMap = moduleGraph.fileToModulesMap
-
-    // Ensure the render module is re-evaluated.
-    const renderModule = moduleGraph.getModuleById(context.renderPath)!
-    moduleGraph.invalidateModule(renderModule)
-  }
-  context.configHooks = []
-  await loadRenderHooks(context, loader.ssrLoadModule)
-  await loader.close()
-}
-
-function isImportedBy(
-  file: string,
-  mod: vite.ModuleNode,
-  seen = new Set<vite.ModuleNode>()
-) {
-  seen.add(mod)
-  for (const dep of mod.importedModules) {
-    if (dep.id === file) {
-      return true
-    }
-    if (!seen.has(dep) && isImportedBy(file, dep, seen)) {
-      return true
-    }
-  }
-  return false
-}
-
-function emitContextUpdate(server: vite.ViteDevServer, context: Context) {
+function emitContextUpdate(server: vite.ViteDevServer, context: SausContext) {
   for (const plugin of server.config.plugins)
     hasContextUpdateHook(plugin) && plugin.contextUpdate(context)
 }
 
 function hasContextUpdateHook(
   plugin: any
-): plugin is { contextUpdate: (context: Context) => void } {
+): plugin is { contextUpdate: (context: SausContext) => void } {
   return !!plugin.contextUpdate
 }

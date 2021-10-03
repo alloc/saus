@@ -1,5 +1,5 @@
 import * as vite from 'vite'
-import { Context } from './context'
+import { SausContext } from './context'
 
 export interface UserConfig extends vite.UserConfig {}
 
@@ -12,7 +12,7 @@ export const defineConfig = (
 
 export interface Plugin extends vite.Plugin {
   /** Called when routes and/or render hooks are updated */
-  contextUpdate?: (context: Context) => void
+  contextUpdate?: (context: SausContext) => void
 }
 
 export type SourceDescription = Extract<

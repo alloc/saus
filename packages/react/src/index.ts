@@ -4,7 +4,8 @@ import { configureVite } from 'saus'
 export * from './node/render'
 
 configureVite(config => {
-  config.plugins!.push(
+  config.plugins ??= []
+  config.plugins.push(
     reactVite({
       babel: config.babel,
     })

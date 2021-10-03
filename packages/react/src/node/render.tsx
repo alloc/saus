@@ -4,8 +4,7 @@ import {
   ClientState,
   logger,
   render as addRenderHook,
-  RenderPromise,
-  RenderResult,
+  RenderCall,
   RouteModule,
   RouteParams,
 } from 'saus'
@@ -15,9 +14,9 @@ fixReactBug()
 
 type RenderHook<T> = (
   module: RouteModule,
-  params: RouteParams,
+  props: RouteParams,
   state: ClientState
-) => RenderResult<T>
+) => T | Promise<T>
 
 /** Render a page for a route. */
 export function render(
@@ -25,14 +24,14 @@ export function render(
   render: RenderHook<ReactElement | null | void>,
   hash?: string,
   start?: number
-): RenderPromise
+): RenderCall
 
 /** Set the fallback renderer. */
 export function render(
   render: RenderHook<ReactElement>,
   hash?: string,
   start?: number
-): RenderPromise
+): RenderCall
 
 export function render(...args: [any, any, any, any?]) {
   if (typeof args[0] === 'string') {
@@ -129,7 +128,12 @@ function fixReactBug() {
     try {
       return render.apply(this, args)
     } catch (err: any) {
-      err.stack = ReactDebugCurrentFrame.getStackAddendum()
+      err.stack =
+        err.constructor.name +
+        ': ' +
+        err.message +
+        ReactDebugCurrentFrame.getStackAddendum()
+
       throw err
     }
   }

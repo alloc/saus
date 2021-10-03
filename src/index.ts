@@ -1,4 +1,6 @@
 export * from './context'
+export * from './render'
+export * from './routes'
 export * from './vite'
 
 export { default as endent } from 'endent'

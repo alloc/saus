@@ -1,10 +1,14 @@
 import path from 'path'
 import regexParam from 'regexparam'
 import * as vite from 'vite'
-import { readsausYaml } from './config'
+import { readSausYaml } from './config'
+import { RenderCall, Renderer, RenderedPage, RenderHook } from './render'
+import { Route, RouteConfig, RouteLoader } from './routes'
 import { UserConfig, SourceDescription } from './vite'
 
-let context!: Context
+let context!: SausContext
+
+export const getSausContext = () => context
 
 export const logger = new Proxy({} as vite.Logger, {
   get(_, key: keyof vite.Logger) {
@@ -12,7 +16,7 @@ export const logger = new Proxy({} as vite.Logger, {
   },
 })
 
-export interface Context {
+export interface SausContext {
   root: string
   logger: vite.Logger
   config: vite.UserConfig
@@ -23,102 +27,33 @@ export interface Context {
   /** Path to the routes module */
   routesPath: string
   /** Routes added with `defineRoutes` */
-  routes: RouteConfig[]
-  /** Generated clients by route */
-  clients: Record<string, Client>
+  routes: Route[]
+  /** Rendered page cache */
+  pages: Record<string, RenderedPage>
   /** The route used when no route is matched */
   defaultRoute?: RouteLoader
   /** Path to the render module */
   renderPath: string
   /** The renderers for specific routes */
-  renderers: Renderer<string>[]
+  renderers: Renderer<string | null | void>[]
   /** The renderer used when no route is matched */
   defaultRenderer?: Renderer<string>
 }
 
-export interface RouteModule extends Record<string, any> {}
-
-export type RouteLoader = () => Promise<RouteModule>
-
-export type RouteParams = Record<string, string> & { error?: any }
-
-export type RouteConfig = {
-  route: string
-  keys: string[]
-  pattern: RegExp
-  import: RouteLoader
-  query?: () => string[] | Promise<string[]>
-}
-
-export type ClientState = Record<string, any> & {
-  routeModuleId: string
-  routeParams: Record<string, string>
-}
-
 /** A generated client module */
-export type Client = SourceDescription & {
-  id: string
-  state: ClientState
-}
+export type Client = { id: string } & SourceDescription
 
 /** Function that generates a client module */
 export type ClientProvider = (
-  state: ClientState,
-  renderer: Renderer<string>,
-  context: Context
+  context: SausContext,
+  renderer: Renderer<string>
 ) => Client | Promise<Client>
 
-export type RenderResult<T> = Promise<T> | T
-export type RenderHook<T> = (
-  module: Record<string, any>,
-  params: Record<string, string>,
-  context: RenderContext
-) => RenderResult<T>
-
-const noop = () => {}
-
-export class Renderer<T> {
-  test!: (path: string) => boolean
-  didRender = noop
-  getClient?: ClientProvider
-
-  constructor(
-    readonly route: string,
-    readonly render: RenderHook<T>,
-    readonly hash?: string,
-    readonly start?: number
-  ) {
-    if (route) {
-      const regex = regexParam(route).pattern
-      this.test = regex.test.bind(regex)
-    }
-  }
-}
-
-export type RenderContext = {
-  /** JSON state used by the client */
-  readonly state: ClientState
-  /** Call this to reset global UI state */
-  readonly didRender: () => void
-}
-
-export type RenderPromise = {
-  /**
-   * Run an isomorphic function after render. In SSR, it runs after the
-   * HTML string is rendered. On the client, it runs post-hydration.
-   */
-  then(didRender: () => void): void
-  /**
-   * Set the function that generates the client module, which is responsible
-   * for hydrating the page. If you're using a framework package like
-   * `@saus/react`, you won't need to call this.
-   */
-  withClient(provider: ClientProvider): RenderPromise
-}
+export type ClientState = Record<string, any>
 
 export type ConfigHook = (
   config: UserConfig,
-  context: Context
+  context: SausContext
 ) => void | Promise<void>
 
 /**
@@ -131,16 +66,16 @@ export function render(
   hook: RenderHook<string | null | void>,
   hash?: string,
   start?: number
-): RenderPromise
+): RenderCall
 
 /** Set the fallback renderer. */
 export function render(
   hook: RenderHook<string>,
   hash?: string,
   start?: number
-): RenderPromise
+): RenderCall
 
-export function render(...args: [any, any, any]): RenderPromise {
+export function render(...args: [any, any, any]) {
   let renderer: Renderer<any>
   if (typeof args[0] === 'string') {
     renderer = new Renderer(...args)
@@ -149,15 +84,7 @@ export function render(...args: [any, any, any]): RenderPromise {
     renderer = new Renderer('', ...args)
     context.defaultRenderer = renderer
   }
-  return {
-    then(didRender) {
-      renderer.didRender = didRender
-    },
-    withClient(provider) {
-      renderer.getClient = provider
-      return this
-    },
-  }
+  return new RenderCall(renderer)
 }
 
 /**
@@ -167,33 +94,29 @@ export function configureVite(hook: ConfigHook) {
   context.configHooks.push(hook)
 }
 
-type Route =
-  | (() => Promise<RouteModule>)
-  | Omit<RouteConfig, 'route' | 'keys' | 'pattern'>
-
-type RouteMap = Record<string, Route> & {
-  404?: () => Promise<RouteModule>
+type RouteMap = Record<string, RouteConfig | RouteLoader> & {
+  default?: RouteLoader
 }
 
 /**
  * Define routes and associate them with a module and optional params query.
  */
 export function defineRoutes(routes: RouteMap) {
-  for (const route in routes) {
-    if (route === '404') {
-      context.defaultRoute = routes[route]
+  for (const path in routes) {
+    if (path === 'default') {
+      context.defaultRoute = routes[path]
       continue
     }
-    const config = routes[route]
-    const { keys, pattern } = regexParam(route)
+    const config = routes[path]
+    const { keys, pattern } = regexParam(path)
     if (keys.length && (typeof config == 'function' || !config.query)) {
-      logger.warn(`Dynamic route "${route}" has no "query" function`)
+      logger.warn(`Dynamic route "${path}" has no "query" function`)
       continue
     }
     context.routes.push(
       typeof config == 'function'
-        ? { import: config, route, keys, pattern }
-        : { ...config, route, keys, pattern }
+        ? { load: config, path, keys, pattern }
+        : { ...config, path, keys, pattern }
     )
   }
 
@@ -207,11 +130,11 @@ export async function loadContext(
   root: string,
   configEnv: vite.ConfigEnv,
   logLevel: vite.LogLevel = 'error'
-): Promise<Context> {
+): Promise<SausContext> {
   const logger = vite.createLogger(logLevel)
 
   // Load "saus.yaml"
-  const { render: renderPath, routes: routesPath } = readsausYaml(root, logger)
+  const { render: renderPath, routes: routesPath } = readSausYaml(root, logger)
 
   // Load "vite.config.ts"
   const loadResult = await vite.loadConfigFromFile(
@@ -225,6 +148,7 @@ export async function loadContext(
   const userConfig = loadResult ? loadResult.config : {}
   const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
     customLogger: logger,
+    mode: configEnv.mode,
     ssr: {
       noExternal: ['saus/client'],
     },
@@ -239,15 +163,15 @@ export async function loadContext(
     configHooks: [],
     routesPath,
     routes: [],
-    clients: {},
+    pages: {},
     renderPath,
     renderers: [],
     defaultRenderer: undefined,
   }
 }
 
-export function resetRenderHooks(ctx: Context, resetConfig?: boolean) {
-  ctx.clients = {}
+export function resetRenderHooks(ctx: SausContext, resetConfig?: boolean) {
+  ctx.pages = {}
   ctx.renderers = []
   ctx.defaultRenderer = undefined
   if (resetConfig) {
@@ -255,15 +179,42 @@ export function resetRenderHooks(ctx: Context, resetConfig?: boolean) {
   }
 }
 
+type ModuleLoader = vite.ViteDevServer
+
 export async function loadModule(
   mod: string,
-  ctx: Context,
-  load: (url: string) => Promise<any>
+  ctx: SausContext,
+  loader: ModuleLoader
 ) {
   context = ctx
   try {
-    await load('/' + path.relative(ctx.root, mod))
+    await loader.ssrLoadModule('/' + path.relative(ctx.root, mod))
   } finally {
     context = null as any
   }
+}
+
+export function loadRoutes(context: SausContext, loader: ModuleLoader) {
+  return loadModule(context.routesPath, context, loader)
+}
+
+export function loadRenderHooks(context: SausContext, loader: ModuleLoader) {
+  return loadModule(context.renderPath, context, loader)
+}
+
+export async function loadConfigHooks(
+  context: SausContext,
+  loader: ModuleLoader
+) {
+  context.configHooks = []
+  await loadRenderHooks(context, loader)
+}
+
+export function createLoader(context: SausContext): Promise<ModuleLoader> {
+  return vite.createServer({
+    ...context.config,
+    configFile: false,
+    logLevel: 'error',
+    server: { middlewareMode: 'ssr' },
+  })
 }

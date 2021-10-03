@@ -4,11 +4,13 @@ import fs from 'fs'
 export default defineRoutes({
   '/': () => import('../routes/Home'),
   '/pokemon/:name': {
-    import: () => import('../routes/Pokemon'),
-    query: () =>
-      JSON.parse(fs.readFileSync('./data/pokemon.json', 'utf8')).map(
-        (name: string) => name.toLowerCase()
-      ) as string[],
+    load: () => import('../routes/Pokemon'),
+    query() {
+      const pokemon: string[] = JSON.parse(
+        fs.readFileSync('./data/pokemon.json', 'utf8')
+      )
+      return pokemon.map(name => [name.toLowerCase()])
+    },
   },
-  404: () => import('../routes/NotFound'),
+  default: () => import('../routes/NotFound'),
 })

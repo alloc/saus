@@ -10,7 +10,7 @@ export interface sausConfig {
 
 const sausYamlFile = 'saus.yaml'
 
-export function readsausYaml(root: string, logger: Logger) {
+export function readSausYaml(root: string, logger: Logger) {
   let config: sausConfig
   try {
     config = yaml.parse(fs.readFileSync(resolve(root, sausYamlFile), 'utf8'))

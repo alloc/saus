@@ -6,15 +6,16 @@ import {
   isChainedCall,
   flattenCallChain,
   NodePath,
+  parseFile,
   resolveReferences,
-  File,
 } from 'saus/babel'
 
 export const getClientProvider =
   (): ClientProvider =>
-  (state, renderer, { renderPath }) => {
+  ({ renderPath }, renderer) => {
     const { hash, start } = renderer
-    const renderFile = new File(renderPath)
+
+    const renderFile = parseFile(renderPath)
 
     let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
     let didRenderFn: NodePath<t.ArrowFunctionExpression> | undefined
@@ -108,7 +109,6 @@ export const getClientProvider =
 
     return {
       id: `client-${hash}${path.extname(renderPath)}`,
-      state,
       code,
       map,
     }

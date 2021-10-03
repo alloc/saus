@@ -2,12 +2,13 @@ import * as React from 'react'
 import { render } from '@saus/react'
 import { App } from './App'
 
-render('/*', (module, params) => {
+render((module, params) => {
   const Page = module.default as React.ComponentType<any>
   return (
     <html>
       <head>
-        <title>{params.name || 'Home'}</title>
+        <title>My React App</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link
           href="https://cdn.jsdelivr.net/npm/modern-normalize@1.1.0/modern-normalize.min.css"
           rel="stylesheet"
@@ -20,6 +21,4 @@ render('/*', (module, params) => {
       </body>
     </html>
   )
-}).then(() => {
-  console.log('hello', import.meta.env.SSR ? 'server' : 'client')
 })

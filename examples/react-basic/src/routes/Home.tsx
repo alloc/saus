@@ -6,7 +6,7 @@ export default function Home() {
       <h1>Home</h1>
       <div>
         {pokemon.map((name, i) => (
-          <a key={i} href={'/pokemon/' + name}>
+          <a key={i} href={'/pokemon/' + name.toLowerCase()}>
             {name}
           </a>
         ))}
