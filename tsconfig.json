@@ -1,5 +1,5 @@
 {
-  "include": ["src", "packages/client/index.ts"],
+  "include": ["src"],
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
