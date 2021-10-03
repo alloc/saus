@@ -53,6 +53,7 @@ export function clientPlugin({
           filename = getPageFilename(path)
         }
 
+        console.log({ filename, path })
         const page = pages[filename]
         client = page.client
 

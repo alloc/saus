@@ -122,7 +122,7 @@ export function defineRoutes(routes: RouteMap) {
 
   // This is only for client-side routing.
   return {} as {
-    [route: string]: () => Promise<RouteModule>
+    [route: string]: RouteLoader
   }
 }
 
@@ -171,11 +171,13 @@ export async function loadContext(
 }
 
 export function resetRenderHooks(ctx: SausContext, resetConfig?: boolean) {
-  ctx.pages = {}
-  ctx.renderers = []
+  Object.keys(ctx.pages).forEach(key => {
+    delete ctx.pages[key]
+  })
+  ctx.renderers.length = 0
   ctx.defaultRenderer = undefined
   if (resetConfig) {
-    ctx.configHooks = []
+    ctx.configHooks.length = 0
   }
 }
 

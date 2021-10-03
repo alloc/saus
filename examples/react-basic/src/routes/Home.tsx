@@ -10,6 +10,7 @@ export default function Home() {
             {name}
           </a>
         ))}
+        <a href="/broken-link">404 Test</a>
       </div>
     </>
   )

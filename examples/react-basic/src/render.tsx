@@ -7,7 +7,7 @@ render((module, params) => {
   return (
     <html>
       <head>
-        <title>My React App</title>
+        <title>Pokemon Wiki</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link
           href="https://cdn.jsdelivr.net/npm/modern-normalize@1.1.0/modern-normalize.min.css"
