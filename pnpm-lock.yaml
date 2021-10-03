@@ -6,17 +6,14 @@ importers:
     specifiers:
       '@alloc/fast-rimraf': ^1.0.8
       '@alloc/prettier-config': ^1.0.0
-      '@ampproject/remapping': ^1.0.1
       '@babel/core': ^7.15.5
       '@babel/plugin-syntax-typescript': ^7.14.5
-      '@types/convert-source-map': ^1.5.2
       '@types/jest': ^26.0.20
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
       async-task-group: ^1.3.3
       cac: ^6.7.3
       chokidar: ^3.5.2
-      convert-source-map: ^1.8.0
       endent: ^2.1.0
       esbuild: ^0.8.36
       esbuild-jest: npm:@alloc/esbuild-jest@^0.3.0
@@ -39,13 +36,11 @@ importers:
       vite: ^2.3.0
       yaml: ^1.10.2
     dependencies:
-      '@ampproject/remapping': 1.0.1
       '@babel/core': 7.15.5
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.15.5
       async-task-group: 1.3.3
       cac: 6.7.3
       chokidar: 3.5.2
-      convert-source-map: 1.8.0
       endent: 2.1.0
       escape-goat: 3.0.0
       kleur: 4.1.4
@@ -62,7 +57,6 @@ importers:
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
       '@alloc/prettier-config': 1.0.0
-      '@types/convert-source-map': 1.5.2
       '@types/jest': 26.0.24
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
@@ -130,14 +124,6 @@ packages:
   /@alloc/types/2.1.0:
     resolution: {integrity: sha512-3HpQjwvBKe2zrNwUjdIsM/UrgmDtRgoDBwJR7whMvG6xM+SOhu2w7EQyDmpqyxS4+1ENSr1dlCKlSR2JC4L0Ug==}
     dev: true
-
-  /@ampproject/remapping/1.0.1:
-    resolution: {integrity: sha512-Ta9bMA3EtUHDaZJXqUoT5cn/EecwOp+SXpKJqxDbDuMbLvEMu6YTyDDuvTWeStODfdmXyfMo7LymQyPkN3BicA==}
-    engines: {node: '>=6.0.0'}
-    dependencies:
-      '@jridgewell/resolve-uri': 1.0.0
-      sourcemap-codec: 1.4.8
-    dev: false
 
   /@babel/code-frame/7.14.5:
     resolution: {integrity: sha512-9pzDqyc6OLDaqe+zbACgFkb6fKMNG6CObKpnYXChRsvYGyEdc7CA2BaqeOM+vOtCS5ndmJicPJhKAwYRI6UfFw==}
@@ -729,11 +715,6 @@ packages:
       chalk: 4.1.2
     dev: true
 
-  /@jridgewell/resolve-uri/1.0.0:
-    resolution: {integrity: sha512-9oLAnygRMi8Q5QkYEU4XWK04B+nuoXoxjRvRxgjuChkLZFBja0YPSgdZ7dZtwhncLBcQe/I/E+fLuk5qxcYVJA==}
-    engines: {node: '>=6.0.0'}
-    dev: false
-
   /@rollup/pluginutils/4.1.1:
     resolution: {integrity: sha512-clDjivHqWGXi7u+0d2r2sBi4Ie6VLEAzWMIkvJLnDmxoOhBYOTfzGbOQBA32THHm11/LiJbd01tJUpJsbshSWQ==}
     engines: {node: '>= 8.0.0'}
@@ -783,10 +764,6 @@ packages:
     resolution: {integrity: sha512-K2waXdXBi2302XUdcHcR1jCeU0LL4TD9HRs/gk0N2Xvrht+G/BfJa4QObBQZfhMdxiCpV3COl5Nfq4uKTeTnJA==}
     dependencies:
       '@babel/types': 7.15.6
-
-  /@types/convert-source-map/1.5.2:
-    resolution: {integrity: sha512-tHs++ZeXer40kCF2JpE51Hg7t4HPa18B1b1Dzy96S0eCw8QKECNMYMfwa1edK/x8yCN0r4e6ewvLcc5CsVGkdg==}
-    dev: true
 
   /@types/graceful-fs/4.1.5:
     resolution: {integrity: sha512-anKkLmZZ+xm4p8JWBf4hElkM4XR+EZeA2M9BAkkTldmcyDY4mbdIJnRghDJH3Ov5ooY7/UAoENtmdMSkaAd7Cw==}

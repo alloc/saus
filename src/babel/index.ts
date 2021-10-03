@@ -1,9 +1,9 @@
 import fs from 'fs'
 import * as babel from '@babel/core'
 import { types as t, NodePath } from '@babel/core'
-import MagicString from 'magic-string'
+import MagicString, { Bundle as MagicBundle } from 'magic-string'
 
-export { babel, t, NodePath }
+export { babel, t, NodePath, MagicString, MagicBundle }
 
 export function toStaticParams(params: Record<string, string>) {
   return t.objectExpression(
@@ -12,8 +12,6 @@ export function toStaticParams(params: Record<string, string>) {
     )
   )
 }
-
-export function extractHydrateHook(file: NodePath<t.Program>) {}
 
 const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
   Array.isArray(arg) ? arg : ([arg] as any)
@@ -103,10 +101,6 @@ export function flattenCallChain(
     calls.push(path.parentPath as NodePath<t.CallExpression>)
   }
   return calls
-}
-
-export function getSourceFile(path: NodePath) {
-  return path.findParent(path => path.isFile()) as NodePath<t.File>
 }
 
 export function getImportDeclaration(

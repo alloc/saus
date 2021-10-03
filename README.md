@@ -4,7 +4,7 @@
 [![Code style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/alecdotbiz)
 
-Bare bones SSG and SSR wrapper around Vite.
+Bare bones SSG powered by Vite.
 
 &nbsp;
 
@@ -29,7 +29,7 @@ defineRoutes({
 })
 ```
 
-Routes are matched in reverse order (except the `default` route, of course).
+Routes are matched in reverse order.
 
 ### Route Parameters
 
@@ -61,6 +61,8 @@ defineRoutes({
 })
 ```
 
+Running `saus build` will emit `dist/404.html` when a default route is defined, which is often used as an "SPA fallback" by static site hosting providers.
+
 ### Client Routing
 
 Saus provides a basic `routes` object for client-side routing. It's your responsibility to implement client-side routing that fits your needs.
@@ -70,6 +72,8 @@ import { routes } from 'saus/client'
 
 const module = await routes['/']()
 ```
+
+See the [`Router`](https://github.com/alloc/saus/blob/master/examples/react-basic/src/Router.tsx) module in `./examples/react-basic` for an example of client routing.
 
 &nbsp;
 
@@ -139,17 +143,23 @@ render(async (module, params, state) => {
 })
 ```
 
-### Custom Renderer
+## Custom Renderer
 
-That said, you can integrate unsupported frameworks easily.
+If your view framework has no official package, you can write your own renderer. A custom renderer has the following parts: (1) a wrapper around `saus.render` which generates HTML from your views, and (2) an optional `withClient` callback that generates client-side hydration logic.
 
-```tsx
-import {escape, render} from 'saus'
+### Client Hydration
 
-render(async (route, params, module) => {
-  return escape`<html>${...}</html>`
-})
-```
+Each `render` call has its own client provider defined by the `withClient` method. The callback passed to `withClient` is responsible for generating the client that hydrates the page. This is entirely optional, of course.
+
+Typically, the client provider will generate the client by parsing its `render` call with Babel. See the [`getClientProvider`](https://github.com/alloc/saus/blob/b75168eafbb2ed618be26dc98b903919de00ece5/packages/react/src/node/client.ts#L18) function in `./packages/react` for a good idea of how that works.
+
+Saus provides helpers to make client generation easier through its `saus/babel` module. [Learn more](https://github.com/alloc/saus/tree/master/src/babel)
+
+### Vite Configuration
+
+Custom renderers can configure Vite for you. For example, `@vitejs/plugin-react` is added by `@saus/react` automatically (see [here](https://github.com/alloc/saus/blob/b75168eafbb2ed618be26dc98b903919de00ece5/packages/react/src/index.ts#L6)). This is done with the `saus.configureVite` function.
+
+Note that `configureVite` should only be called by renderer packages. If you need to configure Vite yourself, just create a `vite.config.ts` module in your project root.
 
 &nbsp;
 
