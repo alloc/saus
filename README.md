@@ -165,7 +165,7 @@ Each `render` call has its own client provider defined by the `withClient` metho
 
 Typically, the client provider will generate the client by parsing its `render` call with Babel. See the [`getClientProvider`](https://github.com/alloc/saus/blob/b75168eafbb2ed618be26dc98b903919de00ece5/packages/react/src/node/client.ts#L18) function in `./packages/react` for a good idea of how that works.
 
-Saus provides helpers to make client generation easier through its `saus/babel` module. [Learn more](https://github.com/alloc/saus/tree/master/src/babel)
+Saus provides helpers to make client generation easier through its `saus/babel` module. [Learn more](https://github.com/alloc/saus/tree/master/babel)
 
 ### Vite Configuration
 
