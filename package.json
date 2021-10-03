@@ -10,7 +10,8 @@
   "bin": "bin/saus",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "!dist/tsconfig.tsbuildinfo"
   ],
   "scripts": {
     "build": "rimraf dist && tsc -p .",
