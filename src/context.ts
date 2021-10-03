@@ -119,11 +119,6 @@ export function defineRoutes(routes: RouteMap) {
         : { ...config, path, keys, pattern }
     )
   }
-
-  // This is only for client-side routing.
-  return {} as {
-    [route: string]: RouteLoader
-  }
 }
 
 export async function loadContext(
