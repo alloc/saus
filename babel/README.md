@@ -5,10 +5,10 @@ Helpers for client code generation
 ## Exports
 
 - `babel`  
-  The `@babel/core` module exports
+  The [`@babel/core`](https://babeljs.io/docs/en/babel-core) module exports
 
 - `t`  
-  Identical to `babel.types`
+  Identical to [`babel.types`](https://babeljs.io/docs/en/babel-types)
 
 - `MagicString`  
   A string manipulator that can generate sourcemaps. [Learn more](https://www.npmjs.com/package/magic-string)
