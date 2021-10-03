@@ -1,10 +1,20 @@
 import React from 'react'
 import navaid, { Router as NavAid } from 'navaid'
-import { routes, RouteModule } from 'saus/client'
+import { routes, RouteModule, RouteParams } from 'saus/client'
+
+// Respect BASE_URL injected by Vite.
+const base = import.meta.env.BASE_URL.replace(/^\//, '')
 
 let router: NavAid | undefined
 let setPage: (page: JSX.Element) => void
 let nextPage: Promise<void> | undefined
+
+// Probably not production ready. Use with caution!
+export function Router(props: { children: JSX.Element }) {
+  const [page, _setPage] = React.useState(props.children)
+  setPage = _setPage
+  return page
+}
 
 // SPA effect by hi-jacking clicks to anchor elements.
 if (!import.meta.env.SSR) {
@@ -22,33 +32,34 @@ if (!import.meta.env.SSR) {
 
 export function visit(path: string, replace?: boolean) {
   if (!import.meta.env.SSR) {
-    if (!router) {
-      router = navaid().listen()
-      for (const route of Object.keys(routes).reverse()) {
-        router.on(route, (params = {}) => {
-          const page = (nextPage = routes[route]().then(module => {
-            // Bail out if the route changed while loading.
-            if (page == nextPage) {
-              setPage(renderRoute(module, params))
-            }
-          }))
-        })
-      }
-    }
+    router ||= Object.keys(routes)
+      // Check routes in reverse order, like the server does.
+      .reverse()
+      // Exclude the default route.
+      .slice(1)
+      .reduce(
+        (router, route) => router.on(route, loadPage.bind(null, route)),
+        navaid(base, () => loadPage('default')).listen()
+      )
     router.route(path, replace)
   }
 }
 
-// This function needs to match what the server does.
-// TODO: It should probably be generated?
-function renderRoute(mod: RouteModule, params: Record<string, string>) {
-  const Page = mod.default as React.ComponentType<any>
-  return <Page {...params} />
+function loadPage(route: string, params?: RouteParams) {
+  // The initial page is pre-rendered, so skip the first call.
+  if (!router) return
+
+  // Bail out if the route changes while loading.
+  const page = (nextPage = routes[route]().then(module => {
+    if (page == nextPage) {
+      setPage(renderPage(module, params || {}))
+    }
+  }))
 }
 
-// Do not use this router in production. It is too naïve.
-export function Router(props: { children: JSX.Element }) {
-  const [page, _setPage] = React.useState(props.children)
-  setPage = _setPage
-  return page
+// This function needs to match what the server does.
+// TODO: It should probably be generated?
+function renderPage(mod: RouteModule, params: RouteParams) {
+  const Page = mod.default as React.ComponentType<any>
+  return <Page {...params} />
 }
