@@ -11,7 +11,7 @@
     "!dist/tsconfig.tsbuildinfo"
   ],
   "scripts": {
-    "build": "tsc -p . --incremental",
+    "build": "rimraf dist && tsc -p .",
     "dev": "pnpm build --parallel --filter=saus --filter=./packages -- -w",
     "prepare": "yarn build"
   },
@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "@types/babel__core": "^7.1.16",
-    "@vitejs/plugin-react": "^1.0.1",
-    "ts-morph": "^12.0.0"
+    "@vitejs/plugin-react": "^1.0.1"
   }
 }
