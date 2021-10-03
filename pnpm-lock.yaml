@@ -4,6 +4,7 @@ importers:
 
   .:
     specifiers:
+      '@alloc/fast-rimraf': ^1.0.8
       '@alloc/prettier-config': ^1.0.0
       '@ampproject/remapping': ^1.0.1
       '@babel/core': ^7.15.5
@@ -59,6 +60,7 @@ importers:
       vite: 2.6.0
       yaml: 1.10.2
     devDependencies:
+      '@alloc/fast-rimraf': 1.0.8
       '@alloc/prettier-config': 1.0.0
       '@types/convert-source-map': 1.5.2
       '@types/jest': 26.0.24
@@ -112,6 +114,11 @@ packages:
     dependencies:
       esbuild: 0.8.57
       nebu: 2.2.1
+    dev: true
+
+  /@alloc/fast-rimraf/1.0.8:
+    resolution: {integrity: sha512-TsRTRLLDW6Q4fWBAYlbkcaHQDAANKsI0smrhS/1x7/GHcjVxo+r+2VRbqrWaYpmjdhvCp5v7n2wtwkMYp+Kivw==}
+    hasBin: true
     dev: true
 
   /@alloc/is/3.1.1:

@@ -13,7 +13,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p . --incremental",
+    "build": "rimraf dist && tsc -p .",
     "dev": "tsc -p . --incremental --watch",
     "prepare": "yarn build"
   },
@@ -40,6 +40,7 @@
     "yaml": "^1.10.2"
   },
   "devDependencies": {
+    "@alloc/fast-rimraf": "^1.0.8",
     "@alloc/prettier-config": "^1.0.0",
     "@types/convert-source-map": "^1.5.2",
     "@types/jest": "^26.0.20",
