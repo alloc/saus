@@ -1,7 +1,7 @@
 {
   "name": "saus",
   "version": "0.1.0",
-  "description": "Static sites for dummies",
+  "description": "Radically simple SSG powered by Vite",
   "author": "Alec Larson",
   "license": "MIT",
   "repository": "alloc/saus",
