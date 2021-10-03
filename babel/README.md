@@ -27,7 +27,13 @@ Helpers for client code generation
   Returns true if the given node path points to a `t.MemberExpression` whose object is a`t.CallExpression` and whose parent is a `t.CallExpression`. For example, in a `render().then()` expression, the node path for `.then` will result in true.
 
 - `flattenCallChain`  
-  Given a node path for a `t.CallExpression` or a node path where `isChainedCall` returns true, this function returns all calls in order. For example, in an `a().b().c()` expression, this function returns an array of node paths where `a()` comes first, then `b()`, then `c()`.
+  Given a node path for a `t.CallExpression` or a node path where `isChainedCall` returns true, this function returns all calls in order. For the following expression…
+
+  ```ts
+  a().b().c()
+  ```
+
+  …it will return an array of node paths where `a()` comes first, then `b()`, then `c()`.
 
 - `getImportDeclaration`  
   Find an import declaration with the given module specifier. The first occurrence is returned.
