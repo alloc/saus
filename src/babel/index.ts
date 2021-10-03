@@ -51,7 +51,7 @@ export function resolveReferences(
     }
 
     const bindPath = binding.path
-    if (getFirstAncestor(bindPath, p => referenced.has(p))) {
+    if (getFirstAncestor(bindPath, p => referenced.has(p as any))) {
       return // Inside a referenced statement
     }
 
