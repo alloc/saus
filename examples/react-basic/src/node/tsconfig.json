@@ -5,6 +5,6 @@
     "jsx": "react",
     "module": "esnext",
     "resolveJsonModule": true,
-    "types": ["node", "saus/client"]
+    "types": ["node"]
   }
 }
