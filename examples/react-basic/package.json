@@ -6,11 +6,11 @@
     "build": "saus build"
   },
   "devDependencies": {
-    "@saus/react": "^0.1.0",
-    "@types/node": "^16.10.2",
-    "saus": "^0.1.0"
+    "@types/node": "^16.10.2"
   },
   "dependencies": {
-    "navaid": "^1.2.0"
+    "@saus/react": "^0.1.0",
+    "navaid": "^1.2.0",
+    "saus": "^0.1.0"
   }
 }

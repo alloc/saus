@@ -76,11 +76,11 @@ importers:
       navaid: ^1.2.0
       saus: ^0.1.0
     dependencies:
-      navaid: 1.2.0
-    devDependencies:
       '@saus/react': link:../../packages/react
-      '@types/node': 16.10.2
+      navaid: 1.2.0
       saus: link:../..
+    devDependencies:
+      '@types/node': 16.10.2
 
   packages/react:
     specifiers:
