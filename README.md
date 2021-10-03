@@ -4,7 +4,19 @@
 [![Code style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://paypal.me/alecdotbiz)
 
-Bare bones SSG powered by Vite.
+Radically simple SSG powered by Vite, with automatic page hydration and practically zero config.
+
+Check out the `./examples/` folder [here](https://github.com/alloc/saus/tree/master/examples).
+
+&nbsp;
+
+## Commands
+
+**Development**  
+Run `saus dev` to start a Vite dev server with Saus plugins.
+
+**Production**  
+Run `saus build` to generate pages.
 
 &nbsp;
 
@@ -160,15 +172,3 @@ Saus provides helpers to make client generation easier through its `saus/babel` 
 Custom renderers can configure Vite for you. For example, `@vitejs/plugin-react` is added by `@saus/react` automatically (see [here](https://github.com/alloc/saus/blob/b75168eafbb2ed618be26dc98b903919de00ece5/packages/react/src/index.ts#L6)). This is done with the `saus.configureVite` function.
 
 Note that `configureVite` should only be called by renderer packages. If you need to configure Vite yourself, just create a `vite.config.ts` module in your project root.
-
-&nbsp;
-
-## Developing
-
-Run `saus dev` to start a Vite dev server with saus plugins injected.
-
-&nbsp;
-
-## Building
-
-Run `saus build` to generate pages.
