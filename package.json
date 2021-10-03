@@ -11,6 +11,8 @@
   "files": [
     "src",
     "dist",
+    "babel",
+    "client",
     "!dist/tsconfig.tsbuildinfo"
   ],
   "scripts": {
