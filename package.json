@@ -12,8 +12,7 @@
     "src",
     "dist",
     "babel",
-    "client",
-    "!dist/tsconfig.tsbuildinfo"
+    "client"
   ],
   "scripts": {
     "build": "rimraf dist && tsc -p .",
