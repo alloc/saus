@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import path from 'path'
 import cpuCount from 'physical-cpu-count'
 import AsyncTaskGroup from 'async-task-group'
 import * as RegexParam from 'regexparam'
@@ -11,10 +12,12 @@ import {
   loadRoutes,
   resetRenderHooks,
 } from './context'
+import { Rollup } from './rollup'
 import { getPageFilename, Route, RouteParams } from './routes'
 import { createPageFactory, RenderedPage } from './render'
 import { clientPlugin } from './plugins/client'
 import { renderMetaPlugin } from './plugins/renderMeta'
+import { routesPlugin } from './plugins/routes'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -138,11 +141,15 @@ export async function build(inlineConfig?: vite.UserConfig) {
 
   const buildOptions = loader.config.build
   if (buildOptions.write !== false) {
+    const routeModulePaths = new Set<string>()
     const pageMap: Record<string, RenderedPage> = {}
     for (const page of pages) {
       const input = getPageFilename(page.path)
       pageMap[input] = page
+      routeModulePaths.add(path.join(context.root, page.route.moduleId))
     }
+
+    const routeChunks: { [routeModuleId: string]: Rollup.OutputChunk[] } = {}
 
     await vite.build(
       vite.mergeConfig(context.config, <vite.UserConfig>{
@@ -158,6 +165,45 @@ export async function build(inlineConfig?: vite.UserConfig) {
             load(id) {
               const page = pageMap[id]
               return page?.html
+            },
+            // Deduplicate entry chunks.
+            transformIndexHtml(html, ctx) {
+              const page = pageMap[ctx.filename]
+              if (page.client) {
+                const bundle = ctx.bundle!
+                const currentChunk = ctx.chunk!
+                const routeModuleId = page.route.moduleId
+                const existingChunks = routeChunks[routeModuleId] || []
+                const duplicateChunk = existingChunks.find(
+                  chunk => chunk.code === currentChunk.code
+                )
+
+                if (duplicateChunk) {
+                  delete bundle[currentChunk.fileName]
+                  return html.replace(
+                    currentChunk.fileName,
+                    duplicateChunk.fileName
+                  )
+                }
+
+                existingChunks.push(currentChunk)
+                routeChunks[routeModuleId] = existingChunks
+
+                // Rename the chunk to avoid confusion. Instead of using the
+                // basename of the .html page, use the basename of the route
+                // module shared by .html pages with duplicate entry chunk.
+                const oldChunkPath = currentChunk.fileName
+                const newChunkPath = oldChunkPath.replace(
+                  path.basename(ctx.filename, '.html'),
+                  path.basename(routeModuleId, path.extname(routeModuleId))
+                )
+
+                currentChunk.fileName = newChunkPath
+                bundle[newChunkPath] = currentChunk
+                delete bundle[oldChunkPath]
+
+                return html.replace(oldChunkPath, currentChunk.fileName)
+              }
             },
           },
         ],
