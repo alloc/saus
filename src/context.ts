@@ -211,9 +211,13 @@ export async function loadConfigHooks(
   await loadRenderHooks(context, loader)
 }
 
-export function createLoader(context: SausContext): Promise<ModuleLoader> {
+export function createLoader(
+  context: SausContext,
+  inlineConfig?: UserConfig
+): Promise<ModuleLoader> {
   return vite.createServer({
     ...context.config,
+    ...inlineConfig,
     configFile: false,
     logLevel: 'error',
     server: { middlewareMode: 'ssr' },
