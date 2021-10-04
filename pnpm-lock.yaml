@@ -33,7 +33,7 @@ importers:
       source-map-support: ^0.5.20
       ts-debounce: ^3.0.0
       typescript: ^4.0.0
-      vite: ^2.3.0
+      vite: npm:@alloc/vite@^2.6.0
       yaml: ^1.10.2
     dependencies:
       '@babel/core': 7.15.5
@@ -52,7 +52,7 @@ importers:
       regexparam: 1.3.0
       source-map-support: 0.5.20
       ts-debounce: 3.0.0
-      vite: 2.6.0
+      vite: /@alloc/vite/2.6.2
       yaml: 1.10.2
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
@@ -124,6 +124,32 @@ packages:
   /@alloc/types/2.1.0:
     resolution: {integrity: sha512-3HpQjwvBKe2zrNwUjdIsM/UrgmDtRgoDBwJR7whMvG6xM+SOhu2w7EQyDmpqyxS4+1ENSr1dlCKlSR2JC4L0Ug==}
     dev: true
+
+  /@alloc/vite/2.6.2:
+    resolution: {integrity: sha512-SBN4sF9SCps0iMvrGzTFvbM0KZxbKhUd6Op9Cx6K95hncv8R8iPfCmO4te9FPW/AfGuabjGWwvYgzpVPIH0h+A==}
+    engines: {node: '>=12.2.0'}
+    hasBin: true
+    peerDependencies:
+      less: '*'
+      sass: '*'
+      stylus: '*'
+    peerDependenciesMeta:
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+    dependencies:
+      '@babel/code-frame': 7.14.5
+      esbuild: 0.13.3
+      misty: 1.4.0
+      postcss: 8.3.8
+      resolve: 1.20.0
+      rollup: 2.58.0
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: false
 
   /@babel/code-frame/7.14.5:
     resolution: {integrity: sha512-9pzDqyc6OLDaqe+zbACgFkb6fKMNG6CObKpnYXChRsvYGyEdc7CA2BaqeOM+vOtCS5ndmJicPJhKAwYRI6UfFw==}
@@ -3907,30 +3933,6 @@ packages:
       spdx-correct: 3.1.1
       spdx-expression-parse: 3.0.1
     dev: true
-
-  /vite/2.6.0:
-    resolution: {integrity: sha512-JNUJ0D/Cx4+xLD0BVy+nnUn2CECKMTR9eUKsvw/pfkG+hhVJFzFyCL5PK1eYV1ehNDIgr8Zl3jWjvwLwZWstLA==}
-    engines: {node: '>=12.2.0'}
-    hasBin: true
-    peerDependencies:
-      less: '*'
-      sass: '*'
-      stylus: '*'
-    peerDependenciesMeta:
-      less:
-        optional: true
-      sass:
-        optional: true
-      stylus:
-        optional: true
-    dependencies:
-      esbuild: 0.13.3
-      postcss: 8.3.8
-      resolve: 1.20.0
-      rollup: 2.58.0
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: false
 
   /w3c-hr-time/1.0.2:
     resolution: {integrity: sha512-z8P5DvDNjKDoFIHK7q8r8lackT6l+jo/Ye3HOle7l9nICP9lf1Ci25fy9vHd0JOWewkIFzXIEig3TdKT7JQ5fQ==}
