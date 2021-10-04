@@ -21,18 +21,27 @@ cli
     await createServer({ server: options })
   })
 
-cli.command('build').action(async () => {
-  const { build } = require('./build') as typeof import('./build')
-  const { pages, errors } = await build()
-  for (const error of errors) {
-    console.log('')
-    console.error(color.red(`Failed to render`), error.path)
-    console.error(`  ` + color.gray(error.reason))
-  }
-  console.log('')
-  success(`${pages.length} pages rendered!`)
-  process.exit(errors.length ? 1 : 0)
-})
+cli
+  .command('build')
+  .option(
+    '--minify [minifier]',
+    `[boolean | "terser" | "esbuild"] enable/disable minification, ` +
+      `or specify minifier to use (default: esbuild)`
+  )
+  .action(async (options: vite.BuildOptions) => {
+    const { build } = require('./build') as typeof import('./build')
+    const { pages, errors } = await build({ build: options })
+    if (errors.length) {
+      console.log('')
+      for (const error of errors) {
+        console.error(color.red(`Failed to render`), error.path)
+        console.error(`  ` + color.gray(error.reason))
+        console.log('')
+      }
+    }
+    success(`${pages.length} pages rendered.`)
+    process.exit(errors.length ? 1 : 0)
+  })
 
 cli.help()
 cli.version(require('../package.json').version)
