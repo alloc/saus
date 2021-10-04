@@ -144,7 +144,6 @@ async function startServer(
   )
 
   server.httpServer!.on('close', () => {
-    console.log('httpServer.close')
     watcher.close()
   })
 
