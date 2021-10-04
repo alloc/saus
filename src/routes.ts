@@ -4,8 +4,7 @@ export interface RouteModule extends Record<string, any> {}
 
 export type RouteLoader<T extends object = RouteModule> = () => Promise<T>
 
-export type RouteParams = Record<string, string> & { error?: any }
-
+export type RouteParams = Record<string, string>
 
 type HasOneKey<T> = [string & keyof T] extends infer Keys
   ? Keys extends [infer Key]

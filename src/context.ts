@@ -59,6 +59,7 @@ export type ClientState = Record<string, any> & {
   rootId?: string
   routePath: string
   routeParams: RouteParams
+  error?: any
 }
 
 export type ConfigHook = (

@@ -35,10 +35,11 @@ export function createPageFactory(context: SausContext) {
     path: string,
     params: RouteParams,
     route: Route,
-    renderer: Renderer
+    renderer: Renderer,
+    initialState?: Record<string, any>
   ): Promise<RenderedPage | null> {
     const routeModule = await route.load()
-    const state: ClientState = {}
+    const state = (initialState || {}) as ClientState
     const html = await renderer.render(routeModule, params, {
       didRender: renderer.didRender || noop,
       state,
@@ -74,7 +75,8 @@ export function createPageFactory(context: SausContext) {
   async function renderUnknownPath(
     path: string,
     params: RouteParams = {},
-    route = context.defaultRoute
+    route = context.defaultRoute,
+    initialState?: Record<string, any>
   ) {
     if (!route) {
       return null
@@ -83,24 +85,32 @@ export function createPageFactory(context: SausContext) {
       path,
       params,
       route,
-      context.defaultRenderer!
-    ) as Promise<RenderedPage>
+      context.defaultRenderer!,
+      initialState
+    )
   }
 
   async function renderMatchedPath(
     path: string,
     params: RouteParams,
-    route: Route
+    route: Route,
+    initialState?: Record<string, any>
   ) {
     for (const renderer of renderers) {
       if (renderer.test(path)) {
-        const page = await renderPage(path, params, route, renderer)
+        const page = await renderPage(
+          path,
+          params,
+          route,
+          renderer,
+          initialState
+        )
         if (page) {
           return page
         }
       }
     }
-    return renderUnknownPath(path, params, route)
+    return renderUnknownPath(path, params, route, initialState)
   }
 
   async function renderPath(
@@ -132,7 +142,7 @@ export function createPageFactory(context: SausContext) {
     // Render the fallback page.
     if (context.defaultRenderer && context.defaultRoute) {
       try {
-        const page = await renderUnknownPath(path, { error })
+        const page = await renderUnknownPath(path, {}, undefined, { error })
         return next(null, page)
       } catch (e: any) {
         error = e
