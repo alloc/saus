@@ -125,13 +125,7 @@ Renderers receive the following arguments:
 - `params` is an object of route parameters
 - `state` is a JSON object that is sent to the client
 
-Mutate the `state` object with any data you'll need to hydrate the page. By default, it includes the `routeModuleId` (the URL for the `module` argument) and the `routeParams` (same as the `params` argument). Your state is made available on the client-side.
-
-```ts
-import { state } from 'saus/client'
-
-console.log(state)
-```
+The `state` object can contain any JSON data you need to render the page on both client and server. Its properties should only be accessed inside a `render` callback. By default, it includes the `routePath` and `routeParams` (same as the `params` argument).
 
 Renderers are matched in reverse order (except for the default renderer, of course).
 
