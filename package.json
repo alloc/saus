@@ -36,7 +36,7 @@
     "regexparam": "^1.0.0",
     "source-map-support": "^0.5.20",
     "ts-debounce": "^3.0.0",
-    "vite": "^2.3.0",
+    "vite": "npm:@alloc/vite@^2.6.0",
     "yaml": "^1.10.2"
   },
   "devDependencies": {
