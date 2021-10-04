@@ -160,12 +160,12 @@ export async function loadContext(
     logLevel
   )
 
-  // Inject the logger
   const userConfig = loadResult ? loadResult.config : {}
+  userConfig.mode ??= configEnv.mode
+
   const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
     configFile: false,
     customLogger: logger,
-    mode: configEnv.mode,
     esbuild: {
       target: 'node14',
     },
