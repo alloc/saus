@@ -1,6 +1,6 @@
 export interface RouteModule extends Record<string, any> {}
 
-export type RouteLoader = () => Promise<RouteModule>
+export type RouteLoader<T extends object = RouteModule> = () => Promise<T>
 
 export type RouteParams = Record<string, string> & { error?: any }
 
@@ -19,9 +19,24 @@ export type InferRouteParams<T extends string> =
     ? { wild: string }
     : {}
 
-export interface RouteConfig {
-  load: RouteLoader
-  query?: () => string[][] | Promise<string[][]>
+type HasOneKey<T> = [string & keyof T] extends infer Keys
+  ? Keys extends [infer Key]
+    ? Key extends any
+      ? [string & keyof T] extends [Key]
+        ? 1
+        : 0
+      : never
+    : never
+  : never
+
+type StaticPageParams<Params extends object> = 1 extends HasOneKey<Params>
+  ? string | number
+  : readonly (string | number)[]
+
+type Promisable<T> = T | PromiseLike<T>
+
+export interface RouteConfig<Params extends object = RouteParams> {
+  paths?: () => Promisable<readonly StaticPageParams<Params>[]>
 }
 
 export interface ParsedRoute {
@@ -31,6 +46,7 @@ export interface ParsedRoute {
 
 export interface Route extends RouteConfig, ParsedRoute {
   path: string
+  load: RouteLoader
 }
 
 export function getPageFilename(url: string) {
@@ -60,9 +76,12 @@ export function matchRoute(path: string, route: ParsedRoute) {
  *     inlineRouteParams("/orders/:id(\\d+)", ["123"])
  *     // => "/orders/123"
  */
-export function inlineRouteParams(path: string, params: string[]) {
-  const splices: [number, number, string][] = []
-  const regex = /(\*|:\w+)(\?|\([^)]+\))?/g
+export function inlineRouteParams(
+  path: string,
+  params: readonly (string | number)[]
+) {
+  const splices: [number, number, string | number][] = []
+  const regex = /(\*|:\w+)(\([^)]+\))?\??/g
   for (let match: RegExpExecArray, i = 0; (match = regex.exec(path)!); ) {
     splices.push([match.index, regex.lastIndex, params[i++]])
   }

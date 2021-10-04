@@ -3,7 +3,13 @@ import regexParam from 'regexparam'
 import * as vite from 'vite'
 import { readSausYaml } from './config'
 import { RenderCall, Renderer, RenderedPage, RenderHook } from './render'
-import { InferRouteParams, Route, RouteConfig, RouteLoader } from './routes'
+import {
+  InferRouteParams,
+  Route,
+  RouteConfig,
+  RouteParams,
+  RouteLoader,
+} from './routes'
 import { UserConfig, SourceDescription } from './vite'
 
 let context!: SausContext
@@ -94,30 +100,37 @@ export function configureVite(hook: ConfigHook) {
   context.configHooks.push(hook)
 }
 
-type RouteMap = Record<string, RouteConfig | RouteLoader> & {
-  default?: RouteLoader
-}
+/** Define a route */
+export function route<RoutePath extends string, Module extends object>(
+  path: RoutePath,
+  load: RouteLoader<Module>,
+  config?: RouteConfig<Module, InferRouteParams<RoutePath>>
+): void
 
-/**
- * Define routes and associate them with a module and optional params query.
- */
-export function defineRoutes(routes: RouteMap) {
-  for (const path in routes) {
-    if (path === 'default') {
-      context.defaultRoute = routes[path]
-      continue
-    }
-    const config = routes[path]
-    const { keys, pattern } = regexParam(path)
-    if (keys.length && (typeof config == 'function' || !config.query)) {
-      logger.warn(`Dynamic route "${path}" has no "query" function`)
-      continue
-    }
-    context.routes.push(
-      typeof config == 'function'
-        ? { load: config, path, keys, pattern }
-        : { ...config, path, keys, pattern }
-    )
+/** Define the default route */
+export function route(load: RouteLoader): void
+
+/** @internal */
+export function route(
+  pathOrLoad: string | RouteLoader,
+  maybeLoad?: RouteLoader,
+  config?: RouteConfig
+) {
+  const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
+  const load = maybeLoad || (pathOrLoad as RouteLoader)
+  const route = {
+    path,
+    load,
+    ...config,
+  } as Route
+
+  if (path === 'default') {
+    route.keys = []
+    route.pattern = /./
+    context.defaultRoute = route
+  } else {
+    Object.assign(route, regexParam(path))
+    context.routes.push(route)
   }
 }
 

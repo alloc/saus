@@ -1,13 +1,10 @@
-import { defineRoutes } from 'saus'
+import { route } from 'saus'
 import pokemonList from '../../data/pokemon.json'
 
-defineRoutes({
-  '/': () => import('../routes/Home'),
-  '/pokemon/:name': {
-    load: () => import('../routes/Pokemon'),
-    query() {
-      return pokemonList.map(name => [name.toLowerCase()])
-    },
-  },
-  default: () => import('../routes/NotFound'),
+route('/', () => import('../routes/Home'))
+
+route('/pokemon/:name', () => import('../routes/Pokemon'), {
+  paths: () => pokemonList.map(name => name.toLowerCase()),
 })
+
+route(() => import('../routes/NotFound'))

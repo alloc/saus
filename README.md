@@ -31,33 +31,38 @@ Add a `routes` path to your `saus.yaml` config, so Saus knows your routes. Since
 routes: ./src/node/routes.ts
 ```
 
-Routes are defined with the `defineRoutes` function. At a bare minimum, each route needs a function that uses dynamic `import()` to load its root component.
+Routes are defined with the `route` function. They are matched in reverse order.
 
 ```ts
-import { defineRoutes } from 'saus'
+// ./src/node/routes.ts
+import { route } from 'saus'
 
-defineRoutes({
-  '/': () => import('./pages/Home'),
-})
+route('/', () => import('./routes/Home'))
+route('/about', () => import('./routes/About'))
 ```
-
-Routes are matched in reverse order.
 
 ### Route Parameters
 
-If your route's path has parameters and you want to generate static pages at build time, you'll want to define a `query` function as well. Saus uses [regexparam](https://github.com/lukeed/regexparam#readme) to implement route parameters.
+Saus uses [regexparam](https://github.com/lukeed/regexparam#readme) to implement route parameters, so your route paths can contain dynamic parts, including wild cards and regular expressions.
 
-The `query` function must return an array of strings (or a promise thereof) that fills in the parameters of your route's path. Each string represents a statically generated page.
+- Static (`/foo`, `/foo/bar`)
+- Parameter (`/:title`, `/books/:title`, `/books/:genre/:title`)
+- Parameter w/ Suffix (`/movies/:title.mp4`, `/movies/:title.(mp4|mov)`)
+- Optional Parameters (`/:title?`, `/books/:title?`, `/books/:genre/:title?`)
+- Wildcards (`*`, `/books/*`, `/books/:genre/*`)
+
+### Generated Paths
+
+If your route's path has parameters and you want to generate static pages at build time, you'll want to define a `paths` function.
+
+The `paths` function must return an array of strings (or a promise thereof) that fills in the parameters of your route's path. Each string represents a statically generated page.
 
 ```ts
-import { defineRoutes } from 'saus'
+import { route } from 'saus'
 import fs from 'fs-extra'
 
-defineRoutes({
-  '/posts/:id': {
-    import: () => import('./pages/Post'),
-    query: () => fs.readJson('./data/posts.json').map(json => json.postId),
-  },
+route('/posts/:id', () => import('./routes/Post'), {
+  paths: () => fs.readJson('./data/posts.json').map(post => post.id),
 })
 ```
 
@@ -66,11 +71,9 @@ defineRoutes({
 When no matching route is found, Saus uses the default route (if you define one).
 
 ```ts
-import { defineRoutes } from 'saus'
+import { route } from 'saus'
 
-defineRoutes({
-  default: () => import('./pages/404'),
-})
+route(() => import('./routes/404'))
 ```
 
 Running `saus build` will emit `dist/404.html` when a default route is defined, which is often used as an "SPA fallback" by static site hosting providers.
