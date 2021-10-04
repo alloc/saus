@@ -100,6 +100,9 @@ export function configureVite(hook: ConfigHook) {
   context.configHooks.push(hook)
 }
 
+const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
+const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
+
 /** Define a route */
 export function route<RoutePath extends string, Module extends object>(
   path: RoutePath,
@@ -121,6 +124,7 @@ export function route(
   const route = {
     path,
     load,
+    moduleId: parseDynamicImport(load),
     ...config,
   } as Route
 

@@ -35,6 +35,7 @@ export interface ParsedRoute {
 export interface Route extends RouteConfig, ParsedRoute {
   path: string
   load: RouteLoader
+  moduleId: string
 }
 
 export function getPageFilename(url: string) {

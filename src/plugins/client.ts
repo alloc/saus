@@ -64,7 +64,7 @@ export function clientPlugin({
           children: JSON.stringify(page.state),
         })
 
-        const { routeModuleId } = page.state
+        const routeModuleId = page.route.moduleId
         const cssUrls = new Set<string>()
 
         if (configEnv.mode == 'production') {

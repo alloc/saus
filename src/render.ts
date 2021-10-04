@@ -19,9 +19,6 @@ export type PageFactory = ReturnType<typeof createPageFactory>
 const noop = () => {}
 const neverTrue = () => false
 
-const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
-const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
-
 export type RenderedPage = {
   path: string
   html: string
@@ -50,7 +47,6 @@ export function createPageFactory(context: SausContext) {
       return null
     }
     const client = await renderClient(path, renderer)
-    state.routeModuleId = parseDynamicImport(loadRoute)
     state.routeParams = params
     const filename = getPageFilename(path)
     return (context.pages[filename] = {
