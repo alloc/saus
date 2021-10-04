@@ -5,7 +5,7 @@ import { babel, t, NodePath } from '../babel'
 import { SausContext } from '../context'
 import { SourceDescription } from '../vite'
 
-const routesPathStub = path.resolve(__dirname, '../../client/routes.ts')
+const routesPathStub = path.resolve(__dirname, '../../src/client/routes.ts')
 
 export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
   return {
