@@ -41,6 +41,7 @@ export function render(...args: [any, any, any, any?]) {
       args[0],
       async (module, params, { state, didRender }) => {
         const root = await render(module, params, state)
+        state.rootId = 'root'
         if (root) {
           try {
             return renderToString(root)
@@ -57,6 +58,7 @@ export function render(...args: [any, any, any, any?]) {
     return addRenderHook(
       async (module, params, { state, didRender }) => {
         const root = await render(module, params, state)
+        state.rootId = 'root'
         try {
           return renderToString(root)
         } finally {

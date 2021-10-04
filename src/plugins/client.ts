@@ -1,3 +1,4 @@
+import endent from 'endent'
 import * as vite from 'vite'
 import { getPageFilename } from '..'
 import { SausContext, Client } from '../context'
@@ -69,11 +70,14 @@ export function clientPlugin({
 
         if (configEnv.mode == 'production') {
           tags.push({
-            injectTo: 'body',
+            injectTo: 'head-prepend',
             tag: 'script',
             attrs: { type: 'module' },
-            // Must use dynamic import, or else it gets tree-shaked
-            children: `import("${routeModuleId}")`,
+            children: endent`
+              import * as routeModule from "${routeModuleId}"
+              import { hydrate } from "saus/client"
+              hydrate(routeModule)
+            `,
           })
         }
 

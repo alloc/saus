@@ -56,6 +56,7 @@ export type ClientProvider = (
 ) => Client | Promise<Client | void> | void
 
 export type ClientState = Record<string, any> & {
+  rootId?: string
   routePath: string
   routeParams: RouteParams
 }

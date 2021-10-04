@@ -90,14 +90,14 @@ export const getClientProvider =
 
     const defaultImports = endent`
       import ReactDOM from "react-dom"
-      import { state as $$state, initialRoute as $$initialRoute } from "saus/client"
+      import { onHydrate as $onHydrate } from "saus/client"
     `
 
     const hydrateBlock = endent`
-      $$initialRoute.then(routeModule => {
+      $onHydrate((routeModule, state) => {
         ReactDOM.hydrate(
-          render(routeModule, $$state.routeParams, $$state),
-          document.getElementById("root")
+          render(routeModule, state.routeParams, state),
+          document.getElementById(state.rootId)
         )
         ${didRenderFn ? 'didRender()' : ''}
       })
