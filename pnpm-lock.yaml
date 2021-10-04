@@ -33,7 +33,7 @@ importers:
       source-map-support: ^0.5.20
       ts-debounce: ^3.0.0
       typescript: ^4.0.0
-      vite: npm:@alloc/vite@^2.6.0
+      vite: npm:@alloc/vite@2.6.3-1
       yaml: ^1.10.2
     dependencies:
       '@babel/core': 7.15.5
@@ -52,7 +52,7 @@ importers:
       regexparam: 1.3.0
       source-map-support: 0.5.20
       ts-debounce: 3.0.0
-      vite: /@alloc/vite/2.6.2
+      vite: /@alloc/vite/2.6.3-1
       yaml: 1.10.2
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
@@ -125,8 +125,8 @@ packages:
     resolution: {integrity: sha512-3HpQjwvBKe2zrNwUjdIsM/UrgmDtRgoDBwJR7whMvG6xM+SOhu2w7EQyDmpqyxS4+1ENSr1dlCKlSR2JC4L0Ug==}
     dev: true
 
-  /@alloc/vite/2.6.2:
-    resolution: {integrity: sha512-SBN4sF9SCps0iMvrGzTFvbM0KZxbKhUd6Op9Cx6K95hncv8R8iPfCmO4te9FPW/AfGuabjGWwvYgzpVPIH0h+A==}
+  /@alloc/vite/2.6.3-1:
+    resolution: {integrity: sha512-kay5KFlNaTUKbvweiXg+RHq7Q6Yn2XT48pRAYjD054PjY6sbjLSAZMb1Tn8SZCuoKBr5S7aFsjhjU4gDKdLHfw==}
     engines: {node: '>=12.2.0'}
     hasBin: true
     peerDependencies:
@@ -147,6 +147,7 @@ packages:
       postcss: 8.3.8
       resolve: 1.20.0
       rollup: 2.58.0
+      sirv: 1.0.17
     optionalDependencies:
       fsevents: 2.3.2
     dev: false
@@ -740,6 +741,10 @@ packages:
       '@types/yargs': 15.0.14
       chalk: 4.1.2
     dev: true
+
+  /@polka/url/1.0.0-next.21:
+    resolution: {integrity: sha512-a5Sab1C4/icpTZVzZc5Ghpz88yQtGOyNqYXcZgOssB2uuAr+wF/MvN6bgtW32q7HHrvBki+BsZ0OuNv6EV3K9g==}
+    dev: false
 
   /@rollup/pluginutils/4.1.1:
     resolution: {integrity: sha512-clDjivHqWGXi7u+0d2r2sBi4Ie6VLEAzWMIkvJLnDmxoOhBYOTfzGbOQBA32THHm11/LiJbd01tJUpJsbshSWQ==}
@@ -2956,6 +2961,12 @@ packages:
       mime-db: 1.49.0
     dev: true
 
+  /mime/2.5.2:
+    resolution: {integrity: sha512-tqkh47FzKeCPD2PUiPB6pkbMzsCasjxAfC62/Wap5qrUWcb+sFasXUC5I3gYM5iBM8v/Qpn4UK0x+j0iHyFPDg==}
+    engines: {node: '>=4.0.0'}
+    hasBin: true
+    dev: false
+
   /mimic-fn/2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
@@ -3569,6 +3580,15 @@ packages:
     resolution: {integrity: sha512-rqYhcAnZ6d/vTPGghdrw7iumdcbXpsk1b8IG/rz+VWV51DM0p7XCtMoJ3qhPLIbp3tvyt3pKRbaaEMZYpHto8Q==}
     dev: true
 
+  /sirv/1.0.17:
+    resolution: {integrity: sha512-qx9go5yraB7ekT7bCMqUHJ5jEaOC/GXBxUWv+jeWnb7WzHUFdcQPGWk7YmAwFBaQBrogpuSqd/azbC2lZRqqmw==}
+    engines: {node: '>= 10'}
+    dependencies:
+      '@polka/url': 1.0.0-next.21
+      mime: 2.5.2
+      totalist: 1.1.0
+    dev: false
+
   /sisteransi/1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
     dev: true
@@ -3819,6 +3839,11 @@ packages:
       regex-not: 1.0.2
       safe-regex: 1.1.0
     dev: true
+
+  /totalist/1.1.0:
+    resolution: {integrity: sha512-gduQwd1rOdDMGxFG1gEvhV88Oirdo2p+KjoYFU7k2g+i7n6AFFbDQ5kMPUsW0pNbfQsB/cwXvT1i4Bue0s9g5g==}
+    engines: {node: '>=6'}
+    dev: false
 
   /tough-cookie/4.0.0:
     resolution: {integrity: sha512-tHdtEpQCMrc1YLrMaqXXcj6AxhYi/xgit6mZu1+EDWUn+qhUf8wMQoFIy9NXuq23zAwtcB0t/MjACGR18pcRbg==}
