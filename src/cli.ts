@@ -34,4 +34,7 @@ cli.command('build').action(async () => {
   process.exit(errors.length ? 1 : 0)
 })
 
+cli.help()
+cli.version(require('../package.json').version)
+
 export default cli
