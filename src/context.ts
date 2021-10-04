@@ -148,6 +148,7 @@ export async function loadContext(
       noExternal: ['saus/client'],
     },
     optimizeDeps: {
+      entries: [renderPath, routesPath],
       exclude: ['saus'],
     },
   })
