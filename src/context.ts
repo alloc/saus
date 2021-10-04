@@ -54,7 +54,7 @@ export type ClientState = Record<string, any>
 export type ConfigHook = (
   config: UserConfig,
   context: SausContext
-) => void | Promise<void>
+) => UserConfig | null | void | Promise<UserConfig | null | void>
 
 /**
  * Hook into the rendering process that generates HTML for a page.

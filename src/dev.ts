@@ -68,8 +68,10 @@ async function startServer(
   await loadConfigHooks(context, loader)
   await loader.close()
 
+  let config = klona(context.config)
+
   const contextPaths = [context.renderPath, context.routesPath]
-  const config = vite.mergeConfig(klona(context.config), <vite.UserConfig>{
+  config = vite.mergeConfig(config, <vite.UserConfig>{
     configFile: false,
     plugins: [
       servePlugin(context), // Page renderer
@@ -85,7 +87,10 @@ async function startServer(
   })
 
   context.configHooks.forEach(hook => {
-    hook(config, context)
+    const result = hook(config, context)
+    if (result) {
+      config = vite.mergeConfig(config, result)
+    }
   })
 
   // Listen immediately to ensure `buildStart` hook is called.

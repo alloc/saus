@@ -39,9 +39,11 @@ export async function build(inlineConfig?: vite.UserConfig) {
   await loadConfigHooks(context, loader)
   await loader.close()
 
-  resetRenderHooks(context)
   context.configHooks.forEach(hook => {
-    hook(context.config, context)
+    const result = hook(context.config, context)
+    if (result) {
+      context.config = vite.mergeConfig(context.config, result)
+    }
   })
 
   context.config.plugins ??= []
@@ -49,6 +51,8 @@ export async function build(inlineConfig?: vite.UserConfig) {
 
   loader = await createLoader(context)
   await loadRoutes(context, loader)
+
+  resetRenderHooks(context)
   await loadRenderHooks(context, loader)
 
   const pageFactory = createPageFactory(context)
