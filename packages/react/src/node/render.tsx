@@ -2,6 +2,7 @@ import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
   ClientState,
+  InferRouteParams,
   logger,
   render as addRenderHook,
   RenderCall,
@@ -12,16 +13,16 @@ import { getClientProvider } from './client'
 
 fixReactBug()
 
-type RenderHook<T> = (
+type RenderHook<T, Params = RouteParams> = (
   module: RouteModule,
-  props: RouteParams,
+  params: Params,
   state: ClientState
 ) => T | Promise<T>
 
 /** Render a page for a route. */
-export function render(
-  route: string,
-  render: RenderHook<ReactElement | null | void>,
+export function render<Route extends string>(
+  route: Route,
+  render: RenderHook<ReactElement | null | void, InferRouteParams<Route>>,
   hash?: string,
   start?: number
 ): RenderCall

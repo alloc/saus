@@ -170,9 +170,9 @@ export type RenderResult<T> =
   | [Exclude<T, null | void>, ClientState, Renderer]
   | (T extends null | void ? null : never)
 
-export type RenderHook<T> = (
+export type RenderHook<T, Params = RouteParams> = (
   module: RouteModule,
-  params: RouteParams,
+  params: Params,
   context: RenderContext
 ) => T | Promise<T>
 

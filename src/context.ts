@@ -3,7 +3,7 @@ import regexParam from 'regexparam'
 import * as vite from 'vite'
 import { readSausYaml } from './config'
 import { RenderCall, Renderer, RenderedPage, RenderHook } from './render'
-import { Route, RouteConfig, RouteLoader } from './routes'
+import { InferRouteParams, Route, RouteConfig, RouteLoader } from './routes'
 import { UserConfig, SourceDescription } from './vite'
 
 let context!: SausContext
@@ -61,9 +61,9 @@ export type ConfigHook = (
  *
  * Return nothing to defer to the next renderer.
  */
-export function render(
-  route: string,
-  hook: RenderHook<string | null | void>,
+export function render<Route extends string>(
+  route: Route,
+  hook: RenderHook<string | null | void, InferRouteParams<Route>>,
   hash?: string,
   start?: number
 ): RenderCall

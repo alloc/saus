@@ -4,6 +4,21 @@ export type RouteLoader = () => Promise<RouteModule>
 
 export type RouteParams = Record<string, string> & { error?: any }
 
+export type InferRouteParams<T extends string> =
+  T extends `${infer Prev}/*/${infer Rest}`
+    ? InferRouteParams<Prev> & { wild: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}?/${infer Rest}`
+    ? { [K in P]?: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}/${infer Rest}`
+    ? { [K in P]: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}?`
+    ? { [K in P]?: string }
+    : T extends `${string}:${infer P}`
+    ? { [K in P]: string }
+    : T extends `${string}*`
+    ? { wild: string }
+    : {}
+
 export interface RouteConfig {
   load: RouteLoader
   query?: () => string[][] | Promise<string[][]>
