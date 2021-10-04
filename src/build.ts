@@ -158,6 +158,7 @@ export async function build(inlineConfig?: vite.UserConfig) {
         },
         plugins: [
           clientPlugin(context),
+          routesPlugin(context),
           {
             name: 'saus:build',
             enforce: 'post',
