@@ -37,7 +37,7 @@ export interface SausContext {
   /** Rendered page cache */
   pages: Record<string, RenderedPage>
   /** The route used when no route is matched */
-  defaultRoute?: RouteLoader
+  defaultRoute?: Route
   /** Path to the render module */
   renderPath: string
   /** The renderers for specific routes */
@@ -55,7 +55,10 @@ export type ClientProvider = (
   renderer: Renderer<string>
 ) => Client | Promise<Client | void> | void
 
-export type ClientState = Record<string, any>
+export type ClientState = Record<string, any> & {
+  routePath: string
+  routeParams: RouteParams
+}
 
 export type ConfigHook = (
   config: UserConfig,

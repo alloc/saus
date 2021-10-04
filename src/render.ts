@@ -9,7 +9,6 @@ import {
   getPageFilename,
   matchRoute,
   Route,
-  RouteLoader,
   RouteModule,
   RouteParams,
 } from './routes'
@@ -22,6 +21,7 @@ const neverTrue = () => false
 export type RenderedPage = {
   path: string
   html: string
+  route: Route
   state: ClientState
   client?: Client
   renderer: Renderer<string>
@@ -34,10 +34,10 @@ export function createPageFactory(context: SausContext) {
   async function renderPage(
     path: string,
     params: RouteParams,
-    loadRoute: RouteLoader,
+    route: Route,
     renderer: Renderer
   ): Promise<RenderedPage | null> {
-    const routeModule = await loadRoute()
+    const routeModule = await route.load()
     const state: ClientState = {}
     const html = await renderer.render(routeModule, params, {
       didRender: renderer.didRender || noop,
@@ -47,11 +47,13 @@ export function createPageFactory(context: SausContext) {
       return null
     }
     const client = await renderClient(path, renderer)
+    state.routePath = route.path
     state.routeParams = params
     const filename = getPageFilename(path)
     return (context.pages[filename] = {
       path,
       html,
+      route,
       state,
       client,
       renderer,
@@ -72,12 +74,15 @@ export function createPageFactory(context: SausContext) {
   async function renderUnknownPath(
     path: string,
     params: RouteParams = {},
-    loadRoute: RouteLoader = context.defaultRoute!
+    route = context.defaultRoute
   ) {
+    if (!route) {
+      return null
+    }
     return renderPage(
       path,
       params,
-      loadRoute,
+      route,
       context.defaultRenderer!
     ) as Promise<RenderedPage>
   }
@@ -89,13 +94,13 @@ export function createPageFactory(context: SausContext) {
   ) {
     for (const renderer of renderers) {
       if (renderer.test(path)) {
-        const page = await renderPage(path, params, route.load, renderer)
+        const page = await renderPage(path, params, route, renderer)
         if (page) {
           return page
         }
       }
     }
-    return renderUnknownPath(path, params, route.load)
+    return renderUnknownPath(path, params, route)
   }
 
   async function renderPath(
