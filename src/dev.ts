@@ -70,7 +70,7 @@ async function startServer(
   onError: (e: any) => void,
   isRestart?: boolean
 ) {
-  const loader = await createLoader(context)
+  const loader = await createLoader(context, { cacheDir: false })
   await loadConfigHooks(context, loader)
   await loader.close()
 
