@@ -52,14 +52,14 @@ function loadPage(route: string, params?: RouteParams) {
   // Bail out if the route changes while loading.
   const page = (nextPage = routes[route]().then(module => {
     if (page == nextPage) {
-      setPage(renderPage(module, params || {}))
+      setPage(renderPage(module, params))
     }
   }))
 }
 
 // This function needs to match what the server does.
 // TODO: It should probably be generated?
-function renderPage(mod: RouteModule, params: RouteParams) {
+function renderPage(mod: RouteModule, params?: RouteParams) {
   const Page = mod.default as React.ComponentType<any>
   return <Page {...params} />
 }
