@@ -142,6 +142,7 @@ export async function loadContext(
   // Inject the logger
   const userConfig = loadResult ? loadResult.config : {}
   const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
+    configFile: false,
     customLogger: logger,
     mode: configEnv.mode,
     esbuild: {
@@ -221,7 +222,6 @@ export function createLoader(
   return vite.createServer({
     ...context.config,
     ...inlineConfig,
-    configFile: false,
     logLevel: 'error',
     server: { middlewareMode: 'ssr' },
   })
