@@ -115,7 +115,10 @@ export function createPageFactory(context: SausContext) {
 
   async function renderPath(
     path: string,
-    next: (error?: Error | null, result?: RenderedPage) => Promise<void> | void
+    next: (
+      error?: Error | null,
+      result?: RenderedPage | null
+    ) => Promise<void> | void
   ) {
     let error: any
 
