@@ -147,6 +147,9 @@ export async function loadContext(
     ssr: {
       noExternal: ['saus/client'],
     },
+    optimizeDeps: {
+      exclude: ['saus'],
+    },
   })
 
   return {
