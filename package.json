@@ -19,6 +19,9 @@
     "dev": "tsc -p . --incremental --watch",
     "prepare": "yarn build"
   },
+  "engines": {
+    "node": ">=14"
+  },
   "dependencies": {
     "@babel/core": "^7.15.5",
     "@babel/plugin-syntax-typescript": "^7.14.5",
