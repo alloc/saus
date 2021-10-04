@@ -181,15 +181,15 @@ export type RenderResult<T> =
   | [Exclude<T, null | void>, ClientState, Renderer]
   | (T extends null | void ? null : never)
 
-export type RenderHook<T, Params = RouteParams> = (
+export type RenderHook<T, Params = RouteParams, State = Record<string, any>> = (
   module: RouteModule,
   params: Params,
-  context: RenderContext
+  context: RenderContext<State>
 ) => T | Promise<T>
 
-export type RenderContext = {
+export type RenderContext<State = Record<string, any>> = {
   /** JSON state used by the client */
-  readonly state: Record<string, any>
+  readonly state: State
   /** Call this to reset global UI state */
   readonly didRender: () => void
 }

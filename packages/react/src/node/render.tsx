@@ -1,7 +1,6 @@
 import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
-  ClientState,
   InferRouteParams,
   logger,
   render as addRenderHook,
@@ -13,23 +12,27 @@ import { getClientProvider } from './client'
 
 fixReactBug()
 
-type RenderHook<T, Params = RouteParams> = (
+type RenderHook<T, Params = RouteParams, State = Record<string, any>> = (
   module: RouteModule,
   params: Params,
-  state: ClientState
+  state: State
 ) => T | Promise<T>
 
 /** Render a page for a route. */
-export function render<Route extends string>(
+export function render<Route extends string, State extends Record<string, any>>(
   route: Route,
-  render: RenderHook<ReactElement | null | void, InferRouteParams<Route>>,
+  render: RenderHook<
+    ReactElement | null | void,
+    InferRouteParams<Route>,
+    State
+  >,
   hash?: string,
   start?: number
 ): RenderCall
 
 /** Set the fallback renderer. */
-export function render(
-  render: RenderHook<ReactElement>,
+export function render<State extends Record<string, any>>(
+  render: RenderHook<ReactElement, RouteParams, State>,
   hash?: string,
   start?: number
 ): RenderCall

@@ -72,16 +72,16 @@ export type ConfigHook = (
  *
  * Return nothing to defer to the next renderer.
  */
-export function render<Route extends string>(
+export function render<Route extends string, State extends Record<string, any>>(
   route: Route,
-  hook: RenderHook<string | null | void, InferRouteParams<Route>>,
+  hook: RenderHook<string | null | void, InferRouteParams<Route>, State>,
   hash?: string,
   start?: number
 ): RenderCall
 
 /** Set the fallback renderer. */
-export function render(
-  hook: RenderHook<string>,
+export function render<State extends Record<string, any>>(
+  hook: RenderHook<string, RouteParams, State>,
   hash?: string,
   start?: number
 ): RenderCall
