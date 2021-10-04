@@ -49,6 +49,12 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       .catch(onError)
   }
 
+  if (logger.isLogged('info')) {
+    logger.info('')
+    const server = (await serverPromise)!
+    vite.printHttpServerUrls(server.httpServer!, server.config)
+  }
+
   return {
     restart,
     close: () =>
