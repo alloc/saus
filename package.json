@@ -36,7 +36,7 @@
     "md5-hex": "^3.0.0",
     "misty": "^1.4.0",
     "physical-cpu-count": "^2.0.0",
-    "regexparam": "^1.0.0",
+    "regexparam": "^2.0.0",
     "source-map-support": "^0.5.20",
     "ts-debounce": "^3.0.0",
     "vite": "npm:@alloc/vite@2.6.3-1",

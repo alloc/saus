@@ -1,6 +1,7 @@
 import * as vite from 'vite'
 import cpuCount from 'physical-cpu-count'
 import AsyncTaskGroup from 'async-task-group'
+import * as RegexParam from 'regexparam'
 import { startTask } from 'misty/task'
 import {
   createLoader,
@@ -10,12 +11,7 @@ import {
   loadRoutes,
   resetRenderHooks,
 } from './context'
-import {
-  getPageFilename,
-  inlineRouteParams,
-  Route,
-  RouteParams,
-} from './routes'
+import { getPageFilename, Route, RouteParams } from './routes'
 import { createPageFactory, RenderedPage } from './render'
 import { clientPlugin } from './plugins/client'
 import { renderMetaPlugin } from './plugins/renderMeta'
@@ -111,27 +107,25 @@ export async function build(inlineConfig?: vite.UserConfig) {
     enqueuePage(path, () => pageFactory.renderMatchedPath(path, params, route))
 
   for (const route of context.routes) {
-    if (route.query) {
+    if (route.paths) {
       if (!route.keys.length) {
         errors.push({
           path: route.path,
-          reason: `Route with "query" needs a route parameter`,
-        })
-      } else if (route.keys.length > 1) {
-        errors.push({
-          path: route.path,
-          reason: `Multiple route parameters not supported yet`,
+          reason: `Route with "paths" needs a route parameter`,
         })
       } else {
-        for (const values of await route.query()) {
-          enqueueRoute(
-            inlineRouteParams(route.path, values),
-            route.keys.reduce<RouteParams>((params, key, i) => {
-              params[key] = values[i]
-              return params
-            }, {}),
-            route
-          )
+        for (const result of await route.paths()) {
+          const values = Array.isArray(result)
+            ? (result as (string | number)[])
+            : [result]
+
+          const params: RouteParams = {}
+          route.keys.forEach((key, i) => {
+            params[key] = '' + values[i]
+          })
+
+          const path = RegexParam.inject(route.path, params)
+          enqueueRoute(path, params, route)
         }
       }
     } else if (!route.keys.length) {

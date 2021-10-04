@@ -1,4 +1,4 @@
-import regexParam from 'regexparam'
+import * as RegexParam from 'regexparam'
 import type {
   Client,
   ClientState,
@@ -160,7 +160,7 @@ export class Renderer<T = any> {
     readonly start?: number
   ) {
     if (route) {
-      const regex = regexParam(route).pattern
+      const regex = RegexParam.parse(route).pattern
       this.test = regex.test.bind(regex)
     }
   }

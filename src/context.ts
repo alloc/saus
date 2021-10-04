@@ -1,5 +1,5 @@
 import path from 'path'
-import regexParam from 'regexparam'
+import * as RegexParam from 'regexparam'
 import * as vite from 'vite'
 import { readSausYaml } from './config'
 import { RenderCall, Renderer, RenderedPage, RenderHook } from './render'
@@ -129,7 +129,7 @@ export function route(
     route.pattern = /./
     context.defaultRoute = route
   } else {
-    Object.assign(route, regexParam(path))
+    Object.assign(route, RegexParam.parse(path))
     context.routes.push(route)
   }
 }
