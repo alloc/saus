@@ -47,7 +47,7 @@ export type Client = { id: string } & SourceDescription
 export type ClientProvider = (
   context: SausContext,
   renderer: Renderer<string>
-) => Client | Promise<Client>
+) => Client | Promise<Client | void> | void
 
 export type ClientState = Record<string, any>
 

@@ -12,9 +12,7 @@ import {
 
 export const getClientProvider =
   (): ClientProvider =>
-  ({ renderPath }, renderer) => {
-    const { hash, start } = renderer
-
+  ({ renderPath }, { hash, start }) => {
     const renderFile = parseFile(renderPath)
 
     let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
@@ -25,6 +23,10 @@ export const getClientProvider =
       .find(
         path => path.node.start === start
       ) as NodePath<t.ExpressionStatement>
+
+    if (!renderStmt) {
+      return // Something ain't right.
+    }
 
     renderStmt.traverse({
       Identifier(path) {

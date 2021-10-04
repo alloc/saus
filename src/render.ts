@@ -67,7 +67,7 @@ export function createPageFactory(context: SausContext) {
     if (!client) {
       const { getClient } = renderer
       if (getClient) {
-        client = await getClient(context, renderer)
+        client = (await getClient(context, renderer)) || undefined
       }
     }
     return client
