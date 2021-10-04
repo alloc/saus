@@ -105,9 +105,14 @@ Define a Saus renderer by calling the `render` function in your render module. I
 ```ts
 import { render, escape } from 'saus'
 
-// Naïve renderer that expects "module.default" to be an HTML string.
-render(async (module, params, state) => {
-  return escape`<div>${module.default}</div>`
+// Simple renderer that expects an HTML string
+render((module, params, state) => {
+  return escape`<html>${module.default}</html>`
+})
+
+// Render differently for a specific route
+render('/posts/:id', async (module, params, state) => {
+  return escape`<html>${await fetchPost(params.id)}</html>`
 })
 ```
 
