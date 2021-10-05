@@ -4,28 +4,33 @@ import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { SausContext } from '../context'
 import { babel, t, NodePath } from '../babel'
 
-export function renderMetaPlugin({ renderPath }: SausContext): vite.Plugin {
+export function renderMetaPlugin({
+  renderPath,
+  configEnv,
+}: SausContext): vite.Plugin {
   return {
     name: 'saus:render-meta',
     enforce: 'pre',
     transform(code, id) {
       if (id === renderPath) {
+        const plugins: babel.PluginItem[] = [
+          ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
+          { visitor: { Program: injectRenderMetadata } },
+        ]
+        if (configEnv.mode === 'production') {
+          plugins.push({ visitor: { CallExpression: assumePurity } })
+        }
         return babel.transformSync(code, {
           sourceMaps: true,
           filename: id,
-          plugins: [
-            ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
-            // Append the `hash` and `start` arguments to render calls.
-            { visitor: { Program: injectRenderMetadata } },
-            // Annotate all function calls as pure, so Rollup can treeshake them.
-            { visitor: { CallExpression: annotateAsPure } },
-          ],
+          plugins,
         }) as vite.TransformResult
       }
     },
   }
 }
 
+// Append the `hash` and `start` arguments to render calls.
 function injectRenderMetadata(program: NodePath<t.Program>) {
   program.traverse({
     CallExpression(path) {
@@ -41,4 +46,12 @@ function injectRenderMetadata(program: NodePath<t.Program>) {
       }
     },
   })
+}
+
+// Function calls whose result is used are assumed to be pure.
+// This makes it easier for Rollup to treeshake them.
+function assumePurity(call: NodePath<t.CallExpression>) {
+  if (!call.parentPath.isExpressionStatement()) {
+    annotateAsPure(call)
+  }
 }
