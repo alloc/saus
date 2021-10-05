@@ -167,8 +167,8 @@ export async function loadContext(
   const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
     configFile: false,
     customLogger: logger,
-    esbuild: {
-      target: 'node14',
+    esbuild: userConfig.esbuild !== false && {
+      target: userConfig.esbuild?.target || 'node14',
     },
     ssr: {
       noExternal: ['saus/client'],
