@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/react": "^17.0.25",
     "@types/react-dom": "^17.0.9",
-    "saus": "^0.1.0"
+    "saus": "*"
   },
   "dependencies": {
     "@types/babel__core": "^7.1.16",

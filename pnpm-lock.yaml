@@ -73,10 +73,10 @@ importers:
 
   examples/react-basic:
     specifiers:
-      '@saus/react': ^0.1.0
+      '@saus/react': '*'
       '@types/node': ^16.10.2
       navaid: ^1.2.0
-      saus: ^0.1.0
+      saus: '*'
     dependencies:
       '@saus/react': link:../../packages/react
       navaid: 1.2.0
@@ -90,7 +90,7 @@ importers:
       '@types/react': ^17.0.25
       '@types/react-dom': ^17.0.9
       '@vitejs/plugin-react': ^1.0.1
-      saus: ^0.1.0
+      saus: '*'
     dependencies:
       '@types/babel__core': 7.1.16
       '@vitejs/plugin-react': 1.0.1
