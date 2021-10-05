@@ -72,10 +72,10 @@ export function createPageFactory(context: SausContext) {
     return client
   }
 
-  async function renderUnknownPath(
+  async function renderDefaultPage(
     path: string,
-    params: RouteParams = {},
-    route = context.defaultRoute,
+    params: RouteParams,
+    route?: Route,
     initialState?: Record<string, any>
   ) {
     if (!route) {
@@ -88,6 +88,13 @@ export function createPageFactory(context: SausContext) {
       context.defaultRenderer!,
       initialState
     )
+  }
+
+  async function renderUnknownPath(
+    path: string,
+    initialState?: Record<string, any>
+  ) {
+    return renderDefaultPage(path, {}, context.defaultRoute, initialState)
   }
 
   async function renderMatchedPath(
@@ -110,7 +117,7 @@ export function createPageFactory(context: SausContext) {
         }
       }
     }
-    return renderUnknownPath(path, params, route, initialState)
+    return renderDefaultPage(path, params, route, initialState)
   }
 
   async function renderPath(
@@ -145,7 +152,7 @@ export function createPageFactory(context: SausContext) {
     // Render the fallback page.
     if (context.defaultRenderer && context.defaultRoute) {
       try {
-        const page = await renderUnknownPath(path, {}, undefined, { error })
+        const page = await renderUnknownPath(path, { error })
         return next(null, page)
       } catch (e: any) {
         error = e
