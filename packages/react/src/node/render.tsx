@@ -1,50 +1,51 @@
 import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
-  InferRouteParams,
   logger,
   render as addRenderHook,
+  ClientState,
+  InferRouteParams,
+  PageRequest,
   RenderCall,
   RouteModule,
-  RouteParams,
 } from 'saus'
 import { getClientProvider } from './client'
 
 fixReactBug()
 
-type RenderHook<T, Params = RouteParams, State = Record<string, any>> = (
-  module: RouteModule,
-  params: Params,
-  state: State
-) => T | Promise<T>
+type Promisable<T> = T | PromiseLike<T>
 
 /** Render a page for a route. */
-export function render<Route extends string, State extends Record<string, any>>(
+export function render<
+  Route extends string,
+  Module extends object = RouteModule,
+  State extends object = ClientState
+>(
   route: Route,
-  render: RenderHook<
-    ReactElement | null | void,
-    InferRouteParams<Route>,
-    State
-  >,
-  hash?: string,
-  start?: number
+  render: (
+    module: Module,
+    request: PageRequest<State, InferRouteParams<Route>>
+  ) => Promisable<JSX.Element | null | void>
 ): RenderCall
 
 /** Set the fallback renderer. */
-export function render<State extends Record<string, any>>(
-  render: RenderHook<ReactElement, RouteParams, State>,
-  hash?: string,
-  start?: number
+export function render<
+  Module extends object = RouteModule,
+  State extends object = ClientState
+>(
+  render: (
+    module: Module,
+    request: PageRequest<State>
+  ) => Promisable<JSX.Element>
 ): RenderCall
 
-export function render(...args: [any, any, any, any?]) {
+export function render(...args: any[]) {
   if (typeof args[0] === 'string') {
-    const render = args[1] as RenderHook<ReactElement | null | void>
+    const [route, render, hash, start] = args
     return addRenderHook(
-      args[0],
-      async (module, params, { state, didRender }) => {
-        const root = await render(module, params, state)
-        state.rootId = 'root'
+      route,
+      async (module, request, { didRender }) => {
+        const root = await render(module, request)
         if (root) {
           try {
             return renderToString(root)
@@ -53,23 +54,22 @@ export function render(...args: [any, any, any, any?]) {
           }
         }
       },
-      args[2],
-      args[3]
+      hash,
+      start
     ).withClient(getClientProvider())
   } else {
-    const render = args[0] as RenderHook<ReactElement>
+    const [render, hash, start] = args
     return addRenderHook(
-      async (module, params, { state, didRender }) => {
-        const root = await render(module, params, state)
-        state.rootId = 'root'
+      async (module, request, { didRender }) => {
+        const root = await render(module, request)
         try {
           return renderToString(root)
         } finally {
           didRender()
         }
       },
-      args[1],
-      args[2]
+      hash,
+      start
     ).withClient(getClientProvider())
   }
 }

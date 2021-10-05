@@ -17,7 +17,7 @@ import {
 
 export const getClientProvider =
   (): ClientProvider =>
-  ({ renderPath, configEnv }, { hash, start }) => {
+  ({ renderPath }, { hash, start }) => {
     const renderFile = parseFile(renderPath)
 
     let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
@@ -105,10 +105,11 @@ export const getClientProvider =
     `
 
     const hydrateBlock = endent`
-      $onHydrate(async (routeModule, state) => {
+      $onHydrate(async (routeModule, request) => {
+        const {rootId = "root"} = request.state
         ReactDOM.hydrate(
-          await render(routeModule, state.routeParams, state),
-          document.getElementById(state.rootId)
+          await render(routeModule, request),
+          document.getElementById(rootId)
         )
         ${didRenderFn ? 'didRender()' : ''}
       })

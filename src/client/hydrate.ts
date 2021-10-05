@@ -1,14 +1,16 @@
-import { state, ClientState, RouteModule } from './state'
+import type { PageRequest } from '../render'
+import { RouteModule } from './state'
 import routes from './routes'
 
-export type HydrateFn = (routeModule: RouteModule, state: ClientState) => void
+export { PageRequest }
+
+export type HydrateFn = (routeModule: RouteModule, request: PageRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: RouteModule, nextState?: ClientState) {
-  if (nextState) Object.assign(state, nextState)
-  routes[state.routePath] = () => Promise.resolve(routeModule)
-  runHydration(routeModule, state)
+export function hydrate(routeModule: RouteModule, request: PageRequest) {
+  routes[request.state.routePath] = async () => routeModule
+  runHydration(routeModule, request)
 }
 
 // TODO: support multiple hydration handlers

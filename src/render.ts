@@ -5,18 +5,11 @@ import type {
   ClientProvider,
   SausContext,
 } from './context'
-import {
-  getPageFilename,
-  matchRoute,
-  Route,
-  RouteModule,
-  RouteParams,
-} from './routes'
+import { getPageFilename, matchRoute, Route, RouteParams } from './routes'
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
 const noop = () => {}
-const neverTrue = () => false
 
 export type RenderedPage = {
   path: string
@@ -39,17 +32,22 @@ export function createPageFactory(context: SausContext) {
     initialState?: Record<string, any>
   ): Promise<RenderedPage | null> {
     const routeModule = await route.load()
-    const state = { ...initialState } as ClientState
-    const html = await renderer.render(routeModule, params, {
+    const state = {
+      ...initialState,
+      routePath: route.path,
+      routeParams: params,
+    } as ClientState
+
+    const request: PageRequest = { path, params, state }
+    const html = await renderer.render(routeModule, request, {
       didRender: renderer.didRender || noop,
-      state,
     })
+
     if (html == null) {
       return null
     }
+
     const client = await renderClient(path, renderer)
-    state.routePath = route.path
-    state.routeParams = params
     const filename = getPageFilename(path)
     return (context.pages[filename] = {
       path,
@@ -174,38 +172,49 @@ export function createPageFactory(context: SausContext) {
 }
 
 export class Renderer<T = any> {
-  test: (path: string) => boolean = neverTrue
+  test: (path: string) => boolean
   didRender?: () => void
   getClient?: ClientProvider
 
   constructor(
     route: string,
-    readonly render: RenderHook<T>,
+    readonly render: (
+      module: object,
+      request: PageRequest,
+      context: RenderContext
+    ) => T | Promise<T>,
     readonly hash?: string,
     readonly start?: number
   ) {
     if (route) {
       const regex = RegexParam.parse(route).pattern
       this.test = regex.test.bind(regex)
+    } else {
+      this.test = () => true
     }
   }
 }
 
-export type RenderResult<T> =
-  | [Exclude<T, null | void>, ClientState, Renderer]
-  | (T extends null | void ? null : never)
-
-export type RenderHook<T, Params = RouteParams, State = Record<string, any>> = (
-  module: RouteModule,
-  params: Params,
-  context: RenderContext<State>
-) => T | Promise<T>
-
-export type RenderContext<State = Record<string, any>> = {
-  /** JSON state used by the client */
-  readonly state: State
-  /** Call this to reset global UI state */
+/**
+ * This context never exists on the client, so it should only be
+ * accessed by renderer packages.
+ */
+export type RenderContext = {
+  /**
+   * Trigger the post-render effect (if one exists). This should be
+   * called *immediately* after the HTML string is returned. We
+   * recommend using a try-finally block.
+   */
   readonly didRender: () => void
+}
+
+export type PageRequest<
+  State extends object = ClientState,
+  Params extends RouteParams = RouteParams
+> = {
+  path: string
+  state: State
+  params: Params
 }
 
 export class RenderCall {

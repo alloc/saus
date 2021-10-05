@@ -2,7 +2,7 @@ import * as React from 'react'
 import { render } from '@saus/react'
 import { App } from './App'
 
-render((module, params) => {
+render((module, { params }) => {
   const Page = module.default as React.ComponentType<any>
   return (
     <html>

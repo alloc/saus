@@ -116,8 +116,12 @@ export function clientPlugin({
           attrs: { type: 'module' },
           children: endent`
             import * as routeModule from "${routeModuleId}"
-            import { hydrate } from "${sausClientId}"
-            hydrate(routeModule)
+            import { hydrate, state } from "${sausClientId}"
+            hydrate(routeModule, {
+              path: location.pathname,
+              params: state.routeParams,
+              state,
+            })
           `,
         })
 

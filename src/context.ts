@@ -1,12 +1,14 @@
 import path from 'path'
 import * as RegexParam from 'regexparam'
 import * as vite from 'vite'
+import { PageRequest } from '.'
 import { readSausYaml } from './config'
-import { RenderCall, Renderer, RenderedPage, RenderHook } from './render'
+import { RenderCall, Renderer, RenderedPage, RenderContext } from './render'
 import {
   InferRouteParams,
   Route,
   RouteConfig,
+  RouteModule,
   RouteParams,
   RouteLoader,
 } from './routes'
@@ -67,26 +69,41 @@ export type ConfigHook = (
   context: SausContext
 ) => UserConfig | null | void | Promise<UserConfig | null | void>
 
+type Promisable<T> = T | PromiseLike<T>
+
 /**
  * Hook into the rendering process that generates HTML for a page.
  *
  * Return nothing to defer to the next renderer.
  */
-export function render<Route extends string, State extends Record<string, any>>(
+export function render<
+  Route extends string,
+  Module extends object = RouteModule,
+  State extends object = ClientState
+>(
   route: Route,
-  hook: RenderHook<string | null | void, InferRouteParams<Route>, State>,
-  hash?: string,
-  start?: number
+  render: (
+    module: Module,
+    request: PageRequest<State, InferRouteParams<Route>>,
+    context: RenderContext
+  ) => Promisable<string | null | void>,
+  ...metadata: any[]
 ): RenderCall
 
 /** Set the fallback renderer. */
-export function render<State extends Record<string, any>>(
-  hook: RenderHook<string, RouteParams, State>,
-  hash?: string,
-  start?: number
+export function render<
+  Module extends object = RouteModule,
+  State extends object = ClientState
+>(
+  render: (
+    module: Module,
+    request: PageRequest<State>,
+    context: RenderContext
+  ) => Promisable<string>,
+  ...metadata: any[]
 ): RenderCall
 
-export function render(...args: [any, any, any]) {
+export function render(...args: [any, any?]) {
   let renderer: Renderer<any>
   if (typeof args[0] === 'string') {
     renderer = new Renderer(...args)
@@ -121,8 +138,8 @@ export function route(load: RouteLoader): void
 /** @internal */
 export function route(
   pathOrLoad: string | RouteLoader,
-  maybeLoad?: RouteLoader,
-  config?: RouteConfig
+  maybeLoad?: RouteLoader<any>,
+  config?: RouteConfig<any, any>
 ) {
   const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
   const load = maybeLoad || (pathOrLoad as RouteLoader)
