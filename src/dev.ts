@@ -14,7 +14,7 @@ import {
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
-import { renderMetaPlugin } from './plugins/renderMeta'
+import { renderPlugin } from './plugins/render'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const root = inlineConfig?.root || process.cwd()
@@ -80,10 +80,10 @@ async function startServer(
   config = vite.mergeConfig(config, <vite.UserConfig>{
     configFile: false,
     plugins: [
-      servePlugin(context), // Page renderer
-      clientPlugin(context), // Client hydration
-      routesPlugin(context), // Routes module
-      renderMetaPlugin(context), // Render metadata
+      servePlugin(context),
+      clientPlugin(context),
+      routesPlugin(context),
+      renderPlugin(context),
     ],
     server: {
       watch: {

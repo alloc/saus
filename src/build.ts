@@ -16,7 +16,7 @@ import { Rollup } from './rollup'
 import { getPageFilename, Route, RouteParams } from './routes'
 import { createPageFactory, RenderedPage } from './render'
 import { clientPlugin } from './plugins/client'
-import { renderMetaPlugin } from './plugins/renderMeta'
+import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 
 export type FailedPage = { path: string; reason: string }
@@ -38,16 +38,18 @@ export async function build(inlineConfig?: vite.UserConfig) {
   await loadConfigHooks(context, loader)
   await loader.close()
 
+  let { config } = context
   context.configHooks.forEach(hook => {
-    const result = hook(context.config, context)
+    const result = hook(config, context)
     if (result) {
-      context.config = vite.mergeConfig(context.config, result)
+      config = vite.mergeConfig(config, result)
     }
   })
 
-  context.config.plugins ??= []
-  context.config.plugins.unshift(renderMetaPlugin(context))
+  config.plugins ??= []
+  config.plugins.unshift(renderPlugin(context))
 
+  context.config = config
   loader = await createLoader(context)
   await loadRoutes(context, loader)
 

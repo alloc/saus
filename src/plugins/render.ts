@@ -3,27 +3,30 @@ import md5Hex from 'md5-hex'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { SausContext } from '../context'
 import { babel, t, NodePath } from '../babel'
+import { isClientUrl } from './client'
 
-export function renderMetaPlugin({
+export function renderPlugin({
   renderPath,
   configEnv,
 }: SausContext): vite.Plugin {
   return {
-    name: 'saus:render-meta',
+    name: 'saus:render',
     enforce: 'pre',
     transform(code, id) {
+      let visitor: babel.Visitor | undefined
       if (id === renderPath) {
-        const plugins: babel.PluginItem[] = [
-          ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
-          { visitor: { Program: injectRenderMetadata } },
-        ]
-        if (configEnv.mode === 'production') {
-          plugins.push({ visitor: { CallExpression: assumePurity } })
-        }
+        visitor = { Program: injectRenderMetadata }
+      } else if (isClientUrl(id) && configEnv.mode === 'production') {
+        visitor = { CallExpression: assumePurity }
+      }
+      if (visitor) {
         return babel.transformSync(code, {
           sourceMaps: true,
           filename: id,
-          plugins,
+          plugins: [
+            ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
+            { visitor },
+          ],
         }) as vite.TransformResult
       }
     },

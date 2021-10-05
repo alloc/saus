@@ -7,6 +7,10 @@ import { Plugin } from '../vite'
 
 const clientPrefix = '/@saus/'
 
+export function isClientUrl(id: string) {
+  return id.startsWith(clientPrefix)
+}
+
 export function getClientUrl(id: string) {
   return clientPrefix + id
 }
@@ -27,21 +31,21 @@ export function clientPlugin({
     async contextUpdate() {
       const { moduleGraph } = server!
       moduleGraph.urlToModuleMap.forEach((mod, url) => {
-        url.startsWith(clientPrefix) && moduleGraph.invalidateModule(mod)
+        isClientUrl(url) && moduleGraph.invalidateModule(mod)
       })
     },
     resolveId(id, importer) {
-      if (id.startsWith(clientPrefix)) {
+      if (isClientUrl(id)) {
         return id
       }
-      if (importer?.startsWith(clientPrefix)) {
+      if (importer && isClientUrl(importer)) {
         return this.resolve(id, renderPath, {
           skipSelf: true,
         })
       }
     },
     load(id) {
-      if (id.startsWith(clientPrefix)) {
+      if (isClientUrl(id)) {
         return client
       }
     },
