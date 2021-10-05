@@ -1,9 +1,7 @@
 import type { RouteModule, RouteParams } from '../routes'
 import type { ClientState } from '../context'
 
-let state: ClientState & {
-  routePromise: Promise<RouteModule>
-}
+let state: ClientState
 
 declare const document: { querySelector: (selector: string) => any }
 

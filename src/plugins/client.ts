@@ -11,11 +11,7 @@ export function getClientUrl(id: string) {
   return clientPrefix + id
 }
 
-export function clientPlugin({
-  renderPath,
-  pages,
-  configEnv,
-}: SausContext): Plugin {
+export function clientPlugin({ renderPath, pages }: SausContext): Plugin {
   let server: vite.ViteDevServer | undefined
   let client: Client | undefined
 
@@ -68,19 +64,6 @@ export function clientPlugin({
         const routeModuleId = page.route.moduleId
         const cssUrls = new Set<string>()
 
-        if (configEnv.mode == 'production') {
-          tags.push({
-            injectTo: 'head-prepend',
-            tag: 'script',
-            attrs: { type: 'module' },
-            children: endent`
-              import * as routeModule from "${routeModuleId}"
-              import { hydrate } from "saus/client"
-              hydrate(routeModule)
-            `,
-          })
-        }
-
         if (server) {
           // Cache the main route module.
           await server.transformRequest(routeModuleId)
@@ -114,6 +97,18 @@ export function clientPlugin({
               .then(mod => mod && collectCss(mod, cssUrls))
           }
         }
+
+        // Hydrate the page.
+        tags.push({
+          injectTo: 'body',
+          tag: 'script',
+          attrs: { type: 'module' },
+          children: endent`
+            import * as routeModule from "${routeModuleId}"
+            import { hydrate } from "/@id/saus/client"
+            hydrate(routeModule)
+          `,
+        })
 
         // Inject stylesheet tags for CSS modules.
         cssUrls.forEach(href =>

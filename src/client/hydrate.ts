@@ -7,8 +7,7 @@ let runHydration: HydrateFn
 
 export function hydrate(routeModule: RouteModule, nextState?: ClientState) {
   if (nextState) Object.assign(state, nextState)
-  const promise = (state.routePromise = Promise.resolve(routeModule))
-  routes[state.routePath] = () => promise
+  routes[state.routePath] = () => Promise.resolve(routeModule)
   runHydration(routeModule, state)
 }
 
