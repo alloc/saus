@@ -11,7 +11,11 @@ export function getClientUrl(id: string) {
   return clientPrefix + id
 }
 
-export function clientPlugin({ renderPath, pages }: SausContext): Plugin {
+export function clientPlugin({
+  renderPath,
+  pages,
+  configEnv,
+}: SausContext): Plugin {
   let server: vite.ViteDevServer | undefined
   let client: Client | undefined
 
@@ -98,6 +102,9 @@ export function clientPlugin({ renderPath, pages }: SausContext): Plugin {
           }
         }
 
+        const sausClientId =
+          (configEnv.mode === 'production' ? '' : '/@id/') + 'saus/client'
+
         // Hydrate the page.
         tags.push({
           injectTo: 'body',
@@ -105,7 +112,7 @@ export function clientPlugin({ renderPath, pages }: SausContext): Plugin {
           attrs: { type: 'module' },
           children: endent`
             import * as routeModule from "${routeModuleId}"
-            import { hydrate } from "/@id/saus/client"
+            import { hydrate } from "${sausClientId}"
             hydrate(routeModule)
           `,
         })
