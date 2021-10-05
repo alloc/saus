@@ -39,7 +39,7 @@ export function createPageFactory(context: SausContext) {
     initialState?: Record<string, any>
   ): Promise<RenderedPage | null> {
     const routeModule = await route.load()
-    const state = (initialState || {}) as ClientState
+    const state = { ...initialState } as ClientState
     const html = await renderer.render(routeModule, params, {
       didRender: renderer.didRender || noop,
       state,
@@ -103,6 +103,10 @@ export function createPageFactory(context: SausContext) {
     route: Route,
     initialState?: Record<string, any>
   ) {
+    if (route.state) {
+      const state = await route.state(...Object.values(params))
+      initialState = { ...initialState, ...state }
+    }
     for (const renderer of renderers) {
       if (renderer.test(path)) {
         const page = await renderPage(

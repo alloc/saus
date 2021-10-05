@@ -1,3 +1,5 @@
+import type { ComponentType } from 'react'
+
 export { RouteParams as InferRouteParams } from 'regexparam'
 
 export interface RouteModule extends Record<string, any> {}
@@ -20,10 +22,18 @@ type StaticPageParams<Params extends object> = 1 extends HasOneKey<Params>
   ? string | number
   : readonly (string | number)[]
 
+type InferRouteProps<T extends object> = T extends ComponentType<infer Props>
+  ? Props
+  : Record<string, any>
+
 type Promisable<T> = T | PromiseLike<T>
 
-export interface RouteConfig<Params extends object = RouteParams> {
+export interface RouteConfig<
+  Module extends object = RouteModule,
+  Params extends object = RouteParams
+> {
   paths?: () => Promisable<readonly StaticPageParams<Params>[]>
+  state?: (...params: string[]) => Promisable<InferRouteProps<Module>>
 }
 
 export interface ParsedRoute {
