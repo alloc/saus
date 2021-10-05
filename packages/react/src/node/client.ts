@@ -68,7 +68,7 @@ export const getClientProvider =
 
     if (renderFn) {
       const renderDecl = renderFile.extract(renderFn)
-      serverToClientRender(renderDecl, renderFn, configEnv)
+      serverToClientRender(renderDecl, renderFn)
 
       const refs = resolveReferences(
         renderFn.get('body'),
@@ -132,8 +132,7 @@ export const getClientProvider =
 // so <html> and <head> can (and should) be removed.
 function serverToClientRender(
   output: MagicString,
-  renderFn: NodePath<t.ArrowFunctionExpression>,
-  configEnv: vite.ConfigEnv
+  renderFn: NodePath<t.ArrowFunctionExpression>
 ) {
   let bodyRefs: NodePath<t.Statement>[]
 
@@ -162,10 +161,9 @@ function serverToClientRender(
             path.stop()
 
             // Find statements used in the <body> element tree.
-            if (configEnv.mode !== 'production')
-              bodyRefs = resolveReferences(path, path =>
-                path.isDescendant(renderFn.get('body'))
-              )
+            bodyRefs = resolveReferences(path, path =>
+              path.isDescendant(renderFn.get('body'))
+            )
 
             const children = path.node.children.filter(
               child => !t.isJSXText(child) || !!child.value.trim()
@@ -201,42 +199,36 @@ function serverToClientRender(
     },
   })
 
-  // In development mode, Rollup is not used, so we need to treeshake the
-  // server-only logic ourselves by removing statements not used by any
-  // elements in the <body> subtree.
-  if (configEnv.mode !== 'production') {
-    const removed = new Set<NodePath>()
+  const removed = new Set<NodePath>()
 
-    renderFn.get('body').traverse({
-      enter(path) {
-        if (!path.isStatement()) return
-        if (path.isExpressionStatement()) {
-          // Preserve call expressions whose result is unused…
-          if (path.get('expression').isCallExpression()) {
-            const call = path
-            const refs = resolveReferences(call, path => {
-              return !path.isDescendant(call)
-            })
-            // …unless it references a removed statement.
-            if (!refs.some(stmt => removed.has(stmt))) {
-              return path.skip()
-            }
-          }
-        }
-        // Preserve these statement types.
-        else if (path.isReturnStatement() || path.isDebuggerStatement()) {
+  // Remove any statements not needed to render the <body> subtree.
+  renderFn.get('body').traverse({
+    enter(path) {
+      if (!path.isStatement()) return
+      if (path.isExpressionStatement()) {
+        // Preserve expressions whose result is unused…
+        const expr = path.get('expression')
+        const refs = resolveReferences(expr, path => {
+          return !path.isDescendant(expr)
+        })
+        // …unless it references a removed statement.
+        if (!refs.some(stmt => removed.has(stmt))) {
           return path.skip()
         }
-        // Is this statement used in the <body> subtree?
-        if (!bodyRefs.includes(path)) {
-          removed.add(path)
-          remove(path, output)
-          path.skip()
-        }
-      },
-    })
+      }
+      // Preserve these statement types.
+      else if (path.isReturnStatement() || path.isDebuggerStatement()) {
+        return path.skip()
+      }
+      // Is this statement used in the <body> subtree?
+      if (!bodyRefs.includes(path)) {
+        removed.add(path)
+        remove(path, output)
+        path.skip()
+      }
+    },
+  })
 
-    // Update the Babel AST for future traversals.
-    removed.forEach(path => path.remove())
-  }
+  // Update the Babel AST for future traversals.
+  removed.forEach(path => path.remove())
 }
