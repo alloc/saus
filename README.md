@@ -53,9 +53,7 @@ Saus uses [regexparam](https://github.com/lukeed/regexparam#readme) to implement
 
 ### Generated Paths
 
-If your route's path has parameters and you want to generate static pages at build time, you'll want to define a `paths` function.
-
-The `paths` function must return an array of strings (or a promise thereof) that fills in the parameters of your route's path. Each string represents a statically generated page.
+When you're using route parameters and want to generate static pages at build time, you can define a `paths` function. When only one route parameter exists, `paths` only needs to return an array of strings/numbers. If multiple route parameters exist, it returns an array of arrays instead.
 
 ```ts
 import { route } from 'saus'
