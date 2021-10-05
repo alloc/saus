@@ -3,6 +3,7 @@ import { ClientProvider, endent, vite } from 'saus'
 import {
   t,
   isChainedCall,
+  isConsoleCall,
   flattenCallChain,
   getTrailingLineBreak,
   getWhitespaceStart,
@@ -79,7 +80,7 @@ export const getClientProvider =
         extracted.add(stmt)
       })
 
-      renderDecl.prepend('const render =\n')
+      renderDecl.prepend('const render = ')
       client.addSource(renderDecl)
     }
 
@@ -206,13 +207,20 @@ function serverToClientRender(
     enter(path) {
       if (!path.isStatement()) return
       if (path.isExpressionStatement()) {
-        // Preserve expressions whose result is unused…
+        // Assume expressions with an unused result have side effects.
         const expr = path.get('expression')
         const refs = resolveReferences(expr, path => {
           return !path.isDescendant(expr)
         })
-        // …unless it references a removed statement.
-        if (!refs.some(stmt => removed.has(stmt))) {
+        // Does this expression reference any removed statements?
+        const removedRefs = refs.filter(stmt => removed.has(stmt))
+        if (!removedRefs.length) {
+          return path.skip()
+        }
+        // If it does, preserve those statements, unless this
+        // expression is a console call.
+        if (!isConsoleCall(expr)) {
+          removedRefs.forEach(stmt => removed.delete(stmt))
           return path.skip()
         }
       }
@@ -223,12 +231,14 @@ function serverToClientRender(
       // Is this statement used in the <body> subtree?
       if (!bodyRefs.includes(path)) {
         removed.add(path)
-        remove(path, output)
         path.skip()
       }
     },
   })
 
   // Update the Babel AST for future traversals.
-  removed.forEach(path => path.remove())
+  removed.forEach(path => {
+    remove(path, output)
+    path.remove()
+  })
 }

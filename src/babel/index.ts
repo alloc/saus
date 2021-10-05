@@ -212,3 +212,12 @@ export function getWhitespaceStart(start: number, source: string) {
 export function getTrailingLineBreak(end: number, source: string) {
   return source[end] === '\n' ? end + 1 : end
 }
+
+export function isConsoleCall(path: NodePath) {
+  if (!path.isCallExpression()) return false
+  const callee = path.get('callee')
+  return (
+    callee.isMemberExpression() &&
+    callee.get('object').isIdentifier({ name: 'console' })
+  )
+}
