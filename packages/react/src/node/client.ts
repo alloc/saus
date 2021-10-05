@@ -1,18 +1,22 @@
 import path from 'path'
-import MagicString, { Bundle } from 'magic-string'
-import { ClientProvider, endent } from 'saus'
+import { ClientProvider, endent, vite } from 'saus'
 import {
   t,
   isChainedCall,
   flattenCallChain,
+  getTrailingLineBreak,
+  getWhitespaceStart,
+  MagicBundle,
+  MagicString,
   NodePath,
   parseFile,
+  remove,
   resolveReferences,
 } from 'saus/babel'
 
 export const getClientProvider =
   (): ClientProvider =>
-  ({ renderPath }, { hash, start }) => {
+  ({ renderPath, configEnv }, { hash, start }) => {
     const renderFile = parseFile(renderPath)
 
     let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
@@ -59,33 +63,39 @@ export const getClientProvider =
       },
     })
 
-    const clientBundle = new Bundle()
+    const client = new MagicBundle()
     const extracted = new Set<NodePath>()
 
     if (renderFn) {
-      const refs = resolveReferences(renderFn)
-      refs.forEach(ref => {
-        clientBundle.addSource(renderFile.extract(ref))
-        extracted.add(ref)
+      const renderDecl = renderFile.extract(renderFn)
+      serverToClientRender(renderDecl, renderFn, configEnv)
+
+      const refs = resolveReferences(
+        renderFn.get('body'),
+        path => !path.isDescendant(renderFn!.parentPath)
+      )
+      refs.forEach(stmt => {
+        client.addSource(renderFile.extract(stmt))
+        extracted.add(stmt)
       })
 
-      const renderDecl = renderFile.extract(renderFn)
-      serverToClientRender(renderDecl, renderFn)
-
-      renderDecl.prepend('const render = ')
-      clientBundle.addSource(renderDecl)
+      renderDecl.prepend('const render =\n')
+      client.addSource(renderDecl)
     }
 
     if (didRenderFn) {
-      const refs = resolveReferences(didRenderFn)
-      refs.forEach(ref => {
-        if (extracted.has(ref)) return
-        clientBundle.addSource(renderFile.extract(ref))
-        extracted.add(ref)
+      const refs = resolveReferences(
+        didRenderFn.get('body'),
+        path => !path.isDescendant(didRenderFn!.parentPath)
+      )
+      refs.forEach(stmt => {
+        if (extracted.has(stmt)) return
+        client.addSource(renderFile.extract(stmt))
+        extracted.add(stmt)
       })
       const didRenderDecl = renderFile.extract(didRenderFn)
       didRenderDecl.prepend('const didRender = ')
-      clientBundle.addSource(didRenderDecl)
+      client.addSource(didRenderDecl)
     }
 
     const defaultImports = endent`
@@ -94,20 +104,22 @@ export const getClientProvider =
     `
 
     const hydrateBlock = endent`
-      $onHydrate((routeModule, state) => {
+      $onHydrate(async (routeModule, state) => {
         ReactDOM.hydrate(
-          render(routeModule, state.routeParams, state),
+          await render(routeModule, state.routeParams, state),
           document.getElementById(state.rootId)
         )
         ${didRenderFn ? 'didRender()' : ''}
       })
     `
 
-    clientBundle.prepend(defaultImports + '\n')
-    clientBundle.append('\n' + hydrateBlock)
+    client.prepend(defaultImports + '\n')
+    client.append('\n' + hydrateBlock)
 
-    const code = clientBundle.toString()
-    const map = clientBundle.generateMap()
+    const code = client.toString()
+    const map = client.generateMap({
+      includeContent: true,
+    })
 
     return {
       id: `client-${hash}${path.extname(renderPath)}`,
@@ -120,14 +132,23 @@ export const getClientProvider =
 // so <html> and <head> can (and should) be removed.
 function serverToClientRender(
   output: MagicString,
-  renderFn: NodePath<t.ArrowFunctionExpression>
+  renderFn: NodePath<t.ArrowFunctionExpression>,
+  configEnv: vite.ConfigEnv
 ) {
+  let bodyRefs: NodePath<t.Statement>[]
+
   renderFn.traverse({
     JSXElement(path) {
-      if (!path.parentPath.isReturnStatement()) {
-        return
-      }
+      if (!path.parentPath.isReturnStatement()) return
+      path.skip()
+
       const rootElement = path
+      const rootStart = getWhitespaceStart(path.node.start!, output.original)
+      const rootEnd = getTrailingLineBreak(
+        path.get('closingElement').node!.end!,
+        output.original
+      )
+
       path.parentPath.traverse({
         JSXElement(path) {
           const tagName = path.get('openingElement').get('name')
@@ -138,20 +159,84 @@ function serverToClientRender(
             return path.skip()
           }
           if (tagName.equals('name', 'body')) {
-            const { children } = path.node
             path.stop()
 
-            // Replace <body> (and any parent elements) with React fragment.
-            output.overwrite(rootElement.node.start!, children[0].start!, '<>')
-            output.overwrite(
-              children[children.length - 1].end!,
-              rootElement.get('closingElement').node!.end!,
-              '</>'
+            // Find statements used in the <body> element tree.
+            if (configEnv.mode !== 'production')
+              bodyRefs = resolveReferences(path, path =>
+                path.isDescendant(renderFn.get('body'))
+              )
+
+            const children = path.node.children.filter(
+              child => !t.isJSXText(child) || !!child.value.trim()
             )
+
+            // Even though we won't be generating code from the
+            // Babel AST, we still need to update it so future
+            // calls to "resolveReferences" are accurate.
+            rootElement.replaceWith(
+              children.length == 1
+                ? children[0]
+                : t.jsxFragment(
+                    t.jsxOpeningFragment(),
+                    t.jsxClosingFragment(),
+                    path.node.children
+                  )
+            )
+
+            const bodyStart = children[0].start!
+            const bodyEnd = children[children.length - 1].end!
+
+            // Turn the children of <body> into the root element,
+            // wrapping in a React fragment if necessary.
+            output.remove(rootStart, bodyStart)
+            output.remove(bodyEnd, rootEnd)
+            if (children.length > 1) {
+              output.appendLeft(bodyStart, '<>')
+              output.appendRight(bodyEnd, '</>')
+            }
           }
         },
       })
-      path.stop()
     },
   })
+
+  // In development mode, Rollup is not used, so we need to treeshake the
+  // server-only logic ourselves by removing statements not used by any
+  // elements in the <body> subtree.
+  if (configEnv.mode !== 'production') {
+    const removed = new Set<NodePath>()
+
+    renderFn.get('body').traverse({
+      enter(path) {
+        if (!path.isStatement()) return
+        if (path.isExpressionStatement()) {
+          // Preserve call expressions whose result is unused…
+          if (path.get('expression').isCallExpression()) {
+            const call = path
+            const refs = resolveReferences(call, path => {
+              return !path.isDescendant(call)
+            })
+            // …unless it references a removed statement.
+            if (!refs.some(stmt => removed.has(stmt))) {
+              return path.skip()
+            }
+          }
+        }
+        // Preserve these statement types.
+        else if (path.isReturnStatement() || path.isDebuggerStatement()) {
+          return path.skip()
+        }
+        // Is this statement used in the <body> subtree?
+        if (!bodyRefs.includes(path)) {
+          removed.add(path)
+          remove(path, output)
+          path.skip()
+        }
+      },
+    })
+
+    // Update the Babel AST for future traversals.
+    removed.forEach(path => path.remove())
+  }
 }

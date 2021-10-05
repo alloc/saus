@@ -17,12 +17,13 @@ const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
   Array.isArray(arg) ? arg : ([arg] as any)
 
 export function resolveReferences(
-  fn: NodePath<t.ArrowFunctionExpression>
+  rootPaths: NodePath | NodePath[],
+  filter = (_path: NodePath) => false
 ): NodePath<t.Statement>[] {
-  const crawled = new Set<NodePath>([fn])
+  const crawled = new Set<NodePath>()
   const referenced = new Set<NodePath<t.Statement>>()
 
-  toArray(fn.get('body')).forEach(crawl)
+  toArray(rootPaths).forEach(crawl)
 
   function crawl(basePath: NodePath) {
     crawled.add(basePath)
@@ -32,9 +33,9 @@ export function resolveReferences(
     })
   }
 
-  function onIdentifier(path: babel.NodePath<t.Identifier | t.JSXIdentifier>) {
+  function onIdentifier(path: NodePath<t.Identifier | t.JSXIdentifier>) {
     const { parentPath } = path
-    if (parentPath.isMemberExpression() || parentPath.isJSXClosingElement()) {
+    if (parentPath.isJSXClosingElement() || isPropertyName(path)) {
       return
     }
 
@@ -45,7 +46,7 @@ export function resolveReferences(
 
     const binding = path.scope.getBinding(name)
     if (!binding) {
-      return // Undeclared variable
+      return // Global or undeclared variable
     }
 
     const bindPath = binding.path
@@ -66,7 +67,7 @@ export function resolveReferences(
   }
 
   function addReference(path: babel.NodePath | null | undefined) {
-    if (path && !path.isDescendant(fn.parentPath)) {
+    if (path && filter(path)) {
       path = path.getStatementParent()
       if (path) {
         referenced.add(path as NodePath<t.Statement>)
@@ -77,6 +78,23 @@ export function resolveReferences(
   return Array.from(referenced).sort((a, b) => {
     return a.node.start! - b.node.start!
   })
+}
+
+/**
+ * Is the given node path either…
+ *   - the name of an object property being declared
+ *   - the name of a property being accessed
+ */
+export function isPropertyName({ parentKey, parentPath }: NodePath) {
+  return (
+    parentPath &&
+    ((parentPath.isObjectProperty() &&
+      !parentPath.node.computed &&
+      parentKey === 'key') ||
+      (parentPath.isMemberExpression() &&
+        !parentPath.node.computed &&
+        parentKey === 'property'))
+  )
 }
 
 export function isChainedCall(
@@ -175,4 +193,22 @@ class File {
     str.remove(node.end, source.length)
     return str
   }
+}
+
+/** Remove a `NodePath`, its preceding whitespace, and its trailing newline (if one exists). */
+export function remove(path: NodePath, source: MagicString) {
+  let start = path.node.start!
+  let end = path.node.end!
+  start = getWhitespaceStart(start, source.original)
+  end = getTrailingLineBreak(end, source.original)
+  source.remove(start, end)
+}
+
+export function getWhitespaceStart(start: number, source: string) {
+  while (source[start - 1] === ' ') start--
+  return start
+}
+
+export function getTrailingLineBreak(end: number, source: string) {
+  return source[end] === '\n' ? end + 1 : end
 }
