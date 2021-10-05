@@ -66,6 +66,20 @@ route('/posts/:id', () => import('./routes/Post'), {
 })
 ```
 
+### Data Loading
+
+If your route needs to load some data before it can render, you can define the `state` method. It receives the route parameters, and returns an object that is merged into the renderer state, which is used to render HTML on both the client and server.
+
+```ts
+import { route } from 'saus'
+import fetch from 'node-fetch'
+
+route('/posts/:id', () => import('./routes/SinglePost'), {
+  state: id => fetch(`https://jsonplaceholder.typicode.com/posts/${id}`),
+  paths: () => [1, 2, 3],
+})
+```
+
 ### Default Route
 
 When no matching route is found, Saus uses the default route (if you define one).
