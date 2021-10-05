@@ -1,6 +1,8 @@
 import * as vite from 'vite'
 import { SausContext } from './context'
 
+export { vite }
+
 export interface UserConfig extends vite.UserConfig {}
 
 export const defineConfig = (
