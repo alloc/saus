@@ -1,5 +1,5 @@
 import path from 'path'
-import { ClientProvider, endent, vite } from 'saus'
+import { ClientProvider, endent } from 'saus'
 import {
   t,
   isChainedCall,
