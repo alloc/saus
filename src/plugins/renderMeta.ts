@@ -1,5 +1,6 @@
 import * as vite from 'vite'
 import md5Hex from 'md5-hex'
+import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { SausContext } from '../context'
 import { babel, t, NodePath } from '../babel'
 
@@ -14,7 +15,10 @@ export function renderMetaPlugin({ renderPath }: SausContext): vite.Plugin {
           filename: id,
           plugins: [
             ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
+            // Append the `hash` and `start` arguments to render calls.
             { visitor: { Program: injectRenderMetadata } },
+            // Annotate all function calls as pure, so Rollup can treeshake them.
+            { visitor: { CallExpression: annotateAsPure } },
           ],
         }) as vite.TransformResult
       }
