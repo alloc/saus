@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as vite from 'vite'
-import { babel, t, NodePath } from '../babel'
+import { babel, t } from '../babel'
 import { SausContext } from '../context'
 import { SourceDescription } from '../vite'
 
@@ -36,34 +36,16 @@ function generateClientRoutes(routesPath: string) {
   babel.traverse(routesModule, {
     CallExpression(path) {
       const callee = path.get('callee')
-      if (callee.isIdentifier({ name: 'defineRoutes' })) {
-        const routes = path.get('arguments')[0] as NodePath<t.ObjectExpression>
-        for (const property of routes.get('properties')) {
-          if (property.isObjectProperty()) {
-            const value = property.get('value')
-
-            // () => import(...)
-            if (value.isArrowFunctionExpression()) {
-              exports.push(property.node)
-            }
-
-            // { load: () => import(...) }
-            else if (value.isObjectExpression()) {
-              const loadProp = value
-                .get('properties')
-                .find(
-                  property =>
-                    property.isObjectProperty() &&
-                    property.get('key').isIdentifier({ name: 'load' })
-                )
-
-              if (loadProp?.isObjectProperty())
-                exports.push(
-                  t.objectProperty(property.node.key, loadProp.node.value)
-                )
-            }
-          }
-        }
+      if (callee.isIdentifier({ name: 'route' })) {
+        const [routePath, importFn] = path.node.arguments as [
+          t.StringLiteral,
+          t.ArrowFunctionExpression
+        ]
+        exports.push(
+          t.isArrowFunctionExpression(routePath)
+            ? t.objectProperty(t.identifier('default'), routePath)
+            : t.objectProperty(routePath, importFn)
+        )
       }
     },
   })
