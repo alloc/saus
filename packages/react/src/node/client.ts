@@ -136,7 +136,8 @@ function serverToClientRender(
   output: MagicString,
   renderFn: NodePath<t.ArrowFunctionExpression>
 ) {
-  let bodyRefs: NodePath<t.Statement>[]
+  let bodyRefs: NodePath<t.Statement>[] = []
+  let needsTreeShake = false
 
   renderFn.traverse({
     JSXElement(path) {
@@ -149,6 +150,16 @@ function serverToClientRender(
         path.get('closingElement').node!.end!,
         output.original
       )
+
+      const rootTagName = rootElement.get('openingElement').toString()
+      const hasHead = rootTagName === 'html'
+      if (!hasHead && rootTagName !== 'body') {
+        return
+      }
+
+      if (hasHead) {
+        needsTreeShake = true
+      }
 
       path.parentPath.traverse({
         JSXElement(path) {
@@ -163,9 +174,12 @@ function serverToClientRender(
             path.stop()
 
             // Find statements used in the <body> element tree.
-            bodyRefs = resolveReferences(path, path =>
-              path.isDescendant(renderFn.get('body'))
-            )
+            if (hasHead)
+              bodyRefs = bodyRefs.concat(
+                resolveReferences(path, path =>
+                  path.isDescendant(renderFn.get('body'))
+                )
+              )
 
             const children = path.node.children.filter(
               child => !t.isJSXText(child) || !!child.value.trim()
@@ -201,45 +215,47 @@ function serverToClientRender(
     },
   })
 
-  const removed = new Set<NodePath>()
+  if (needsTreeShake) {
+    const removed = new Set<NodePath>()
 
-  // Remove any statements not needed to render the <body> subtree.
-  renderFn.get('body').traverse({
-    enter(path) {
-      if (!path.isStatement()) return
-      if (path.isExpressionStatement()) {
-        // Assume expressions with an unused result have side effects.
-        const expr = path.get('expression')
-        const refs = resolveReferences(expr, path => {
-          return !path.isDescendant(expr)
-        })
-        // Does this expression reference any removed statements?
-        const removedRefs = refs.filter(stmt => removed.has(stmt))
-        if (!removedRefs.length) {
+    // Remove any statements not needed to render the <body> subtree.
+    renderFn.get('body').traverse({
+      enter(path) {
+        if (!path.isStatement()) return
+        if (path.isExpressionStatement()) {
+          // Assume expressions with an unused result have side effects.
+          const expr = path.get('expression')
+          const refs = resolveReferences(expr, path => {
+            return !path.isDescendant(expr)
+          })
+          // Does this expression reference any removed statements?
+          const removedRefs = refs.filter(stmt => removed.has(stmt))
+          if (!removedRefs.length) {
+            return path.skip()
+          }
+          // If it does, preserve those statements, unless this
+          // expression is a console call.
+          if (!isConsoleCall(expr)) {
+            removedRefs.forEach(stmt => removed.delete(stmt))
+            return path.skip()
+          }
+        }
+        // Preserve these statement types.
+        else if (path.isReturnStatement() || path.isDebuggerStatement()) {
           return path.skip()
         }
-        // If it does, preserve those statements, unless this
-        // expression is a console call.
-        if (!isConsoleCall(expr)) {
-          removedRefs.forEach(stmt => removed.delete(stmt))
-          return path.skip()
+        // Is this statement used in the <body> subtree?
+        if (!bodyRefs.includes(path)) {
+          removed.add(path)
+          path.skip()
         }
-      }
-      // Preserve these statement types.
-      else if (path.isReturnStatement() || path.isDebuggerStatement()) {
-        return path.skip()
-      }
-      // Is this statement used in the <body> subtree?
-      if (!bodyRefs.includes(path)) {
-        removed.add(path)
-        path.skip()
-      }
-    },
-  })
+      },
+    })
 
-  // Update the Babel AST for future traversals.
-  removed.forEach(path => {
-    remove(path, output)
-    path.remove()
-  })
+    // Update the Babel AST for future traversals.
+    removed.forEach(path => {
+      remove(path, output)
+      path.remove()
+    })
+  }
 }

@@ -94,16 +94,16 @@ function renderToString(root: ReactElement) {
     root = React.cloneElement(root, {
       children,
     })
-  } else if (root.type == 'body') {
+  } else {
+    if (root.type !== 'body') {
+      root = <body>{root}</body>
+    }
     root = (
       <html>
         <head />
         {transformBody(root)}
       </html>
     )
-  } else {
-    logger.warn(`Renderer did not return <body> or <html> element`)
-    return ''
   }
   return `<!DOCTYPE html>\n` + ReactDOM.renderToStaticMarkup(root)
 }
