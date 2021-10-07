@@ -145,12 +145,6 @@ function serverToClientRender(
       path.skip()
 
       const rootElement = path
-      const rootStart = getWhitespaceStart(path.node.start!, output.original)
-      const rootEnd = getTrailingLineBreak(
-        path.get('closingElement').node!.end!,
-        output.original
-      )
-
       const rootTagName = rootElement.get('openingElement').toString()
       const hasHead = rootTagName === 'html'
       if (!hasHead && rootTagName !== 'body') {
@@ -160,6 +154,12 @@ function serverToClientRender(
       if (hasHead) {
         needsTreeShake = true
       }
+
+      const rootStart = getWhitespaceStart(path.node.start!, output.original)
+      const rootEnd = getTrailingLineBreak(
+        path.get('closingElement').node!.end!,
+        output.original
+      )
 
       path.parentPath.traverse({
         JSXElement(path) {
