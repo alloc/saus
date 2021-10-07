@@ -125,6 +125,11 @@ function fixReactBug() {
   const { ReactDebugCurrentFrame } = (React as any)
     .__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED
 
+  // Avoid crashing in case two instances of React are present.
+  if (!ReactDebugCurrentFrame) {
+    return
+  }
+
   const ReactDOMServerRendererPrototype: any = Object.getPrototypeOf(
     (ReactDOM.renderToNodeStream(<div />) as any).partialRenderer
   )
