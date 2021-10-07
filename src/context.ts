@@ -1,9 +1,15 @@
 import path from 'path'
+import callerPath from 'caller-path'
 import * as RegexParam from 'regexparam'
 import * as vite from 'vite'
-import { PageRequest } from '.'
 import { readSausYaml } from './config'
-import { RenderCall, Renderer, RenderedPage, RenderContext } from './render'
+import {
+  PageRequest,
+  RenderCall,
+  Renderer,
+  RenderedPage,
+  RenderContext,
+} from './render'
 import {
   InferRouteParams,
   Route,
@@ -64,10 +70,16 @@ export type ClientState = Record<string, any> & {
   error?: any
 }
 
-export type ConfigHook = (
-  config: UserConfig,
-  context: SausContext
-) => UserConfig | null | void | Promise<UserConfig | null | void>
+export type ConfigHook = {
+  (config: UserConfig, context: SausContext):
+    | UserConfig
+    | null
+    | void
+    | Promise<UserConfig | null | void>
+
+  /** The module that added this hook. */
+  modulePath?: string
+}
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -119,6 +131,7 @@ export function render(...args: [any, any?]) {
  * Access and manipulate the Vite config before it's applied.
  */
 export function configureVite(hook: ConfigHook) {
+  hook.modulePath = callerPath()
   context.configHooks.push(hook)
 }
 
@@ -161,10 +174,19 @@ export function route(
 }
 
 export async function loadContext(
-  root: string,
-  configEnv: vite.ConfigEnv,
-  logLevel: vite.LogLevel = 'error'
+  command: 'serve' | 'build',
+  inlineConfig?: vite.UserConfig,
+  sausPlugins?: ((context: SausContext) => vite.Plugin)[]
 ): Promise<SausContext> {
+  const root = inlineConfig?.root || process.cwd()
+  const configEnv: vite.ConfigEnv = {
+    command,
+    mode:
+      inlineConfig?.mode ||
+      (command === 'build' ? 'production' : 'development'),
+  }
+
+  const logLevel = inlineConfig?.logLevel || 'info'
   const logger = vite.createLogger(logLevel)
 
   // Load "saus.yaml"
@@ -181,7 +203,7 @@ export async function loadContext(
   const userConfig = loadResult ? loadResult.config : {}
   userConfig.mode ??= configEnv.mode
 
-  const config = vite.mergeConfig(userConfig, <vite.UserConfig>{
+  let config = vite.mergeConfig(userConfig, <vite.UserConfig>{
     configFile: false,
     customLogger: logger,
     esbuild: userConfig.esbuild !== false && {
@@ -196,7 +218,11 @@ export async function loadContext(
     },
   })
 
-  return {
+  if (inlineConfig) {
+    config = vite.mergeConfig(config, inlineConfig)
+  }
+
+  const context: SausContext = {
     root,
     logger,
     config,
@@ -210,6 +236,26 @@ export async function loadContext(
     renderers: [],
     defaultRenderer: undefined,
   }
+
+  await loadConfigHooks(context)
+  for (const hook of context.configHooks) {
+    const result = await hook(config, context)
+    if (result) {
+      config = vite.mergeConfig(config, result)
+    }
+  }
+
+  // Renderer hooks must be loaded *after* config hooks
+  // have been applied.
+  resetRenderHooks(context)
+
+  if (sausPlugins) {
+    config.plugins ||= []
+    config.plugins.unshift(sausPlugins.map(p => p(context)))
+  }
+
+  context.config = config
+  return context
 }
 
 export function resetRenderHooks(ctx: SausContext, resetConfig?: boolean) {
@@ -220,6 +266,14 @@ export function resetRenderHooks(ctx: SausContext, resetConfig?: boolean) {
   ctx.defaultRenderer = undefined
   if (resetConfig) {
     ctx.configHooks.length = 0
+  }
+}
+
+export function resetConfigModules(ctx: SausContext) {
+  for (const hook of ctx.configHooks) {
+    if (hook.modulePath) {
+      delete require.cache[hook.modulePath]
+    }
   }
 }
 
@@ -246,12 +300,13 @@ export function loadRenderHooks(context: SausContext, loader: ModuleLoader) {
   return loadModule(context.renderPath, context, loader)
 }
 
-export async function loadConfigHooks(
-  context: SausContext,
-  loader: ModuleLoader
-) {
+export async function loadConfigHooks(context: SausContext) {
+  const loader = await createLoader(context, {
+    cacheDir: false,
+  })
   context.configHooks = []
   await loadRenderHooks(context, loader)
+  await loader.close()
 }
 
 export function createLoader(
@@ -262,6 +317,9 @@ export function createLoader(
     ...context.config,
     ...inlineConfig,
     logLevel: 'error',
-    server: { middlewareMode: 'ssr' },
+    server: {
+      ...inlineConfig?.server,
+      middlewareMode: 'ssr',
+    },
   })
 }

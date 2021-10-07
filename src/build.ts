@@ -1,115 +1,100 @@
-import * as vite from 'vite'
 import path from 'path'
 import cpuCount from 'physical-cpu-count'
-import AsyncTaskGroup from 'async-task-group'
-import * as RegexParam from 'regexparam'
+import { Worker } from 'jest-worker'
 import { startTask } from 'misty/task'
 import {
   createLoader,
-  loadConfigHooks,
   loadContext,
-  loadRenderHooks,
   loadRoutes,
-  resetRenderHooks,
+  resetConfigModules,
 } from './context'
 import { Rollup } from './rollup'
-import { getPageFilename, Route, RouteParams } from './routes'
-import { createPageFactory, RenderedPage } from './render'
+import { vite, BuildOptions } from './vite'
+import { getPageFilename, RouteParams } from './routes'
+import { RenderedPage } from './render'
 import { clientPlugin } from './plugins/client'
-import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
+import { rateLimit } from './utils/rateLimit'
 
 export type FailedPage = { path: string; reason: string }
 
-export async function build(inlineConfig?: vite.UserConfig) {
-  const root = inlineConfig?.root || process.cwd()
-  const configEnv: vite.ConfigEnv = {
-    command: 'build',
-    mode: inlineConfig?.mode || 'production',
-  }
+export async function build(
+  inlineConfig?: vite.UserConfig & { build?: BuildOptions }
+) {
+  const context = await loadContext('build', inlineConfig)
 
-  const logLevel = inlineConfig?.logLevel || 'error'
-  const context = await loadContext(root, configEnv, logLevel)
-
-  if (inlineConfig)
-    context.config = vite.mergeConfig(context.config, inlineConfig)
-
-  let loader = await createLoader(context)
-  await loadConfigHooks(context, loader)
+  const loader = await createLoader(context)
+  await loadRoutes(context, loader)
   await loader.close()
 
-  let { config } = context
-  context.configHooks.forEach(hook => {
-    const result = hook(config, context)
-    if (result) {
-      config = vite.mergeConfig(config, result)
-    }
-  })
+  type PageWorker = Worker & {
+    runSetup(inlineConfig?: vite.UserConfig): Promise<void>
+    renderPage(routePath: string, params?: RouteParams): Promise<RenderedPage>
+  }
 
-  config.plugins ??= []
-  config.plugins.unshift(renderPlugin(context))
+  const debug = inlineConfig?.build?.maxWorkers === 0
+  const numWorkers = debug ? 1 : cpuCount
 
-  context.config = config
-  loader = await createLoader(context)
-  await loadRoutes(context, loader)
+  const pageWorker = debug
+    ? require('./build/worker')
+    : (new Worker(require.resolve('./build/worker'), {
+        // TODO: find out why this causes SIGABRT
+        // enableWorkerThreads: true,
+        numWorkers,
+      }) as PageWorker)
 
-  resetRenderHooks(context)
-  await loadRenderHooks(context, loader)
+  // Ensure modules that added config hooks are evaluated again.
+  if (debug) {
+    resetConfigModules(context)
+  }
 
-  const pageFactory = createPageFactory(context)
+  // Prepare each worker thread.
+  await Promise.all(
+    range(0, numWorkers).map(() => pageWorker.runSetup(inlineConfig))
+  )
 
   let pageCount = 0
   let renderCount = 0
 
-  const progress = startTask('')
+  const progress = startTask('0 of 0 pages rendered')
   const updateProgress = () =>
     progress.update(`${renderCount} of ${pageCount} pages rendered`)
 
   const pages: RenderedPage[] = []
   const errors: FailedPage[] = []
 
-  const pageQueue = new AsyncTaskGroup(
+  const failedRoutes = new Set<string>()
+  const renderPage = rateLimit(
     cpuCount,
-    async ([path, renderPage]: [
-      string,
-      (path: string) => Promise<RenderedPage | null>
-    ]) => {
+    async (routePath: string, params?: RouteParams) => {
       try {
-        const page = await renderPage(path)
+        const page = await pageWorker.renderPage(routePath, params)
         if (page) {
+          const filename = getPageFilename(page.path)
+          context.pages[filename] = page
           pages.push(page)
         } else {
           pageCount -= 1
           updateProgress()
         }
       } catch (e: any) {
-        console.error(e.stack)
-        errors.push({
-          path,
-          reason: e.message,
-        })
+        if (!failedRoutes.has(routePath)) {
+          failedRoutes.add(routePath)
+          console.error(e.stack)
+          errors.push({
+            path: routePath,
+            reason: e.message,
+          })
+        }
       }
       renderCount += 1
       updateProgress()
+    },
+    () => {
+      pageCount += 1
+      updateProgress()
     }
   )
-
-  const enqueuePage = (
-    path: string,
-    renderer: (path: string) => Promise<RenderedPage | null>
-  ) => {
-    pageCount += 1
-    updateProgress()
-    pageQueue.push([path, renderer])
-  }
-
-  // Render the default page.
-  if (context.defaultRoute && context.defaultRenderer) {
-    enqueuePage('/404', pageFactory.renderUnknownPath)
-  }
-
-  const enqueueRoute = (path: string, params: RouteParams, route: Route) =>
-    enqueuePage(path, () => pageFactory.renderMatchedPath(path, params, route))
 
   for (const route of context.routes) {
     if (route.paths) {
@@ -129,26 +114,28 @@ export async function build(inlineConfig?: vite.UserConfig) {
             params[key] = '' + values[i]
           })
 
-          const path = RegexParam.inject(route.path, params)
-          enqueueRoute(path, params, route)
+          renderPage(route.path, params)
         }
       }
     } else if (!route.keys.length) {
-      enqueueRoute(route.path, {}, route)
+      renderPage(route.path)
     }
   }
 
-  await pageQueue
+  if (context.defaultRoute) {
+    renderPage('default')
+  }
+
+  await renderPage.calls
   progress.finish()
 
-  const buildOptions = loader.config.build
-  if (buildOptions.write !== false) {
+  if (inlineConfig?.build?.write !== false && pages.length) {
     const routeModulePaths = new Set<string>()
     const pageMap: Record<string, RenderedPage> = {}
     for (const page of pages) {
       const input = getPageFilename(page.path)
       pageMap[input] = page
-      routeModulePaths.add(path.join(context.root, page.route.moduleId))
+      routeModulePaths.add(path.join(context.root, page.routeModuleId))
     }
 
     const routeChunks: { [routeModuleId: string]: Rollup.OutputChunk[] } = {}
@@ -175,7 +162,7 @@ export async function build(inlineConfig?: vite.UserConfig) {
               if (page.client) {
                 const bundle = ctx.bundle!
                 const currentChunk = ctx.chunk!
-                const routeModuleId = page.route.moduleId
+                const routeModuleId = page.routeModuleId
                 const existingChunks = routeChunks[routeModuleId] || []
                 const duplicateChunk = existingChunks.find(
                   chunk => chunk.code === currentChunk.code
@@ -214,9 +201,20 @@ export async function build(inlineConfig?: vite.UserConfig) {
     )
   }
 
-  await loader.close()
+  if (!debug) {
+    pageWorker.end()
+  }
+
   return {
     pages,
     errors,
   }
+}
+
+function range(offset: number, length: number) {
+  const indices = new Array(length)
+  for (let i = 0; i < length; i++) {
+    indices[i] = i + offset
+  }
+  return indices
 }

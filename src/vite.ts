@@ -5,6 +5,10 @@ export { vite }
 
 export interface UserConfig extends vite.UserConfig {}
 
+export interface BuildOptions extends vite.BuildOptions {
+  maxWorkers?: number
+}
+
 export const defineConfig = (
   config:
     | UserConfig

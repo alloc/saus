@@ -2,7 +2,7 @@ import 'source-map-support/register'
 import { success } from 'misty'
 import color from 'kleur'
 import cac from 'cac'
-import * as vite from 'vite'
+import { BuildOptions, vite } from './vite'
 
 const cli = cac('saus')
 
@@ -28,7 +28,8 @@ cli
     `[boolean | "terser" | "esbuild"] enable/disable minification, ` +
       `or specify minifier to use (default: esbuild)`
   )
-  .action(async (options: vite.BuildOptions) => {
+  .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
+  .action(async (options: BuildOptions) => {
     const { build } = require('./build') as typeof import('./build')
     const { pages, errors } = await build({ build: options })
     if (errors.length) {

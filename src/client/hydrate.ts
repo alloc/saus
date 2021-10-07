@@ -1,14 +1,13 @@
 import type { PageRequest } from '../render'
-import { RouteModule } from './state'
 import routes from './routes'
 
 export { PageRequest }
 
-export type HydrateFn = (routeModule: RouteModule, request: PageRequest) => void
+export type HydrateFn = (routeModule: any, request: PageRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: RouteModule, request: PageRequest) {
+export function hydrate(routeModule: object, request: PageRequest) {
   routes[request.state.routePath] = async () => routeModule
   runHydration(routeModule, request)
 }

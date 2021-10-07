@@ -1,5 +1,6 @@
 import { SausContext } from '../context'
 import { createPageFactory, PageFactory } from '../render'
+import { defer } from '../utils/defer'
 import { Plugin } from '../vite'
 
 export function servePlugin(context: SausContext): Plugin {
@@ -33,17 +34,4 @@ export function servePlugin(context: SausContext): Plugin {
         )
       }),
   }
-}
-
-type Deferred<T> = PromiseLike<T> & {
-  resolve: T extends void ? () => void : (value: T) => void
-}
-
-function defer<T>() {
-  const result = {} as Deferred<T>
-  const promise = new Promise(resolve => {
-    result.resolve = resolve as any
-  })
-  result.then = promise.then.bind(promise) as any
-  return result
 }

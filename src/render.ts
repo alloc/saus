@@ -14,10 +14,9 @@ const noop = () => {}
 export type RenderedPage = {
   path: string
   html: string
-  route: Route
   state: ClientState
   client?: Client
-  renderer: Renderer<string>
+  routeModuleId: string
 }
 
 export function createPageFactory(context: SausContext) {
@@ -47,27 +46,23 @@ export function createPageFactory(context: SausContext) {
       return null
     }
 
-    const client = await renderClient(path, renderer)
     const filename = getPageFilename(path)
-    return (context.pages[filename] = {
-      path,
-      html,
-      route,
-      state,
-      client,
-      renderer,
-    })
-  }
 
-  async function renderClient(path: string, renderer: Renderer) {
-    let client = context.pages[path]?.client
+    let client = context.pages[filename]?.client
     if (!client) {
       const { getClient } = renderer
       if (getClient) {
         client = (await getClient(context, renderer)) || undefined
       }
     }
-    return client
+
+    return (context.pages[filename] = {
+      path,
+      html,
+      state,
+      client,
+      routeModuleId: route.moduleId,
+    })
   }
 
   async function renderDefaultPage(

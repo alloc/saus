@@ -4,7 +4,6 @@ import { debounce } from 'ts-debounce'
 import { watch } from 'chokidar'
 import {
   SausContext,
-  createLoader,
   loadConfigHooks,
   loadContext,
   loadRenderHooks,
@@ -17,26 +16,8 @@ import { servePlugin } from './plugins/serve'
 import { renderPlugin } from './plugins/render'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
-  const root = inlineConfig?.root || process.cwd()
-  const configEnv: vite.ConfigEnv = {
-    command: 'serve',
-    mode: inlineConfig?.mode || 'development',
-  }
-
-  const logLevel = inlineConfig?.logLevel || 'info'
-  const context = await loadContext(root, configEnv, logLevel)
-
-  if (inlineConfig)
-    context.config = vite.mergeConfig(context.config, inlineConfig)
-
+  const context = await loadContext('serve', inlineConfig)
   const { logger } = context
-
-  const onError = (e: any) => {
-    if (!logger.hasErrorLogged(e)) {
-      logger.error(e.message, { error: e })
-    }
-    return null
-  }
 
   let serverPromise = startServer(context, restart, onError).catch(onError)
 
@@ -47,6 +28,13 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
         return startServer(context, restart, onError, true)
       })
       .catch(onError)
+  }
+
+  function onError(e: any) {
+    if (!logger.hasErrorLogged(e)) {
+      logger.error(e.message, { error: e })
+    }
+    return null
   }
 
   if (logger.isLogged('info')) {
@@ -70,10 +58,6 @@ async function startServer(
   onError: (e: any) => void,
   isRestart?: boolean
 ) {
-  const loader = await createLoader(context, { cacheDir: false })
-  await loadConfigHooks(context, loader)
-  await loader.close()
-
   let config = klona(context.config)
 
   const contextPaths = [context.renderPath, context.routesPath]
