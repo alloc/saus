@@ -2,7 +2,7 @@ import * as vite from 'vite'
 import md5Hex from 'md5-hex'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { SausContext } from '../context'
-import { babel, t, NodePath } from '../babel'
+import { babel, transformSync, t, NodePath } from '../babel'
 import { isClientUrl } from './client'
 
 export function renderPlugin({
@@ -20,14 +20,7 @@ export function renderPlugin({
         visitor = { CallExpression: assumePurity }
       }
       if (visitor) {
-        return babel.transformSync(code, {
-          sourceMaps: true,
-          filename: id,
-          plugins: [
-            ['@babel/syntax-typescript', { isTSX: /\.[tj]sx$/.test(id) }],
-            { visitor },
-          ],
-        }) as vite.TransformResult
+        return transformSync(code, id, [{ visitor }]) as vite.TransformResult
       }
     },
   }

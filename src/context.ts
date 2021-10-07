@@ -2,6 +2,7 @@ import path from 'path'
 import callerPath from 'caller-path'
 import * as RegexParam from 'regexparam'
 import * as vite from 'vite'
+import { transformSync } from './babel'
 import { readSausYaml } from './config'
 import {
   PageRequest,
@@ -303,11 +304,35 @@ export function loadRenderHooks(context: SausContext, loader: ModuleLoader) {
 export async function loadConfigHooks(context: SausContext) {
   const loader = await createLoader(context, {
     cacheDir: false,
+    plugins: [stripRelativeImports(context)],
   })
   context.configHooks = []
   await loadRenderHooks(context, loader)
   await loader.close()
 }
+
+// Top-level statements in project-specific modules could rely
+// on Vite plugins injected by a renderer package, so we need
+// to avoid evaluating those modules until Vite is configured.
+const stripRelativeImports = (context: SausContext): vite.Plugin => ({
+  name: 'saus:strip-relative-imports',
+  transform(code, id) {
+    if (id == context.renderPath) {
+      return transformSync(code, id, [
+        {
+          visitor: {
+            ImportDeclaration(decl) {
+              const source = decl.get('source').node.value
+              if (/^\.\.?\//.test(source)) {
+                decl.remove()
+              }
+            },
+          },
+        },
+      ]) as vite.TransformResult
+    }
+  },
+})
 
 export function createLoader(
   context: SausContext,

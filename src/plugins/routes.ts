@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as vite from 'vite'
-import { babel, t } from '../babel'
+import { babel, inferSyntaxPlugins, t } from '../babel'
 import { SausContext } from '../context'
 import { SourceDescription } from '../vite'
 
@@ -27,9 +27,7 @@ export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
 function generateClientRoutes(routesPath: string) {
   const routesModule = babel.parseSync(fs.readFileSync(routesPath, 'utf8'), {
     filename: routesPath,
-    plugins: /\.tsx?$/.test(routesPath)
-      ? [['@babel/syntax-typescript', { isTSX: routesPath.endsWith('x') }]]
-      : [],
+    plugins: inferSyntaxPlugins(routesPath),
   })!
 
   const exports: t.ObjectProperty[] = []

@@ -151,6 +151,38 @@ export function getFirstAncestor(
   return parentPath
 }
 
+export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
+  return /\.tsx?$/.test(filename)
+    ? [['@babel/syntax-typescript', { isTSX: filename.endsWith('x') }]]
+    : []
+}
+
+/**
+ * Shortcut for `babel.transformSync` with configuration files like `.babelrc`
+ * and `babel.config.js` disabled, source maps enabled, and syntax plugins
+ * inferred from the file extension.
+ */
+export function transformSync(
+  code: string,
+  filename: string,
+  config: babel.TransformOptions | babel.PluginItem[]
+) {
+  if (Array.isArray(config)) {
+    config = { plugins: config }
+  }
+  const syntaxPlugins = inferSyntaxPlugins(filename)
+  if (syntaxPlugins.length) {
+    config.plugins = syntaxPlugins.concat(config.plugins || [])
+  }
+  return babel.transformSync(code, {
+    filename,
+    babelrc: false,
+    configFile: false,
+    sourceMaps: true,
+    ...config,
+  })
+}
+
 export function parseFile(filename: string, source?: string) {
   return new File(filename, source)
 }
@@ -162,10 +194,6 @@ class File {
     readonly filename: string,
     readonly source = fs.readFileSync(filename, 'utf8')
   ) {
-    const syntaxPlugins = /\.tsx?$/.test(filename)
-      ? [['@babel/syntax-typescript', { isTSX: filename.endsWith('x') }]]
-      : []
-
     const visitor: babel.Visitor = {
       Program: path => {
         this.program = path
@@ -173,9 +201,10 @@ class File {
       },
     }
 
-    babel.transformSync(source, {
-      filename,
-      plugins: [...syntaxPlugins, { visitor }],
+    transformSync(source, filename, {
+      plugins: [{ visitor }],
+      sourceMaps: false,
+      code: false,
     })
   }
 
