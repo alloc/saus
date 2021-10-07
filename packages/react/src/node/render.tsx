@@ -1,7 +1,6 @@
 import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
-  logger,
   render as addRenderHook,
   ClientState,
   InferRouteParams,

@@ -4,7 +4,6 @@ import { debounce } from 'ts-debounce'
 import { watch } from 'chokidar'
 import {
   SausContext,
-  loadConfigHooks,
   loadContext,
   loadRenderHooks,
   loadRoutes,
