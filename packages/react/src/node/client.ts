@@ -145,9 +145,16 @@ function serverToClientRender(
   let bodyRefs: NodePath<t.Statement>[] = []
   let needsTreeShake = false
 
+  // When the <html> tag is replaced by <body> children, the same
+  // return statement is traversed again, but this double traversal
+  // is unwanted, so we bail out in that case.
+  const returnStmts = new Set<NodePath>()
+
   renderFn.traverse({
     JSXElement(path) {
       if (!path.parentPath.isReturnStatement()) return
+      if (returnStmts.has(path.parentPath)) return
+      returnStmts.add(path.parentPath)
       path.skip()
 
       const rootElement = path
