@@ -145,7 +145,11 @@ function serverToClientRender(
       path.skip()
 
       const rootElement = path
-      const rootTagName = rootElement.get('openingElement').toString()
+      const rootTagName = rootElement
+        .get('openingElement')
+        .get('name')
+        .toString()
+
       const hasHead = rootTagName === 'html'
       if (!hasHead && rootTagName !== 'body') {
         return
