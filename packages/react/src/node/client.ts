@@ -13,6 +13,7 @@ import {
   parseFile,
   remove,
   resolveReferences,
+  removeSSR,
 } from 'saus/babel'
 
 export const getClientProvider =
@@ -85,6 +86,11 @@ export const getClientProvider =
     }
 
     if (didRenderFn) {
+      // SSR-only logic must be removed before resolving references.
+      // We only do it for `didRenderFn` because `renderFn` is not
+      // allowed to use `import.meta.env.SSR` at all.
+      didRenderFn.get('body').traverse(removeSSR())
+
       const refs = resolveReferences(
         didRenderFn.get('body'),
         path => !path.isDescendant(didRenderFn!.parentPath)

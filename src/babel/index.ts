@@ -97,6 +97,36 @@ export function isPropertyName({ parentKey, parentPath }: NodePath) {
   )
 }
 
+export function removeSSR(): babel.Visitor {
+  return {
+    MetaProperty(path) {
+      if (!path.get('meta').isIdentifier({ name: 'import' })) return
+      const expr = path.findParent(p => !p.parentPath?.isMemberExpression())!
+      if (expr.toString() == 'import.meta.env.SSR') {
+        const parent = expr.parentPath!
+        if (expr.parentKey == 'test') {
+          if (parent.isIfStatement() || parent.isConditionalExpression()) {
+            if (parent.node.alternate) {
+              parent.replaceWith(parent.node.alternate)
+            } else {
+              parent.remove()
+            }
+          } else {
+            expr.replaceWith(t.booleanLiteral(false))
+          }
+        } else if (
+          expr.parentKey == 'left' &&
+          parent.equals('operator', '&&')
+        ) {
+          parent.replaceWith(t.booleanLiteral(false))
+        } else {
+          expr.replaceWith(t.booleanLiteral(false))
+        }
+      }
+    },
+  }
+}
+
 export function isChainedCall(
   path: NodePath
 ): path is NodePath<t.MemberExpression> {
