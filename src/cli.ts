@@ -28,6 +28,7 @@ cli
     `[boolean | "terser" | "esbuild"] enable/disable minification, ` +
       `or specify minifier to use (default: esbuild)`
   )
+  .option('--force', `[boolean] clear the rollup cache`)
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
   .action(async (options: BuildOptions) => {
     const { build } = require('./build') as typeof import('./build')

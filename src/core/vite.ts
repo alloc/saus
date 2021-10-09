@@ -7,6 +7,7 @@ export interface UserConfig extends vite.UserConfig {}
 
 export interface BuildOptions extends vite.BuildOptions {
   maxWorkers?: number
+  force?: boolean
 }
 
 export const defineConfig = (

@@ -114,7 +114,8 @@ export async function build(
   await renderPage.calls
   progress.finish()
 
-  if (inlineConfig?.build?.write !== false && pages.length) {
+  const buildOptions = inlineConfig?.build || {}
+  if (buildOptions.write !== false && pages.length) {
     const routeModulePaths = new Set<string>()
     const pageMap: Record<string, RenderedPage> = {}
     for (const page of pages) {
@@ -124,7 +125,7 @@ export async function build(
     }
 
     const cachePath = getCachePath(context.root)
-    let cache = readCache(cachePath)
+    let cache = buildOptions.force ? undefined : readCache(cachePath)
 
     const routeChunks: { [routeModuleId: string]: Rollup.OutputChunk[] } = {}
     const config = vite.mergeConfig(context.config, <vite.UserConfig>{
