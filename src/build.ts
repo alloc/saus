@@ -139,67 +139,72 @@ export async function build(
       routeModulePaths.add(path.join(context.root, page.routeModuleId))
     }
 
+    const cachePath = getCachePath(context.root)
+    let cache = readCache(cachePath)
+
     const routeChunks: { [routeModuleId: string]: Rollup.OutputChunk[] } = {}
-
-    await vite.build(
-      vite.mergeConfig(context.config, <vite.UserConfig>{
-        build: {
-          rollupOptions: { input: Object.keys(pageMap) },
-        },
-        plugins: [
-          clientPlugin(context),
-          routesPlugin(context),
-          {
-            name: 'saus:build',
-            enforce: 'post',
-            resolveId: id => pageMap[id] && id,
-            load(id) {
-              const page = pageMap[id]
-              return page?.html
-            },
-            // Deduplicate entry chunks.
-            transformIndexHtml(html, ctx) {
-              const page = pageMap[ctx.filename]
-              if (page.client) {
-                const bundle = ctx.bundle!
-                const currentChunk = ctx.chunk!
-                const routeModuleId = page.routeModuleId
-                const existingChunks = routeChunks[routeModuleId] || []
-                const duplicateChunk = existingChunks.find(
-                  chunk => chunk.code === currentChunk.code
-                )
-
-                if (duplicateChunk) {
-                  delete bundle[currentChunk.fileName]
-                  return html.replace(
-                    currentChunk.fileName,
-                    duplicateChunk.fileName
-                  )
-                }
-
-                existingChunks.push(currentChunk)
-                routeChunks[routeModuleId] = existingChunks
-
-                // Rename the chunk to avoid confusion. Instead of using the
-                // basename of the .html page, use the basename of the route
-                // module shared by .html pages with duplicate entry chunk.
-                const oldChunkPath = currentChunk.fileName
-                const newChunkPath = oldChunkPath.replace(
-                  path.basename(ctx.filename, '.html'),
-                  path.basename(routeModuleId, path.extname(routeModuleId))
-                )
-
-                currentChunk.fileName = newChunkPath
-                bundle[newChunkPath] = currentChunk
-                delete bundle[oldChunkPath]
-
-                return html.replace(oldChunkPath, currentChunk.fileName)
-              }
-            },
+    const config = vite.mergeConfig(context.config, <vite.UserConfig>{
+      build: {
+        rollupOptions: { input: Object.keys(pageMap), cache },
+      },
+      plugins: [
+        clientPlugin(context),
+        routesPlugin(context),
+        {
+          name: 'saus:build',
+          enforce: 'post',
+          resolveId: id => pageMap[id] && id,
+          load(id) {
+            const page = pageMap[id]
+            return page?.html
           },
-        ],
-      })
-    )
+          // Deduplicate entry chunks.
+          transformIndexHtml(html, ctx) {
+            const page = pageMap[ctx.filename]
+            if (page.client) {
+              const bundle = ctx.bundle!
+              const currentChunk = ctx.chunk!
+              const routeModuleId = page.routeModuleId
+              const existingChunks = routeChunks[routeModuleId] || []
+              const duplicateChunk = existingChunks.find(
+                chunk => chunk.code === currentChunk.code
+              )
+
+              if (duplicateChunk) {
+                delete bundle[currentChunk.fileName]
+                return html.replace(
+                  currentChunk.fileName,
+                  duplicateChunk.fileName
+                )
+              }
+
+              existingChunks.push(currentChunk)
+              routeChunks[routeModuleId] = existingChunks
+
+              // Rename the chunk to avoid confusion. Instead of using the
+              // basename of the .html page, use the basename of the route
+              // module shared by .html pages with duplicate entry chunk.
+              const oldChunkPath = currentChunk.fileName
+              const newChunkPath = oldChunkPath.replace(
+                path.basename(ctx.filename, '.html'),
+                path.basename(routeModuleId, path.extname(routeModuleId))
+              )
+
+              currentChunk.fileName = newChunkPath
+              bundle[newChunkPath] = currentChunk
+              delete bundle[oldChunkPath]
+
+              return html.replace(oldChunkPath, currentChunk.fileName)
+            }
+          },
+        },
+      ],
+    })
+
+    cache = ((await vite.build(config)) as vite.ViteBuild).cache
+    if (cache) {
+      writeCache(cachePath, cache)
+    }
   }
 
   if (!debug) {
