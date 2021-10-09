@@ -1,16 +1,23 @@
-import { RegexParam, RouteParams, SausContext, vite } from '../core'
-import { PageFactory } from '../pages'
-import { setup } from './setup'
+import { expose, isWorkerRuntime } from 'threads/worker'
+import { RegexParam, RouteParams, vite } from '../core'
+import { setup, SetupPromise } from './setup'
 
-let setupPromise: Promise<[PageFactory, SausContext]>
+let setupPromise: SetupPromise
 
 export async function runSetup(inlineConfig?: vite.UserConfig) {
-  setupPromise = setup(inlineConfig)
-  await setupPromise
+  const [context] = await (setupPromise = setup(inlineConfig))
+  if (!isWorkerRuntime()) {
+    return context
+  }
+}
+
+export async function tearDown() {
+  const [, , loader] = await setupPromise
+  await loader.close()
 }
 
 export async function renderPage(routePath: string, params?: RouteParams) {
-  const [pageFactory, context] = await setupPromise
+  const [context, pageFactory] = await setupPromise
 
   if (routePath === 'default') {
     // Render the default page.
@@ -22,4 +29,8 @@ export async function renderPage(routePath: string, params?: RouteParams) {
     const pagePath = params ? RegexParam.inject(routePath, params) : routePath
     return pageFactory.renderMatchedPath(pagePath, params || {}, route)
   }
+}
+
+if (isWorkerRuntime()) {
+  expose({ runSetup, tearDown, renderPage })
 }

@@ -5,7 +5,8 @@ export const getCachePath = (root: string) =>
   path.join(root, 'node_modules/.saus')
 
 export type CachedModule = {
-  ast: any
+  id: string
+  originalCode: string
 }
 
 export type Cache = {

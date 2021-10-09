@@ -155,7 +155,7 @@ export function resetConfigModules(context: SausContext) {
   }
 }
 
-type ModuleLoader = vite.ViteDevServer
+export interface ModuleLoader extends vite.ViteDevServer {}
 
 export async function loadModule(
   mod: string,

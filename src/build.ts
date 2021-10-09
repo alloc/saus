@@ -1,58 +1,40 @@
-import { Worker } from 'jest-worker'
+import { spawn, Thread, Worker } from 'threads'
 import { startTask } from 'misty/task'
 import path from 'path'
 import cpuCount from 'physical-cpu-count'
-import {
-  createLoader,
-  loadContext,
-  loadRoutes,
-  resetConfigModules,
-  vite,
-  BuildOptions,
-  RouteParams,
-} from './core'
+import { vite, BuildOptions, RouteParams } from './core'
 import { getPageFilename, RenderedPage } from './pages'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
 import { Rollup } from './rollup'
 import { rateLimit } from './utils/rateLimit'
+import { getCachePath, readCache, writeCache } from './build/cache'
+import * as mainWorker from './build/worker'
+import { yeux } from './utils/yeux'
 
 export type FailedPage = { path: string; reason: string }
 
 export async function build(
   inlineConfig?: vite.UserConfig & { build?: BuildOptions }
 ) {
-  const context = await loadContext('build', inlineConfig)
+  const context = (await mainWorker.runSetup(inlineConfig))!
 
-  const loader = await createLoader(context)
-  await loadRoutes(context, loader)
-  await loader.close()
+  type PageWorker = typeof import('./build/worker')
 
-  type PageWorker = Worker & {
-    runSetup(inlineConfig?: vite.UserConfig): Promise<void>
-    renderPage(routePath: string, params?: RouteParams): Promise<RenderedPage>
-  }
-
-  const debug = inlineConfig?.build?.maxWorkers === 0
-  const numWorkers = debug ? 1 : cpuCount
-
-  const pageWorker = debug
-    ? require('./build/worker')
-    : (new Worker(require.resolve('./build/worker'), {
-        // TODO: find out why this causes SIGABRT
-        // enableWorkerThreads: true,
-        numWorkers,
-      }) as PageWorker)
-
-  // Ensure modules that added config hooks are evaluated again.
-  if (debug) {
-    resetConfigModules(context)
-  }
-
-  // Prepare each worker thread.
-  await Promise.all(
-    range(0, numWorkers).map(() => pageWorker.runSetup(inlineConfig))
+  const maxWorkers = Math.max(
+    inlineConfig?.build?.maxWorkers ?? cpuCount - 1,
+    1
   )
+
+  const workerImpl = new Worker('./build/worker')
+  const workerPool = yeux(async () => {
+    const worker = await spawn<PageWorker>(workerImpl)
+    await worker.runSetup(inlineConfig)
+    return worker
+  })
+
+  // Use the main thread to reduce wait times.
+  workerPool.add(mainWorker as any)
 
   let pageCount = 0
   let renderCount = 0
@@ -66,10 +48,11 @@ export async function build(
 
   const failedRoutes = new Set<string>()
   const renderPage = rateLimit(
-    cpuCount,
+    maxWorkers,
     async (routePath: string, params?: RouteParams) => {
+      const worker = await workerPool.get()
       try {
-        const page = await pageWorker.renderPage(routePath, params)
+        const page = await worker.renderPage(routePath, params)
         if (page) {
           const filename = getPageFilename(page.path)
           context.pages[filename] = page
@@ -88,6 +71,7 @@ export async function build(
           })
         }
       }
+      workerPool.add(worker)
       renderCount += 1
       updateProgress()
     },
@@ -207,20 +191,17 @@ export async function build(
     }
   }
 
-  if (!debug) {
-    pageWorker.end()
-  }
+  await Promise.all(
+    workerPool.pooled.map(async worker => {
+      await worker.tearDown()
+      if (worker !== mainWorker) {
+        await Thread.terminate(worker)
+      }
+    })
+  )
 
   return {
     pages,
     errors,
   }
-}
-
-function range(offset: number, length: number) {
-  const indices = new Array(length)
-  for (let i = 0; i < length; i++) {
-    indices[i] = i + offset
-  }
-  return indices
 }

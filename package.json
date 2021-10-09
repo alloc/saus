@@ -31,7 +31,6 @@
     "chokidar": "^3.5.2",
     "endent": "^2.1.0",
     "escape-goat": "^3.0.0",
-    "jest-worker": "^27.2.4",
     "kleur": "^4.1.4",
     "klona": "^2.0.4",
     "magic-string": "^0.25.7",
@@ -40,6 +39,7 @@
     "physical-cpu-count": "^2.0.0",
     "regexparam": "^2.0.0",
     "source-map-support": "^0.5.20",
+    "threads": "^1.7.0",
     "ts-debounce": "^3.0.0",
     "vite": "npm:@alloc/vite@2.6.3-2",
     "yaml": "^1.10.2"
