@@ -8,7 +8,7 @@ import {
   loadRenderHooks,
   loadRoutes,
   resetRenderHooks,
-} from './context'
+} from './core'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'

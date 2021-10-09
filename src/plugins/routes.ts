@@ -1,9 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import * as vite from 'vite'
 import { babel, inferSyntaxPlugins, t } from '../babel'
-import { SausContext } from '../context'
-import { SourceDescription } from '../vite'
+import { SausContext, SourceDescription, vite } from '../core'
 
 const routesPathStub = path.resolve(__dirname, '../../src/client/routes.ts')
 

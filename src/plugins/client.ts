@@ -1,9 +1,8 @@
 import endent from 'endent'
 import * as vite from 'vite'
-import { getPageFilename } from '..'
-import { SausContext, Client } from '../context'
+import { Client, SausContext, Plugin } from '../core'
+import { getPageFilename } from '../pages'
 import { collectCss } from '../preload'
-import { Plugin } from '../vite'
 
 const clientPrefix = '/@saus/'
 

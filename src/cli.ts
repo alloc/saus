@@ -2,7 +2,7 @@ import 'source-map-support/register'
 import { success } from 'misty'
 import color from 'kleur'
 import cac from 'cac'
-import { BuildOptions, vite } from './vite'
+import { BuildOptions, vite } from './core'
 
 const cli = cac('saus')
 

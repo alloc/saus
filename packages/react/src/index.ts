@@ -1,5 +1,5 @@
 import reactVite from '@vitejs/plugin-react'
-import { configureVite } from 'saus'
+import { configureVite } from 'saus/core'
 
 export * from './node/render'
 
@@ -15,7 +15,7 @@ configureVite(config => ({
   ],
 }))
 
-declare module 'saus' {
+declare module 'saus/core' {
   export interface UserConfig {
     babel?: import('@babel/core').TransformOptions
   }

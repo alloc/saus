@@ -1,35 +1,12 @@
 import path from 'path'
 import callerPath from 'caller-path'
-import * as RegexParam from 'regexparam'
-import * as vite from 'vite'
-import { transformSync } from './babel'
+import { transformSync } from '../babel'
+import type { RenderedPage } from '../pages'
 import { readSausYaml } from './config'
-import {
-  PageRequest,
-  RenderCall,
-  Renderer,
-  RenderedPage,
-  RenderContext,
-} from './render'
-import {
-  InferRouteParams,
-  Route,
-  RouteConfig,
-  RouteModule,
-  RouteParams,
-  RouteLoader,
-} from './routes'
-import { UserConfig, SourceDescription } from './vite'
-
-let context!: SausContext
-
-export const getSausContext = () => context
-
-export const logger = new Proxy({} as vite.Logger, {
-  get(_, key: keyof vite.Logger) {
-    return context.logger[key]
-  },
-})
+import type { Renderer } from './renderer'
+import type { Route } from './routes'
+import { UserConfig, vite } from './vite'
+import { context, setContext } from './global'
 
 export interface SausContext {
   root: string
@@ -55,22 +32,6 @@ export interface SausContext {
   defaultRenderer?: Renderer<string>
 }
 
-/** A generated client module */
-export type Client = { id: string } & SourceDescription
-
-/** Function that generates a client module */
-export type ClientProvider = (
-  context: SausContext,
-  renderer: Renderer<string>
-) => Client | Promise<Client | void> | void
-
-export type ClientState = Record<string, any> & {
-  rootId?: string
-  routePath: string
-  routeParams: RouteParams
-  error?: any
-}
-
 export type ConfigHook = {
   (config: UserConfig, context: SausContext):
     | UserConfig
@@ -82,96 +43,12 @@ export type ConfigHook = {
   modulePath?: string
 }
 
-type Promisable<T> = T | PromiseLike<T>
-
-/**
- * Hook into the rendering process that generates HTML for a page.
- *
- * Return nothing to defer to the next renderer.
- */
-export function render<
-  Route extends string,
-  Module extends object = RouteModule,
-  State extends object = ClientState
->(
-  route: Route,
-  render: (
-    module: Module,
-    request: PageRequest<State, InferRouteParams<Route>>,
-    context: RenderContext
-  ) => Promisable<string | null | void>,
-  ...metadata: any[]
-): RenderCall
-
-/** Set the fallback renderer. */
-export function render<
-  Module extends object = RouteModule,
-  State extends object = ClientState
->(
-  render: (
-    module: Module,
-    request: PageRequest<State>,
-    context: RenderContext
-  ) => Promisable<string>,
-  ...metadata: any[]
-): RenderCall
-
-export function render(...args: [any, any?]) {
-  let renderer: Renderer<any>
-  if (typeof args[0] === 'string') {
-    renderer = new Renderer(...args)
-    context.renderers.push(renderer)
-  } else {
-    renderer = new Renderer('', ...args)
-    context.defaultRenderer = renderer
-  }
-  return new RenderCall(renderer)
-}
-
 /**
  * Access and manipulate the Vite config before it's applied.
  */
 export function configureVite(hook: ConfigHook) {
   hook.modulePath = callerPath()
   context.configHooks.push(hook)
-}
-
-const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
-const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
-
-/** Define a route */
-export function route<RoutePath extends string, Module extends object>(
-  path: RoutePath,
-  load: RouteLoader<Module>,
-  config?: RouteConfig<Module, InferRouteParams<RoutePath>>
-): void
-
-/** Define the default route */
-export function route(load: RouteLoader): void
-
-/** @internal */
-export function route(
-  pathOrLoad: string | RouteLoader,
-  maybeLoad?: RouteLoader<any>,
-  config?: RouteConfig<any, any>
-) {
-  const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
-  const load = maybeLoad || (pathOrLoad as RouteLoader)
-  const route = {
-    path,
-    load,
-    moduleId: parseDynamicImport(load),
-    ...config,
-  } as Route
-
-  if (path === 'default') {
-    route.keys = []
-    route.pattern = /./
-    context.defaultRoute = route
-  } else {
-    Object.assign(route, RegexParam.parse(path))
-    context.routes.push(route)
-  }
 }
 
 export async function loadContext(
@@ -259,19 +136,19 @@ export async function loadContext(
   return context
 }
 
-export function resetRenderHooks(ctx: SausContext, resetConfig?: boolean) {
-  Object.keys(ctx.pages).forEach(key => {
-    delete ctx.pages[key]
+export function resetRenderHooks(context: SausContext, resetConfig?: boolean) {
+  Object.keys(context.pages).forEach(key => {
+    delete context.pages[key]
   })
-  ctx.renderers.length = 0
-  ctx.defaultRenderer = undefined
+  context.renderers.length = 0
+  context.defaultRenderer = undefined
   if (resetConfig) {
-    ctx.configHooks.length = 0
+    context.configHooks.length = 0
   }
 }
 
-export function resetConfigModules(ctx: SausContext) {
-  for (const hook of ctx.configHooks) {
+export function resetConfigModules(context: SausContext) {
+  for (const hook of context.configHooks) {
     if (hook.modulePath) {
       delete require.cache[hook.modulePath]
     }
@@ -285,11 +162,11 @@ export async function loadModule(
   ctx: SausContext,
   loader: ModuleLoader
 ) {
-  context = ctx
+  setContext(ctx)
   try {
     await loader.ssrLoadModule('/' + path.relative(ctx.root, mod))
   } finally {
-    context = null as any
+    setContext(null)
   }
 }
 

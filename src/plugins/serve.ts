@@ -1,7 +1,6 @@
-import { SausContext } from '../context'
-import { createPageFactory, PageFactory } from '../render'
+import { Plugin, SausContext } from '../core'
+import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
-import { Plugin } from '../vite'
 
 export function servePlugin(context: SausContext): Plugin {
   // The server starts before Saus is ready, so we stall

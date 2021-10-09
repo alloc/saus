@@ -1,140 +1,78 @@
-import path from 'path'
-import { ClientProvider, endent } from 'saus'
+import { endent, ClientProvider } from 'saus/core'
 import {
   t,
-  isChainedCall,
   isConsoleCall,
-  flattenCallChain,
   getTrailingLineBreak,
   getWhitespaceStart,
   MagicBundle,
   MagicString,
   NodePath,
-  parseFile,
   remove,
   resolveReferences,
-  removeSSR,
 } from 'saus/babel'
 
-export const getClientProvider =
-  (): ClientProvider =>
-  ({ renderPath }, { hash, start }) => {
-    const renderFile = parseFile(renderPath)
+export const getClient: ClientProvider = ({
+  renderFn,
+  didRenderFn,
+  extract,
+}) => {
+  const client = new MagicBundle()
+  const extracted = new Set<NodePath>()
 
-    let renderFn: NodePath<t.ArrowFunctionExpression> | undefined
-    let didRenderFn: NodePath<t.ArrowFunctionExpression> | undefined
+  const renderDecl = extract(renderFn)
+  serverToClientRender(renderDecl, renderFn)
 
-    const renderStmt = renderFile.program
-      .get('body')
-      .find(
-        path => path.node.start === start
-      ) as NodePath<t.ExpressionStatement>
+  const refs = resolveReferences(
+    renderFn.get('body'),
+    path => !path.isDescendant(renderFn!.parentPath)
+  )
+  refs.forEach(stmt => {
+    client.addSource(extract(stmt))
+    extracted.add(stmt)
+  })
 
-    if (!renderStmt) {
-      return // Something ain't right.
-    }
+  renderDecl.prepend('const render = ')
+  client.addSource(renderDecl)
 
-    renderStmt.traverse({
-      Identifier(path) {
-        const { node, parentPath } = path
-
-        // Parse the `render(...)` call
-        if (node.start === start && parentPath.isCallExpression()) {
-          parentPath.get('arguments').find(arg => {
-            if (arg.isArrowFunctionExpression()) {
-              renderFn = arg
-              return true
-            }
-          })
-          path.stop()
-        }
-
-        // Parse the `.then(...)` call
-        else if (isChainedCall(parentPath)) {
-          const callChain = flattenCallChain(parentPath)
-          if (callChain[0].node.start === start) {
-            const thenCall = parentPath.parentPath as NodePath<t.CallExpression>
-            thenCall.get('arguments').find(arg => {
-              if (arg.isArrowFunctionExpression()) {
-                didRenderFn = arg
-                return true
-              }
-            })
-          }
-        }
-      },
+  if (didRenderFn) {
+    const refs = resolveReferences(
+      didRenderFn.get('body'),
+      path => !path.isDescendant(didRenderFn!.parentPath)
+    )
+    refs.forEach(stmt => {
+      if (extracted.has(stmt)) return
+      client.addSource(extract(stmt))
+      extracted.add(stmt)
     })
-
-    const client = new MagicBundle()
-    const extracted = new Set<NodePath>()
-
-    if (renderFn) {
-      const renderDecl = renderFile.extract(renderFn)
-      serverToClientRender(renderDecl, renderFn)
-
-      const refs = resolveReferences(
-        renderFn.get('body'),
-        path => !path.isDescendant(renderFn!.parentPath)
-      )
-      refs.forEach(stmt => {
-        client.addSource(renderFile.extract(stmt))
-        extracted.add(stmt)
-      })
-
-      renderDecl.prepend('const render = ')
-      client.addSource(renderDecl)
-    }
-
-    if (didRenderFn) {
-      // SSR-only logic must be removed before resolving references.
-      // We only do it for `didRenderFn` because `renderFn` is not
-      // allowed to use `import.meta.env.SSR` at all.
-      didRenderFn.get('body').traverse(removeSSR())
-
-      const refs = resolveReferences(
-        didRenderFn.get('body'),
-        path => !path.isDescendant(didRenderFn!.parentPath)
-      )
-      refs.forEach(stmt => {
-        if (extracted.has(stmt)) return
-        client.addSource(renderFile.extract(stmt))
-        extracted.add(stmt)
-      })
-      const didRenderDecl = renderFile.extract(didRenderFn)
-      didRenderDecl.prepend('const didRender = ')
-      client.addSource(didRenderDecl)
-    }
-
-    const defaultImports = endent`
-      import ReactDOM from "react-dom"
-      import { onHydrate as $onHydrate } from "saus/client"
-    `
-
-    const hydrateBlock = endent`
-      $onHydrate(async (routeModule, request) => {
-        const {rootId = "root"} = request.state
-        ReactDOM.hydrate(
-          await render(routeModule, request),
-          document.getElementById(rootId)
-        )
-        ${didRenderFn ? 'didRender()' : ''}
-      })
-    `
-
-    client.prepend(defaultImports + '\n')
-    client.append('\n' + hydrateBlock)
-
-    const code = client.toString()
-    const map = client.generateMap({
-      includeContent: true,
-    })
-
-    return {
-      id: `client-${hash}${path.extname(renderPath)}`,
-      code,
-      map,
-    }
+    const didRenderDecl = extract(didRenderFn)
+    didRenderDecl.prepend('const didRender = ')
+    client.addSource(didRenderDecl)
   }
+
+  const defaultImports = endent`
+    import ReactDOM from "react-dom"
+    import { onHydrate as $onHydrate } from "saus/client"
+  `
+
+  const hydrateBlock = endent`
+    $onHydrate(async (routeModule, request) => {
+      const {rootId = "root"} = request.state
+      ReactDOM.hydrate(
+        await render(routeModule, request),
+        document.getElementById(rootId)
+      )
+      ${didRenderFn ? 'didRender()' : ''}
+    })
+  `
+
+  client.prepend(defaultImports + '\n')
+  client.append('\n' + hydrateBlock)
+
+  return {
+    code: client.toString(),
+    map: client.generateMap(),
+  }
+}
 
 // The client only needs to hydrate the <body> tree,
 // so <html> and <head> can (and should) be removed.

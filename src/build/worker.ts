@@ -1,8 +1,5 @@
-import * as RegexParam from 'regexparam'
-import * as vite from 'vite'
-import { SausContext } from '../context'
-import { PageFactory } from '../render'
-import { RouteParams } from '../routes'
+import { RegexParam, RouteParams, SausContext, vite } from '../core'
+import { PageFactory } from '../pages'
 import { setup } from './setup'
 
 let setupPromise: Promise<[PageFactory, SausContext]>

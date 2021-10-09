@@ -1,8 +1,8 @@
 import * as vite from 'vite'
 import md5Hex from 'md5-hex'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
-import { SausContext } from '../context'
 import { babel, transformSync, t, NodePath } from '../babel'
+import { SausContext } from '../core'
 import { isClientUrl } from './client'
 
 export function renderPlugin({

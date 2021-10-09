@@ -1,16 +1,14 @@
 import React, { Children, ReactElement } from 'react'
 import ReactDOM from 'react-dom/server'
 import {
-  render as addRenderHook,
+  render as createRenderer,
   ClientState,
   InferRouteParams,
-  PageRequest,
   RenderCall,
+  RenderRequest,
   RouteModule,
-} from 'saus'
-import { getClientProvider } from './client'
-
-fixReactBug()
+} from 'saus/core'
+import { getClient } from './client'
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -23,9 +21,9 @@ export function render<
   route: Route,
   render: (
     module: Module,
-    request: PageRequest<State, InferRouteParams<Route>>
+    request: RenderRequest<State, InferRouteParams<Route>>
   ) => Promisable<JSX.Element | null | void>
-): RenderCall
+): RenderCall<JSX.Element>
 
 /** Set the fallback renderer. */
 export function render<
@@ -34,77 +32,55 @@ export function render<
 >(
   render: (
     module: Module,
-    request: PageRequest<State>
+    request: RenderRequest<State>
   ) => Promisable<JSX.Element>
-): RenderCall
+): RenderCall<JSX.Element>
 
 export function render(...args: any[]) {
-  if (typeof args[0] === 'string') {
-    const [route, render, hash, start] = args
-    return addRenderHook(
-      route,
-      async (module, request, { didRender }) => {
-        const root = await render(module, request)
-        if (root) {
-          try {
-            return renderToString(root)
-          } finally {
-            didRender()
-          }
-        }
-      },
-      hash,
-      start
-    ).withClient(getClientProvider())
-  } else {
-    const [render, hash, start] = args
-    return addRenderHook(
-      async (module, request, { didRender }) => {
-        const root = await render(module, request)
-        try {
-          return renderToString(root)
-        } finally {
-          didRender()
-        }
-      },
-      hash,
-      start
-    ).withClient(getClientProvider())
+  if (typeof args[0] !== 'string') {
+    args.unshift('')
   }
-}
-
-function renderToString(root: ReactElement) {
-  if (root.type == 'html') {
-    const children = Children.toArray(root.props.children)
-    const headIndex = children.findIndex(
-      child => isJSX(child) && child.type === 'head'
-    )
-    if (headIndex < 0) {
-      children.unshift(<head />)
-    }
-    const bodyIndex = children.findIndex(
-      child => isJSX(child) && child.type === 'body'
-    )
-    children.splice(
-      bodyIndex,
-      1,
-      transformBody(children[bodyIndex] as ReactElement)
-    )
-    root = React.cloneElement(root, {
-      children,
-    })
-  } else {
-    if (root.type !== 'body') {
-      root = <body>{root}</body>
-    }
-    root = (
-      <html>
-        <head />
-        {transformBody(root)}
-      </html>
-    )
-  }
-  return `<!DOCTYPE html>\n` + ReactDOM.renderToStaticMarkup(root)
+  const [route, render, hash, start] = args
+  const renderer = createRenderer<JSX.Element>(
+    route,
+    async (mod, req) => {
+      let root = await render(mod, req)
+      if (root.type == 'html') {
+        const children = Children.toArray(root.props.children)
+        const headIndex = children.findIndex(
+          child => isJSX(child) && child.type === 'head'
+        )
+        if (headIndex < 0) {
+          children.unshift(<head />)
+        }
+        const bodyIndex = children.findIndex(
+          child => isJSX(child) && child.type === 'body'
+        )
+        children.splice(
+          bodyIndex,
+          1,
+          transformBody(children[bodyIndex] as ReactElement)
+        )
+        return React.cloneElement(root, {
+          children,
+        })
+      }
+      if (root.type !== 'body') {
+        root = <body>{root}</body>
+      }
+      return (
+        <html>
+          <head />
+          {transformBody(root)}
+        </html>
+      )
+    },
+    ReactDOM.renderToStaticMarkup,
+    getClient,
+    hash,
+    start
+  )
+  return renderer.api
 }
 
 function transformBody(body: ReactElement) {
@@ -120,6 +96,9 @@ function isJSX(val: any): val is ReactElement {
   return val && typeof val === 'object' && 'type' in val
 }
 
+fixReactBug()
+
+// Ensure the component stack is included in stack traces.
 function fixReactBug() {
   const { ReactDebugCurrentFrame } = (React as any)
     .__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED

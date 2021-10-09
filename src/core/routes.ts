@@ -1,6 +1,9 @@
 import type { ComponentType } from 'react'
+import type { RouteParams as InferRouteParams } from 'regexparam'
+import * as RegexParam from 'regexparam'
+import { context } from './global'
 
-export { RouteParams as InferRouteParams } from 'regexparam'
+export { RegexParam, InferRouteParams }
 
 export interface RouteModule extends Record<string, any> {}
 
@@ -47,10 +50,6 @@ export interface Route extends RouteConfig, ParsedRoute {
   moduleId: string
 }
 
-export function getPageFilename(url: string) {
-  return url == '/' ? 'index.html' : url.slice(1) + '.html'
-}
-
 export function matchRoute(path: string, route: ParsedRoute) {
   return route.pattern
     .exec(path)
@@ -59,4 +58,42 @@ export function matchRoute(path: string, route: ParsedRoute) {
       params[route.keys[i]] = value
       return params
     }, {})
+}
+
+const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
+const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
+
+/** Define a route */
+export function route<RoutePath extends string, Module extends object>(
+  path: RoutePath,
+  load: RouteLoader<Module>,
+  config?: RouteConfig<Module, InferRouteParams<RoutePath>>
+): void
+
+/** Define the default route */
+export function route(load: RouteLoader): void
+
+/** @internal */
+export function route(
+  pathOrLoad: string | RouteLoader,
+  maybeLoad?: RouteLoader<any>,
+  config?: RouteConfig<any, any>
+) {
+  const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
+  const load = maybeLoad || (pathOrLoad as RouteLoader)
+  const route = {
+    path,
+    load,
+    moduleId: parseDynamicImport(load),
+    ...config,
+  } as Route
+
+  if (path === 'default') {
+    route.keys = []
+    route.pattern = /./
+    context.defaultRoute = route
+  } else {
+    Object.assign(route, RegexParam.parse(path))
+    context.routes.push(route)
+  }
 }

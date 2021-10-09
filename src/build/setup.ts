@@ -5,10 +5,10 @@ import {
   loadRenderHooks,
   loadRoutes,
   SausContext,
-} from '../context'
+} from '../core'
+import { createPageFactory, PageFactory } from '../pages'
 import { renderPlugin } from '../plugins/render'
 import { routesPlugin } from '../plugins/routes'
-import { createPageFactory, PageFactory } from '../render'
 
 export async function setup(inlineConfig?: vite.UserConfig) {
   const context = await loadContext('build', inlineConfig, [

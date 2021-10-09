@@ -1,8 +1,16 @@
-export * from './context'
-export * from './render'
-export * from './routes'
-export * from './vite'
-
-export { default as endent } from 'endent'
+export { render } from './render'
+export { route, defineConfig, UserConfig, vite } from './core'
 export { htmlEscape as escape } from 'escape-goat'
-export { default as md5Hex } from 'md5-hex'
+
+type BuildFactory = typeof import('./build').build
+type ServerFactory = typeof import('./dev').createServer
+
+export const build: BuildFactory = async inlineConfig => {
+  const { build } = await import('./build')
+  return build(inlineConfig)
+}
+
+export const createServer: ServerFactory = async inlineConfig => {
+  const { createServer } = await import('./dev')
+  return createServer(inlineConfig)
+}

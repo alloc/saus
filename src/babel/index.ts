@@ -1,17 +1,8 @@
-import fs from 'fs'
 import * as babel from '@babel/core'
 import { types as t, NodePath } from '@babel/core'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 
 export { babel, t, NodePath, MagicString, MagicBundle }
-
-export function toStaticParams(params: Record<string, string>) {
-  return t.objectExpression(
-    Object.keys(params).map(key =>
-      t.objectProperty(t.identifier(key), t.stringLiteral(params[key]))
-    )
-  )
-}
 
 const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
   Array.isArray(arg) ? arg : ([arg] as any)
@@ -187,11 +178,6 @@ export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
     : []
 }
 
-/**
- * Shortcut for `babel.transformSync` with configuration files like `.babelrc`
- * and `babel.config.js` disabled, source maps enabled, and syntax plugins
- * inferred from the file extension.
- */
 export function transformSync(
   code: string,
   filename: string,
@@ -211,47 +197,6 @@ export function transformSync(
     sourceMaps: true,
     ...config,
   })
-}
-
-export function parseFile(filename: string, source?: string) {
-  return new File(filename, source)
-}
-
-class File {
-  program!: NodePath<t.Program>
-
-  constructor(
-    readonly filename: string,
-    readonly source = fs.readFileSync(filename, 'utf8')
-  ) {
-    const visitor: babel.Visitor = {
-      Program: path => {
-        this.program = path
-        path.stop()
-      },
-    }
-
-    transformSync(source, filename, {
-      plugins: [{ visitor }],
-      sourceMaps: false,
-      code: false,
-    })
-  }
-
-  extract(path: NodePath) {
-    const { node } = path
-    if (node.start == null || node.end == null) {
-      throw Error('Missing node start/end')
-    }
-    if (!this.program.isAncestor(path)) {
-      throw Error('Given node is not from this file')
-    }
-    const { source, filename } = this
-    const str = new MagicString(source, { filename } as any)
-    str.remove(0, node.start)
-    str.remove(node.end, source.length)
-    return str
-  }
 }
 
 /** Remove a `NodePath`, its preceding whitespace, and its trailing newline (if one exists). */
