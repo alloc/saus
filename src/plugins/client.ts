@@ -1,5 +1,6 @@
 import endent from 'endent'
 import * as vite from 'vite'
+import { Cache } from '../build/cache'
 import { Client, SausContext, Plugin } from '../core'
 import { getPageFilename } from '../pages'
 import { collectCss } from '../preload'
@@ -14,11 +15,18 @@ export function getClientUrl(id: string) {
   return clientPrefix + id
 }
 
-export function clientPlugin({
-  renderPath,
-  pages,
-  configEnv,
-}: SausContext): Plugin {
+export function clientPlugin(context: SausContext, cache?: Cache): Plugin {
+  const { renderPath, pages, configEnv } = context
+
+  const cachedClients: Record<string, string> = {}
+  if (cache) {
+    for (const module of cache.modules) {
+      if (isClientUrl(module.id)) {
+        cachedClients[module.id] = module.originalCode
+      }
+    }
+  }
+
   let server: vite.ViteDevServer | undefined
   let client: Client | undefined
 
@@ -45,7 +53,7 @@ export function clientPlugin({
     },
     load(id) {
       if (isClientUrl(id)) {
-        return client
+        return client || cachedClients[id]
       }
     },
     transformIndexHtml: {
