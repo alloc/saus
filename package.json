@@ -41,7 +41,7 @@
     "source-map-support": "^0.5.20",
     "threads": "^1.7.0",
     "ts-debounce": "^3.0.0",
-    "vite": "npm:@alloc/vite@2.6.3-2",
+    "vite": "npm:@alloc/vite@2.6.3-3",
     "yaml": "^1.10.2"
   },
   "devDependencies": {

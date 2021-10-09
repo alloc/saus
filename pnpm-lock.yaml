@@ -35,7 +35,7 @@ importers:
       threads: ^1.7.0
       ts-debounce: ^3.0.0
       typescript: ^4.0.0
-      vite: npm:@alloc/vite@2.6.3-2
+      vite: npm:@alloc/vite@2.6.3-3
       yaml: ^1.10.2
     dependencies:
       '@babel/core': 7.15.5
@@ -56,7 +56,7 @@ importers:
       source-map-support: 0.5.20
       threads: 1.7.0
       ts-debounce: 3.0.0
-      vite: /@alloc/vite/2.6.3-2
+      vite: /@alloc/vite/2.6.3-3
       yaml: 1.10.2
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
@@ -129,8 +129,8 @@ packages:
     resolution: {integrity: sha512-3HpQjwvBKe2zrNwUjdIsM/UrgmDtRgoDBwJR7whMvG6xM+SOhu2w7EQyDmpqyxS4+1ENSr1dlCKlSR2JC4L0Ug==}
     dev: true
 
-  /@alloc/vite/2.6.3-2:
-    resolution: {integrity: sha512-gCdYq9DUQQyJidIlZxVfefjodcraabrRD88XMSQtkYrKAa1tzWumjvohbIX3ChKcuocLJAMRnIbFfB6cnHnEpw==}
+  /@alloc/vite/2.6.3-3:
+    resolution: {integrity: sha512-KrVtQDuazxn7wkoViAZh/8sdr/vMC4AHhYCNCYbvX+HEH0ADG2Y+1YyjGi7g9w4GwjdHZEk5htAPkBN0iUkkcA==}
     engines: {node: '>=12.2.0'}
     hasBin: true
     peerDependencies:
