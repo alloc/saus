@@ -4,8 +4,9 @@ import { setup } from './setup'
 
 let setupPromise: Promise<[PageFactory, SausContext]>
 
-export function runSetup(inlineConfig?: vite.UserConfig) {
+export async function runSetup(inlineConfig?: vite.UserConfig) {
   setupPromise = setup(inlineConfig)
+  await setupPromise
 }
 
 export async function renderPage(routePath: string, params?: RouteParams) {
