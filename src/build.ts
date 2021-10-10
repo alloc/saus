@@ -17,7 +17,9 @@ export type FailedPage = { path: string; reason: string }
 export async function build(
   inlineConfig?: vite.UserConfig & { build?: BuildOptions }
 ) {
+  const loading = startTask('Loading routes...')
   const context = (await mainWorker.setup(inlineConfig))!
+  loading.finish()
 
   type PageWorker = typeof import('./build/worker')
 
