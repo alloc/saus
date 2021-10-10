@@ -1,4 +1,4 @@
-import { spawn, Thread, Worker } from 'threads'
+import { spawn, ModuleThread, Thread, Worker } from 'threads'
 import { startTask } from 'misty/task'
 import path from 'path'
 import cpuCount from 'physical-cpu-count'
@@ -76,9 +76,9 @@ export async function build(
           })
         }
       }
-      workerPool.add(worker)
       renderCount += 1
       updateProgress()
+      workerPool.add(worker)
     },
     () => {
       pageCount += 1
@@ -119,13 +119,18 @@ export async function build(
   await renderPage.calls
   progress.finish()
 
-  // Wait for worker termination to avoid SIGABRT.
-  await workerPool.close(async worker => {
+  // Stop workers from doing unnecessary work after the pages have
+  // been generated, but wait to terminate the workers until after
+  // the Rollup build is done.
+  const terminateQueue: ModuleThread[] = []
+  const closing = workerPool.close(async worker => {
     await worker.close()
     if (worker !== mainWorker) {
-      await Thread.terminate(worker)
+      terminateQueue.push(worker)
     }
   })
+
+  let buildPromise: Promise<void> | undefined
 
   const buildOptions = inlineConfig?.build || {}
   if (buildOptions.write !== false && pages.length) {
@@ -199,11 +204,17 @@ export async function build(
       ],
     })
 
-    cache = ((await vite.build(config)) as vite.ViteBuild).cache
-    if (cache) {
-      writeCache(cachePath, cache)
-    }
+    buildPromise = vite.build(config).then(({ cache }: any) => {
+      cache && writeCache(cachePath, cache)
+    })
   }
+
+  await Promise.all([
+    // Terminate workers while Rollup is building.
+    closing.then(() => Promise.all(terminateQueue.map(Thread.terminate))),
+    // Wait for Rollup to finish.
+    buildPromise,
+  ])
 
   return {
     pages,
