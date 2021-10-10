@@ -17,7 +17,7 @@ export type FailedPage = { path: string; reason: string }
 export async function build(
   inlineConfig?: vite.UserConfig & { build?: BuildOptions }
 ) {
-  const context = (await mainWorker.runSetup(inlineConfig))!
+  const context = (await mainWorker.setup(inlineConfig))!
 
   type PageWorker = typeof import('./build/worker')
 
@@ -26,10 +26,16 @@ export async function build(
     1
   )
 
-  const workerImpl = new Worker('./build/worker')
+  // HACK: The `spawn` method from "threads" may return the same worker
+  // for parallel calls when given the same worker implementation, so
+  // we have to prevent parallel calls via queueing.
+  const createWorker = rateLimit(1, () =>
+    spawn<PageWorker>(new Worker('./build/worker'))
+  )
+
   const workerPool = yeux(async () => {
-    const worker = await spawn<PageWorker>(workerImpl)
-    await worker.runSetup(inlineConfig)
+    const worker = await createWorker()
+    await worker.setup(inlineConfig)
     return worker
   })
 
@@ -64,10 +70,9 @@ export async function build(
       } catch (e: any) {
         if (!failedRoutes.has(routePath)) {
           failedRoutes.add(routePath)
-          console.error(e.stack)
           errors.push({
             path: routePath,
-            reason: e.message,
+            reason: e.stack,
           })
         }
       }
@@ -113,6 +118,14 @@ export async function build(
 
   await renderPage.calls
   progress.finish()
+
+  // Wait for worker termination to avoid SIGABRT.
+  await workerPool.close(async worker => {
+    await worker.close()
+    if (worker !== mainWorker) {
+      await Thread.terminate(worker)
+    }
+  })
 
   const buildOptions = inlineConfig?.build || {}
   if (buildOptions.write !== false && pages.length) {
@@ -191,18 +204,6 @@ export async function build(
       writeCache(cachePath, cache)
     }
   }
-
-  // Wait for worker termination to avoid SIGABRT.
-  await workerPool.pooled.then(workers =>
-    Promise.all(
-      workers.map(async worker => {
-        await worker.tearDown()
-        if (worker !== mainWorker) {
-          await Thread.terminate(worker)
-        }
-      })
-    )
-  )
 
   return {
     pages,

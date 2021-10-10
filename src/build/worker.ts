@@ -1,26 +1,68 @@
 import { expose, isWorkerRuntime } from 'threads/worker'
-import { RegexParam, RouteParams, vite } from '../core'
-import { setup, SetupPromise } from './setup'
+import {
+  createLoader,
+  loadContext,
+  loadRoutes,
+  ModuleLoader,
+  RegexParam,
+  RouteParams,
+  SausContext,
+  vite,
+} from '../core'
+import { setContext } from '../core/global'
+import { createPageFactory, PageFactory } from '../pages'
+import { renderPlugin } from '../plugins/render'
+import { routesPlugin } from '../plugins/routes'
 
-let setupPromise: SetupPromise
+let loader: ModuleLoader
+let context: SausContext
+let setupPromise: Promise<PageFactory | void>
 
-export async function runSetup(inlineConfig?: vite.UserConfig) {
-  const [context] = await (setupPromise = setup(inlineConfig))
+export async function setup(inlineConfig?: vite.UserConfig) {
+  context = await loadContext('build', inlineConfig, [
+    renderPlugin,
+    routesPlugin,
+  ])
+
+  loader = await createLoader(context, {
+    cacheDir: false,
+    server: { hmr: false, wss: false },
+  })
+
+  // Don't wait for the page factory, so we can cancel
+  // module loading early if necessary…
+  setupPromise = (async () => {
+    setContext(context)
+    try {
+      await loadRoutes(loader)
+    } catch (e: any) {
+      if (e.message !== 'Server is closed') {
+        if (isWorkerRuntime()) {
+          e.message = `Worker ${process.env.WORKER_ID} failed: ` + e.message
+          return console.error(e)
+        } else {
+          throw e
+        }
+      }
+    } finally {
+      setContext(null)
+    }
+    return createPageFactory(context)
+  })()
+
   if (!isWorkerRuntime()) {
-    return context
+    // …except on the main thread, where cancellation is unsupported.
+    return setupPromise.then(() => context)
   }
 }
 
-export async function tearDown() {
-  const [, , loader] = await setupPromise
+export async function close() {
   await loader.close()
 }
 
 export async function renderPage(routePath: string, params?: RouteParams) {
-  const [context, pageFactory] = await setupPromise
-
+  const pageFactory = (await setupPromise)!
   if (routePath === 'default') {
-    // Render the default page.
     if (context.defaultRoute && context.defaultRenderer) {
       return pageFactory.renderUnknownPath('/404')
     }
@@ -32,5 +74,5 @@ export async function renderPage(routePath: string, params?: RouteParams) {
 }
 
 if (isWorkerRuntime()) {
-  expose({ runSetup, tearDown, renderPage })
+  expose({ setup, close, renderPage })
 }

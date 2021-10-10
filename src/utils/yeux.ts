@@ -6,9 +6,9 @@ const ACTIVE: PoolState = 0
 const POOLED: PoolState = 1
 
 export interface ObjectPool<T extends object> {
-  pooled: Promise<T[]>
   get(): Promise<T>
   add(value: T): void
+  close(onClose: (value: T) => Promise<void> | void): Promise<void>
 }
 
 interface Request<T extends object> extends Deferred<T> {
@@ -18,7 +18,7 @@ interface Request<T extends object> extends Deferred<T> {
 /** Create an object pool. */
 export function yeux<T extends object>(
   create: () => T | Promise<T>,
-  reset: (value: T) => void = () => {}
+  reset?: (value: T) => void
 ): ObjectPool<T> {
   const pooled: T[] = []
   const poolStates = new WeakMap<T, PoolState>()
@@ -32,9 +32,6 @@ export function yeux<T extends object>(
   const surplus: Promise<T>[] = []
 
   return {
-    get pooled(): Promise<T[]> {
-      return Promise.all([...pooled, ...surplus])
-    },
     async get() {
       let value = pooled.shift()
       if (value == null) {
@@ -70,6 +67,21 @@ export function yeux<T extends object>(
             }
           })
 
+          // Reject the current request or remove this promise from
+          // the surplus if `create` throws an error.
+          newValue.catch(err => {
+            let index = requests.indexOf(request)
+            if (index >= 0) {
+              requests.splice(index, 1)
+              request.reject(err)
+            } else if (!pendingValue) {
+              const index = surplus.indexOf(newValue)
+              if (index >= 0) {
+                surplus.splice(index, 1)
+              }
+            }
+          })
+
           value = await request
         } else {
           value = newValue
@@ -81,7 +93,7 @@ export function yeux<T extends object>(
     add(value) {
       if (poolStates.get(value) !== POOLED) {
         poolStates.set(value, POOLED)
-        reset(value)
+        reset?.(value)
 
         const get = requests.shift()
         if (get) {
@@ -91,6 +103,14 @@ export function yeux<T extends object>(
           pooled.push(value)
         }
       }
+    },
+    async close(onClose) {
+      const noop = () => {}
+      await Promise.all(
+        pooled
+          .map(onClose)
+          .concat(surplus.map(promise => promise.then(onClose, noop)))
+      )
     },
   }
 }

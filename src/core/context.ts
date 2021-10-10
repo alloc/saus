@@ -157,34 +157,44 @@ export function resetConfigModules(context: SausContext) {
 
 export interface ModuleLoader extends vite.ViteDevServer {}
 
-export async function loadModule(
-  mod: string,
-  ctx: SausContext,
+function loadModules(
+  url: string | string[],
+  context: SausContext,
   loader: ModuleLoader
 ) {
-  setContext(ctx)
-  try {
-    await loader.ssrLoadModule('/' + path.relative(ctx.root, mod))
-  } finally {
-    setContext(null)
+  if (!Array.isArray(url)) {
+    url = [url]
   }
+  return loader.ssrLoadModule(
+    url.map(url => '/' + path.relative(context.root, url))
+  )
 }
 
-export function loadRoutes(context: SausContext, loader: ModuleLoader) {
-  return loadModule(context.routesPath, context, loader)
-}
-
-export function loadRenderHooks(context: SausContext, loader: ModuleLoader) {
-  return loadModule(context.renderPath, context, loader)
+/** Load routes and renderers for the current Saus context. */
+export async function loadRoutes(loader: ModuleLoader) {
+  const modules: string[] = []
+  if (!context.routes.length) {
+    modules.push(context.routesPath)
+  }
+  if (!context.renderers.length && !context.defaultRenderer) {
+    modules.push(context.renderPath)
+  }
+  await loadModules(modules, context, loader)
 }
 
 export async function loadConfigHooks(context: SausContext) {
   const loader = await createLoader(context, {
-    cacheDir: false,
     plugins: [stripRelativeImports(context)],
+    cacheDir: false,
+    server: { hmr: false, wss: false },
   })
   context.configHooks = []
-  await loadRenderHooks(context, loader)
+  setContext(context)
+  try {
+    await loadModules(context.renderPath, context, loader)
+  } finally {
+    setContext(null)
+  }
   await loader.close()
 }
 

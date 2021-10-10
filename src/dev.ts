@@ -2,17 +2,12 @@ import * as vite from 'vite'
 import { klona } from 'klona'
 import { debounce } from 'ts-debounce'
 import { watch } from 'chokidar'
-import {
-  SausContext,
-  loadContext,
-  loadRenderHooks,
-  loadRoutes,
-  resetRenderHooks,
-} from './core'
+import { SausContext, loadContext, loadRoutes, resetRenderHooks } from './core'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { renderPlugin } from './plugins/render'
+import { setContext } from './core/global'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const context = await loadContext('serve', inlineConfig)
@@ -86,45 +81,49 @@ async function startServer(
   const server = await vite.createServer(config)
   await server.listen(undefined, isRestart)
 
-  // Load the routes after config hooks are applied.
   context.routes = []
-  await loadRoutes(context, server)
-
-  // Load the renderers after config hooks are applied.
   resetRenderHooks(context)
-  await loadRenderHooks(context, server)
+
+  setContext(context)
+  try {
+    await loadRoutes(server)
+  } finally {
+    setContext(null)
+  }
 
   // Tell plugins to update local state derived from Saus context.
   emitContextUpdate(server, context)
 
+  const changedFiles = new Set<string>()
+  const scheduleReload = debounce(async () => {
+    try {
+      await loadRoutes(server)
+
+      // Restart if a config hook is added.
+      if (context.configHooks.length) {
+        return restart()
+      }
+
+      emitContextUpdate(server, context)
+      changedFiles.forEach(file => server.watcher.emit('change', file))
+      changedFiles.clear()
+    } catch (e) {
+      onError(e)
+    }
+  }, 50)
+
   // Watch our context paths, so routes and renderers are hot-updated.
-  const watcher = watch(contextPaths).on(
-    'change',
-    debounce(file => {
-      if (file === context.renderPath) {
-        resetRenderHooks(context, true)
-        return loadRenderHooks(context, server)
-          .then(() => {
-            // Restart if a config hook is added.
-            if (context.configHooks.length) {
-              return restart()
-            }
-            emitContextUpdate(server, context)
-            server.watcher.emit('change', file)
-          })
-          .catch(onError)
-      }
-      if (file === context.routesPath) {
-        context.routes = []
-        return loadRoutes(context, server)
-          .then(() => {
-            emitContextUpdate(server, context)
-            server.watcher.emit('change', file)
-          })
-          .catch(onError)
-      }
-    }, 30)
-  )
+  const watcher = watch(contextPaths).on('change', file => {
+    if (file == context.renderPath) {
+      changedFiles.add(file)
+      resetRenderHooks(context, true)
+      scheduleReload()
+    } else if (file == context.routesPath) {
+      changedFiles.add(file)
+      context.routes = []
+      scheduleReload()
+    }
+  })
 
   server.httpServer!.on('close', () => {
     watcher.close()
