@@ -133,7 +133,7 @@ export async function build(
         rollupOptions: { input: Object.keys(pageMap), cache },
       },
       plugins: [
-        clientPlugin(context, cache),
+        clientPlugin(context),
         routesPlugin(context),
         {
           name: 'saus:build',

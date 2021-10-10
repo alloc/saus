@@ -20,5 +20,7 @@ export const readCache = (cachePath: string) => {
 }
 
 export const writeCache = (cachePath: string, cache: Cache) => {
+  // Ensure "transformIndexHtml" hooks are always called.
+  cache.modules = cache.modules.filter(mod => !mod.id.endsWith('.html'))
   fs.writeFileSync(cachePath, JSON.stringify(cache))
 }
