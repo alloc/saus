@@ -186,7 +186,7 @@ export async function loadConfigHooks(context: SausContext) {
   const loader = await createLoader(context, {
     plugins: [stripRelativeImports(context)],
     cacheDir: false,
-    server: { hmr: false, wss: false },
+    server: { hmr: false, wss: false, watch: false },
   })
   context.configHooks = []
   setContext(context)

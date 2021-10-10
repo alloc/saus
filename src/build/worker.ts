@@ -26,7 +26,7 @@ export async function setup(inlineConfig?: vite.UserConfig) {
 
   loader = await createLoader(context, {
     cacheDir: false,
-    server: { hmr: false, wss: false },
+    server: { hmr: false, wss: false, watch: false },
   })
 
   // Don't wait for the page factory, so we can cancel
