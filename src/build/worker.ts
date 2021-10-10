@@ -18,6 +18,8 @@ let loader: ModuleLoader
 let context: SausContext
 let setupPromise: Promise<PageFactory | void>
 
+const isMainThread = !isWorkerRuntime()
+
 export async function setup(inlineConfig?: vite.UserConfig) {
   context = await loadContext('build', inlineConfig, [
     renderPlugin,
@@ -37,12 +39,8 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       await loadRoutes(loader)
     } catch (e: any) {
       if (e.message !== 'Server is closed') {
-        if (isWorkerRuntime()) {
-          e.message = `Worker ${process.env.WORKER_ID} failed: ` + e.message
-          return console.error(e)
-        } else {
-          throw e
-        }
+        if (isMainThread) throw e
+        return console.error(e)
       }
     } finally {
       setContext(null)
@@ -50,7 +48,7 @@ export async function setup(inlineConfig?: vite.UserConfig) {
     return createPageFactory(context)
   })()
 
-  if (!isWorkerRuntime()) {
+  if (isMainThread) {
     // …except on the main thread, where cancellation is unsupported.
     return setupPromise.then(() => context)
   }
@@ -73,6 +71,6 @@ export async function renderPage(routePath: string, params?: RouteParams) {
   }
 }
 
-if (isWorkerRuntime()) {
+if (!isMainThread) {
   expose({ setup, close, renderPage })
 }
