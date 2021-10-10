@@ -192,13 +192,16 @@ export async function build(
     }
   }
 
-  await Promise.all(
-    workerPool.pooled.map(async worker => {
-      await worker.tearDown()
-      if (worker !== mainWorker) {
-        await Thread.terminate(worker)
-      }
-    })
+  // Wait for worker termination to avoid SIGABRT.
+  await workerPool.pooled.then(workers =>
+    Promise.all(
+      workers.map(async worker => {
+        await worker.tearDown()
+        if (worker !== mainWorker) {
+          await Thread.terminate(worker)
+        }
+      })
+    )
   )
 
   return {
