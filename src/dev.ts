@@ -105,7 +105,7 @@ async function startServer(
       }
 
       emitContextUpdate(server, context)
-      changedFiles.forEach(file => server.watcher.emit('change', file))
+      changedFiles.forEach(file => server.watcher!.emit('change', file))
       changedFiles.clear()
     } catch (e) {
       onError(e)
