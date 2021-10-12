@@ -213,7 +213,7 @@ export async function build(
 
   await Promise.all([
     // Terminate workers while Rollup is building.
-    closing.then(() => Promise.all(terminateQueue.map(Thread.terminate))),
+    closing.then(() => Promise.all(terminateQueue.map(terminate))),
     // Wait for Rollup to finish.
     buildPromise,
   ])
@@ -221,5 +221,18 @@ export async function build(
   return {
     pages,
     errors,
+  }
+}
+
+const { $worker } = require('module').createRequire(require.resolve('threads'))(
+  './symbols'
+)
+
+function terminate(worker: any) {
+  const nativeWorker = worker[$worker]
+  if (nativeWorker.unref) {
+    nativeWorker.unref()
+  } else {
+    return Thread.terminate(worker)
   }
 }
