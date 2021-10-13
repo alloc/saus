@@ -75,7 +75,7 @@ export function render(...args: any[]) {
         </html>
       )
     },
-    ReactDOM.renderToStaticMarkup,
+    ReactDOM.renderToString,
     getClient,
     hash,
     start
