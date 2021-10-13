@@ -10,27 +10,28 @@ import { renderPlugin } from './plugins/render'
 import { setContext } from './core/global'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
-  const context = await loadContext('serve', inlineConfig)
-  const { logger } = context
-
+  let context = await loadContext('serve', inlineConfig)
   let serverPromise = startServer(context, restart, onError).catch(onError)
 
   function restart() {
     serverPromise = serverPromise
       .then(async oldServer => {
         await oldServer?.close()
+        context = await loadContext('serve', inlineConfig)
         return startServer(context, restart, onError, true)
       })
       .catch(onError)
   }
 
   function onError(e: any) {
+    const { logger } = context
     if (!logger.hasErrorLogged(e)) {
       logger.error(e.message, { error: e })
     }
     return null
   }
 
+  const { logger } = context
   if (logger.isLogged('info')) {
     logger.info('')
     const server = (await serverPromise)!
@@ -52,9 +53,9 @@ async function startServer(
   onError: (e: any) => void,
   isRestart?: boolean
 ) {
-  let config = klona(context.config)
-
   const contextPaths = [context.renderPath, context.routesPath]
+
+  let config = klona(context.config)
   config = vite.mergeConfig(config, <vite.UserConfig>{
     configFile: false,
     plugins: [
@@ -68,13 +69,6 @@ async function startServer(
         ignored: contextPaths,
       },
     },
-  })
-
-  context.configHooks.forEach(hook => {
-    const result = hook(config, context)
-    if (result) {
-      config = vite.mergeConfig(config, result)
-    }
   })
 
   // Listen immediately to ensure `buildStart` hook is called.
