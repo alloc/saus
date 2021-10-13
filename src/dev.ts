@@ -66,19 +66,22 @@ async function startServer(
   config = klona(config)
   config.plugins = plugins
 
-  config = vite.mergeConfig(config, <vite.UserConfig>{
-    plugins: [
-      servePlugin(context),
-      clientPlugin(context),
-      routesPlugin(context),
-      renderPlugin(context),
-    ],
-    server: {
-      watch: {
-        ignored: contextPaths,
+  config = vite.mergeConfig(
+    <vite.UserConfig>{
+      plugins: [
+        servePlugin(context),
+        clientPlugin(context),
+        routesPlugin(context),
+        renderPlugin(context),
+      ],
+      server: {
+        watch: {
+          ignored: contextPaths,
+        },
       },
     },
-  })
+    config
+  )
 
   // Listen immediately to ensure `buildStart` hook is called.
   const server = await vite.createServer(config)
