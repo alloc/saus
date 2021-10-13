@@ -1,5 +1,4 @@
-import type { RouteParams } from '../routes'
-import type { ClientState } from '../context'
+import type { ClientState } from '../core'
 
 let state: ClientState
 
@@ -12,4 +11,4 @@ if (!import.meta.env.SSR) {
 }
 
 export { state }
-export type { ClientState, RouteParams }
+export type { ClientState }
