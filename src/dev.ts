@@ -83,9 +83,6 @@ async function startServer(
   const server = await vite.createServer(config)
   await server.listen(undefined, isRestart)
 
-  context.routes = []
-  resetRenderHooks(context)
-
   setContext(context)
   try {
     await loadRoutes(server)
