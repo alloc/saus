@@ -12,22 +12,21 @@ import { steal } from './utils/steal'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   let context = await loadContext('serve', inlineConfig)
-  let serverPromise = startServer(context, restart, onError).catch(onError)
+  let serverPromise = startServer(context, restart, onError)
 
   function restart() {
-    serverPromise = serverPromise
-      .then(async oldServer => {
-        await oldServer?.close()
-        context = await loadContext('serve', inlineConfig)
-        return startServer(context, restart, onError, true)
-      })
-      .catch(onError)
+    serverPromise = serverPromise.then(async oldServer => {
+      await oldServer.close()
+      context = await loadContext('serve', inlineConfig)
+      return startServer(context, restart, onError, true)
+    })
+    serverPromise.catch(onError)
   }
 
   function onError(e: any) {
     const { logger } = context
     if (!logger.hasErrorLogged(e)) {
-      logger.error(e.message, { error: e })
+      logger.error(e.stack, { error: e })
     }
     return null
   }
@@ -35,16 +34,13 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   const { logger } = context
   if (logger.isLogged('info')) {
     logger.info('')
-    const server = (await serverPromise)!
+    const server = await serverPromise
     vite.printHttpServerUrls(server.httpServer!, server.config)
   }
 
   return {
     restart,
-    close: () =>
-      serverPromise.then(server => {
-        server?.close()
-      }),
+    close: () => serverPromise.then(server => server.close(), onError),
   }
 }
 
