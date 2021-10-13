@@ -54,6 +54,9 @@ async function startServer(
   isRestart?: boolean
 ) {
   const contextPaths = [context.renderPath, context.routesPath]
+  if (context.configPath) {
+    contextPaths.push(context.configPath)
+  }
 
   let config = klona(context.config)
   config = vite.mergeConfig(config, <vite.UserConfig>{
@@ -90,6 +93,9 @@ async function startServer(
 
   const changedFiles = new Set<string>()
   const scheduleReload = debounce(async () => {
+    if (changedFiles.has(context.configPath!)) {
+      return restart()
+    }
     try {
       await loadRoutes(server)
 
@@ -108,15 +114,13 @@ async function startServer(
 
   // Watch our context paths, so routes and renderers are hot-updated.
   const watcher = watch(contextPaths).on('change', file => {
+    changedFiles.add(file)
     if (file == context.renderPath) {
-      changedFiles.add(file)
       resetRenderHooks(context, true)
-      scheduleReload()
     } else if (file == context.routesPath) {
-      changedFiles.add(file)
       context.routes = []
-      scheduleReload()
     }
+    scheduleReload()
   })
 
   server.httpServer!.on('close', () => {
