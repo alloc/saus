@@ -73,11 +73,14 @@ export function createPageFactory(context: SausContext) {
     if (!route) {
       return null
     }
+    if (!context.defaultRenderer) {
+      throw Error('Default renderer is not defined')
+    }
     return renderPage(
       path,
       params,
       route,
-      context.defaultRenderer!,
+      context.defaultRenderer,
       initialState
     )
   }
