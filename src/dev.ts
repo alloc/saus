@@ -8,6 +8,7 @@ import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { renderPlugin } from './plugins/render'
 import { setContext } from './core/global'
+import { steal } from './utils/steal'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   let context = await loadContext('serve', inlineConfig)
@@ -58,9 +59,14 @@ async function startServer(
     contextPaths.push(context.configPath)
   }
 
-  let config = klona(context.config)
+  let { config } = context
+
+  // Clone the config, but not its plugins.
+  const plugins = steal(config, 'plugins')
+  config = klona(config)
+  config.plugins = plugins
+
   config = vite.mergeConfig(config, <vite.UserConfig>{
-    configFile: false,
     plugins: [
       servePlugin(context),
       clientPlugin(context),
