@@ -21,7 +21,7 @@ export function servePlugin(context: SausContext): Plugin {
           pageFactory.renderPath(path, async (error, page) => {
             if (page) {
               const html = await server.transformIndexHtml(path, page.html)
-              res.setHeader('Content-Type', 'text/html')
+              res.setHeader('Content-Type', 'text/html; charset=utf-8')
               res.setHeader('Content-Length', Buffer.byteLength(html))
               res.writeHead(200)
               res.write(html)
