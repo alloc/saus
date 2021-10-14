@@ -31,6 +31,7 @@
     "chokidar": "^3.5.2",
     "endent": "^2.1.0",
     "escape-goat": "^3.0.0",
+    "is-plain-object": "^5.0.0",
     "kleur": "^4.1.4",
     "klona": "^2.0.4",
     "magic-string": "^0.25.7",
