@@ -65,9 +65,9 @@ export async function build(
           const filename = getPageFilename(page.path)
           context.pages[filename] = page
           pages.push(page)
+          renderCount++
         } else {
-          pageCount -= 1
-          updateProgress()
+          pageCount--
         }
       } catch (e: any) {
         if (!failedRoutes.has(routePath)) {
@@ -78,12 +78,13 @@ export async function build(
           })
         }
       }
-      renderCount += 1
       updateProgress()
       workerPool.add(worker)
+      // Wait for console to update.
+      return new Promise(next => setImmediate(next))
     },
     () => {
-      pageCount += 1
+      pageCount++
       updateProgress()
     }
   )
