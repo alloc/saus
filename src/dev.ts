@@ -100,16 +100,17 @@ async function startServer(
     }
     setContext(context)
     try {
+      changedFiles.forEach(file => server.watcher!.emit('change', file))
+      changedFiles.clear()
+
       await loadRoutes(server)
 
       // Restart if a config hook is added.
       if (context.configHooks.length) {
-        return restart()
+        restart()
+      } else {
+        emitContextUpdate(server, context)
       }
-
-      emitContextUpdate(server, context)
-      changedFiles.forEach(file => server.watcher!.emit('change', file))
-      changedFiles.clear()
     } catch (e) {
       onError(e)
     } finally {
