@@ -1,5 +1,5 @@
 export { render } from './render'
-export { route, defineConfig, UserConfig, vite } from './core'
+export { route, defineConfig, Plugin, UserConfig, vite } from './core'
 export { htmlEscape as escape } from 'escape-goat'
 
 type BuildFactory = typeof import('./build').build
