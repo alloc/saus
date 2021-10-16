@@ -23,9 +23,16 @@ export type RenderedPage = {
   routeModuleId: string
 }
 
-export function createPageFactory(context: SausContext) {
-  const routes = [...context.routes].reverse()
-  const renderers = [...context.renderers].reverse()
+export function createPageFactory({
+  renderPath: rendererPath,
+  pages,
+  routes,
+  renderers,
+  defaultRoute,
+  defaultRenderer,
+}: SausContext) {
+  routes = [...routes].reverse()
+  renderers = [...renderers].reverse()
 
   async function renderPage(
     path: string,
@@ -53,9 +60,9 @@ export function createPageFactory(context: SausContext) {
 
     const filename = getPageFilename(path)
     const client =
-      context.pages[filename]?.client || (await getClient(context, renderer))
+      pages[filename]?.client || (await getClient(rendererPath, renderer))
 
-    return (context.pages[filename] = {
+    return (pages[filename] = {
       path,
       html,
       state,
@@ -73,23 +80,17 @@ export function createPageFactory(context: SausContext) {
     if (!route) {
       return null
     }
-    if (!context.defaultRenderer) {
+    if (!defaultRenderer) {
       throw Error('Default renderer is not defined')
     }
-    return renderPage(
-      path,
-      params,
-      route,
-      context.defaultRenderer,
-      initialState
-    )
+    return renderPage(path, params, route, defaultRenderer, initialState)
   }
 
   async function renderUnknownPath(
     path: string,
     initialState?: Record<string, any>
   ) {
-    return renderDefaultPage(path, {}, context.defaultRoute, initialState)
+    return renderDefaultPage(path, {}, defaultRoute, initialState)
   }
 
   async function renderMatchedPath(
@@ -149,7 +150,7 @@ export function createPageFactory(context: SausContext) {
     }
 
     // Render the fallback page.
-    if (context.defaultRenderer && context.defaultRoute) {
+    if (defaultRenderer && defaultRoute) {
       try {
         const page = await renderUnknownPath(path, { error })
         return next(null, page)

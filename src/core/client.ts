@@ -9,7 +9,6 @@ import {
   t,
   transformSync,
 } from '../babel'
-import type { SausContext } from './context'
 import type { RouteParams } from './routes'
 import type { Renderer } from './renderer'
 import type { SourceDescription } from './vite'
@@ -26,10 +25,12 @@ export type ClientState = Record<string, any> & {
 }
 
 export async function getClient(
-  context: SausContext,
+  filename: string,
   { getClient, hash, start }: Renderer
 ): Promise<Client | undefined> {
   if (!getClient) return
+
+  const source = fs.readFileSync(filename, 'utf8')
 
   let program!: NodePath<t.Program>
   const visitor: babel.Visitor = {
@@ -38,9 +39,6 @@ export async function getClient(
       path.stop()
     },
   }
-
-  const filename = context.renderPath
-  const source = fs.readFileSync(filename, 'utf8')
 
   // Use the AST for traversal, but not code generation.
   transformSync(source, filename, {
