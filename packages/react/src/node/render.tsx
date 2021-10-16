@@ -48,7 +48,7 @@ export function render(...args: any[]) {
         <div id="root">{await render(mod, req)}</div>
       </body>
     ),
-    ReactDOM.renderToString,
+    { head: ReactDOM.renderToStaticMarkup, body: ReactDOM.renderToString },
     getClient,
     hash,
     start
