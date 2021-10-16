@@ -98,6 +98,7 @@ async function startServer(
     if (changedFiles.has(context.configPath!)) {
       return restart()
     }
+    setContext(context)
     try {
       await loadRoutes(server)
 
@@ -111,6 +112,8 @@ async function startServer(
       changedFiles.clear()
     } catch (e) {
       onError(e)
+    } finally {
+      setContext(null)
     }
   }, 50)
 
