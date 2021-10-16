@@ -1,4 +1,4 @@
-import React, { Children, ReactElement } from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom/server'
 import {
   render as createRenderer,
@@ -43,57 +43,17 @@ export function render(...args: any[]) {
   const [route, render, hash, start] = args
   const renderer = createRenderer<JSX.Element>(
     route,
-    async (mod, req) => {
-      let root = await render(mod, req)
-      if (root.type == 'html') {
-        const children = Children.toArray(root.props.children)
-        const headIndex = children.findIndex(
-          child => isJSX(child) && child.type === 'head'
-        )
-        if (headIndex < 0) {
-          children.unshift(<head />)
-        }
-        const bodyIndex = children.findIndex(
-          child => isJSX(child) && child.type === 'body'
-        )
-        children.splice(
-          bodyIndex,
-          1,
-          transformBody(children[bodyIndex] as ReactElement)
-        )
-        return React.cloneElement(root, {
-          children,
-        })
-      }
-      if (root.type !== 'body') {
-        root = <body>{root}</body>
-      }
-      return (
-        <html>
-          <head />
-          {transformBody(root)}
-        </html>
-      )
-    },
+    async (mod, req) => (
+      <body>
+        <div id="root">{await render(mod, req)}</div>
+      </body>
+    ),
     ReactDOM.renderToString,
     getClient,
     hash,
     start
   )
   return renderer.api
-}
-
-function transformBody(body: ReactElement) {
-  const { children, ...props } = body.props
-  return (
-    <body {...props}>
-      <div id="root">{children}</div>
-    </body>
-  )
-}
-
-function isJSX(val: any): val is ReactElement {
-  return val && typeof val === 'object' && 'type' in val
 }
 
 fixReactBug()
