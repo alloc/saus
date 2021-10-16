@@ -56,7 +56,7 @@ export const getClient: ClientProvider = ({
 
   const hydrateBlock = endent`
     $onHydrate(async (routeModule, request) => {
-      const {rootId = "root"} = request.state
+      const {rootId = "saus_react"} = request.state
       ReactDOM.hydrate(
         await render(routeModule, request),
         document.getElementById(rootId)
