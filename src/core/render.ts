@@ -39,6 +39,9 @@ export function render<T>(
       if (!result) return
       try {
         let html = stringifyBody(result)
+        if (!/^\s*<body( |>)/.test(html)) {
+          html = `<body>\n${html}\n</body>`
+        }
         if (getHead) {
           let head = stringifyHead(await getHead(req))
           if (!/^\s*<head( |>)/.test(head)) {
