@@ -58,14 +58,6 @@ export function clientPlugin(context: SausContext): Plugin {
         const page = pages[filename]
         client = page.client
 
-        // Include the JSON state defined by the renderer.
-        tags.push({
-          injectTo: 'body',
-          tag: 'script',
-          attrs: { id: 'initial-state', type: 'application/json' },
-          children: JSON.stringify(page.state),
-        })
-
         const routeModuleId = page.routeModuleId
         const cssUrls = new Set<string>()
 
@@ -103,6 +95,16 @@ export function clientPlugin(context: SausContext): Plugin {
           }
         }
 
+        // Even though we could embed this JSON string into the hydration
+        // script, making the HTML parser aware of its JSON format allows
+        // it to be parsed earlier than it otherwise would be.
+        tags.push({
+          injectTo: 'body',
+          tag: 'script',
+          attrs: { id: 'initial-state', type: 'application/json' },
+          children: JSON.stringify(page.state),
+        })
+
         const sausClientId =
           (configEnv.mode === 'production' ? '' : '/@id/') + 'saus/client'
 
@@ -113,12 +115,8 @@ export function clientPlugin(context: SausContext): Plugin {
           attrs: { type: 'module' },
           children: endent`
             import * as routeModule from "${routeModuleId}"
-            import { hydrate, state } from "${sausClientId}"
-            hydrate(routeModule, {
-              path: location.pathname,
-              params: state.routeParams,
-              state,
-            })
+            import { hydrate } from "${sausClientId}"
+            hydrate(routeModule, "${page.path}")
           `,
         })
 
