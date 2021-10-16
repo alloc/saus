@@ -1,6 +1,6 @@
 {
   "name": "saus",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Radically simple SSG powered by Vite",
   "author": "Alec Larson",
   "license": "MIT",
