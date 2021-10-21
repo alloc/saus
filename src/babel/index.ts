@@ -178,8 +178,7 @@ export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
     : []
 }
 
-export function transformSync(
-  code: string,
+function getBabelConfig(
   filename: string,
   config: babel.TransformOptions | babel.PluginItem[]
 ) {
@@ -190,14 +189,26 @@ export function transformSync(
   if (syntaxPlugins.length) {
     config.plugins = syntaxPlugins.concat(config.plugins || [])
   }
-  return babel.transformSync(code, {
+  return {
     filename,
     babelrc: false,
     configFile: false,
     sourceMaps: true,
     ...config,
-  })
+  }
 }
+
+export const transformSync = (
+  code: string,
+  filename: string,
+  config: babel.TransformOptions | babel.PluginItem[]
+) => babel.transformSync(code, getBabelConfig(filename, config))
+
+export const transformAsync = (
+  code: string,
+  filename: string,
+  config: babel.TransformOptions | babel.PluginItem[]
+) => babel.transformAsync(code, getBabelConfig(filename, config))
 
 /** Remove a `NodePath`, its preceding whitespace, and its trailing newline (if one exists). */
 export function remove(path: NodePath, source: MagicString) {
