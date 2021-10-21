@@ -25,12 +25,6 @@ export function clientPlugin(context: SausContext): Plugin {
     configureServer(s) {
       server = s
     },
-    async contextUpdate() {
-      const { moduleGraph } = server!
-      moduleGraph.urlToModuleMap.forEach((mod, url) => {
-        isClientUrl(url) && moduleGraph.invalidateModule(mod)
-      })
-    },
     resolveId(id, importer) {
       if (isClientUrl(id)) {
         return id

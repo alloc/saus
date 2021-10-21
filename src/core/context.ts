@@ -1,35 +1,30 @@
-import path from 'path'
 import callerPath from 'caller-path'
-import { transformSync } from '../babel'
+import { getImportDeclarations, transformSync } from '../babel'
 import type { RenderedPage } from '../pages'
 import { readSausYaml } from './config'
-import type { Renderer } from './renderer'
-import type { Route } from './routes'
 import { UserConfig, vite } from './vite'
-import { context, setContext } from './global'
+import { RenderModule } from './render'
+import { RoutesModule } from './routes'
+import { Deferred } from '../utils/defer'
+import { renderModule, setRenderModule } from './global'
+import { ssrCreateContext } from 'vite'
 
-export interface SausContext {
+export interface SausContext extends RenderModule, RoutesModule {
   root: string
   logger: vite.Logger
   config: vite.UserConfig
   configEnv: vite.ConfigEnv
   configPath: string | null
-  /** Functions that modify the Vite config */
-  configHooks: ConfigHook[]
   /** Path to the routes module */
   routesPath: string
-  /** Routes added with `defineRoutes` */
-  routes: Route[]
   /** Rendered page cache */
   pages: Record<string, RenderedPage>
-  /** The route used when no route is matched */
-  defaultRoute?: Route
   /** Path to the render module */
   renderPath: string
-  /** The renderers for specific routes */
-  renderers: Renderer<string | null | void>[]
-  /** The renderer used when no route is matched */
-  defaultRenderer?: Renderer<string>
+  /** The SSR context used when loading routes */
+  ssrContext?: vite.SSRContext
+  /** Wait to serve pages until hot reloading completes */
+  reloading?: Deferred<void>
 }
 
 export type ConfigHook = {
@@ -48,7 +43,7 @@ export type ConfigHook = {
  */
 export function configureVite(hook: ConfigHook) {
   hook.modulePath = callerPath()
-  context.configHooks.push(hook)
+  renderModule.configHooks.push(hook)
 }
 
 export async function loadContext(
@@ -112,7 +107,6 @@ export async function loadContext(
     pages: {},
     renderPath,
     renderers: [],
-    defaultRenderer: undefined,
   }
 
   await loadConfigHooks(context)
@@ -123,10 +117,6 @@ export async function loadContext(
     }
   }
 
-  // Renderer hooks must be loaded *after* config hooks
-  // have been applied.
-  resetRenderHooks(context)
-
   if (sausPlugins) {
     config.plugins ||= []
     config.plugins.unshift(sausPlugins.map(p => p(context)))
@@ -134,25 +124,6 @@ export async function loadContext(
 
   context.config = config
   return context
-}
-
-export function resetRenderHooks(context: SausContext, resetConfig?: boolean) {
-  Object.keys(context.pages).forEach(key => {
-    delete context.pages[key]
-  })
-  context.renderers.length = 0
-  context.defaultRenderer = undefined
-  if (resetConfig) {
-    context.configHooks.length = 0
-  }
-}
-
-export function resetConfigModules(context: SausContext) {
-  for (const hook of context.configHooks) {
-    if (hook.modulePath) {
-      delete require.cache[hook.modulePath]
-    }
-  }
 }
 
 export interface ModuleLoader extends vite.ViteDevServer {}
@@ -166,20 +137,9 @@ function loadModules(
     url = [url]
   }
   return loader.ssrLoadModule(
-    url.map(url => '/' + path.relative(context.root, url))
+    url.map(url => url.replace(context.root, '')),
+    context.ssrContext
   )
-}
-
-/** Load routes and renderers for the current Saus context. */
-export async function loadRoutes(loader: ModuleLoader) {
-  const modules: string[] = []
-  if (!context.routes.length) {
-    modules.push(context.routesPath)
-  }
-  if (!context.renderers.length && !context.defaultRenderer) {
-    modules.push(context.renderPath)
-  }
-  await loadModules(modules, context, loader)
 }
 
 export async function loadConfigHooks(context: SausContext) {
@@ -188,13 +148,17 @@ export async function loadConfigHooks(context: SausContext) {
     cacheDir: false,
     server: { hmr: false, wss: false, watch: false },
   })
+  context.ssrContext = ssrCreateContext(loader)
   context.configHooks = []
-  setContext(context)
+  setRenderModule(context)
   try {
     await loadModules(context.renderPath, context, loader)
   } finally {
-    setContext(null)
+    setRenderModule(null)
+    context.ssrContext = undefined
   }
+  context.renderers.length = 0
+  context.defaultRenderer = undefined
   await loader.close()
 }
 
@@ -203,20 +167,24 @@ export async function loadConfigHooks(context: SausContext) {
 // to avoid evaluating those modules until Vite is configured.
 const stripRelativeImports = (context: SausContext): vite.Plugin => ({
   name: 'saus:strip-relative-imports',
-  transform(code, id) {
-    if (id == context.renderPath) {
-      return transformSync(code, id, [
+  transform(code, importer) {
+    if (importer == context.renderPath) {
+      const { isExternal } = context.ssrContext!
+      return transformSync(code, importer, [
         {
           visitor: {
-            ImportDeclaration(decl) {
-              const source = decl.get('source').node.value
-              if (/^\.\.?\//.test(source)) {
-                decl.remove()
+            Program(program) {
+              for (const decl of getImportDeclarations(program)) {
+                const source = decl.get('source').node.value
+                const isRelative = /^\.\.?\//.test(source)
+                if (isRelative || !isExternal(source)) {
+                  decl.remove()
+                }
               }
             },
           },
         },
-      ]) as vite.TransformResult
+      ]) as Promise<vite.TransformResult>
     }
   },
 })

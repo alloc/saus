@@ -34,6 +34,7 @@ export function createPageFactory({
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
 
+  // The main logic for rendering a page.
   async function renderPage(
     path: string,
     params: RouteParams,
@@ -62,6 +63,9 @@ export function createPageFactory({
     const client =
       pages[filename]?.client || (await getClient(rendererPath, renderer))
 
+    // Currently, the page cache is only used by the saus:client plugin,
+    // since the performance impact of rendering on every request isn't
+    // bad enough to justify complicated cache invalidation.
     return (pages[filename] = {
       path,
       html,
@@ -71,6 +75,10 @@ export function createPageFactory({
     })
   }
 
+  /**
+   * Use the default renderer to render HTML for the given `path`.
+   * If the given `route` is undefined, nothing is rendered.
+   */
   async function renderDefaultPage(
     path: string,
     params: RouteParams,
@@ -86,6 +94,9 @@ export function createPageFactory({
     return renderPage(path, params, route, defaultRenderer, initialState)
   }
 
+  /**
+   * Use the default route to render HTML for the given `path`.
+   */
   async function renderUnknownPath(
     path: string,
     initialState?: Record<string, any>
@@ -93,6 +104,10 @@ export function createPageFactory({
     return renderDefaultPage(path, {}, defaultRoute, initialState)
   }
 
+  /**
+   * Skip route matching and render HTML for the given `path` using
+   * the given route and params.
+   */
   async function renderMatchedPath(
     path: string,
     params: RouteParams,
@@ -120,6 +135,9 @@ export function createPageFactory({
     return renderDefaultPage(path, params, route, initialState)
   }
 
+  /**
+   * Find a matching route to render HTML for the given `path`.
+   */
   async function renderPath(
     path: string,
     next: (

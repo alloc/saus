@@ -1,8 +1,12 @@
-import type { SausContext } from './context'
+import type { RenderModule } from './render'
+import type { RoutesModule } from './routes'
 
-export let context: SausContext
+export let routesModule: RoutesModule
 
-export const setContext = (newContext: SausContext | null) =>
-  // Avoid ! assertions everywhere by assuming the context
-  // is always defined (even though it's not).
-  void (context = newContext as any)
+export const setRoutesModule = (module: RoutesModule | null) =>
+  (routesModule = module!)
+
+export let renderModule: RenderModule
+
+export const setRenderModule = (module: RenderModule | null) =>
+  (renderModule = module!)

@@ -17,7 +17,7 @@ export function servePlugin(context: SausContext): Plugin {
     configureServer: server => () =>
       server.middlewares.use((req, res, next) => {
         const path = req.originalUrl!
-        init.then(() =>
+        Promise.all([init, context.reloading]).then(() =>
           pageFactory.renderPath(path, async (error, page) => {
             if (page) {
               const html = await server.transformIndexHtml(path, page.html)

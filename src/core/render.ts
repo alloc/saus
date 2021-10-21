@@ -1,9 +1,23 @@
 import { ClientProvider } from './client'
 import { RenderRequest, Renderer } from './renderer'
-import { context } from './global'
+import { renderModule } from './global'
+import { ConfigHook } from './context'
 
 type Promisable<T> = T | PromiseLike<T>
 type ExcludeVoid<T> = Exclude<T, null | void>
+
+/**
+ * Values that can be configured by the "render module"
+ * defined in `saus.yaml` with the `render` path property.
+ */
+export type RenderModule = {
+  /** The renderers for specific routes */
+  renderers: Renderer<string | null | void>[]
+  /** The renderer used when no route is matched */
+  defaultRenderer?: Renderer<string>
+  /** Functions that modify the Vite config */
+  configHooks: ConfigHook[]
+}
 
 export type RenderHook<T = any> = (
   module: any,
@@ -62,9 +76,9 @@ export function render<T>(
     start
   )
   if (route) {
-    context.renderers.push(renderer)
+    renderModule.renderers.push(renderer)
   } else {
-    context.defaultRenderer = renderer
+    renderModule.defaultRenderer = renderer
   }
   return renderer
 }

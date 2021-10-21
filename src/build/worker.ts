@@ -2,14 +2,13 @@ import { expose, isWorkerRuntime } from 'threads/worker'
 import {
   createLoader,
   loadContext,
-  loadRoutes,
   ModuleLoader,
   RegexParam,
   RouteParams,
   SausContext,
   vite,
 } from '../core'
-import { setContext } from '../core/global'
+import { setRenderModule, setRoutesModule } from '../core/global'
 import { createPageFactory, PageFactory } from '../pages'
 import { renderPlugin } from '../plugins/render'
 import { routesPlugin } from '../plugins/routes'
@@ -34,16 +33,22 @@ export async function setup(inlineConfig?: vite.UserConfig) {
   // Don't wait for the page factory, so we can cancel
   // module loading early if necessary…
   setupPromise = (async () => {
-    setContext(context)
+    setRenderModule(context)
+    setRoutesModule(context)
     try {
-      await loadRoutes(loader)
+      await loader.ssrLoadModule(
+        [context.routesPath, context.renderPath].map(file =>
+          file.replace(context.root, '')
+        )
+      )
     } catch (e: any) {
       if (e.message !== 'Server is closed') {
         if (isMainThread) throw e
         return console.error(e)
       }
     } finally {
-      setContext(null)
+      setRenderModule(null)
+      setRoutesModule(null)
     }
     return createPageFactory(context)
   })()

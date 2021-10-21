@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
-import { context } from './global'
+import { routesModule } from './global'
 
 export { RegexParam, InferRouteParams }
 
@@ -60,6 +60,17 @@ export function matchRoute(path: string, route: ParsedRoute) {
     }, {})
 }
 
+/**
+ * Values set by the "routes module" defined in `saus.yaml` with
+ * the `routes` path property.
+ */
+export type RoutesModule = {
+  /** Routes defined with the `route` function */
+  routes: Route[]
+  /** The route used when no route is matched */
+  defaultRoute?: Route
+}
+
 const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
 
@@ -91,9 +102,9 @@ export function route(
   if (path === 'default') {
     route.keys = []
     route.pattern = /./
-    context.defaultRoute = route
+    routesModule.defaultRoute = route
   } else {
     Object.assign(route, RegexParam.parse(path))
-    context.routes.push(route)
+    routesModule.routes.push(route)
   }
 }
