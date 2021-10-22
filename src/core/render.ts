@@ -68,7 +68,7 @@ export function render<T>(
         }
         return `<!DOCTYPE html>\n` + html
       } finally {
-        didRender()
+        await didRender()
       }
     },
     getClient,
