@@ -26,9 +26,13 @@ export function servePlugin(context: SausContext): Plugin {
             res.writeHead(200)
             res.write(html)
             res.end()
+          } else if (error) {
+            server.ssrRewriteStacktrace(error)
+            console.error(error)
+            res.writeHead(500)
+            res.end()
           } else {
-            error && server.ssrRewriteStacktrace(error)
-            next(error)
+            next()
           }
         })
       }),
