@@ -27,7 +27,7 @@ export function servePlugin(context: SausContext): Plugin {
             res.write(html)
             res.end()
           } else if (error) {
-            server.ssrRewriteStacktrace(error)
+            server.ssrRewriteStacktrace(error, context.config.filterStack)
             console.error(error)
             res.writeHead(500)
             res.end()

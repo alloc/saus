@@ -3,7 +3,9 @@ import { SausContext } from './context'
 
 export { vite }
 
-export interface UserConfig extends vite.UserConfig {}
+export interface UserConfig extends vite.UserConfig {
+  filterStack?: (source: string) => boolean
+}
 
 export interface BuildOptions extends vite.BuildOptions {
   maxWorkers?: number

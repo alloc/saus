@@ -12,7 +12,7 @@ import { ssrCreateContext } from 'vite'
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
   logger: vite.Logger
-  config: vite.UserConfig
+  config: UserConfig
   configEnv: vite.ConfigEnv
   configPath: string | null
   /** Path to the routes module */

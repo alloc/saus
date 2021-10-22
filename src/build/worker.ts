@@ -76,7 +76,7 @@ export async function renderPage(routePath: string, params?: RouteParams) {
       return pageFactory.renderMatchedPath(pagePath, params || {}, route)
     }
   } catch (error) {
-    loader.ssrRewriteStacktrace(error)
+    loader.ssrRewriteStacktrace(error, context.config.filterStack)
     throw error
   }
 }
