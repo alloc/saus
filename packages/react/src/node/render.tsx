@@ -68,17 +68,22 @@ function fixReactBug() {
     (ReactDOM.renderToNodeStream(<div />) as any).partialRenderer
   )
 
+  const stackFrameRE = /^ {4}at (?:.+?\s+\()?.+?:\d+(?::\d+)?\)?/m
+
   const { render } = ReactDOMServerRendererPrototype
   ReactDOMServerRendererPrototype.render = function (...args: any[]) {
     try {
       return render.apply(this, args)
     } catch (err: any) {
-      err.stack =
-        err.constructor.name +
-        ': ' +
-        err.message +
-        ReactDebugCurrentFrame.getStackAddendum()
-
+      const componentStack = ReactDebugCurrentFrame.getStackAddendum()
+      const firstFrame = stackFrameRE.exec(err.stack)
+      if (firstFrame) {
+        const index = firstFrame.index + firstFrame[0].length
+        err.stack =
+          err.stack.slice(0, index) + componentStack + err.stack.slice(index)
+      } else {
+        err.message += componentStack
+      }
       throw err
     }
   }
