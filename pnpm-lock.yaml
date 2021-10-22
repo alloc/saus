@@ -14,6 +14,7 @@ importers:
       '@types/source-map-support': ^0.5.4
       cac: ^6.7.3
       caller-path: ^3.0.1
+      catch-exit: ^1.2.2
       chokidar: ^3.5.2
       endent: ^2.1.0
       esbuild: ^0.8.36
@@ -44,6 +45,7 @@ importers:
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.15.5
       cac: 6.7.3
       caller-path: 3.0.1
+      catch-exit: 1.2.2
       chokidar: 3.5.2
       endent: 2.1.0
       escape-goat: 3.0.0
@@ -1235,6 +1237,12 @@ packages:
       rsvp: 4.8.5
     dev: true
 
+  /catch-exit/1.2.2:
+    resolution: {integrity: sha512-7rZ3CgzR3L3fDcEjtxj0bV6/zEhf9P7jkjm7ucMSTqBVhvCrwp+/Dbq26AqC+O0HxpIqY+pz9O+xKlvGqUBDmg==}
+    dependencies:
+      human-signals: 2.1.0
+    dev: false
+
   /chalk/2.4.2:
     resolution: {integrity: sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==}
     engines: {node: '>=4'}
@@ -2046,6 +2054,11 @@ packages:
     resolution: {integrity: sha512-SEQu7vl8KjNL2eoGBLF3+wAjpsNfA9XMlXAYj/3EdaNfAlxKthD1xjEQfGOUhllCGGJVNY34bRr6lPINhNjyZw==}
     engines: {node: '>=8.12.0'}
     dev: true
+
+  /human-signals/2.1.0:
+    resolution: {integrity: sha512-B4FFZ6q/T2jhhksgkbEW3HBvWIfDW85snkQgawt07S7J5QXTk6BkNV+0yAeZrM5QpMAdYlocGoljn0sJ/WQkFw==}
+    engines: {node: '>=10.17.0'}
+    dev: false
 
   /iconv-lite/0.4.24:
     resolution: {integrity: sha512-v3MXnZAcvnywkTUEZomIActle7RXXeedOR31wwl7VlyoXO4Qi9arvSenNQWne1TcRwhCL1HwLI21bEqdpj8/rA==}

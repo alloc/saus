@@ -1,6 +1,7 @@
 import * as vite from 'vite'
 import { klona } from 'klona'
 import { debounce } from 'ts-debounce'
+import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { SausContext, loadContext, RenderModule, RoutesModule } from './core'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
@@ -12,7 +13,10 @@ import { defer } from './utils/defer'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   let context = await loadContext('serve', inlineConfig)
+
+  let server: vite.ViteDevServer | undefined
   let serverPromise = startServer(context, restart, onError)
+  serverPromise.then(s => (server = s))
 
   function restart() {
     serverPromise = serverPromise.then(async oldServer => {
@@ -26,6 +30,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   function onError(e: any) {
     const { logger } = context
     if (!logger.hasErrorLogged(e)) {
+      server?.ssrRewriteStacktrace(e)
       logger.error(e.stack, { error: e })
     }
     return null
@@ -38,9 +43,18 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     vite.printHttpServerUrls(server.httpServer!, server.config)
   }
 
+  const onExit = addExitCallback((signal, exitCode, error) => {
+    if (error) {
+      server?.ssrRewriteStacktrace(error)
+    }
+  })
+
   return {
     restart,
-    close: () => serverPromise.then(server => server.close(), onError),
+    close: () =>
+      serverPromise
+        .then(server => server.close(), onError)
+        .finally(() => removeExitCallback(onExit)),
   }
 }
 

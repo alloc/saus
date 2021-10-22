@@ -28,6 +28,7 @@
     "@babel/plugin-syntax-typescript": "^7.14.5",
     "cac": "^6.7.3",
     "caller-path": "^3.0.1",
+    "catch-exit": "^1.2.2",
     "chokidar": "^3.5.2",
     "endent": "^2.1.0",
     "escape-goat": "^3.0.0",
