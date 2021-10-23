@@ -122,8 +122,9 @@ export function createPageFactory({
       const state = await route.state(...Object.values(params))
       initialState = { ...initialState, ...state }
     }
+    const path = url.replace(/[?#].+$/, '')
     for (const renderer of renderers) {
-      if (renderer.test(url)) {
+      if (renderer.test(path)) {
         const page = await renderPage(
           url,
           params,
