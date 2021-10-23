@@ -147,8 +147,9 @@ export function createPageFactory({
   ) {
     let error: any
 
+    const matchedPath = path.replace(/(\?|\#).+$/, '')
     for (const route of routes) {
-      const params = matchRoute(path, route)
+      const params = matchRoute(matchedPath, route)
       if (!params) {
         continue
       }
