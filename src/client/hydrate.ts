@@ -2,16 +2,25 @@ import type { RenderRequest } from '../core'
 import { state } from './state'
 import routes from './routes'
 
+const urlPathRegex = /^(.+?)(?:#([^?]*))?(?:\?(.*))?$/
+
 export type HydrateFn = (routeModule: any, request: RenderRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: object, path: string) {
+export function hydrate(routeModule: object, url: string) {
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }
   routes[state.routePath] = async () => routeModule
-  runHydration(routeModule, { path, params: state.routeParams, state })
+  const [, path, hash, query] = urlPathRegex.exec(url)!
+  runHydration(routeModule, {
+    path,
+    hash,
+    query,
+    params: state.routeParams,
+    state,
+  })
 }
 
 // TODO: support multiple hydration handlers

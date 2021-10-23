@@ -68,12 +68,12 @@ export async function renderPage(routePath: string, params?: RouteParams) {
   try {
     if (routePath === 'default') {
       if (context.defaultRoute && context.defaultRenderer) {
-        return pageFactory.renderUnknownPath('/404')
+        return pageFactory.renderUnknownPage('/404')
       }
     } else {
       const route = context.routes.find(route => route.path === routePath)!
       const pagePath = params ? RegexParam.inject(routePath, params) : routePath
-      return pageFactory.renderMatchedPath(pagePath, params || {}, route)
+      return pageFactory.renderRoute(pagePath, params || {}, route)
     }
   } catch (error) {
     loader.ssrRewriteStacktrace(error, context.config.filterStack)

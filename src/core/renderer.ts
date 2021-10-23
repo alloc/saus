@@ -8,6 +8,8 @@ export type RenderRequest<
   Params extends RouteParams = RouteParams
 > = {
   path: string
+  hash?: string
+  query?: string
   state: State
   params: Params
 }

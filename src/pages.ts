@@ -23,6 +23,8 @@ export type RenderedPage = {
   routeModuleId: string
 }
 
+const urlPathRegex = /^(.+?)(?:#([^?]*))?(?:\?(.*))?$/
+
 export function createPageFactory({
   renderPath: rendererPath,
   pages,
@@ -36,7 +38,7 @@ export function createPageFactory({
 
   // The main logic for rendering a page.
   async function renderPage(
-    path: string,
+    url: string,
     params: RouteParams,
     route: Route,
     renderer: Renderer,
@@ -49,9 +51,11 @@ export function createPageFactory({
       routeParams: params,
     } as ClientState
 
+    const [, path, hash, query] = urlPathRegex.exec(url)!
+
     const html = await renderer.render(
       routeModule,
-      { path, params, state },
+      { path, hash, query, params, state },
       renderer
     )
 
@@ -59,7 +63,7 @@ export function createPageFactory({
       return null
     }
 
-    const filename = getPageFilename(path)
+    const filename = getPageFilename(url)
     const client =
       pages[filename]?.client || (await getClient(rendererPath, renderer))
 
@@ -67,7 +71,7 @@ export function createPageFactory({
     // since the performance impact of rendering on every request isn't
     // bad enough to justify complicated cache invalidation.
     return (pages[filename] = {
-      path,
+      path: url,
       html,
       state,
       client,
@@ -76,11 +80,11 @@ export function createPageFactory({
   }
 
   /**
-   * Use the default renderer to render HTML for the given `path`.
+   * Use the default renderer to render HTML for the given `url`.
    * If the given `route` is undefined, nothing is rendered.
    */
   async function renderDefaultPage(
-    path: string,
+    url: string,
     params: RouteParams,
     route?: Route,
     initialState?: Record<string, any>
@@ -91,25 +95,25 @@ export function createPageFactory({
     if (!defaultRenderer) {
       throw Error('Default renderer is not defined')
     }
-    return renderPage(path, params, route, defaultRenderer, initialState)
+    return renderPage(url, params, route, defaultRenderer, initialState)
   }
 
   /**
-   * Use the default route to render HTML for the given `path`.
+   * Use the default route to render HTML for the given `url`.
    */
-  async function renderUnknownPath(
-    path: string,
+  async function renderUnknownPage(
+    url: string,
     initialState?: Record<string, any>
   ) {
-    return renderDefaultPage(path, {}, defaultRoute, initialState)
+    return renderDefaultPage(url, {}, defaultRoute, initialState)
   }
 
   /**
-   * Skip route matching and render HTML for the given `path` using
+   * Skip route matching and render HTML for the given `url` using
    * the given route and params.
    */
-  async function renderMatchedPath(
-    path: string,
+  async function renderRoute(
+    url: string,
     params: RouteParams,
     route: Route,
     initialState?: Record<string, any>
@@ -119,9 +123,9 @@ export function createPageFactory({
       initialState = { ...initialState, ...state }
     }
     for (const renderer of renderers) {
-      if (renderer.test(path)) {
+      if (renderer.test(url)) {
         const page = await renderPage(
-          path,
+          url,
           params,
           route,
           renderer,
@@ -132,14 +136,14 @@ export function createPageFactory({
         }
       }
     }
-    return renderDefaultPage(path, params, route, initialState)
+    return renderDefaultPage(url, params, route, initialState)
   }
 
   /**
-   * Find a matching route to render HTML for the given `path`.
+   * Find a matching route to render HTML for the given `url`.
    */
-  async function renderPath(
-    path: string,
+  async function resolvePage(
+    url: string,
     next: (
       error?: Error | null,
       result?: RenderedPage | null
@@ -147,14 +151,14 @@ export function createPageFactory({
   ) {
     let error: any
 
-    const matchedPath = path.replace(/(\?|\#).+$/, '')
+    const path = url.replace(/[?#].+$/, '')
     for (const route of routes) {
-      const params = matchRoute(matchedPath, route)
+      const params = matchRoute(path, route)
       if (!params) {
         continue
       }
       try {
-        const page = await renderMatchedPath(path, params, route)
+        const page = await renderRoute(url, params, route)
         return next(null, page)
       } catch (e: any) {
         error = e
@@ -164,14 +168,14 @@ export function createPageFactory({
 
     // Skip requests with file extension, unless explicitly
     // handled by a non-default renderer.
-    if (!error && /\.[^/]+$/.test(path)) {
+    if (!error && /\.[^/]+$/.test(url)) {
       return next()
     }
 
     // Render the fallback page.
     if (defaultRenderer && defaultRoute) {
       try {
-        const page = await renderUnknownPath(path, { error })
+        const page = await renderUnknownPage(url, { error })
         return next(null, page)
       } catch (e: any) {
         error = e
@@ -182,8 +186,8 @@ export function createPageFactory({
   }
 
   return {
-    renderPath,
-    renderUnknownPath,
-    renderMatchedPath,
+    resolvePage,
+    renderUnknownPage,
+    renderRoute,
   }
 }
