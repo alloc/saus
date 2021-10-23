@@ -43,7 +43,10 @@ export function render(...args: any[]) {
   const [route, render, hash, start] = args
   const renderer = createRenderer<JSX.Element>(
     route,
-    async (mod, req) => <div id="saus_react">{await render(mod, req)}</div>,
+    async (mod, req) => {
+      const content = await render(mod, req)
+      return content == null ? null : <div id="saus_react">{content}</div>
+    },
     { head: ReactDOM.renderToStaticMarkup, body: ReactDOM.renderToString },
     getClient,
     hash,

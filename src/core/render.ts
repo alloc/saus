@@ -36,7 +36,7 @@ type ToString<T> = (result: T) => string
  */
 export function render<T>(
   route: string,
-  render: RenderHook<T>,
+  render: RenderHook<T | null | void>,
   stringify: ToString<T> | { head: ToString<T>; body: ToString<T> },
   getClient?: ClientProvider,
   hash?: string,
@@ -50,7 +50,7 @@ export function render<T>(
     route,
     async (mod, req, { getHead, didRender }) => {
       const result = await render(mod, req)
-      if (!result) return
+      if (result == null) return
       try {
         let html = stringifyBody(result)
         if (!/^\s*<body( |>)/.test(html)) {
