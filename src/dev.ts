@@ -171,7 +171,10 @@ async function startServer(
     const files = Array.from(changedFiles)
     changedFiles.clear()
 
-    await moduleCache.reload(files)
+    await moduleCache.reload(files).catch(error => {
+      // Clone the error so unfixed Babel errors never go unnoticed.
+      events.emit('error', cloneError(error))
+    })
   }, 50)
 
   watcher.on('change', file => {
@@ -359,4 +362,11 @@ function waitForChanges(
   events.on('close', onClose)
 
   logger.info(gray('Waiting for changes...'))
+}
+
+function cloneError(e: any) {
+  const clone = Object.assign(new e.constructor(), e)
+  clone.message = e.message
+  clone.stack = e.stack
+  return clone
 }
