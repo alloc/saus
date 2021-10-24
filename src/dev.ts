@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import path from 'path'
 import { klona } from 'klona'
 import { debounce } from 'ts-debounce'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
@@ -84,9 +85,10 @@ async function startServer(
     config
   )
 
-  // Listen immediately to ensure `buildStart` hook is called.
   const server = await vite.createServer(config)
-  await server.listen(undefined, isRestart)
+
+  // Listen immediately to ensure `buildStart` hook is called.
+  await listen(server, onError, isRestart)
 
   // Ensure the Vite config is watched.
   if (context.configPath) {
@@ -249,4 +251,55 @@ function handleContextUpdates(
       context.reloading = undefined
     },
   }
+}
+
+function listen(
+  server: vite.ViteDevServer,
+  onError: (error: any) => void,
+  isRestart?: boolean
+): Promise<void> {
+  let listening = false
+
+  const { resolve, promise } = defer<void>()
+
+  // When optimizing deps, a syntax error may be hit. If so, we need to
+  // handle it here by waiting for the offending file to be updated, and
+  // try to optimize again once updated.
+  server.httpServer!.on('error', (error: any) => {
+    onError(error)
+
+    // ESBuild syntax errors have an "errors" array property.
+    if (!listening && Array.isArray(error.errors)) {
+      const files = new Set<string>()
+      error.errors.forEach((e: any) => {
+        const file = e.location?.file
+        if (file && typeof file == 'string') {
+          files.add(path.resolve(server.config.root, file))
+        }
+      })
+      if (files.size) {
+        const { logger } = server.config
+        logger.info(k.gray('Waiting for changes...'))
+        server.watcher!.on('change', function onChange(file) {
+          if (files.has(file)) {
+            server.watcher!.off('change', onChange)
+            logger.clearScreen('info')
+            listen()
+          }
+        })
+      }
+    }
+  })
+
+  const listen = async () => {
+    try {
+      if (await server.listen(undefined, isRestart)) {
+        listening = true
+        resolve()
+      }
+    } catch {}
+  }
+
+  listen()
+  return promise
 }
