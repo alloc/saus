@@ -43,11 +43,12 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     serverPromise.catch(onError)
   }
 
-  function onError(e: any) {
+  function onError(error: any) {
     const { logger } = context
-    if (!logger.hasErrorLogged(e)) {
-      server?.ssrRewriteStacktrace(e, context.config.filterStack)
-      logger.error(e.stack, { error: e })
+    if (!logger.hasErrorLogged(error)) {
+      server?.ssrRewriteStacktrace(error, context.config.filterStack)
+      const msg = error instanceof SyntaxError ? error.message : error.stack
+      logger.error(msg, { error })
     }
   }
 
