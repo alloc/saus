@@ -138,7 +138,8 @@ async function startServer(
       const { id } = error as any
       if (id) {
         context.logger.error(error.message + '\n', { error })
-        waitForChanges(id, server, events, () => {
+        waitForChanges(id, server, events, async () => {
+          await server.close().catch(e => events.emit('error', e))
           events.emit('restart')
         })
         return null
