@@ -1,6 +1,8 @@
 import * as vite from 'vite'
 import path from 'path'
+import { gray } from 'kleur'
 import { klona } from 'klona'
+import { EventEmitter } from 'events'
 import { debounce } from 'ts-debounce'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { SausContext, loadContext, RenderModule, RoutesModule } from './core'
@@ -15,15 +17,21 @@ import { defer } from './utils/defer'
 export async function createServer(inlineConfig?: vite.UserConfig) {
   let context = await loadContext('serve', inlineConfig)
 
-  let server: vite.ViteDevServer | undefined
-  let serverPromise = startServer(context, restart, onError)
+  const events = new EventEmitter()
+  events.on('error', onError)
+  events.on('restart', restart)
+
+  let server: vite.ViteDevServer | null = null
+  let serverPromise = startServer(context, events)
   serverPromise.then(s => (server = s))
 
   function restart() {
     serverPromise = serverPromise.then(async oldServer => {
-      await oldServer.close()
+      await oldServer?.close()
+
       context = await loadContext('serve', inlineConfig)
-      return startServer(context, restart, onError, true)
+      server = await startServer(context, events, true)
+      return server
     })
     serverPromise.catch(onError)
   }
@@ -34,14 +42,15 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       server?.ssrRewriteStacktrace(e, context.config.filterStack)
       logger.error(e.stack, { error: e })
     }
-    return null
   }
 
   const { logger } = context
   if (logger.isLogged('info')) {
-    logger.info('')
     const server = await serverPromise
-    vite.printHttpServerUrls(server.httpServer!, server.config)
+    if (server) {
+      logger.info('')
+      vite.printHttpServerUrls(server.httpServer!, server.config)
+    }
   }
 
   const onExit = addExitCallback((signal, exitCode, error) => {
@@ -52,17 +61,23 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
   return {
     restart,
-    close: () =>
-      serverPromise
-        .then(server => server.close(), onError)
-        .finally(() => removeExitCallback(onExit)),
+    async close() {
+      events.emit('close')
+      try {
+        const server = await serverPromise
+        await server?.close()
+      } catch (e) {
+        onError(e)
+      } finally {
+        removeExitCallback(onExit)
+      }
+    },
   }
 }
 
 async function startServer(
   context: SausContext,
-  restart: () => void,
-  onError: (e: any) => void,
+  events: EventEmitter,
   isRestart?: boolean
 ) {
   let { config } = context
@@ -86,16 +101,17 @@ async function startServer(
   )
 
   const server = await vite.createServer(config)
+  const watcher = server.watcher!
 
   // Listen immediately to ensure `buildStart` hook is called.
-  await listen(server, onError, isRestart)
+  await listen(server, events, isRestart)
 
   // Ensure the Vite config is watched.
   if (context.configPath) {
-    server.watcher!.add(context.configPath)
+    watcher.add(context.configPath)
   }
 
-  context.ssrContext = vite.ssrCreateContext(server)
+  const moduleCache = (context.ssrContext = vite.ssrCreateContext(server))
 
   // When starting the server, the context is fresh, so we don't bother
   // using intermediate objects when loading routes and renderers.
@@ -106,8 +122,21 @@ async function startServer(
       [context.routesPath, context.renderPath].map(file =>
         file.replace(context.root, '')
       ),
-      context.ssrContext
+      moduleCache
     )
+  } catch (error) {
+    // Handle parsing errors from Babel
+    if (error instanceof SyntaxError) {
+      const { id } = error as any
+      if (id) {
+        context.logger.error(error.message + '\n', { error })
+        waitForChanges(id, server, events, () => {
+          events.emit('restart')
+        })
+        return null
+      }
+    }
+    throw error
   } finally {
     setRoutesModule(null)
     setRenderModule(null)
@@ -116,15 +145,13 @@ async function startServer(
   // Tell plugins to update local state derived from Saus context.
   emitContextUpdate(server, context)
 
-  context.ssrContext.plugins.push(
-    handleContextUpdates(context, server, restart)
-  )
+  moduleCache.plugins.push(handleContextUpdates(context, server, events))
 
   const changedFiles = new Set<string>()
   const scheduleReload = debounce(async () => {
     // Restart the server when Vite config is changed.
     if (changedFiles.has(context.configPath!)) {
-      return restart()
+      return events.emit('restart')
     }
 
     // Wait for reloading to finish.
@@ -136,11 +163,10 @@ async function startServer(
     const files = Array.from(changedFiles)
     changedFiles.clear()
 
-    const cache = context.ssrContext!
-    await cache.reload(files)
+    await moduleCache.reload(files)
   }, 50)
 
-  server.watcher!.on('change', file => {
+  watcher.on('change', file => {
     changedFiles.add(file)
     scheduleReload()
   })
@@ -162,7 +188,7 @@ function hasContextUpdateHook(
 function handleContextUpdates(
   context: SausContext,
   server: vite.ViteDevServer,
-  restart: () => void
+  events: EventEmitter
 ): vite.SSRPlugin {
   let renderConfig: RenderModule | null
   let routesConfig: RoutesModule | null
@@ -216,7 +242,7 @@ function handleContextUpdates(
           newProviders.some(file => file && !oldProviders.includes(file))
 
         if (needsRestart) {
-          return restart()
+          return events.emit('restart')
         }
 
         // No config hooks were added or removed.
@@ -255,18 +281,19 @@ function handleContextUpdates(
 
 function listen(
   server: vite.ViteDevServer,
-  onError: (error: any) => void,
+  events: EventEmitter,
   isRestart?: boolean
 ): Promise<void> {
   let listening = false
 
   const { resolve, promise } = defer<void>()
+  events.once('close', () => resolve())
 
   // When optimizing deps, a syntax error may be hit. If so, we need to
   // handle it here by waiting for the offending file to be updated, and
   // try to optimize again once updated.
   server.httpServer!.on('error', (error: any) => {
-    onError(error)
+    events.emit('error', error)
 
     // ESBuild syntax errors have an "errors" array property.
     if (!listening && Array.isArray(error.errors)) {
@@ -278,15 +305,7 @@ function listen(
         }
       })
       if (files.size) {
-        const { logger } = server.config
-        logger.info(k.gray('Waiting for changes...'))
-        server.watcher!.on('change', function onChange(file) {
-          if (files.has(file)) {
-            server.watcher!.off('change', onChange)
-            logger.clearScreen('info')
-            listen()
-          }
-        })
+        waitForChanges(files, server, events, listen)
       }
     }
   })
@@ -302,4 +321,34 @@ function listen(
 
   listen()
   return promise
+}
+
+function waitForChanges(
+  input: string | Set<string>,
+  server: vite.ViteDevServer,
+  events: EventEmitter,
+  callback: () => void
+) {
+  const { logger } = server.config
+  const watcher = server.watcher!
+
+  const files = typeof input === 'string' ? new Set([input]) : input
+  const onChange = (file: string) => {
+    if (files.has(file)) {
+      watcher.off('change', onChange)
+      events.off('close', onClose)
+
+      logger.clearScreen('info')
+      callback()
+    }
+  }
+
+  const onClose = () => {
+    watcher.off('change', onChange)
+  }
+
+  watcher.on('change', onChange)
+  events.on('close', onClose)
+
+  logger.info(gray('Waiting for changes...'))
 }
