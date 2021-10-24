@@ -32,9 +32,18 @@ export function createPageFactory({
   renderers,
   defaultRoute,
   defaultRenderer,
+  logger,
 }: SausContext) {
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
+
+  const warnings = new Set<string>()
+  const warn = (msg: string) => {
+    if (!warnings.has(msg)) {
+      warnings.add(msg)
+      logger.warn(msg)
+    }
+  }
 
   // The main logic for rendering a page.
   async function renderPage(
@@ -93,7 +102,8 @@ export function createPageFactory({
       return null
     }
     if (!defaultRenderer) {
-      throw Error('Default renderer is not defined')
+      warn('Default renderer is not defined')
+      return null
     }
     return renderPage(url, params, route, defaultRenderer, initialState)
   }
