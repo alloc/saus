@@ -29,13 +29,13 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
   let server: vite.ViteDevServer | null = null
   let serverPromise = startServer(context, events)
-  serverPromise.then(s => (server = s))
 
   function restart() {
     serverPromise = serverPromise.then(async oldServer => {
       await oldServer?.close()
 
       resetConfigModules(context)
+      context.logger.clearScreen('info')
       context = await loadContext('serve', inlineConfig)
       server = await startServer(context, events, true)
       return server
@@ -52,14 +52,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     }
   }
 
-  const { logger } = context
-  if (logger.isLogged('info')) {
-    const server = await serverPromise
-    if (server) {
-      logger.info('')
-      vite.printHttpServerUrls(server.httpServer!, server.config)
-    }
-  }
+  await serverPromise
 
   const onExit = addExitCallback((signal, exitCode, error) => {
     if (error) {
@@ -182,6 +175,11 @@ async function startServer(
     changedFiles.add(file)
     scheduleReload()
   })
+
+  if (context.logger.isLogged('info')) {
+    context.logger.info('')
+    vite.printHttpServerUrls(server.httpServer!, server.config)
+  }
 
   return server
 }
