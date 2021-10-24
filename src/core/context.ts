@@ -203,3 +203,11 @@ export function createLoader(
     },
   })
 }
+
+export function resetConfigModules(context: SausContext) {
+  for (const hook of context.configHooks) {
+    if (hook.modulePath) {
+      delete require.cache[hook.modulePath]
+    }
+  }
+}
