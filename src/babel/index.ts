@@ -236,6 +236,12 @@ export function remove(path: NodePath, source: MagicString) {
 function getExpandedRange(path: NodePath, source: MagicString) {
   let start = path.node.start!
   let end = path.node.end!
+  if (path.node.leadingComments) {
+    start = path.node.leadingComments.reduce(
+      (start, comment) => Math.min(start, comment.start),
+      start
+    )
+  }
   start = getWhitespaceStart(start, source.original)
   end = getTrailingLineBreak(end, source.original)
   return [start, end] as const
