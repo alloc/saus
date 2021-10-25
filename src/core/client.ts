@@ -7,7 +7,9 @@ import {
   MagicBundle,
   MagicString,
   NodePath,
+  remove,
   removeSSR,
+  replaceWith,
   resolveReferences,
   t,
   transformSync,
@@ -37,7 +39,8 @@ export async function getClient(
 ): Promise<Client | undefined> {
   if (!getClient) return
 
-  const source = fs.readFileSync(filename, 'utf8')
+  const sourceStr = fs.readFileSync(filename, 'utf8')
+  const source = new MagicString(sourceStr, { filename } as any)
 
   let program!: NodePath<t.Program>
   const visitor: babel.Visitor = {
@@ -48,7 +51,7 @@ export async function getClient(
   }
 
   // Use the AST for traversal, but not code generation.
-  transformSync(source, filename, {
+  transformSync(sourceStr, filename, {
     plugins: [{ visitor }],
     sourceMaps: false,
     code: false,
@@ -116,7 +119,7 @@ export async function getClient(
   didRenderFn?.get('body').traverse(removeSSR())
 
   const context: ClientContext = {
-    source,
+    source: sourceStr,
     program,
     renderFn,
     didRenderFn,
@@ -129,8 +132,13 @@ export async function getClient(
       if (!program.isAncestor(path)) {
         throw Error('Given node is not from this file')
       }
-      const str = new MagicString(source, { filename } as any)
-      return str.remove(0, start).remove(end, source.length)
+      return source.clone().remove(0, start).remove(end, sourceStr.length)
+    },
+    replaceWith(path, replacement) {
+      return replaceWith(path, replacement, source)
+    },
+    remove(path) {
+      return remove(path, source)
     },
   }
 
@@ -295,4 +303,12 @@ export type ClientContext = {
    * on the bundle.
    */
   extract: (path: NodePath) => MagicString
+  /**
+   * Replace an AST node with another AST node or a source string.
+   */
+  replaceWith: (path: NodePath, replacement: babel.Node | string) => void
+  /**
+   * Remove an AST node.
+   */
+  remove: (path: NodePath) => void
 }

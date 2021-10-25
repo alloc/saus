@@ -1,5 +1,5 @@
 import * as babel from '@babel/core'
-import { types as t, NodePath } from '@babel/core'
+import { types as t, NodePath, transformFromAstSync } from '@babel/core'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 
 export { babel, t, NodePath, MagicString, MagicBundle }
@@ -210,13 +210,35 @@ export const transformAsync = (
   config: babel.TransformOptions | babel.PluginItem[]
 ) => babel.transformAsync(code, getBabelConfig(filename, config))
 
+export function replaceWith(
+  path: NodePath,
+  replacement: babel.Node | string,
+  source: MagicString
+) {
+  const [start, end] = getExpandedRange(path, source)
+  if (typeof replacement === 'string') {
+    path.replaceWithSourceString(replacement)
+    source.overwrite(start, end, replacement)
+  } else {
+    const { code: replacementString } = transformFromAstSync(replacement)!
+    source.overwrite(start, end, replacementString!)
+    path.replaceWith(replacement)
+  }
+}
+
 /** Remove a `NodePath`, its preceding whitespace, and its trailing newline (if one exists). */
 export function remove(path: NodePath, source: MagicString) {
+  const [start, end] = getExpandedRange(path, source)
+  source.remove(start, end)
+  path.remove()
+}
+
+function getExpandedRange(path: NodePath, source: MagicString) {
   let start = path.node.start!
   let end = path.node.end!
   start = getWhitespaceStart(start, source.original)
   end = getTrailingLineBreak(end, source.original)
-  source.remove(start, end)
+  return [start, end] as const
 }
 
 export function getWhitespaceStart(start: number, source: string) {
