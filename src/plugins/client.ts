@@ -18,7 +18,6 @@ export function clientPlugin(context: SausContext): Plugin {
   const { renderPath, pages, configEnv } = context
 
   let server: vite.ViteDevServer | undefined
-  let client: Client | undefined
 
   return {
     name: 'saus:client',
@@ -37,7 +36,13 @@ export function clientPlugin(context: SausContext): Plugin {
     },
     load(id) {
       if (isClientUrl(id)) {
-        return client
+        id = id.replace(clientPrefix, '')
+
+        // Find a page that uses this client.
+        const page = Object.values(pages).find(page => id === page.client?.id)
+        if (page) {
+          return page.client!.code
+        }
       }
     },
     transformIndexHtml: {
@@ -50,8 +55,6 @@ export function clientPlugin(context: SausContext): Plugin {
         }
 
         const page = pages[filename]
-        client = page.client
-
         const routeModuleId = page.routeModuleId
         const cssUrls = new Set<string>()
 
@@ -65,6 +68,7 @@ export function clientPlugin(context: SausContext): Plugin {
             .then(mod => mod && collectCss(mod, cssUrls))
         }
 
+        const client = page.client
         if (client) {
           const clientUrl = getClientUrl(client.id)
 
