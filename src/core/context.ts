@@ -107,6 +107,7 @@ export async function loadContext(
     pages: {},
     renderPath,
     renderers: [],
+    beforeRenderHooks: [],
   }
 
   await loadConfigHooks(context)

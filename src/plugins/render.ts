@@ -26,12 +26,14 @@ export function renderPlugin({
   }
 }
 
+const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
+
 // Append the `hash` and `start` arguments to render calls.
 function injectRenderMetadata(program: NodePath<t.Program>) {
   program.traverse({
     CallExpression(path) {
       const callee = path.get('callee')
-      if (callee.isIdentifier() && /^render([A-Z]|$)/.test(callee.node.name)) {
+      if (callee.isIdentifier() && renderIdentRE.test(callee.node.name)) {
         const stmt = path.getStatementParent()!
         path.node.arguments.push(
           // Content hash of the render call (for caching).
