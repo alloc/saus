@@ -2,6 +2,7 @@ import { ClientProvider } from './client'
 import { RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
 import { ConfigHook } from './context'
+import { RegexParam } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
 type ExcludeVoid<T> = Exclude<T, null | void>
@@ -11,12 +12,21 @@ type ExcludeVoid<T> = Exclude<T, null | void>
  * defined in `saus.yaml` with the `render` path property.
  */
 export type RenderModule = {
+  /** Hooks that run before the renderer */
+  beforeRenderHooks: BeforeRenderHook[]
   /** The renderers for specific routes */
   renderers: Renderer<string | null | void>[]
   /** The renderer used when no route is matched */
   defaultRenderer?: Renderer<string>
   /** Functions that modify the Vite config */
   configHooks: ConfigHook[]
+}
+
+export type BeforeRenderHook = {
+  (request: RenderRequest<any, any>): Promisable<void>
+  test?: (path: string) => boolean
+  hash?: string
+  start?: number
 }
 
 export type RenderHook<T = any> = (
@@ -81,4 +91,28 @@ export function render<T>(
     renderModule.defaultRenderer = renderer
   }
   return renderer
+}
+
+/** Run a before-render effect for every route */
+export function beforeRender(hook: BeforeRenderHook): void
+
+/** Run a before-render effect for the given `route` */
+export function beforeRender(route: string, hook: BeforeRenderHook): void
+
+export function beforeRender(...args: any[]) {
+  let hook: BeforeRenderHook
+  if (typeof args[0] == 'string') {
+    const route = args[0]
+    hook = args[1]
+    const regex = RegexParam.parse(route).pattern
+    hook.test = regex.test.bind(regex)
+  } else {
+    hook = args[0]
+  }
+  if (args.length > 2) {
+    const [hash, start] = args.slice(-2)
+    hook.hash = hash
+    hook.start = start
+  }
+  renderModule.beforeRenderHooks.push(hook)
 }

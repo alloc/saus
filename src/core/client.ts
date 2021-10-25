@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import md5Hex from 'md5-hex'
 import {
   flattenCallChain,
   isChainedCall,
@@ -11,7 +12,9 @@ import {
 } from '../babel'
 import type { RouteParams } from './routes'
 import type { Renderer } from './renderer'
+import type { BeforeRenderHook } from './render'
 import type { SourceDescription } from './vite'
+import { debug } from './debug'
 
 /** A generated client module */
 export type Client = { id: string } & SourceDescription
@@ -26,7 +29,8 @@ export type ClientState = Record<string, any> & {
 
 export async function getClient(
   filename: string,
-  { getClient, hash, start }: Renderer
+  { getClient, hash, start }: Renderer,
+  usedHooks: BeforeRenderHook[]
 ): Promise<Client | undefined> {
   if (!getClient) return
 
@@ -52,7 +56,8 @@ export async function getClient(
     .find(path => path.node.start === start) as NodePath<t.ExpressionStatement>
 
   if (!renderStmt) {
-    return // Something ain't right.
+    debug('Failed to generate client. Render statement was not found.')
+    return
   }
 
   let renderFn!: NodePath<t.ArrowFunctionExpression>
@@ -89,6 +94,21 @@ export async function getClient(
     },
   })
 
+  const beforeRenderFns: NodePath<t.ArrowFunctionExpression>[] = []
+  usedHooks.forEach(hook => {
+    const hookStmt = program
+      .get('body')
+      .find(
+        path => path.node.start === hook.start!
+      ) as NodePath<t.ExpressionStatement>
+
+    hookStmt.assertExpressionStatement()
+    const hookExpr = hookStmt.get('expression')
+
+    hookExpr.assertArrowFunctionExpression()
+    beforeRenderFns.push(hookExpr as any)
+  })
+
   // Remove SSR-only logic so resolveReferences works right.
   didRenderFn?.get('body').traverse(removeSSR())
 
@@ -97,6 +117,7 @@ export async function getClient(
     program,
     renderFn,
     didRenderFn,
+    beforeRenderFns,
     extract(path) {
       const { start, end } = path.node
       if (start == null || end == null) {
@@ -110,11 +131,16 @@ export async function getClient(
     },
   })
 
-  if (client)
+  if (client) {
+    if (usedHooks.length) {
+      hash += usedHooks.map(hook => hook.hash!).join('')
+      hash = md5Hex(hash!).slice(0, 16)
+    }
     return {
       id: `client-${hash}${path.extname(filename)}`,
       ...client,
     }
+  }
 }
 
 type Promisable<T> = T | PromiseLike<T>
@@ -140,6 +166,11 @@ export type ClientContext = {
    * already tree-shaked.
    */
   didRenderFn?: NodePath<t.ArrowFunctionExpression>
+  /**
+   * These functions should run in order before the `renderFn`
+   * has its logic executed.
+   */
+  beforeRenderFns: NodePath<t.ArrowFunctionExpression>[]
   /**
    * Extract a node to be used in the generated client.
    *

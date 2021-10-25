@@ -7,6 +7,8 @@ import {
   RouteParams,
   SausContext,
   matchRoute,
+  RenderRequest,
+  BeforeRenderHook,
 } from './core'
 
 export function getPageFilename(url: string) {
@@ -32,6 +34,7 @@ export function createPageFactory({
   renderers,
   defaultRoute,
   defaultRenderer,
+  beforeRenderHooks,
   logger,
 }: SausContext) {
   routes = [...routes].reverse()
@@ -61,20 +64,25 @@ export function createPageFactory({
     } as ClientState
 
     const [, path, hash, query] = urlPathRegex.exec(url)!
+    const request: RenderRequest = { path, hash, query, params, state }
 
-    const html = await renderer.render(
-      routeModule,
-      { path, hash, query, params, state },
-      renderer
-    )
+    const usedHooks: BeforeRenderHook[] = []
+    for (const hook of beforeRenderHooks) {
+      if (!hook.test || hook.test(path)) {
+        usedHooks.push(hook)
+        await hook(request)
+      }
+    }
 
+    const html = await renderer.render(routeModule, request, renderer)
     if (html == null) {
       return null
     }
 
     const filename = getPageFilename(url)
     const client =
-      pages[filename]?.client || (await getClient(rendererPath, renderer))
+      pages[filename]?.client ||
+      (await getClient(rendererPath, renderer, usedHooks))
 
     // Currently, the page cache is only used by the saus:client plugin,
     // since the performance impact of rendering on every request isn't

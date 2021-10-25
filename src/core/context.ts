@@ -107,6 +107,7 @@ export async function loadContext(
     pages: {},
     renderPath,
     renderers: [],
+    beforeRenderHooks: [],
   }
 
   await loadConfigHooks(context)
@@ -157,6 +158,7 @@ export async function loadConfigHooks(context: SausContext) {
     setRenderModule(null)
     context.ssrContext = undefined
   }
+  context.beforeRenderHooks.length = 0
   context.renderers.length = 0
   context.defaultRenderer = undefined
   await loader.close()

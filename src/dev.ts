@@ -205,7 +205,11 @@ function handleContextUpdates(
   return {
     executeModule(module) {
       if (module.file === context.renderPath) {
-        renderConfig = setRenderModule({ renderers: [], configHooks: [] })
+        renderConfig = setRenderModule({
+          renderers: [],
+          configHooks: [],
+          beforeRenderHooks: [],
+        })
       } else if (module.file === context.routesPath) {
         routesConfig = setRoutesModule({ routes: [] })
       } else {
