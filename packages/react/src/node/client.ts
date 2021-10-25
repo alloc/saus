@@ -14,10 +14,29 @@ import {
 export const getClient: ClientProvider = ({
   renderFn,
   didRenderFn,
+  beforeRenderFns,
   extract,
 }) => {
   const client = new MagicBundle()
   const extracted = new Set<NodePath>()
+
+  const beforeRenderCalls: string[] = []
+  beforeRenderFns.forEach((hook, i) => {
+    const refs = resolveReferences(
+      hook.get('body'),
+      path => !path.isDescendant(hook.parentPath)
+    )
+    refs.forEach(stmt => {
+      if (extracted.has(stmt)) return
+      client.addSource(extract(stmt))
+      extracted.add(stmt)
+    })
+    const hookId = `$beforeRender${i + 1}`
+    beforeRenderCalls.push(`${hookId}(request)`)
+    const hookImpl = extract(hook)
+    hookImpl.prepend(`const ${hookId} = `)
+    client.addSource(hookImpl)
+  })
 
   const renderDecl = extract(renderFn)
   serverToClientRender(renderDecl, renderFn)
@@ -27,6 +46,7 @@ export const getClient: ClientProvider = ({
     path => !path.isDescendant(renderFn!.parentPath)
   )
   refs.forEach(stmt => {
+    if (extracted.has(stmt)) return
     client.addSource(extract(stmt))
     extracted.add(stmt)
   })
@@ -56,6 +76,7 @@ export const getClient: ClientProvider = ({
 
   const hydrateBlock = endent`
     $onHydrate(async (routeModule, request) => {
+      ${beforeRenderFns.length ? beforeRenderCalls.join('\n') : ''}
       const {rootId = "saus_react"} = request.state
       ReactDOM.hydrate(
         await $render(routeModule, request),
