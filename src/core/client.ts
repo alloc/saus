@@ -116,7 +116,7 @@ export async function getClient(
   })
 
   // Remove SSR-only logic so resolveReferences works right.
-  didRenderFn?.get('body').traverse(removeSSR())
+  didRenderFn?.get('body').traverse(removeSSR(source))
 
   const context: ClientContext = {
     source: sourceStr,

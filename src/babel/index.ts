@@ -88,7 +88,7 @@ export function isPropertyName({ parentKey, parentPath }: NodePath) {
   )
 }
 
-export function removeSSR(): babel.Visitor {
+export function removeSSR(source: MagicString): babel.Visitor {
   return {
     MetaProperty(path) {
       if (!path.get('meta').isIdentifier({ name: 'import' })) return
@@ -98,20 +98,20 @@ export function removeSSR(): babel.Visitor {
         if (expr.parentKey == 'test') {
           if (parent.isIfStatement() || parent.isConditionalExpression()) {
             if (parent.node.alternate) {
-              parent.replaceWith(parent.node.alternate)
+              replaceWith(parent, parent.node.alternate, source)
             } else {
-              parent.remove()
+              remove(parent, source)
             }
           } else {
-            expr.replaceWith(t.booleanLiteral(false))
+            replaceWith(expr, 'false', source)
           }
         } else if (
           expr.parentKey == 'left' &&
           parent.equals('operator', '&&')
         ) {
-          parent.replaceWith(t.booleanLiteral(false))
+          replaceWith(parent, 'false', source)
         } else {
-          expr.replaceWith(t.booleanLiteral(false))
+          replaceWith(expr, 'false', source)
         }
       }
     },
