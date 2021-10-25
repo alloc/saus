@@ -34,7 +34,7 @@ export type ClientState = Record<string, any> & {
 
 export async function getClient(
   filename: string,
-  { getClient, hash, start }: Renderer,
+  { getClient, start }: Renderer,
   usedHooks: BeforeRenderHook[]
 ): Promise<Client | undefined> {
   if (!getClient) return
@@ -152,12 +152,9 @@ export async function getClient(
     if ('onHydrate' in client) {
       client = renderClientDescription(client, context)
     }
-    if (usedHooks.length) {
-      hash += usedHooks.map(hook => hook.hash!).join('')
-      hash = md5Hex(hash!).slice(0, 16)
-    }
+    const hash = md5Hex(client.code).slice(0, 16)
     return {
-      id: `client-${hash}${path.extname(filename)}`,
+      id: `client.${hash}${path.extname(filename)}`,
       ...client,
     }
   }

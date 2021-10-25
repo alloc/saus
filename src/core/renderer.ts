@@ -29,7 +29,6 @@ export class Renderer<T = any> {
       renderer: Renderer
     ) => Promisable<string | null | void>,
     readonly getClient?: ClientProvider,
-    readonly hash?: string,
     readonly start?: number
   ) {
     if (route) {

@@ -1,5 +1,4 @@
 import * as vite from 'vite'
-import md5Hex from 'md5-hex'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { babel, transformSync, t, NodePath } from '../babel'
 import { SausContext } from '../core'
@@ -28,16 +27,13 @@ export function renderPlugin({
 
 const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
 
-// Append the `hash` and `start` arguments to render calls.
+// Append the node position to render-related calls.
 function injectRenderMetadata(program: NodePath<t.Program>) {
   program.traverse({
     CallExpression(path) {
       const callee = path.get('callee')
       if (callee.isIdentifier() && renderIdentRE.test(callee.node.name)) {
-        const stmt = path.getStatementParent()!
         path.node.arguments.push(
-          // Content hash of the render call (for caching).
-          t.stringLiteral(md5Hex(stmt.toString()).slice(0, 16)),
           // Start position of the render call (for client generation).
           t.numericLiteral(path.node.start!)
         )

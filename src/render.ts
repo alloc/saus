@@ -38,13 +38,12 @@ export function render(...args: [any, ...any[]]) {
   if (typeof args[0] !== 'string') {
     args.unshift('')
   }
-  const [route, render, hash, start] = args
+  const [route, render, start] = args
   const renderer = createRenderer<string>(
     route,
     render,
     s => s,
     undefined,
-    hash,
     start
   )
   return renderer.api

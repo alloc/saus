@@ -40,7 +40,7 @@ export function render(...args: any[]) {
   if (typeof args[0] !== 'string') {
     args.unshift('')
   }
-  const [route, render, hash, start] = args
+  const [route, render, start] = args
   const renderer = createRenderer<JSX.Element>(
     route,
     async (mod, req) => {
@@ -49,7 +49,6 @@ export function render(...args: any[]) {
     },
     { head: ReactDOM.renderToStaticMarkup, body: ReactDOM.renderToString },
     getClient,
-    hash,
     start
   )
   return renderer.api

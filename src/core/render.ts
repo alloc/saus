@@ -25,7 +25,6 @@ export type RenderModule = {
 export type BeforeRenderHook = {
   (request: RenderRequest<any, any>): Promisable<void>
   test?: (path: string) => boolean
-  hash?: string
   start?: number
 }
 
@@ -49,7 +48,6 @@ export function render<T>(
   render: RenderHook<T | null | void>,
   stringify: ToString<T> | { head: ToString<T>; body: ToString<T> },
   getClient?: ClientProvider,
-  hash?: string,
   start?: number
 ): Renderer<ExcludeVoid<T>> {
   const stringifyHead =
@@ -82,7 +80,6 @@ export function render<T>(
       }
     },
     getClient,
-    hash,
     start
   )
   if (route) {
@@ -109,10 +106,8 @@ export function beforeRender(...args: any[]) {
   } else {
     hook = args[0]
   }
-  if (args.length > 2) {
-    const [hash, start] = args.slice(-2)
-    hook.hash = hash
-    hook.start = start
+  if (typeof args[args.length - 1] === 'number') {
+    hook.start = args.pop() as number
   }
   renderModule.beforeRenderHooks.push(hook)
 }
