@@ -1,4 +1,4 @@
-import { ClientProvider, ClientState } from './client'
+import type { ClientProvider, ClientState } from './client'
 import { RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>

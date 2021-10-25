@@ -4,17 +4,20 @@ import md5Hex from 'md5-hex'
 import {
   flattenCallChain,
   isChainedCall,
+  MagicBundle,
   MagicString,
   NodePath,
   removeSSR,
+  resolveReferences,
   t,
   transformSync,
 } from '../babel'
-import type { RouteParams } from './routes'
-import type { Renderer } from './renderer'
 import type { BeforeRenderHook } from './render'
+import type { Renderer } from './renderer'
+import type { RouteParams } from './routes'
 import type { SourceDescription } from './vite'
 import { debug } from './debug'
+import endent from 'endent'
 
 /** A generated client module */
 export type Client = { id: string } & SourceDescription
@@ -112,7 +115,7 @@ export async function getClient(
   // Remove SSR-only logic so resolveReferences works right.
   didRenderFn?.get('body').traverse(removeSSR())
 
-  const client = await getClient({
+  const context: ClientContext = {
     source,
     program,
     renderFn,
@@ -129,9 +132,13 @@ export async function getClient(
       const str = new MagicString(source, { filename } as any)
       return str.remove(0, start).remove(end, source.length)
     },
-  })
+  }
 
+  let client = await getClient(context)
   if (client) {
+    if ('onHydrate' in client) {
+      client = renderClientDescription(client, context)
+    }
     if (usedHooks.length) {
       hash += usedHooks.map(hook => hook.hash!).join('')
       hash = md5Hex(hash!).slice(0, 16)
@@ -143,12 +150,120 @@ export async function getClient(
   }
 }
 
+function renderClientDescription(
+  { imports, onHydrate }: ClientDescription,
+  { extract, renderFn, didRenderFn, beforeRenderFns }: ClientContext
+): SourceDescription {
+  const script = new MagicBundle()
+
+  // Top-level statements are extracted from the render module.
+  const statements = new Set<NodePath>()
+  const useStatement = (stmt: NodePath<t.Statement>) => {
+    if (statements.has(stmt)) return
+    script.addSource(extract(stmt))
+    statements.add(stmt)
+  }
+  const useReferencedStatements = (fn: NodePath<t.ArrowFunctionExpression>) => {
+    const refs = resolveReferences(
+      fn.get('body'),
+      path => !path.isDescendant(fn.parentPath)
+    )
+    refs.forEach(useStatement)
+  }
+
+  const beforeRenderCalls: string[] = []
+  beforeRenderFns.forEach((hook, i) => {
+    useReferencedStatements(hook)
+    const hookId = `$beforeRender${i + 1}`
+    beforeRenderCalls.push(`${hookId}(request)`)
+    const hookStr = extract(hook)
+    hookStr.prepend(`const ${hookId} = `)
+    script.addSource(hookStr)
+  })
+
+  useReferencedStatements(renderFn)
+  const renderStr = extract(renderFn)
+  renderStr.prepend('const $render = ')
+  script.addSource(renderStr)
+
+  if (didRenderFn) {
+    useReferencedStatements(didRenderFn)
+    const didRenderStr = extract(didRenderFn)
+    didRenderStr.prepend('const $didHydrate = ')
+    script.addSource(didRenderStr)
+  }
+
+  const importsBlock = endent`
+    import { onHydrate as $onHydrate } from "saus/client"
+    ${renderImports(imports).join('\n')}
+  `
+
+  const hydrateBlock = endent`
+    $onHydrate(async (routeModule, request) => {
+      ${beforeRenderFns.length ? beforeRenderCalls.join('\n') : ''}
+      const content = await $render(routeModule, request)
+      ${onHydrate}
+      ${didRenderFn ? '$didHydrate()' : ''}
+    })
+  `
+
+  script.prepend(importsBlock + '\n')
+  script.append('\n' + hydrateBlock)
+
+  return {
+    code: script.toString(),
+    map: script.generateMap(),
+  }
+}
+
+function renderImports(imports: ClientImports) {
+  return Object.entries(imports).map(
+    ([source, spec]) =>
+      `import ${
+        typeof spec === 'string'
+          ? spec
+          : '{ ' +
+            spec
+              .map(spec =>
+                typeof spec === 'string' ? spec : spec[0] + ' as ' + spec[1]
+              )
+              .join(', ') +
+            ' }'
+      } from "${source}"`
+  )
+}
+
 type Promisable<T> = T | PromiseLike<T>
+
+type ClientImports = {
+  [source: string]: string | (string | [name: string, alias: string])[]
+}
+
+export type ClientDescription = {
+  /**
+   * Define `import` statements to be included.
+   *
+   * The keys are modules to import from, and the values are either the
+   * identifier used for the default export or an array of identifiers
+   * used for named exports.
+   */
+  imports: ClientImports
+  /**
+   * Hydration code to run on the client.
+   *
+   * Executed inside a function with this type signature:
+   *
+   *     async (content: unknown, request: RenderRequest) => void
+   *
+   * Custom imports are available as well.
+   */
+  onHydrate: string
+}
 
 /** Function that generates a client module */
 export type ClientProvider = (
   context: ClientContext
-) => Promisable<SourceDescription | void>
+) => Promisable<SourceDescription | ClientDescription | void>
 
 export type ClientContext = {
   source: string
