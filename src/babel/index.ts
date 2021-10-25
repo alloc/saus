@@ -248,8 +248,7 @@ function getExpandedRange(path: NodePath, source: MagicString) {
 }
 
 export function getWhitespaceStart(start: number, source: string) {
-  while (source[start - 1] === ' ') start--
-  return start
+  return start - /(^|\n)([\n ]*)$/.exec(source.slice(0, start))![2].length
 }
 
 export function getTrailingLineBreak(end: number, source: string) {
