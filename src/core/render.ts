@@ -34,7 +34,7 @@ export type RenderHook<T = any> = (
   request: RenderRequest<any, any>
 ) => Promisable<T>
 
-type ToString<T> = (result: T) => string
+type ToString<T> = (result: T) => Promisable<string>
 
 /**
  * Create a `Renderer` and add it to the current Saus context.
@@ -62,12 +62,12 @@ export function render<T>(
       const result = await render(mod, req)
       if (result == null) return
       try {
-        let html = stringifyBody(result)
+        let html = await stringifyBody(result)
         if (!/^\s*<body( |>)/.test(html)) {
           html = `<body>\n${html}\n</body>`
         }
         if (getHead) {
-          let head = stringifyHead(await getHead(req))
+          let head = await stringifyHead(await getHead(req))
           if (!/^\s*<head( |>)/.test(head)) {
             head = `<head>\n${head}\n</head>`
           }

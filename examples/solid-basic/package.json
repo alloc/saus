@@ -1,0 +1,16 @@
+{
+  "name": "solid-basic",
+  "private": true,
+  "scripts": {
+    "dev": "saus dev",
+    "build": "saus build"
+  },
+  "devDependencies": {
+    "@types/node": "^16.10.2"
+  },
+  "dependencies": {
+    "@saus/solid": "*",
+    "saus": "*",
+    "solid-js": "^1.1.7"
+  }
+}

@@ -1,0 +1,43 @@
+html {
+  font-size: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+div {
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  padding: 0.2rem;
+}
+
+header {
+  width: 100%;
+  height: 6rem;
+  border-bottom: 1px solid hsl(0, 0%, 92%);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+header img {
+  height: 66%;
+}
+
+main {
+  padding: 0 2rem;
+}
+
+h1 {
+  font-size: 2.6rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+.pokemon img {
+  width: 30rem;
+  align-self: center;
+}

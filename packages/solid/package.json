@@ -1,0 +1,28 @@
+{
+  "name": "@saus/solid",
+  "version": "0.4.9",
+  "description": "Solid renderer for saus",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc -p .",
+    "dev": "tsc -p . --incremental --watch",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*",
+    "solid-js": "*"
+  },
+  "devDependencies": {
+    "saus": "*",
+    "solid-js": "^1.1.7"
+  },
+  "dependencies": {
+    "vite-plugin-solid": "^2.1.1"
+  }
+}
