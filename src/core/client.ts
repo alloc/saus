@@ -109,10 +109,15 @@ export async function getClient(
       ) as NodePath<t.ExpressionStatement>
 
     hookStmt.assertExpressionStatement()
-    const hookExpr = hookStmt.get('expression')
+    let hookExpr = hookStmt.get('expression') as NodePath<t.CallExpression>
 
-    hookExpr.assertArrowFunctionExpression()
-    beforeRenderFns.push(hookExpr as any)
+    hookExpr.assertCallExpression()
+    for (const arg of hookExpr.get('arguments')) {
+      if (arg.isArrowFunctionExpression()) {
+        beforeRenderFns.push(arg)
+        break
+      }
+    }
   })
 
   // Remove SSR-only logic so resolveReferences works right.
