@@ -31,7 +31,7 @@ export const getClient: ClientProvider = ({
     extracted.add(stmt)
   })
 
-  renderDecl.prepend('const render = ')
+  renderDecl.prepend('const $render = ')
   client.addSource(renderDecl)
 
   if (didRenderFn) {
@@ -45,7 +45,7 @@ export const getClient: ClientProvider = ({
       extracted.add(stmt)
     })
     const didRenderDecl = extract(didRenderFn)
-    didRenderDecl.prepend('const didRender = ')
+    didRenderDecl.prepend('const $didRender = ')
     client.addSource(didRenderDecl)
   }
 
@@ -58,10 +58,10 @@ export const getClient: ClientProvider = ({
     $onHydrate(async (routeModule, request) => {
       const {rootId = "saus_react"} = request.state
       ReactDOM.hydrate(
-        await render(routeModule, request),
+        await $render(routeModule, request),
         document.getElementById(rootId)
       )
-      ${didRenderFn ? 'didRender()' : ''}
+      ${didRenderFn ? '$didRender()' : ''}
     })
   `
 
