@@ -2,6 +2,7 @@ import reactVite from '@vitejs/plugin-react'
 import { configureVite } from 'saus/core'
 
 export * from './node/render'
+export { beforeRender } from 'saus/core'
 
 configureVite(config => ({
   optimizeDeps: {
