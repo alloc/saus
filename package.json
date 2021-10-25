@@ -30,6 +30,7 @@
     "caller-path": "^3.0.1",
     "catch-exit": "^1.2.2",
     "chokidar": "^3.5.2",
+    "debug": "^4.3.2",
     "endent": "^2.1.0",
     "escape-goat": "^3.0.0",
     "is-plain-object": "^5.0.0",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "@alloc/fast-rimraf": "^1.0.8",
     "@alloc/prettier-config": "^1.0.0",
+    "@types/debug": "^4.1.7",
     "@types/jest": "^26.0.20",
     "@types/physical-cpu-count": "^2.0.0",
     "@types/source-map-support": "^0.5.4",
