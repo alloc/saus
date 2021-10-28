@@ -2,7 +2,10 @@ import { Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
-export function servePlugin(context: SausContext): Plugin {
+export function servePlugin(
+  context: SausContext,
+  onError: (e: any) => void
+): Plugin {
   // The server starts before Saus is ready, so we stall
   // any early page requests until it is.
   let init = defer<void>()
@@ -27,8 +30,7 @@ export function servePlugin(context: SausContext): Plugin {
             res.write(html)
             res.end()
           } else if (error) {
-            server.ssrRewriteStacktrace(error, context.config.filterStack)
-            console.error(error)
+            onError(error)
             res.writeHead(500)
             res.end()
           } else {

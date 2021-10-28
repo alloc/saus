@@ -92,7 +92,7 @@ async function startServer(
   config = vite.mergeConfig(
     <vite.UserConfig>{
       plugins: [
-        servePlugin(context),
+        servePlugin(context, e => events.emit('error', e)),
         clientPlugin(context),
         routesPlugin(context),
         renderPlugin(context),
