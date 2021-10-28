@@ -4,7 +4,7 @@
   "description": "React renderer for saus",
   "license": "MIT",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "index.d.ts",
   "files": [
     "src",
     "dist"
