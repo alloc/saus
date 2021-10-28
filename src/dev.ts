@@ -129,9 +129,7 @@ async function startServer(
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
     if (filename) {
-      // Babel includes the filename in the `.message` string
-      const msg = (error.id ? error.message : error.stack) + '\n'
-      context.logger.error(msg, { error })
+      events.emit('error', error)
       waitForChanges(filename, server, events, async () => {
         await server.close().catch(e => events.emit('error', e))
         events.emit('restart')
