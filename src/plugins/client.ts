@@ -1,6 +1,6 @@
 import endent from 'endent'
 import * as vite from 'vite'
-import { Client, SausContext, Plugin } from '../core'
+import { SausContext, Plugin } from '../core'
 import { getPageFilename } from '../pages'
 import { collectCss } from '../preload'
 
