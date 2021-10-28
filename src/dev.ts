@@ -125,18 +125,18 @@ async function startServer(
       ),
       moduleCache
     )
-  } catch (error) {
-    // Handle parsing errors from Babel
-    if (error instanceof SyntaxError) {
-      const { id } = error as any
-      if (id) {
-        context.logger.error(error.message + '\n', { error })
-        waitForChanges(id, server, events, async () => {
-          await server.close().catch(e => events.emit('error', e))
-          events.emit('restart')
-        })
-        return null
-      }
+  } catch (error: any) {
+    // Babel errors use `.id` and Vite SSR uses `.file`
+    const filename = error.id || error.file
+    if (filename) {
+      // Babel includes the filename in the `.message` string
+      const msg = (error.id ? error.message : error.stack) + '\n'
+      context.logger.error(msg, { error })
+      waitForChanges(filename, server, events, async () => {
+        await server.close().catch(e => events.emit('error', e))
+        events.emit('restart')
+      })
+      return null
     }
     throw error
   } finally {
