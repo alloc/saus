@@ -164,6 +164,9 @@ async function startServer(
     changedFiles.clear()
 
     await moduleCache.reload(files).catch(error => {
+      // Stop blocking page requests.
+      context.reloading = undefined
+
       // Clone the error so unfixed Babel errors never go unnoticed.
       events.emit('error', cloneError(error))
     })
