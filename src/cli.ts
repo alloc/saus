@@ -4,6 +4,10 @@ import color from 'kleur'
 import cac from 'cac'
 import { BuildOptions, vite } from './core'
 
+if (process.env.DEBUG === 'saus:*') {
+  process.env.DEBUG += ' saus'
+}
+
 const cli = cac('saus')
 
 cli

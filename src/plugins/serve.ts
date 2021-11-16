@@ -1,6 +1,9 @@
+import createDebug from 'debug'
 import { Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
+
+const debug = createDebug('saus:serve')
 
 export function servePlugin(
   context: SausContext,
@@ -21,8 +24,11 @@ export function servePlugin(
     configureServer: server => () =>
       server.middlewares.use((req, res, next) => {
         const path = req.originalUrl!
+        debug(`Received request: "${path}"`)
         requestQueue = requestQueue.then(async () => {
           await Promise.all([init, context.reloading])
+
+          debug(`Processing request: "${path}"`)
           await pageFactory.resolvePage(path, async (error, page) => {
             if (page) {
               const html = await server.transformIndexHtml(path, page.html)
@@ -39,6 +45,7 @@ export function servePlugin(
               next()
             }
           })
+          debug(`Completed request: "${path}"`)
         })
       }),
   }

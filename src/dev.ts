@@ -12,6 +12,7 @@ import {
   RoutesModule,
   resetConfigModules,
 } from './core'
+import { debug } from './core/debug'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
@@ -163,6 +164,10 @@ async function startServer(
     const files = Array.from(changedFiles)
     changedFiles.clear()
 
+    if (process.env.DEBUG) {
+      debug(`Reloading modules:`)
+    }
+
     await moduleCache.reload(files).catch(error => {
       // Stop blocking page requests.
       context.reloading = undefined
@@ -170,6 +175,8 @@ async function startServer(
       // Clone the error so unfixed Babel errors never go unnoticed.
       events.emit('error', cloneError(error))
     })
+
+    debug(`Reload completed.`)
   }, 50)
 
   watcher.on('change', file => {
@@ -205,6 +212,7 @@ function handleContextUpdates(
   let routesConfig: RoutesModule | null
   return {
     executeModule(module) {
+      debug(`  - ${module.file}`)
       if (module.file === context.renderPath) {
         renderConfig = setRenderModule({
           renderers: [],
