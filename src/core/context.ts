@@ -1,13 +1,14 @@
 import callerPath from 'caller-path'
+import { ssrCreateContext } from 'vite'
 import { getImportDeclarations, transformSync } from '../babel'
 import type { RenderedPage } from '../pages'
+import { Deferred } from '../utils/defer'
+import { ClientState } from './client'
 import { readSausYaml } from './config'
-import { UserConfig, vite } from './vite'
+import { renderModule, setRenderModule } from './global'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { Deferred } from '../utils/defer'
-import { renderModule, setRenderModule } from './global'
-import { ssrCreateContext } from 'vite'
+import { UserConfig, vite } from './vite'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -19,6 +20,8 @@ export interface SausContext extends RenderModule, RoutesModule {
   routesPath: string
   /** Rendered page cache */
   pages: Record<string, RenderedPage>
+  /** Client state cache */
+  states: Record<string, Deferred<ClientState>>
   /** Path to the render module */
   renderPath: string
   /** The SSR context used when loading routes */
@@ -105,6 +108,7 @@ export async function loadContext(
     routesPath,
     routes: [],
     pages: {},
+    states: {},
     renderPath,
     renderers: [],
     beforeRenderHooks: [],
