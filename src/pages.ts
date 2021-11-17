@@ -11,6 +11,7 @@ import {
   RenderRequest,
   BeforeRenderHook,
 } from './core'
+import { defer } from './utils/defer'
 
 export function getPageFilename(url: string) {
   return url == '/' ? 'index.html' : url.slice(1) + '.html'
@@ -31,6 +32,7 @@ const urlPathRegex = /^(.+?)(?:#([^?]*))?(?:\?(.*))?$/
 export function createPageFactory({
   renderPath: rendererPath,
   pages,
+  states,
   routes,
   renderers,
   defaultRoute,
@@ -57,53 +59,65 @@ export function createPageFactory({
     renderer: Renderer,
     initialState?: Record<string, any>
   ): Promise<RenderedPage | null> {
-    debug(`Loading route: "${route.moduleId}"`)
-    const routeModule = await route.load()
     const state = {
       ...initialState,
       routePath: route.path,
       routeParams: params,
     } as ClientState
 
-    const [, path, hash, query] = urlPathRegex.exec(url)!
-    const request: RenderRequest = { path, hash, query, params, state }
+    states[url]?.resolve(state)
 
-    if (beforeRenderHooks.length) {
-      debug(`Running beforeRender hooks`)
-    }
+    try {
+      debug(`Loading route: "${route.moduleId}"`)
+      const routeModule = await route.load()
 
-    const usedHooks: BeforeRenderHook[] = []
-    for (const hook of beforeRenderHooks) {
-      if (!hook.test || hook.test(path)) {
-        usedHooks.push(hook)
-        await hook(request)
+      const [, path, hash, query] = urlPathRegex.exec(url)!
+      const request: RenderRequest = { path, hash, query, params, state }
+
+      if (beforeRenderHooks.length) {
+        debug(`Running beforeRender hooks`)
       }
-    }
 
-    debug(`Rendering page: "${request.path}"`)
-    const html = await renderer.render(routeModule, request, renderer)
-    if (html == null) {
-      debug(`Nothing was rendered. Trying next renderer.`)
-      return null
-    }
+      const usedHooks: BeforeRenderHook[] = []
+      for (const hook of beforeRenderHooks) {
+        if (!hook.test || hook.test(path)) {
+          usedHooks.push(hook)
+          await hook(request)
+        }
+      }
 
-    const filename = getPageFilename(url)
-    let client = pages[filename]?.client
-    if (!client) {
-      debug(`Generating client module`)
-      client = await getClient(rendererPath, renderer, usedHooks)
-    }
+      debug(`Rendering page: "${request.path}"`)
+      const html = await renderer.render(routeModule, request, renderer)
+      if (html == null) {
+        debug(`Nothing was rendered. Trying next renderer.`)
+        return null
+      }
 
-    // Currently, the page cache is only used by the saus:client plugin,
-    // since the performance impact of rendering on every request isn't
-    // bad enough to justify complicated cache invalidation.
-    return (pages[filename] = {
-      path: url,
-      html,
-      state,
-      client,
-      routeModuleId: route.moduleId,
-    })
+      const filename = getPageFilename(url)
+      let client = pages[filename]?.client
+      if (!client) {
+        debug(`Generating client module`)
+        client = await getClient(rendererPath, renderer, usedHooks)
+      }
+
+      // Currently, the page cache is only used by the saus:client plugin,
+      // since the performance impact of rendering on every request isn't
+      // bad enough to justify complicated cache invalidation.
+      return (pages[filename] = {
+        path: url,
+        html,
+        state,
+        client,
+        routeModuleId: route.moduleId,
+      })
+    } catch (e) {
+      delete states[url]
+      throw e
+    }
+  }
+
+  function getState(url: string): Promise<ClientState> | undefined {
+    return states[url]?.promise
   }
 
   /**
@@ -146,9 +160,15 @@ export function createPageFactory({
     route: Route,
     initialState?: Record<string, any>
   ) {
+    states[url] = defer()
     if (route.state) {
-      const state = await route.state(...Object.values(params))
-      initialState = { ...initialState, ...state }
+      try {
+        const state = await route.state(...Object.values(params))
+        initialState = { ...initialState, ...state }
+      } catch (error) {
+        delete states[url]
+        throw error
+      }
     }
     const path = url.replace(/[?#].+$/, '')
     for (const renderer of renderers) {
@@ -215,6 +235,7 @@ export function createPageFactory({
   }
 
   return {
+    getState,
     resolvePage,
     renderUnknownPage,
     renderRoute,

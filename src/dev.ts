@@ -117,7 +117,9 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const moduleCache = (context.ssrContext = vite.ssrCreateContext(server))
+  const moduleCache = (context.ssrContext = vite.ssrCreateContext(server, [
+    injectDevCache(context),
+  ]))
 
   // When starting the server, the context is fresh, so we don't bother
   // using intermediate objects when loading routes and renderers.
@@ -150,6 +152,8 @@ async function startServer(
   // Tell plugins to update local state derived from Saus context.
   emitContextUpdate(server, context)
 
+  // This plugin handles updated modules, so it's not needed until
+  // the server has been initialized.
   moduleCache.plugins.push(handleContextUpdates(context, server, events))
 
   const changedFiles = new Set<string>()
@@ -194,6 +198,22 @@ async function startServer(
   }
 
   return server
+}
+
+/**
+ * We want `loadClientState` to "just work" in SSR environments,
+ * so we need to inject the state cache by overriding the import
+ * made within the `src/client/state.ts` module.
+ */
+function injectDevCache(context: SausContext): vite.SSRPlugin {
+  const cachePath = '/@fs' + path.resolve(__dirname, '../src/client/cache.ts')
+  return {
+    setExports(id) {
+      if (id == cachePath) {
+        return { states: context.states }
+      }
+    },
+  }
 }
 
 function emitContextUpdate(server: vite.ViteDevServer, context: SausContext) {
