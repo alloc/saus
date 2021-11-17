@@ -56,7 +56,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     }
   }
 
-  await serverPromise
+  server = await serverPromise
 
   const onExit = addExitCallback((signal, exitCode, error) => {
     if (error) {
