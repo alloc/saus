@@ -31,6 +31,9 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   let server: vite.ViteDevServer | null = null
   let serverPromise = startServer(context, events)
 
+  // Stop promises from crashing the process.
+  process.on('unhandledRejection', onError)
+
   function restart() {
     serverPromise = serverPromise.then(async oldServer => {
       await oldServer?.close()
@@ -64,6 +67,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   return {
     restart,
     async close() {
+      process.off('unhandledRejection', onError)
       events.emit('close')
       try {
         const server = await serverPromise
