@@ -48,14 +48,6 @@ export interface RouteConfig<
     pathParams: string[],
     searchParams: URLSearchParams
   ) => Promisable<InferRouteProps<Module>>
-  /**
-   * Control the key used in the caching of loaded page state.
-   *
-   * By default, the `url.path` and `url.search` properties are included
-   * in the cache key, so query strings will affect the state used when
-   * rendering the page.
-   */
-  cacheKey?: (url: ParsedUrl) => string
 }
 
 export interface ParsedRoute {
