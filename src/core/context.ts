@@ -26,6 +26,8 @@ export interface SausContext extends RenderModule, RoutesModule {
   renderPath: string
   /** The SSR context used when loading routes */
   ssrContext?: vite.SSRContext
+  /** For checking if a page is outdated since rendering began */
+  reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
 }
@@ -112,6 +114,7 @@ export async function loadContext(
     renderPath,
     renderers: [],
     beforeRenderHooks: [],
+    reloadId: 0,
   }
 
   await loadConfigHooks(context)

@@ -176,6 +176,7 @@ async function startServer(
       debug(`Reloading modules:`)
     }
 
+    context.reloadId++
     await moduleCache.reload(files).catch(error => {
       // Stop blocking page requests.
       context.reloading = undefined
