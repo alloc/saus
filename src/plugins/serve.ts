@@ -1,13 +1,8 @@
-import createDebug from 'debug'
 import { Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
-const debug = createDebug('saus:serve')
-
-const stateSuffix = '/state.json'
-
-type Promisable<T> = T | PromiseLike<T>
+const stateSuffix = /\/state.json(\?.+)?$/
 
 export function servePlugin(
   context: SausContext,
@@ -17,30 +12,6 @@ export function servePlugin(
   // any early page requests until it is.
   let init = defer<void>()
   let pageFactory: PageFactory
-  let requestQueue = Promise.resolve()
-
-  function handleRequest(action: () => Promisable<void>) {
-    const promise = requestQueue
-      .then(() => Promise.all([init, context.reloading]))
-      .then(action)
-    requestQueue = promise.catch(() => {})
-    return promise
-  }
-
-  async function getState(pageUrl: string) {
-    await requestQueue
-    let state = await pageFactory.getState(pageUrl)
-    if (!state) {
-      await handleRequest(() =>
-        pageFactory.resolvePage(pageUrl, (_, page) => {
-          if (page) {
-            state = page.state
-          }
-        })
-      )
-    }
-    return state
-  }
 
   return {
     name: 'saus:serve',
@@ -50,48 +21,81 @@ export function servePlugin(
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {
-        const url = req.originalUrl!
-        if (url.endsWith(stateSuffix)) {
-          const pageUrl = url.slice(0, -stateSuffix.length) || '/'
-          try {
-            const pageState = await getState(pageUrl)
-            if (pageState) {
-              const payload = JSON.stringify(pageState)
-              res.setHeader('Content-Type', 'application/json')
-              res.setHeader('Content-Length', Buffer.byteLength(payload))
-              res.writeHead(200)
-              res.write(payload)
-              res.end()
-            } else {
-              next()
+        const url = req.originalUrl!.replace(/#[^?]*/, '')
+
+        let { reloadId } = context
+        try {
+          await Promise.all([init, context.reloading])
+          await processRequest().then(respond)
+        } catch (error) {
+          respond({ error })
+        }
+
+        type Response = {
+          error?: any
+          body?: any
+          headers?: [string, string | number][]
+        }
+
+        async function processRequest(): Promise<Response | undefined> {
+          if (stateSuffix.test(url)) {
+            let pageUrl = url.replace(stateSuffix, '$1')
+            if (pageUrl[0] !== '/') {
+              pageUrl = '/' + pageUrl
             }
-          } catch (error) {
-            onError(error)
-            res.writeHead(500)
-            res.end()
-          }
-        } else {
-          debug(`Received request: "${url}"`)
-          handleRequest(async () => {
-            debug(`Processing request: "${url}"`)
+            try {
+              const pageState = await pageFactory.getState(pageUrl)
+              if (pageState) {
+                const body = JSON.stringify(pageState)
+                return {
+                  body,
+                  headers: [
+                    ['Content-Type', 'application/json'],
+                    ['Content-Length', Buffer.byteLength(body)],
+                  ],
+                }
+              }
+            } catch (error) {
+              return { error }
+            }
+          } else {
+            let response: Response | undefined
             await pageFactory.resolvePage(url, async (error, page) => {
               if (page) {
                 const html = await server.transformIndexHtml(url, page.html)
-                res.setHeader('Content-Type', 'text/html; charset=utf-8')
-                res.setHeader('Content-Length', Buffer.byteLength(html))
-                res.writeHead(200)
-                res.write(html)
-                res.end()
+                response = {
+                  body: html,
+                  headers: [
+                    ['Content-Type', 'text/html; charset=utf-8'],
+                    ['Content-Length', Buffer.byteLength(html)],
+                  ],
+                }
               } else if (error) {
-                onError(error)
-                res.writeHead(500)
-                res.end()
-              } else {
-                next()
+                response = { error }
               }
             })
-            debug(`Completed request: "${url}"`)
-          })
+            return response
+          }
+        }
+
+        function respond({ error, body, headers }: Response = {}): any {
+          if (reloadId !== (reloadId = context.reloadId)) {
+            return (context.reloading || Promise.resolve())
+              .then(processRequest)
+              .then(respond)
+          }
+          if (error) {
+            onError(error)
+            res.writeHead(500)
+            res.end()
+          } else if (body) {
+            headers?.forEach(([key, value]) => res.setHeader(key, value))
+            res.writeHead(200)
+            res.write(body)
+            res.end()
+          } else {
+            next()
+          }
         }
       }),
   }

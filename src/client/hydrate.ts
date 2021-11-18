@@ -2,7 +2,7 @@ import type { RenderRequest } from '../core'
 import { initialState as state } from './state'
 import routes from './routes'
 
-const urlPathRegex = /^(.+?)(?:#([^?]*))?(?:\?(.*))?$/
+const urlPathRegex = /^(.+?)(?:#[^?]*)?(?:\?(.*))?$/
 
 export type HydrateFn = (routeModule: any, request: RenderRequest) => void
 
@@ -13,10 +13,9 @@ export function hydrate(routeModule: object, url: string) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }
   routes[state.routePath] = async () => routeModule
-  const [, path, hash, query] = urlPathRegex.exec(url)!
+  const [, path, query] = urlPathRegex.exec(url)!
   runHydration(routeModule, {
     path,
-    hash,
     query,
     params: state.routeParams,
     state,

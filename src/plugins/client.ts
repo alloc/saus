@@ -15,7 +15,7 @@ export function getClientUrl(id: string) {
 }
 
 export function clientPlugin(context: SausContext): Plugin {
-  const { renderPath, pages, configEnv } = context
+  const { renderPath, pages, states, configEnv } = context
 
   let server: vite.ViteDevServer | undefined
 
@@ -51,7 +51,7 @@ export function clientPlugin(context: SausContext): Plugin {
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
-          filename = getPageFilename(path)
+          filename = getPageFilename(path.replace(/\?.*$/, ''))
         }
 
         const page = pages[filename]
@@ -96,11 +96,12 @@ export function clientPlugin(context: SausContext): Plugin {
         // Even though we could embed this JSON string into the hydration
         // script, making the HTML parser aware of its JSON format allows
         // it to be parsed earlier than it otherwise would be.
+        const state = states[path]
         tags.push({
           injectTo: 'body',
           tag: 'script',
           attrs: { id: 'initial-state', type: 'application/json' },
-          children: JSON.stringify(page.state),
+          children: JSON.stringify(state),
         })
 
         const sausClientId =
@@ -114,7 +115,7 @@ export function clientPlugin(context: SausContext): Plugin {
           children: endent`
             import * as routeModule from "${routeModuleId}"
             import { hydrate } from "${sausClientId}"
-            hydrate(routeModule, "${page.path}")
+            hydrate(routeModule, "${path}")
           `,
         })
 
