@@ -122,17 +122,12 @@ export function createPageFactory({
     return pagePromise
   }
 
-  function resolveState(
-    url: ParsedUrl,
-    params: RouteParams,
-    route: Route,
-    cacheKey = getCacheKey(route, url)
-  ) {
-    let state = states[cacheKey]
+  function resolveState(url: ParsedUrl, params: RouteParams, route: Route) {
+    let state = states[url.path]
     if (!state) {
-      state = states[cacheKey] = defer()
+      state = states[url.path] = defer()
       loadState(route, url, params).then(state.resolve, error => {
-        delete states[cacheKey]
+        delete states[url.path]
         state.reject(error)
       })
     }
@@ -172,13 +167,12 @@ export function createPageFactory({
   async function renderRoute(
     url: string | ParsedUrl,
     params: RouteParams,
-    route: Route,
-    cacheKey?: string
+    route: Route
   ) {
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
-    const state = await resolveState(url, params, route, cacheKey)
+    const state = await resolveState(url, params, route)
     for (const renderer of renderers) {
       if (renderer.test(url.path)) {
         const page = await renderPage(url, state, route, renderer)
@@ -271,19 +265,14 @@ export function createPageFactory({
         )) || defaultRoute
 
       if (route) {
-        const cacheKey = getCacheKey(route, url)
-        if (!states[cacheKey]) {
+        if (!states[url.path]) {
           params ??= matchRoute(url.path, route)!
-          await renderRoute(url, params, route, cacheKey)
+          await renderRoute(url, params, route)
         }
-        return states[cacheKey]?.promise
+        return states[url.path]?.promise
       }
     },
   }
-}
-
-function getCacheKey(route: Route, url: ParsedUrl) {
-  return route.cacheKey ? route.cacheKey(url) : url.toString()
 }
 
 async function loadState(
