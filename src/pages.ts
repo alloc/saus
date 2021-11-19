@@ -91,7 +91,7 @@ export function createPageFactory({
         }
       }
 
-      debug(`Rendering page: ${url}`)
+      debug(`Rendering page: ${path}`)
       const html = await renderer.render(routeModule, request, renderer)
       if (html == null) {
         debug(`Nothing was rendered. Trying next renderer.`)
@@ -105,7 +105,7 @@ export function createPageFactory({
         client = await getClient(rendererPath, renderer, usedHooks)
       }
 
-      debug(`Page ready: ${url}`)
+      debug(`Page ready: ${path}`)
 
       // Currently, the page cache is only used by the saus:client plugin,
       // since the performance impact of rendering on every request isn't

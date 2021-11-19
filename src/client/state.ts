@@ -20,10 +20,8 @@ if (!import.meta.env.SSR) {
 /**
  * Load client state for the given URL, using the local cache if possible.
  *
- * The `url` cannot contain a hash fragment. Search queries are okay.
- *
- * Before appending a search query, use `URLSearchParams#sort` to ensure
- * the query params are idempotent regardless of order.
+ * The `url` must not contain either a hash fragment (eg: `#foo`) or
+ * search query (eg: `?foo`).
  */
 function loadClientState(url: string): Promise<ClientState> {
   let state = states[url]

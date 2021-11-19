@@ -43,7 +43,7 @@ export class Renderer<T = any> {
    * called *immediately* after the HTML string is returned. We
    * recommend using a try-finally block.
    */
-  didRender: () => Promise<void> | void = noop
+  didRender: (request: RenderRequest) => Promisable<void> = noop
 }
 
 /**
@@ -69,7 +69,7 @@ export class RenderCall<T = string | null | void> {
    * Run an isomorphic function after render. In SSR, it runs after the
    * HTML string is rendered. On the client, it runs post-hydration.
    */
-  then(didRender: () => Promise<void> | void) {
+  then(didRender: (request: RenderRequest) => Promisable<void>) {
     this._renderer.didRender = didRender
   }
 }

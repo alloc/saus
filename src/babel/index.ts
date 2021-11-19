@@ -220,7 +220,17 @@ export function replaceWith(
     path.replaceWithSourceString(replacement)
     source.overwrite(start, end, replacement)
   } else {
-    const { code: replacementString } = transformFromAstSync(replacement)!
+    let stmts: t.Statement[]
+    if (t.isBlockStatement(replacement)) {
+      stmts = replacement.body
+    } else if (t.isStatement(replacement)) {
+      stmts = [replacement]
+    } else if (t.isExpression(replacement)) {
+      stmts = [t.expressionStatement(replacement)]
+    } else {
+      throw new Error(`Node type not supported by "replaceWith"`)
+    }
+    const { code: replacementString } = transformFromAstSync(t.program(stmts))!
     source.overwrite(start, end, replacementString!)
     path.replaceWith(replacement)
   }
