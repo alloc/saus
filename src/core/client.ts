@@ -213,7 +213,7 @@ function renderClientDescription(
       ${beforeRenderFns.length ? beforeRenderCalls.join('\n') : ''}
       const content = await $render(routeModule, request)
       ${onHydrate}
-      ${didRenderFn ? '$didHydrate()' : ''}
+      ${didRenderFn ? '$didHydrate(request)' : ''}
     })
   `
 

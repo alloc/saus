@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
-import { ParsedUrl } from '../utils/url'
 import { routesModule } from './global'
 
 export { RegexParam, InferRouteParams }
@@ -113,7 +112,6 @@ export function route(
   if (path === 'default') {
     route.keys = []
     route.pattern = /./
-    route.cacheKey = () => path
     routesModule.defaultRoute = route
   } else {
     Object.assign(route, RegexParam.parse(path))

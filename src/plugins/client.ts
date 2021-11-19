@@ -1,4 +1,5 @@
 import endent from 'endent'
+import { warn } from 'misty'
 import * as vite from 'vite'
 import { SausContext, Plugin } from '../core'
 import { getPageFilename } from '../pages'
@@ -96,12 +97,15 @@ export function clientPlugin(context: SausContext): Plugin {
         // Even though we could embed this JSON string into the hydration
         // script, making the HTML parser aware of its JSON format allows
         // it to be parsed earlier than it otherwise would be.
-        const state = states[path]
+        const state = await states[page.path]
+        if (!state) {
+          warn(`Missing client state for page: "${page.path}"`)
+        }
         tags.push({
           injectTo: 'body',
           tag: 'script',
           attrs: { id: 'initial-state', type: 'application/json' },
-          children: JSON.stringify(state),
+          children: JSON.stringify(state || {}),
         })
 
         const sausClientId =
