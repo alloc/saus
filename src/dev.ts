@@ -112,6 +112,11 @@ async function startServer(
   // Listen immediately to ensure `buildStart` hook is called.
   await listen(server, events, isRestart)
 
+  if (context.logger.isLogged('info')) {
+    context.logger.info('')
+    vite.printHttpServerUrls(server.httpServer!, server.config)
+  }
+
   // Ensure the Vite config is watched.
   if (context.configPath) {
     watcher.add(context.configPath)
@@ -192,11 +197,6 @@ async function startServer(
     changedFiles.add(file)
     scheduleReload()
   })
-
-  if (context.logger.isLogged('info')) {
-    context.logger.info('')
-    vite.printHttpServerUrls(server.httpServer!, server.config)
-  }
 
   return server
 }
