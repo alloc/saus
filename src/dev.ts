@@ -126,17 +126,20 @@ async function startServer(
     injectDevCache(context),
   ]))
 
-  // When starting the server, the context is fresh, so we don't bother
-  // using intermediate objects when loading routes and renderers.
-  setRoutesModule(context)
-  setRenderModule(context)
-  try {
-    await server.ssrLoadModule(
+  const loadSausModules = () =>
+    server.ssrLoadModule(
       [context.routesPath, context.renderPath].map(file =>
         file.replace(context.root, '')
       ),
       moduleCache
     )
+
+  // When starting the server, the context is fresh, so we don't bother
+  // using intermediate objects when loading routes and renderers.
+  setRoutesModule(context)
+  setRenderModule(context)
+  try {
+    await loadSausModules()
   } catch (error: any) {
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
@@ -165,6 +168,7 @@ async function startServer(
   const scheduleReload = debounce(async () => {
     // Restart the server when Vite config is changed.
     if (changedFiles.has(context.configPath!)) {
+      debug(`Vite config changed. Restarting server.`)
       return events.emit('restart')
     }
 
@@ -177,20 +181,26 @@ async function startServer(
     const files = Array.from(changedFiles)
     changedFiles.clear()
 
-    if (process.env.DEBUG) {
-      debug(`Reloading modules:`)
-    }
-
     context.reloadId++
-    await moduleCache.reload(files).catch(error => {
-      // Stop blocking page requests.
-      context.reloading = undefined
+    context.reloading = defer()
 
+    const purged = await moduleCache.purge(files).catch(error => {
       // Clone the error so unfixed Babel errors never go unnoticed.
       events.emit('error', cloneError(error))
     })
 
-    debug(`Reload completed.`)
+    // Reload the "render.ts" and "routes.ts" modules immediately,
+    // so the dev server is up-to-date when new HTTP requests come in.
+    const needsReload = !!purged?.some(
+      mod => mod.file == context.renderPath || mod.file == context.routesPath
+    )
+
+    if (needsReload) {
+      await loadSausModules()
+    } else {
+      context.reloading?.resolve()
+      context.reloading = undefined
+    }
   }, 50)
 
   watcher.on('change', file => {
@@ -237,7 +247,6 @@ function handleContextUpdates(
   let routesConfig: RoutesModule | null
   return {
     executeModule(module) {
-      debug(`  - ${module.file}`)
       if (module.file === context.renderPath) {
         renderConfig = setRenderModule({
           renderers: [],
@@ -249,7 +258,6 @@ function handleContextUpdates(
       } else {
         return // Not a module we care about.
       }
-      context.reloading ??= defer()
       return error => {
         if (module.file === context.renderPath) {
           setRenderModule(null)
