@@ -2,7 +2,7 @@ import { Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
-const stateSuffix = /\/state.json(\?.+)?$/
+const stateSuffix = /\/state\.json$/
 
 export function servePlugin(
   context: SausContext,
@@ -39,7 +39,7 @@ export function servePlugin(
 
         async function processRequest(): Promise<Response | undefined> {
           if (stateSuffix.test(url)) {
-            let pageUrl = url.replace(stateSuffix, '$1')
+            let pageUrl = url.replace(stateSuffix, '')
             if (pageUrl[0] !== '/') {
               pageUrl = '/' + pageUrl
             }
