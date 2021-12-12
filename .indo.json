@@ -1,4 +1,9 @@
 {
+  "repos": {
+    "vendor/regexparam": {
+      "url": "https://github.com/aleclarson/regexparam.git"
+    }
+  },
   "alias": {
     "vite": "@alloc/vite"
   }
