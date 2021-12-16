@@ -114,7 +114,8 @@ async function startServer(
 
   if (context.logger.isLogged('info')) {
     context.logger.info('')
-    vite.printHttpServerUrls(server.httpServer!, server.config)
+    server.printUrls()
+    server.bindShortcuts()
   }
 
   // Ensure the Vite config is watched.
