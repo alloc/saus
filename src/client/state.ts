@@ -25,7 +25,7 @@ if (!import.meta.env.SSR) {
  */
 function loadClientState(url: string): Promise<ClientState> {
   let state = states[url]
-  if (!state) {
+  if (!state && typeof fetch !== 'undefined') {
     const stateUrl = url.replace(/\/?$/, '/state.json')
     state = states[url] = fetch(stateUrl).then(res => res.json())
   }
