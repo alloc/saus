@@ -13,6 +13,7 @@ importers:
       '@types/jest': ^26.0.20
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
+      array-flatten: ^3.0.0
       cac: ^6.7.3
       caller-path: ^3.0.1
       catch-exit: ^1.2.2
@@ -45,6 +46,7 @@ importers:
       '@babel/core': 7.15.5
       '@babel/helper-annotate-as-pure': 7.15.4
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.15.5
+      array-flatten: 3.0.0
       cac: 6.7.3
       caller-path: 3.0.1
       catch-exit: 1.2.2
@@ -1020,6 +1022,10 @@ packages:
     resolution: {integrity: sha1-45sJrqne+Gao8gbiiK9jkZuuOcQ=}
     engines: {node: '>=0.10.0'}
     dev: true
+
+  /array-flatten/3.0.0:
+    resolution: {integrity: sha512-zPMVc3ZYlGLNk4mpK1NzP2wg0ml9t7fUgDsayR5Y5rSzxQilzR9FGu/EH2jQOcKSAeAfWeylyW8juy3OkWRvNA==}
+    dev: false
 
   /array-unique/0.3.2:
     resolution: {integrity: sha1-qJS3XUvE9s1nnvMkSp/Y9Gri1Cg=}

@@ -1,3 +1,4 @@
+import { flatten } from 'array-flatten'
 import { spawn, ModuleThread, Thread, Worker } from 'threads'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -5,7 +6,6 @@ import cpuCount from 'physical-cpu-count'
 import { vite, BuildOptions, RouteParams } from './core'
 import { getPageFilename, RenderedPage } from './pages'
 import { clientPlugin } from './plugins/client'
-import { routesPlugin } from './plugins/routes'
 import { Rollup } from './rollup'
 import { rateLimit } from './utils/rateLimit'
 import { getCachePath, readCache, writeCache } from './build/cache'
@@ -149,13 +149,35 @@ export async function build(
     let cache = buildOptions.force ? undefined : readCache(cachePath)
 
     const routeChunks: { [routeModuleId: string]: Rollup.OutputChunk[] } = {}
-    const config = vite.mergeConfig(context.config, <vite.UserConfig>{
+
+    let config: vite.UserConfig = { ...context.config }
+    if (config.plugins)
+      config.plugins = flatten(
+        config.plugins.map((value, i) => {
+          const plugins = Array.isArray(value)
+            ? (value.filter(Boolean) as vite.Plugin[])
+            : value
+            ? [value]
+            : []
+
+          // Clone the plugins and remove certain hooks to avoid
+          // double initialization.
+          return plugins.map(plugin => {
+            if (plugin.apply !== 'build') {
+              plugin = { ...plugin }
+              plugin.config = plugin.configResolved = undefined
+            }
+            return plugin
+          })
+        })
+      )
+
+    config = vite.mergeConfig(config, <vite.UserConfig>{
       build: {
         rollupOptions: { input: Object.keys(pageMap), cache },
       },
       plugins: [
         clientPlugin(context),
-        routesPlugin(context),
         {
           name: 'saus:build',
           enforce: 'post',

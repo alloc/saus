@@ -26,6 +26,7 @@
     "@babel/core": "^7.15.5",
     "@babel/helper-annotate-as-pure": "^7.15.4",
     "@babel/plugin-syntax-typescript": "^7.14.5",
+    "array-flatten": "^3.0.0",
     "cac": "^6.7.3",
     "caller-path": "^3.0.1",
     "catch-exit": "^1.2.2",
