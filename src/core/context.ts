@@ -1,3 +1,4 @@
+import path from 'path'
 import callerPath from 'caller-path'
 import { ssrCreateContext } from 'vite'
 import { getImportDeclarations, transformSync } from '../babel'
@@ -9,6 +10,7 @@ import { renderModule, setRenderModule } from './global'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
+import { debug } from './debug'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -48,6 +50,12 @@ export type ConfigHook = {
  */
 export function configureVite(hook: ConfigHook) {
   hook.modulePath = callerPath()
+  debug(
+    `configureVite called from ${path.relative(
+      process.cwd(),
+      hook.modulePath!
+    )}`
+  )
   renderModule.configHooks.push(hook)
 }
 

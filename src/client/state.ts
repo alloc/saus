@@ -34,3 +34,23 @@ function loadClientState(url: string): Promise<ClientState> {
 
 export { initialState, loadClientState }
 export type { ClientState }
+
+export interface StateIsolate<T = any> {
+  /** Call this (and await its promise) **before** rendering the page. */
+  load: () => Promise<T>
+  get: 
+}
+
+/**
+ * State isolates are loaded at compile time. Their loader function receives the
+ * top-level state for the current page route. They are stored within the hydration
+ * JSON state using a globally unique identifier.
+ */
+export function defineStateIsolate<T>(
+  guid: string,
+  load: (state: Record<string, any>) => T
+) {}
+
+type UnwrapIsolateProps<T> = {
+  [P in keyof T]: T[P]
+}
