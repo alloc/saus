@@ -1,3 +1,4 @@
+export * from './config'
 export * from './context'
 export * from './client'
 export * from './render'

@@ -1,7 +1,6 @@
 import { ClientProvider } from './client'
 import { RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
-import { ConfigHook } from './context'
 import { RegexParam } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
@@ -18,8 +17,6 @@ export type RenderModule = {
   renderers: Renderer<string | null | void>[]
   /** The renderer used when no route is matched */
   defaultRenderer?: Renderer<string>
-  /** Functions that modify the Vite config */
-  configHooks: ConfigHook[]
 }
 
 export type BeforeRenderHook = {

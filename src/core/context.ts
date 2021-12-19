@@ -1,14 +1,13 @@
-import callerPath from 'caller-path'
 import { ssrCreateContext } from 'vite'
 import { getImportDeclarations, transformSync } from '../babel'
 import type { RenderedPage } from '../pages'
 import { Deferred } from '../utils/defer'
 import { ClientState } from './client'
-import { readSausYaml } from './config'
-import { renderModule, setRenderModule } from './global'
+import { readSausYaml } from '../config'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
+import { ConfigHook, setConfigHooks } from './config'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -16,6 +15,7 @@ export interface SausContext extends RenderModule, RoutesModule {
   config: UserConfig
   configEnv: vite.ConfigEnv
   configPath: string | null
+  configHooks: string[]
   /** Path to the routes module */
   routesPath: string
   /** Rendered page cache */
@@ -30,25 +30,6 @@ export interface SausContext extends RenderModule, RoutesModule {
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
-}
-
-export type ConfigHook = {
-  (config: UserConfig, context: SausContext):
-    | UserConfig
-    | null
-    | void
-    | Promise<UserConfig | null | void>
-
-  /** The module that added this hook. */
-  modulePath?: string
-}
-
-/**
- * Access and manipulate the Vite config before it's applied.
- */
-export function configureVite(hook: ConfigHook) {
-  hook.modulePath = callerPath()
-  renderModule.configHooks.push(hook)
 }
 
 export async function loadContext(
@@ -118,8 +99,16 @@ export async function loadContext(
   }
 
   await loadConfigHooks(context)
-  for (const hook of context.configHooks) {
-    const result = await hook(config, context)
+  for (const hookPath of context.configHooks) {
+    const hookModule = require(hookPath)
+    const configHook: ConfigHook = hookModule.__esModule
+      ? hookModule.default
+      : hookModule
+
+    const result = await (typeof configHook == 'function'
+      ? configHook(config, configEnv)
+      : configHook)
+
     if (result) {
       config = vite.mergeConfig(config, result)
     }
@@ -157,12 +146,11 @@ export async function loadConfigHooks(context: SausContext) {
     server: { hmr: false, wss: false, watch: false },
   })
   context.ssrContext = ssrCreateContext(loader)
-  context.configHooks = []
-  setRenderModule(context)
+  setConfigHooks((context.configHooks = []))
   try {
     await loadModules(context.renderPath, context, loader)
   } finally {
-    setRenderModule(null)
+    setConfigHooks(null)
     context.ssrContext = undefined
   }
   context.beforeRenderHooks.length = 0
@@ -211,12 +199,4 @@ export function createLoader(
       middlewareMode: 'ssr',
     },
   })
-}
-
-export function resetConfigModules(context: SausContext) {
-  for (const hook of context.configHooks) {
-    if (hook.modulePath) {
-      delete require.cache[hook.modulePath]
-    }
-  }
 }

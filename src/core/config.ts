@@ -1,28 +1,34 @@
-import fs from 'fs'
-import { resolve } from 'path'
-import yaml from 'yaml'
-import { Logger } from 'vite'
+import path from 'path'
+import assert from 'assert'
+import callerPath from 'caller-path'
+import { ConfigEnv, UserConfig } from 'vite'
 
-export interface sausConfig {
-  routes: string
-  render: string
+export type ConfigHook =
+  | UserConfig
+  | Promise<UserConfig>
+  | ((
+      config: UserConfig,
+      env: ConfigEnv
+    ) => UserConfig | Promise<UserConfig> | null)
+
+/** Paths to modules that inject Vite config */
+let configHooks: string[] | null = null
+
+/**
+ * Access and manipulate the Vite config before it's applied.
+ *
+ * For compatibility with SSR bundling, anyone calling this should first
+ * pass a module path along with their own `import.meta.url` string, so
+ * their Vite plugins are excluded from the SSR bundle.
+ */
+export function addConfigHook(hookPath: string, importer = callerPath()) {
+  assert(importer, 'Failed to infer where `addConfigHook` was called from')
+  assert(configHooks, 'Cannot call `addConfigHook` at this time')
+
+  hookPath = path.resolve(importer, hookPath)
+  configHooks.push(hookPath)
 }
 
-const sausYamlFile = 'saus.yaml'
-
-export function readSausYaml(root: string, logger: Logger) {
-  let config: sausConfig
-  try {
-    config = yaml.parse(fs.readFileSync(resolve(root, sausYamlFile), 'utf8'))
-  } catch (e: any) {
-    logger.error(
-      `Failed to load "${sausYamlFile}"` +
-        (e.message && e.code !== 'ENOENT' ? `: ${e.message}` : ''),
-      { error: e }
-    )
-    process.exit(1)
-  }
-  config.routes = resolve(root, config.routes)
-  config.render = resolve(root, config.render)
-  return config
+export function setConfigHooks(hooks: string[] | null) {
+  configHooks = hooks
 }
