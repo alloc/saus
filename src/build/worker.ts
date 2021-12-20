@@ -63,6 +63,12 @@ export async function close() {
   await loader.close()
 }
 
+export async function getState(routePath: string, params?: RouteParams) {
+  const pageFactory = (await setupPromise)!
+  const pagePath = params ? RegexParam.inject(routePath, params) : routePath
+  return pageFactory.getState(pagePath)
+}
+
 export async function renderPage(routePath: string, params?: RouteParams) {
   const pageFactory = (await setupPromise)!
   try {

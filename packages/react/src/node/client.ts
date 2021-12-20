@@ -1,8 +1,8 @@
-import { ClientProvider } from 'saus/core'
+import { defineClient, endent } from 'saus/core'
 
-export const getClient: ClientProvider = () => ({
+export default defineClient({
   imports: { 'react-dom': 'ReactDOM' },
-  onHydrate: `
+  onHydrate: endent`
     const { rootId = "saus_react" } = request.state
     ReactDOM.hydrate(content, document.getElementById(rootId))
   `,

@@ -8,6 +8,7 @@ import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
+import { setRenderModule } from './global'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -145,17 +146,25 @@ export async function loadConfigHooks(context: SausContext) {
     cacheDir: false,
     server: { hmr: false, wss: false, watch: false },
   })
+
+  // Populate an object that will be thrown away immediately,
+  // because we need the config hooks applied before the
+  // renderers are usable.
+  setRenderModule({
+    beforeRenderHooks: [],
+    renderers: [],
+  })
+
   context.ssrContext = ssrCreateContext(loader)
   setConfigHooks((context.configHooks = []))
   try {
     await loadModules(context.renderPath, context, loader)
   } finally {
     setConfigHooks(null)
+    setRenderModule(null)
     context.ssrContext = undefined
   }
-  context.beforeRenderHooks.length = 0
-  context.renderers.length = 0
-  context.defaultRenderer = undefined
+
   await loader.close()
 }
 

@@ -15,17 +15,14 @@ export type ConfigHook =
 let configHooks: string[] | null = null
 
 /**
- * Access and manipulate the Vite config before it's applied.
- *
- * For compatibility with SSR bundling, anyone calling this should first
- * pass a module path along with their own `import.meta.url` string, so
- * their Vite plugins are excluded from the SSR bundle.
+ * Register a module that exports Vite config, which will be merged
+ * into the user's Vite config.
  */
 export function addConfigHook(hookPath: string, importer = callerPath()) {
   assert(importer, 'Failed to infer where `addConfigHook` was called from')
   assert(configHooks, 'Cannot call `addConfigHook` at this time')
 
-  hookPath = path.resolve(importer, hookPath)
+  hookPath = path.resolve(path.dirname(importer), hookPath)
   configHooks.push(hookPath)
 }
 

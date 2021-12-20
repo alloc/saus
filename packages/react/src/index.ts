@@ -1,9 +1,9 @@
-import { configureVite } from 'saus/core'
+import { addConfigHook } from 'saus/core'
 
 export * from './node/render'
 export { beforeRender } from 'saus/core'
 
-configureVite('./vite.config')
+addConfigHook('./vite.config')
 
 declare module 'saus/core' {
   export interface UserConfig {

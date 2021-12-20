@@ -1,5 +1,4 @@
 import fs from 'fs'
-import path from 'path'
 import md5Hex from 'md5-hex'
 import {
   flattenCallChain,
@@ -7,9 +6,7 @@ import {
   MagicBundle,
   MagicString,
   NodePath,
-  remove,
   removeSSR,
-  replaceWith,
   resolveReferences,
   t,
   transformSync,
@@ -18,8 +15,6 @@ import type { BeforeRenderHook } from './render'
 import type { Renderer } from './renderer'
 import type { RouteParams } from './routes'
 import type { SourceDescription } from './vite'
-import { debug } from './debug'
-import endent from 'endent'
 
 /** A generated client module */
 export type Client = { id: string } & SourceDescription
@@ -31,16 +26,45 @@ export type ClientState = Record<string, any> & {
   routeParams: RouteParams
   error?: any
 }
+/**
+ * Client fragments represent a portion of a render module,
+ * which are pieced together by the SSR bundle based on
+ * which page URL is being rendered.
+ */
+export interface ClientFunction {
+  /** Route path for page matching */
+  route?: string
+  /** Character offset where the function is found within the source file */
+  start: number
+  /** The function implementation */
+  function: string
+  /** Referenced variables outside the function */
+  referenced: string[]
+}
 
-export async function getClient(
+export interface RenderFunction extends ClientFunction {
+  didRender?: ClientFunction
+}
+
+export type ClientFunctions = {
+  beforeRender: ClientFunction[]
+  render: RenderFunction[]
+}
+
+export function extractClientFunctions(
   filename: string,
-  { getClient, start }: Renderer,
-  usedHooks: BeforeRenderHook[]
-): Promise<Client | undefined> {
-  if (!getClient) return
+  renderers: Renderer<string | null | void>[],
+  defaultRenderer: Renderer<string> | undefined
+): ClientFunctions {
+  if (defaultRenderer) {
+    renderers = renderers.concat(defaultRenderer)
+  }
 
-  const sourceStr = fs.readFileSync(filename, 'utf8')
-  const source = new MagicString(sourceStr, { filename } as any)
+  const rawSource = fs.readFileSync(filename, 'utf8')
+  const source = new MagicString(rawSource, {
+    filename,
+    indentExclusionRanges: [],
+  })
 
   let program!: NodePath<t.Program>
   const visitor: babel.Visitor = {
@@ -51,174 +75,198 @@ export async function getClient(
   }
 
   // Use the AST for traversal, but not code generation.
-  transformSync(sourceStr, filename, {
+  transformSync(rawSource, filename, {
     plugins: [{ visitor }],
     sourceMaps: false,
     code: false,
   })
 
-  const renderStmt = program
-    .get('body')
-    .find(path => path.node.start === start) as NodePath<t.ExpressionStatement>
+  const beforeRenderFns: NodePath<t.ArrowFunctionExpression>[] = []
+  const renderFns: NodePath<t.ArrowFunctionExpression>[] = []
+  const didRenderFns: Record<number, NodePath<t.ArrowFunctionExpression>> = {}
 
-  if (!renderStmt) {
-    debug('Failed to generate client. Render statement was not found.')
-    return
-  }
+  program.get('body').forEach(path => {
+    const isRenderCall = renderers.some(
+      renderer => renderer.start === path.node.start
+    )
+    if (isRenderCall) {
+      const renderStmt = path
+      const start = renderStmt.node.start!
 
-  let renderFn!: NodePath<t.ArrowFunctionExpression>
-  let didRenderFn: NodePath<t.ArrowFunctionExpression> | undefined
+      renderStmt.traverse({
+        Identifier(path) {
+          const { node, parentPath } = path
 
-  renderStmt.traverse({
-    Identifier(path) {
-      const { node, parentPath } = path
-
-      // Parse the `render(...)` call
-      if (node.start === start && parentPath.isCallExpression()) {
-        parentPath.get('arguments').find(arg => {
-          if (arg.isArrowFunctionExpression()) {
-            renderFn = arg
-            return true
+          // Parse the `render(...)` call
+          if (node.start === start && parentPath.isCallExpression()) {
+            parentPath.get('arguments').find(arg => {
+              if (arg.isArrowFunctionExpression()) {
+                renderFns.push(arg)
+                return true
+              }
+            })
+            path.stop()
           }
-        })
-        path.stop()
-      }
 
-      // Parse the `.then(...)` call
-      else if (isChainedCall(parentPath)) {
-        const callChain = flattenCallChain(parentPath)
-        if (callChain[0].node.start === start) {
-          const thenCall = parentPath.parentPath as NodePath<t.CallExpression>
-          thenCall.get('arguments').find(arg => {
-            if (arg.isArrowFunctionExpression()) {
-              didRenderFn = arg
-              return true
+          // Parse the `.then(...)` call
+          else if (isChainedCall(parentPath)) {
+            const callChain = flattenCallChain(parentPath)
+            if (callChain[0].node.start === start) {
+              const thenCall =
+                parentPath.parentPath as NodePath<t.CallExpression>
+
+              const methodId = thenCall.get('callee').get('property').node.name
+              if (methodId !== 'then') {
+                return
+              }
+
+              thenCall.get('arguments').find(arg => {
+                if (arg.isArrowFunctionExpression()) {
+                  didRenderFns[start] = arg
+                  return true
+                }
+              })
             }
-          })
+          }
+        },
+      })
+    } else {
+      const exprPath =
+        path.isExpressionStatement() &&
+        (path.get('expression') as NodePath<t.Expression>)
+
+      const callPath =
+        (exprPath &&
+          exprPath.isCallExpression() &&
+          exprPath.get('callee').isIdentifier({ name: 'beforeRender' }) &&
+          (exprPath as NodePath<t.CallExpression>)) ||
+        null
+
+      const calleePath = callPath?.get('callee')
+      if (calleePath?.isIdentifier({ name: 'beforeRender' })) {
+        for (const arg of callPath!.get('arguments')) {
+          if (arg.isArrowFunctionExpression()) {
+            beforeRenderFns.push(arg)
+            break
+          }
         }
       }
-    },
-  })
-
-  const beforeRenderFns: NodePath<t.ArrowFunctionExpression>[] = []
-  usedHooks.forEach(hook => {
-    const hookStmt = program
-      .get('body')
-      .find(
-        path => path.node.start === hook.start!
-      ) as NodePath<t.ExpressionStatement>
-
-    hookStmt.assertExpressionStatement()
-    let hookExpr = hookStmt.get('expression') as NodePath<t.CallExpression>
-
-    hookExpr.assertCallExpression()
-    for (const arg of hookExpr.get('arguments')) {
-      if (arg.isArrowFunctionExpression()) {
-        beforeRenderFns.push(arg)
-        break
-      }
     }
   })
 
-  // Remove SSR-only logic so resolveReferences works right.
-  didRenderFn?.get('body').traverse(removeSSR(source))
-
-  const context: ClientContext = {
-    source: sourceStr,
-    program,
-    renderFn,
-    didRenderFn,
-    beforeRenderFns,
-    extract(path) {
-      const { start, end } = path.node
-      if (start == null || end == null) {
-        throw Error('Missing node start/end')
-      }
-      if (!program.isAncestor(path)) {
-        throw Error('Given node is not from this file')
-      }
-      return source.clone().remove(0, start).remove(end, sourceStr.length)
-    },
-    replaceWith(path, replacement) {
-      return replaceWith(path, replacement, source)
-    },
-    remove(path) {
-      return remove(path, source)
-    },
+  const getSource = (path: NodePath) => {
+    const { start, end } = path.node
+    if (start == null || end == null) {
+      throw Error('Missing node start/end')
+    }
+    return source.slice(start, end)
   }
 
-  let client = await getClient(context)
-  if (client) {
-    if ('onHydrate' in client) {
-      client = renderClientDescription(client, context)
-    }
-    const hash = md5Hex(client.code).slice(0, 16)
+  const defineClientFunction = (
+    fn: NodePath<t.ArrowFunctionExpression>
+  ): ClientFunction => {
+    const parentArgs = fn.parentPath.get('arguments') as NodePath[]
+    const routeArg =
+      parentArgs[0] !== fn
+        ? (parentArgs[0] as NodePath<t.StringLiteral>)
+        : undefined
+
+    const referenced = resolveReferences(
+      fn.get('body'),
+      path => !path.isDescendant(fn.parentPath)
+    ).map(getSource)
+
     return {
-      id: `client.${hash}${path.extname(filename)}`,
-      ...client,
+      route: routeArg?.node.value,
+      start: fn.parentPath.node.start!,
+      function: getSource(fn),
+      referenced,
+    }
+  }
+
+  return {
+    beforeRender: beforeRenderFns.map(defineClientFunction),
+    render: renderFns.map(path => {
+      const fn = defineClientFunction(path) as RenderFunction
+      const didRenderFn = didRenderFns[fn.start]
+      if (didRenderFn) {
+        didRenderFn.get('body').traverse(removeSSR(source))
+        fn.didRender = defineClientFunction(didRenderFn)
+      }
+      return fn
+    }),
+  }
+}
+
+export async function getClient(
+  functions: ClientFunctions,
+  { client, start }: Renderer,
+  usedHooks: BeforeRenderHook[]
+): Promise<Client | undefined> {
+  if (client) {
+    const result = renderClient(
+      client,
+      functions.render.find(fn => fn.start === start)!,
+      functions.beforeRender.filter(fn =>
+        usedHooks.some(usedHook => fn.start === usedHook.start)
+      )
+    )
+    const hash = md5Hex(result.code).slice(0, 16)
+    return {
+      id: `client.${hash}.js`,
+      ...result,
     }
   }
 }
 
-function renderClientDescription(
-  { imports, onHydrate }: ClientDescription,
-  { extract, renderFn, didRenderFn, beforeRenderFns }: ClientContext
-): SourceDescription {
+function renderClient(
+  client: ClientDescription,
+  renderFn: RenderFunction,
+  beforeRenderFns?: ClientFunction[]
+) {
   const script = new MagicBundle()
+  const imports = [
+    `import { onHydrate as $onHydrate } from "saus/client"`,
+    ...renderImports(client.imports),
+  ]
 
-  // Top-level statements are extracted from the render module.
-  const statements = new Set<NodePath>()
-  const useStatement = (stmt: NodePath<t.Statement>) => {
-    if (statements.has(stmt)) return
-    script.addSource(extract(stmt))
-    statements.add(stmt)
-  }
-  const useReferencedStatements = (fn: NodePath<t.ArrowFunctionExpression>) => {
-    const refs = resolveReferences(
-      fn.get('body'),
-      path => !path.isDescendant(fn.parentPath)
-    )
-    refs.forEach(useStatement)
+  // The container for top-level statements
+  const topLevel = new MagicString(imports.join('\n') + '\n')
+  script.addSource(topLevel)
+
+  // The $onHydrate callback
+  const onHydrate = new MagicString('')
+  script.addSource(onHydrate)
+
+  const usedStatements = new Set<string>()
+  const insertFunction = (fn: ClientFunction, name: string) => {
+    for (const stmt of fn.referenced) {
+      if (usedStatements.has(stmt)) continue
+      usedStatements.add(stmt)
+      topLevel.append(stmt + '\n')
+    }
+    topLevel.append(`const ${name} = ${fn.function}`)
+    onHydrate.append(`${name}(request)\n`)
   }
 
-  const beforeRenderCalls: string[] = []
-  beforeRenderFns.forEach((hook, i) => {
-    useReferencedStatements(hook)
-    const hookId = `$beforeRender${i + 1}`
-    beforeRenderCalls.push(`${hookId}(request)`)
-    const hookStr = extract(hook)
-    hookStr.prepend(`const ${hookId} = `)
-    script.addSource(hookStr)
+  beforeRenderFns?.forEach((fn, i) => {
+    insertFunction(fn, `$beforeRender${i + 1}`)
   })
 
-  useReferencedStatements(renderFn)
-  const renderStr = extract(renderFn)
-  renderStr.prepend('const $render = ')
-  script.addSource(renderStr)
-
-  if (didRenderFn) {
-    useReferencedStatements(didRenderFn)
-    const didRenderStr = extract(didRenderFn)
-    didRenderStr.prepend('const $didHydrate = ')
-    script.addSource(didRenderStr)
+  insertFunction(renderFn, `$render`)
+  if (renderFn.didRender) {
+    insertFunction(renderFn.didRender, `$didRender`)
   }
 
-  const importsBlock = endent`
-    import { onHydrate as $onHydrate } from "saus/client"
-    ${renderImports(imports).join('\n')}
-  `
+  onHydrate
+    .append(`const content = await $render(routeModule, request)`)
+    .append(client.onHydrate)
 
-  const hydrateBlock = endent`
-    $onHydrate(async (routeModule, request) => {
-      ${beforeRenderFns.length ? beforeRenderCalls.join('\n') : ''}
-      const content = await $render(routeModule, request)
-      ${onHydrate}
-      ${didRenderFn ? '$didHydrate(request)' : ''}
-    })
-  `
-
-  script.prepend(importsBlock + '\n')
-  script.append('\n' + hydrateBlock)
+  // Indent the function body, then wrap with $onHydrate call.
+  onHydrate
+    .indent('  ')
+    .prepend(`$onHydrate(async (routeModule, request) => {`)
+    .append(`})`)
 
   return {
     code: script.toString(),
@@ -243,13 +291,15 @@ function renderImports(imports: ClientImports) {
   )
 }
 
-type Promisable<T> = T | PromiseLike<T>
-
 type ClientImports = {
   [source: string]: string | (string | [name: string, alias: string])[]
 }
 
-export type ClientDescription = {
+export function defineClient(description: ClientDescription) {
+  return description
+}
+
+export interface ClientDescription {
   /**
    * Define `import` statements to be included.
    *
@@ -269,11 +319,6 @@ export type ClientDescription = {
    */
   onHydrate: string
 }
-
-/** Function that generates a client module */
-export type ClientProvider = (
-  context: ClientContext
-) => Promisable<SourceDescription | ClientDescription | void>
 
 export type ClientContext = {
   source: string

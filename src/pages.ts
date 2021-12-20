@@ -10,6 +10,8 @@ import {
   matchRoute,
   RenderRequest,
   BeforeRenderHook,
+  extractClientFunctions,
+  ClientFunctions,
 } from './core'
 import { defer } from './utils/defer'
 import { noop } from './utils/noop'
@@ -28,17 +30,27 @@ export type RenderedPage = {
   routeModuleId: string
 }
 
-export function createPageFactory({
-  renderPath: rendererPath,
-  pages,
-  states,
-  routes,
-  renderers,
-  defaultRoute,
-  defaultRenderer,
-  beforeRenderHooks,
-  logger,
-}: SausContext) {
+export function createPageFactory(
+  context: SausContext,
+  functions?: ClientFunctions
+) {
+  let {
+    pages,
+    states,
+    routes,
+    renderers,
+    defaultRoute,
+    defaultRenderer,
+    beforeRenderHooks,
+    logger,
+  } = context
+
+  functions ??= extractClientFunctions(
+    context.renderPath,
+    renderers,
+    defaultRenderer
+  )
+
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
 
@@ -102,7 +114,7 @@ export function createPageFactory({
       let client = pages[filename]?.client
       if (!client) {
         debug(`Generating client module`)
-        client = await getClient(rendererPath, renderer, usedHooks)
+        client = await getClient(functions, renderer, usedHooks)
       }
 
       debug(`Page ready: ${path}`)
@@ -130,6 +142,16 @@ export function createPageFactory({
         delete states[url.path]
         state.reject(error)
       })
+      if (route.include) {
+        state.then(() =>
+          Promise.all(
+            (typeof route.include == 'function'
+              ? route.include(url)
+              : route.include!
+            ).map(fragment => fragment.load())
+          )
+        )
+      }
     }
     return state.promise
   }

@@ -8,7 +8,7 @@ import {
   RenderRequest,
   RouteModule,
 } from 'saus/core'
-import { getClient } from './client'
+import client from './client'
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -48,7 +48,7 @@ export function render(...args: any[]) {
       return content == null ? null : <div id="saus_react">{content}</div>
     },
     { head: ReactDOM.renderToStaticMarkup, body: ReactDOM.renderToString },
-    getClient,
+    client,
     start
   )
   return renderer.api

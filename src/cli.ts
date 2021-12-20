@@ -45,6 +45,10 @@ cli
     process.exit(errors.length ? 1 : 0)
   })
 
+cli.command('bundle').action(async () => {
+  await (require('./bundle') as typeof import('./bundle')).bundle()
+})
+
 cli.help()
 cli.version(require('../package.json').version)
 

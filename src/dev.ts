@@ -5,13 +5,7 @@ import { klona } from 'klona'
 import { EventEmitter } from 'events'
 import { debounce } from 'ts-debounce'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
-import {
-  SausContext,
-  loadContext,
-  RenderModule,
-  RoutesModule,
-  resetConfigModules,
-} from './core'
+import { SausContext, loadContext, RenderModule, RoutesModule } from './core'
 import { debug } from './core/debug'
 import { clientPlugin } from './plugins/client'
 import { routesPlugin } from './plugins/routes'
@@ -38,7 +32,6 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     serverPromise = serverPromise.then(async oldServer => {
       await oldServer?.close()
 
-      resetConfigModules(context)
       context.logger.clearScreen('info')
       context = await loadContext('serve', inlineConfig)
       server = await startServer(context, events, true)

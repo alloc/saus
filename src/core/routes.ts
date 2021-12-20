@@ -1,7 +1,9 @@
 import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
+import { ParsedUrl } from '../utils/url'
 import { routesModule } from './global'
+import { StateFragment } from './state'
 
 export { RegexParam, InferRouteParams }
 
@@ -41,12 +43,23 @@ export interface RouteConfig<
    */
   paths?: () => Promisable<readonly StaticPageParams<Params>[]>
   /**
-   * Load the page state for this route.
+   * Load the page state for this route. This state exists during hydration
+   * and is usually provided to the root component on the page.
    */
   state?: (
     pathParams: string[],
     searchParams: URLSearchParams
   ) => Promisable<InferRouteProps<Module>>
+  /**
+   * Declare which state fragments are required by this route.
+   *
+   * For state fragments whose `load` method expects one or more arguments,
+   * you should define those arguments with the `bind` method. If no arguments
+   * are expected, pass the state fragment without calling any method.
+   */
+  include?:
+    | StateFragment<any, []>[]
+    | ((url: ParsedUrl) => StateFragment<any, []>[])
 }
 
 export interface ParsedRoute {

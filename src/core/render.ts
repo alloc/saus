@@ -1,4 +1,4 @@
-import { ClientProvider } from './client'
+import { ClientDescription } from './client'
 import { RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
 import { RegexParam } from './routes'
@@ -44,7 +44,7 @@ export function render<T>(
   route: string,
   render: RenderHook<T | null | void>,
   stringify: ToString<T> | { head: ToString<T>; body: ToString<T> },
-  getClient?: ClientProvider,
+  clientDescription?: ClientDescription,
   start?: number
 ): Renderer<ExcludeVoid<T>> {
   const stringifyHead =
@@ -76,7 +76,7 @@ export function render<T>(
         await didRender(req)
       }
     },
-    getClient,
+    clientDescription,
     start
   )
   if (route) {

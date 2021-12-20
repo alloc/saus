@@ -1,4 +1,4 @@
-import type { ClientProvider, ClientState } from './client'
+import type { ClientDescription, ClientState } from './client'
 import { RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
@@ -27,7 +27,7 @@ export class Renderer<T = any> {
       request: RenderRequest,
       renderer: Renderer
     ) => Promisable<string | null | void>,
-    readonly getClient?: ClientProvider,
+    readonly client?: ClientDescription,
     readonly start?: number
   ) {
     if (route) {
