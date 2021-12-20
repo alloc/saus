@@ -13,6 +13,7 @@ export default defineConfig({
     'src/bundle.ts',
     'src/dev.ts',
   ],
-  format: ['cjs', 'esm'],
+  format: ['cjs'],
+  splitting: true,
   sourcemap: true,
 })
