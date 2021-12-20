@@ -10,8 +10,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rimraf dist && tsc -p .",
-    "dev": "tsc -p . --incremental --watch",
+    "build": "rimraf dist && tsup",
+    "dev": "tsup --watch",
     "prepare": "yarn build"
   },
   "peerDependencies": {
