@@ -19,6 +19,7 @@ importers:
       catch-exit: ^1.2.2
       chokidar: ^3.5.2
       debug: ^4.3.2
+      elaps: ^2.4.0
       endent: ^2.1.0
       esbuild: ^0.8.36
       esbuild-jest: npm:@alloc/esbuild-jest@^0.3.0
@@ -74,6 +75,7 @@ importers:
       '@types/jest': 26.0.24
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
+      elaps: 2.4.0
       esbuild: 0.8.57
       esbuild-jest: /@alloc/esbuild-jest/0.3.6_esbuild@0.8.57
       jest: 26.6.3
@@ -551,6 +553,10 @@ packages:
     dependencies:
       exec-sh: 0.3.6
       minimist: 1.2.5
+    dev: true
+
+  /@cush/execall/1.0.0:
+    resolution: {integrity: sha512-pbrDxZOGgTbyLunPdgDgTeJCVFctqlGMoS0yEzuYQbaBvnSCAgh//74/Elhmx/gKG6gkutPvPWs/UwdEHFGV7w==}
     dev: true
 
   /@istanbuljs/load-nyc-config/1.1.0:
@@ -1585,6 +1591,14 @@ packages:
     engines: {node: '>=8'}
     dependencies:
       webidl-conversions: 5.0.0
+    dev: true
+
+  /elaps/2.4.0:
+    resolution: {integrity: sha512-aXPheqvpwMPK692PwlJNMzLb6dtsZuGTrTHQU2o3xJQPpX0JxAsF9LfnecAj6PM3bXX2vDThdMekFz0lrRPGZA==}
+    engines: {node: '>=9'}
+    dependencies:
+      '@cush/execall': 1.0.0
+      util.format: 1.0.0
     dev: true
 
   /electron-to-chromium/1.3.855:
@@ -4452,6 +4466,10 @@ packages:
   /use/3.1.1:
     resolution: {integrity: sha512-cwESVXlO3url9YWlFW/TA9cshCEhtu7IKJ/p5soJ/gGpj7vbvFrAY/eIioQ6Dw23KjZhYgiIo8HOs1nQ2vr/oQ==}
     engines: {node: '>=0.10.0'}
+    dev: true
+
+  /util.format/1.0.0:
+    resolution: {integrity: sha512-RanEelDzP4yCwPXY5OlWMSb/wZ+tKbM1VEFDLtYdOfZvp6bfE2X8S3zqz+/uQGUd6X1RaUGOUGgisc3Rygn5JQ==}
     dev: true
 
   /uuid/8.3.2:

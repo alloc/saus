@@ -1,0 +1,143 @@
+[
+  {
+    "output": [
+      {
+        "exports": [
+          "default"
+        ],
+        "facadeModuleId": "/Users/aleclarson/dev/alloc/saus/examples/react-basic/.saus/main.js",
+        "isDynamicEntry": false,
+        "isEntry": true,
+        "isImplicitEntry": false,
+        "modules": {
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/.saus/main.js": {
+            "code": ";(function dedupeRequire(dedupe) {\n    const Module = require('module');\n    const resolveFilename = Module._resolveFilename;\n    Module._resolveFilename = function (request, parent, isMain, options) {\n        if (request[0] !== '.' && request[0] !== '/') {\n            const parts = request.split('/');\n            const pkgName = parts[0][0] === '@' ? parts[0] + '/' + parts[1] : parts[0];\n            if (dedupe.includes(pkgName)) {\n                // Use this module as the parent.\n                parent = module;\n            }\n        }\n        return resolveFilename(request, parent, isMain, options);\n    };\n})([\"react\",\"react-dom\"]);\nvar main = main$1.main(async () => {\n  await Promise.resolve().then(function () { return routes; });\n  await Promise.resolve().then(function () { return render; });\n});",
+            "originalLength": 268,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 811
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/data/pokemon.json": {
+            "code": "var pokemon = [\n\t\"Pikachu\",\n\t\"Bulbasaur\",\n\t\"Charmander\",\n\t\"Squirtle\"\n];",
+            "originalLength": 51,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 71
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/node/routes.ts": {
+            "code": "saus.route(\"/\", () => Promise.resolve().then(function () { return Home$1; }));\nsaus.route(\"/pokemon/:name\", () => Promise.resolve().then(function () { return Pokemon$1; }), {\n  paths: () => pokemon.map((name) => name.toLowerCase())\n});\nsaus.route(() => Promise.resolve().then(function () { return NotFound$1; }));",
+            "originalLength": 291,
+            "removedExports": [],
+            "renderedExports": [],
+            "renderedLength": 313
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/Router.tsx": {
+            "code": "\"/\".replace(/^\\//, \"\");\nfunction Router(props) {\n  const [page, _setPage] = React__default[\"default\"].useState(props.children);\n  return page;\n}",
+            "originalLength": 1951,
+            "removedExports": [
+              "visit"
+            ],
+            "renderedExports": [
+              "Router"
+            ],
+            "renderedLength": 144
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/App.css": {
+            "code": "var App$1 = '';",
+            "originalLength": 618,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 15
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/App.tsx": {
+            "code": "function App(props) {\n  return /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"header\", {\n      children: /* @__PURE__ */ jsxRuntime.jsx(\"img\", {\n        src: \"/logo.png\"\n      })\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"main\", {\n      children: /* @__PURE__ */ jsxRuntime.jsx(Router, {\n        children: props.children\n      })\n    })]\n  });\n}",
+            "originalLength": 274,
+            "removedExports": [],
+            "renderedExports": [
+              "App"
+            ],
+            "renderedLength": 397
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/render.tsx": {
+            "code": "var __defProp = Object.defineProperty;\nvar __getOwnPropSymbols = Object.getOwnPropertySymbols;\nvar __hasOwnProp = Object.prototype.hasOwnProperty;\nvar __propIsEnum = Object.prototype.propertyIsEnumerable;\nvar __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;\nvar __spreadValues = (a, b) => {\n  for (var prop in b || (b = {}))\n    if (__hasOwnProp.call(b, prop))\n      __defNormalProp(a, prop, b[prop]);\n  if (__getOwnPropSymbols)\n    for (var prop of __getOwnPropSymbols(b)) {\n      if (__propIsEnum.call(b, prop))\n        __defNormalProp(a, prop, b[prop]);\n    }\n  return a;\n};\nreact.render((module, {\n  params\n}) => {\n  const Page = module.default;\n  return /* @__PURE__ */ jsxRuntime.jsx(App, {\n    children: /* @__PURE__ */ jsxRuntime.jsx(Page, __spreadValues({}, params))\n  });\n}, 97).head(() => /* @__PURE__ */ jsxRuntime.jsxs(\"head\", {\n  children: [/* @__PURE__ */ jsxRuntime.jsx(\"title\", {\n    children: \"Pokemon Wiki\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"link\", {\n    rel: \"icon\",\n    type: \"image/svg+xml\",\n    href: \"/favicon.svg\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"link\", {\n    href: \"https://cdn.jsdelivr.net/npm/modern-normalize@1.1.0/modern-normalize.min.css\",\n    rel: \"stylesheet\"\n  })]\n}));",
+            "originalLength": 516,
+            "removedExports": [],
+            "renderedExports": [],
+            "renderedLength": 1319
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/routes/Home.tsx": {
+            "code": "function Home() {\n  return /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n      children: \"Home\"\n    }), /* @__PURE__ */ jsxRuntime.jsxs(\"div\", {\n      children: [pokemon.map((name, i) => /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n        href: \"/pokemon/\" + name.toLowerCase(),\n        children: name\n      }, i)), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n        href: \"/broken-link\",\n        children: \"404 Test\"\n      })]\n    })]\n  });\n}",
+            "originalLength": 345,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 495
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/routes/Pokemon.tsx": {
+            "code": "function Pokemon({\n  name\n}) {\n  return /* @__PURE__ */ jsxRuntime.jsxs(\"div\", {\n    className: \"pokemon\",\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n      children: name[0].toUpperCase() + name.slice(1)\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n      href: \"/\",\n      children: \"Go back\"\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"img\", {\n      src: \"/\" + name + \".webp\",\n      crossOrigin: \"anonymous\"\n    })]\n  });\n}",
+            "originalLength": 270,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 431
+          },
+          "/Users/aleclarson/dev/alloc/saus/examples/react-basic/src/routes/NotFound.tsx": {
+            "code": "var NotFound = () => /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n  children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n    children: \"Page not found\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n    href: \"#\",\n    onClick: (e) => (e.preventDefault(), history.back()),\n    children: \"Go back\"\n  })]\n});",
+            "originalLength": 156,
+            "removedExports": [],
+            "renderedExports": [
+              "default"
+            ],
+            "renderedLength": 309
+          }
+        },
+        "name": "main",
+        "type": "chunk",
+        "code": "\"use strict\";\nObject.defineProperty(exports, \"__esModule\", { value: true });\nexports[Symbol.toStringTag] = \"Module\";\nvar main$1 = require(\"saus/src/bundle/main\");\nvar saus = require(\"saus\");\nvar react = require(\"@saus/react\");\nvar React = require(\"react\");\nrequire(\"navaid\");\nrequire(\"saus/client\");\nvar jsxRuntime = require(\"react/jsx-runtime\");\nfunction _interopDefaultLegacy(e) {\n  return e && typeof e === \"object\" && \"default\" in e ? e : { \"default\": e };\n}\nvar React__default = /* @__PURE__ */ _interopDefaultLegacy(React);\n;\n(function dedupeRequire(dedupe) {\n  const Module = require(\"module\");\n  const resolveFilename = Module._resolveFilename;\n  Module._resolveFilename = function(request, parent, isMain, options) {\n    if (request[0] !== \".\" && request[0] !== \"/\") {\n      const parts = request.split(\"/\");\n      const pkgName = parts[0][0] === \"@\" ? parts[0] + \"/\" + parts[1] : parts[0];\n      if (dedupe.includes(pkgName)) {\n        parent = module;\n      }\n    }\n    return resolveFilename(request, parent, isMain, options);\n  };\n})([\"react\", \"react-dom\"]);\nvar main = main$1.main(async () => {\n  await Promise.resolve().then(function() {\n    return routes;\n  });\n  await Promise.resolve().then(function() {\n    return render;\n  });\n});\nvar pokemon = [\n  \"Pikachu\",\n  \"Bulbasaur\",\n  \"Charmander\",\n  \"Squirtle\"\n];\nsaus.route(\"/\", () => Promise.resolve().then(function() {\n  return Home$1;\n}));\nsaus.route(\"/pokemon/:name\", () => Promise.resolve().then(function() {\n  return Pokemon$1;\n}), {\n  paths: () => pokemon.map((name) => name.toLowerCase())\n});\nsaus.route(() => Promise.resolve().then(function() {\n  return NotFound$1;\n}));\nvar routes = /* @__PURE__ */ Object.freeze({\n  __proto__: null,\n  [Symbol.toStringTag]: \"Module\"\n});\n\"/\".replace(/^\\//, \"\");\nfunction Router(props) {\n  const [page, _setPage] = React__default[\"default\"].useState(props.children);\n  return page;\n}\nvar App$1 = \"\";\nfunction App(props) {\n  return /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"header\", {\n      children: /* @__PURE__ */ jsxRuntime.jsx(\"img\", {\n        src: \"/logo.png\"\n      })\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"main\", {\n      children: /* @__PURE__ */ jsxRuntime.jsx(Router, {\n        children: props.children\n      })\n    })]\n  });\n}\nvar __defProp = Object.defineProperty;\nvar __getOwnPropSymbols = Object.getOwnPropertySymbols;\nvar __hasOwnProp = Object.prototype.hasOwnProperty;\nvar __propIsEnum = Object.prototype.propertyIsEnumerable;\nvar __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;\nvar __spreadValues = (a, b) => {\n  for (var prop in b || (b = {}))\n    if (__hasOwnProp.call(b, prop))\n      __defNormalProp(a, prop, b[prop]);\n  if (__getOwnPropSymbols)\n    for (var prop of __getOwnPropSymbols(b)) {\n      if (__propIsEnum.call(b, prop))\n        __defNormalProp(a, prop, b[prop]);\n    }\n  return a;\n};\nreact.render((module2, {\n  params\n}) => {\n  const Page = module2.default;\n  return /* @__PURE__ */ jsxRuntime.jsx(App, {\n    children: /* @__PURE__ */ jsxRuntime.jsx(Page, __spreadValues({}, params))\n  });\n}, 97).head(() => /* @__PURE__ */ jsxRuntime.jsxs(\"head\", {\n  children: [/* @__PURE__ */ jsxRuntime.jsx(\"title\", {\n    children: \"Pokemon Wiki\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"link\", {\n    rel: \"icon\",\n    type: \"image/svg+xml\",\n    href: \"/favicon.svg\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"link\", {\n    href: \"https://cdn.jsdelivr.net/npm/modern-normalize@1.1.0/modern-normalize.min.css\",\n    rel: \"stylesheet\"\n  })]\n}));\nvar render = /* @__PURE__ */ Object.freeze({\n  __proto__: null,\n  [Symbol.toStringTag]: \"Module\"\n});\nfunction Home() {\n  return /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n      children: \"Home\"\n    }), /* @__PURE__ */ jsxRuntime.jsxs(\"div\", {\n      children: [pokemon.map((name, i) => /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n        href: \"/pokemon/\" + name.toLowerCase(),\n        children: name\n      }, i)), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n        href: \"/broken-link\",\n        children: \"404 Test\"\n      })]\n    })]\n  });\n}\nvar Home$1 = /* @__PURE__ */ Object.freeze({\n  __proto__: null,\n  [Symbol.toStringTag]: \"Module\",\n  \"default\": Home\n});\nfunction Pokemon({\n  name\n}) {\n  return /* @__PURE__ */ jsxRuntime.jsxs(\"div\", {\n    className: \"pokemon\",\n    children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n      children: name[0].toUpperCase() + name.slice(1)\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n      href: \"/\",\n      children: \"Go back\"\n    }), /* @__PURE__ */ jsxRuntime.jsx(\"img\", {\n      src: \"/\" + name + \".webp\",\n      crossOrigin: \"anonymous\"\n    })]\n  });\n}\nvar Pokemon$1 = /* @__PURE__ */ Object.freeze({\n  __proto__: null,\n  [Symbol.toStringTag]: \"Module\",\n  \"default\": Pokemon\n});\nvar NotFound = () => /* @__PURE__ */ jsxRuntime.jsxs(jsxRuntime.Fragment, {\n  children: [/* @__PURE__ */ jsxRuntime.jsx(\"h1\", {\n    children: \"Page not found\"\n  }), /* @__PURE__ */ jsxRuntime.jsx(\"a\", {\n    href: \"#\",\n    onClick: (e) => (e.preventDefault(), history.back()),\n    children: \"Go back\"\n  })]\n});\nvar NotFound$1 = /* @__PURE__ */ Object.freeze({\n  __proto__: null,\n  [Symbol.toStringTag]: \"Module\",\n  \"default\": NotFound\n});\nexports[\"default\"] = main;\n",
+        "dynamicImports": [],
+        "fileName": "main.js",
+        "implicitlyLoadedBefore": [],
+        "importedBindings": {
+          "saus/src/bundle/main": [
+            "main"
+          ],
+          "saus": [
+            "route"
+          ],
+          "@saus/react": [
+            "render"
+          ],
+          "react": [
+            "default"
+          ],
+          "navaid": [],
+          "saus/client": [],
+          "react/jsx-runtime": [
+            "jsxs",
+            "Fragment",
+            "jsx"
+          ]
+        },
+        "imports": [
+          "saus/src/bundle/main",
+          "saus",
+          "@saus/react",
+          "react",
+          "navaid",
+          "saus/client",
+          "react/jsx-runtime"
+        ],
+        "map": null,
+        "referencedFiles": []
+      }
+    ]
+  }
+]

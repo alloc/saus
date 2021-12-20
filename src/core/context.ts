@@ -9,6 +9,7 @@ import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
 import { setRenderModule } from './global'
+import { Profiling } from '../profiling'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -49,8 +50,12 @@ export async function loadContext(
   const logLevel = inlineConfig?.logLevel || 'info'
   const logger = vite.createLogger(logLevel)
 
+  Profiling.mark('load saus.yaml')
+
   // Load "saus.yaml"
   const { render: renderPath, routes: routesPath } = readSausYaml(root, logger)
+
+  Profiling.mark('load user config')
 
   // Load "vite.config.ts"
   const loadResult = await vite.loadConfigFromFile(
@@ -98,6 +103,8 @@ export async function loadContext(
     beforeRenderHooks: [],
     reloadId: 0,
   }
+
+  Profiling.mark('load config hooks')
 
   await loadConfigHooks(context)
   for (const hookPath of context.configHooks) {

@@ -1,5 +1,10 @@
-import { matchRoute, RenderModule, RoutesModule } from '../core'
-import { setRenderModule, setRoutesModule } from '../core/global'
+import {
+  matchRoute,
+  RenderModule,
+  RoutesModule,
+  setRenderModule,
+  setRoutesModule,
+} from './client'
 
 /**
  * SSR bundles import this function and wrap their "render module"

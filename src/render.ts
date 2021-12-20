@@ -1,11 +1,12 @@
-import {
-  render as createRenderer,
+import type {
   ClientState,
   InferRouteParams,
   RenderCall,
   RenderRequest,
   RouteModule,
 } from './core'
+
+import { render as createRenderer } from './core/render'
 
 type Promisable<T> = T | PromiseLike<T>
 
