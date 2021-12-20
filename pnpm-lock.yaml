@@ -21,6 +21,7 @@ importers:
       debug: ^4.3.2
       elaps: ^2.4.0
       endent: ^2.1.0
+      es-module-lexer: ^0.9.3
       esbuild: ^0.8.36
       esbuild-jest: npm:@alloc/esbuild-jest@^0.3.0
       escape-goat: ^3.0.0
@@ -54,6 +55,7 @@ importers:
       chokidar: 3.5.2
       debug: 4.3.2
       endent: 2.1.0
+      es-module-lexer: 0.9.3
       escape-goat: 3.0.0
       is-plain-object: 5.0.0
       kleur: 4.1.4
@@ -162,7 +164,7 @@ packages:
       misty: 1.4.0
       postcss: 8.3.8
       resolve: 1.20.0
-      rollup: 2.58.0
+      rollup: 2.61.1
       sirv: 1.0.17
     optionalDependencies:
       fsevents: 2.3.2
@@ -557,7 +559,6 @@ packages:
 
   /@cush/execall/1.0.0:
     resolution: {integrity: sha512-pbrDxZOGgTbyLunPdgDgTeJCVFctqlGMoS0yEzuYQbaBvnSCAgh//74/Elhmx/gKG6gkutPvPWs/UwdEHFGV7w==}
-    dev: true
 
   /@istanbuljs/load-nyc-config/1.1.0:
     resolution: {integrity: sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ==}
@@ -1599,7 +1600,7 @@ packages:
     dependencies:
       '@cush/execall': 1.0.0
       util.format: 1.0.0
-    dev: true
+    dev: false
 
   /electron-to-chromium/1.3.855:
     resolution: {integrity: sha512-4g104x65rHM+Wv/0VPh36s6YRBXP4mebpLSNtwTOpUvxyzAmdQGPoxYdg4MiaxvQnJh2xxcAwDOXYa1SMRr2WQ==}
@@ -1632,6 +1633,10 @@ packages:
     dependencies:
       is-arrayish: 0.2.1
     dev: true
+
+  /es-module-lexer/0.9.3:
+    resolution: {integrity: sha512-1HQ2M2sPtxwnvOvT1ZClHyQDiggdNjURWpY2we6aMKCQiUVxTmVs2UYPLIrD84sS+kMdUwfBSylbJPwNnBrnHQ==}
+    dev: false
 
   /esbuild-android-arm64/0.13.3:
     resolution: {integrity: sha512-jc9E8vGTHkzb0Vwl74H8liANV9BWsqtzLHaKvcsRgf1M+aVCBSF0gUheduAKfDsbDMT0judeMLhwBP34EUesTA==}
@@ -3881,21 +3886,12 @@ packages:
       glob: 7.2.0
     dev: true
 
-  /rollup/2.58.0:
-    resolution: {integrity: sha512-NOXpusKnaRpbS7ZVSzcEXqxcLDOagN6iFS8p45RkoiMqPHDLwJm758UF05KlMoCRbLBTZsPOIa887gZJ1AiXvw==}
-    engines: {node: '>=10.0.0'}
-    hasBin: true
-    optionalDependencies:
-      fsevents: 2.3.2
-    dev: false
-
   /rollup/2.61.1:
     resolution: {integrity: sha512-BbTXlEvB8d+XFbK/7E5doIcRtxWPRiqr0eb5vQ0+2paMM04Ye4PZY5nHOQef2ix24l/L0SpLd5hwcH15QHPdvA==}
     engines: {node: '>=10.0.0'}
     hasBin: true
     optionalDependencies:
       fsevents: 2.3.2
-    dev: true
 
   /rsvp/4.8.5:
     resolution: {integrity: sha512-nfMOlASu9OnRJo1mbEk2cz0D56a1MBNrJ7orjRZQG10XDyuvwksKbuXNp6qa+kbn839HwjwhBzhFmdsaEAfauA==}
@@ -4470,7 +4466,6 @@ packages:
 
   /util.format/1.0.0:
     resolution: {integrity: sha512-RanEelDzP4yCwPXY5OlWMSb/wZ+tKbM1VEFDLtYdOfZvp6bfE2X8S3zqz+/uQGUd6X1RaUGOUGgisc3Rygn5JQ==}
-    dev: true
 
   /uuid/8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}

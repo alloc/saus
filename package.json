@@ -34,6 +34,7 @@
     "chokidar": "^3.5.2",
     "debug": "^4.3.2",
     "endent": "^2.1.0",
+    "es-module-lexer": "^0.9.3",
     "escape-goat": "^3.0.0",
     "is-plain-object": "^5.0.0",
     "kleur": "^4.1.4",

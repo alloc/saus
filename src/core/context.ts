@@ -1,5 +1,7 @@
-import { ssrCreateContext } from 'vite'
-import { getImportDeclarations, transformSync } from '../babel'
+import fs from 'fs'
+import Module from 'module'
+import esbuild from 'esbuild'
+import esModuleLexer from 'es-module-lexer'
 import type { RenderedPage } from '../pages'
 import { Deferred } from '../utils/defer'
 import { ClientState } from './client'
@@ -8,7 +10,6 @@ import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
-import { setRenderModule } from './global'
 import { Profiling } from '../profiling'
 
 export interface SausContext extends RenderModule, RoutesModule {
@@ -133,74 +134,44 @@ export async function loadContext(
 
 export interface ModuleLoader extends vite.ViteDevServer {}
 
-function loadModules(
-  url: string | string[],
-  context: SausContext,
-  loader: ModuleLoader
-) {
-  if (!Array.isArray(url)) {
-    url = [url]
-  }
-  return loader.ssrLoadModule(
-    url.map(url => url.replace(context.root, '')),
-    context.ssrContext
-  )
-}
-
 export async function loadConfigHooks(context: SausContext) {
-  const loader = await createLoader(context, {
-    plugins: [stripRelativeImports(context)],
-    cacheDir: false,
-    server: { hmr: false, wss: false, watch: false },
-  })
+  const importer = context.renderPath
+  const require = Module.createRequire(importer)
+  const code = fs
+    .readFileSync(importer, 'utf8')
+    .split('\n')
+    .filter(line => line.startsWith('import '))
+    .join('\n')
 
-  // Populate an object that will be thrown away immediately,
-  // because we need the config hooks applied before the
-  // renderers are usable.
-  setRenderModule({
-    beforeRenderHooks: [],
-    renderers: [],
-  })
+  await esModuleLexer.init
+  const [imports] = esModuleLexer.parse(code, importer)
 
-  context.ssrContext = ssrCreateContext(loader)
+  // Collect config hooks from renderer packages.
   setConfigHooks((context.configHooks = []))
-  try {
-    await loadModules(context.renderPath, context, loader)
-  } finally {
-    setConfigHooks(null)
-    setRenderModule(null)
-    context.ssrContext = undefined
+
+  for (const imp of imports) {
+    const moduleId = imp.n!
+    // Skip relative imports
+    if (moduleId[0] == '.') {
+      continue
+    }
+    try {
+      // In the case of failed module resolution, we swallow the error
+      // and assume the module in question relies on Vite resolution,
+      // which means it can't provide a config hook.
+      const modulePath = require.resolve(moduleId)
+
+      delete require.cache[modulePath]
+      try {
+        require(modulePath)
+      } catch (e) {
+        console.error(e)
+      }
+    } catch {}
   }
 
-  await loader.close()
+  setConfigHooks(null)
 }
-
-// Top-level statements in project-specific modules could rely
-// on Vite plugins injected by a renderer package, so we need
-// to avoid evaluating those modules until Vite is configured.
-const stripRelativeImports = (context: SausContext): vite.Plugin => ({
-  name: 'saus:strip-relative-imports',
-  transform(code, importer) {
-    if (importer == context.renderPath) {
-      const { isExternal } = context.ssrContext!
-      return transformSync(code, importer, [
-        {
-          visitor: {
-            Program(program) {
-              for (const decl of getImportDeclarations(program)) {
-                const source = decl.get('source').node.value
-                const isRelative = /^\.\.?\//.test(source)
-                if (isRelative || !isExternal(source)) {
-                  decl.remove()
-                }
-              }
-            },
-          },
-        },
-      ]) as Promise<vite.TransformResult>
-    }
-  },
-})
 
 export function createLoader(
   context: SausContext,
