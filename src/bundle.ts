@@ -1,13 +1,15 @@
+import * as babel from '@babel/core'
 import fs from 'fs'
 import path from 'path'
-import elaps from 'elaps'
+import builtins from 'builtin-modules'
+import { getBabelConfig, t } from './babel'
 import {
+  ClientFunction,
   createLoader,
   endent,
   extractClientFunctions,
   loadContext,
 } from './core'
-import { setRenderModule, setRoutesModule } from './core/global'
 import { vite } from './core/vite'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
@@ -27,36 +29,14 @@ export async function bundle() {
 
   let { config, routesPath, renderPath } = context
 
-  Profiling.mark('load ssr modules')
-
-  setRenderModule(context)
-  setRoutesModule(context)
-  try {
-    await loader.ssrLoadModule(
-      [routesPath, renderPath].map(file => file.replace(context.root, ''))
-    )
-  } finally {
-    setRenderModule(null)
-    setRoutesModule(null)
-  }
-
-  Profiling.mark('parse render functions')
-
-  const functions = extractClientFunctions(
-    renderPath,
-    context.renderers,
-    context.defaultRenderer
-  )
-
-  /* TODO: embed render functions */
-
-  Profiling.mark('generate ssr bundle')
-
   const entryId = path.resolve('.saus/main.js')
   const entryModule = createVirtualModule({
     id: entryId,
     code: endent`
-      import { main } from "saus/src/bundle/main"
+      import { main } from "/@fs/${path.resolve(
+        __dirname,
+        '../src/bundle/main.ts'
+      )}"
       export default main(async () => {
         await import("/@fs/${routesPath}")
         await import("/@fs/${renderPath}")
@@ -65,22 +45,93 @@ export async function bundle() {
     moduleSideEffects: 'no-treeshake',
   })
 
+  const redirectedModules = [
+    redirectModule(
+      'saus',
+      path.resolve(__dirname, '../src/bundle/runtime/index.ts')
+    ),
+    redirectModule(
+      'saus/core',
+      path.resolve(__dirname, '../src/bundle/runtime/core.ts')
+    ),
+  ]
+
+  Profiling.mark('parse render functions')
+
+  const functions = extractClientFunctions(renderPath)
+
+  Profiling.mark('transform render functions')
+
+  const transformFunction = async (fn: ClientFunction) => {
+    const transformResult = await loader.pluginContainer.transform(
+      [...fn.referenced, `export default ` + fn.function].join('\n'),
+      renderPath
+    )
+    if (transformResult?.code) {
+      const [prelude, transformedFn] =
+        transformResult.code.split('\nexport default ')
+
+      const { program } = (await babel.parseAsync(
+        prelude,
+        getBabelConfig(renderPath)
+      )) as t.File
+
+      fn.function = transformedFn.replace(/;\n?$/, '')
+      fn.referenced = program.body.map(node =>
+        prelude.slice(node.start!, node.end!)
+      )
+    }
+  }
+
+  // Ensure our calls to `pluginContainer.transform` don't throw when
+  // plugin-react expects `renderPath` to exist in the module graph.
+  await loader.moduleGraph.ensureEntryFromUrl('/@fs/' + renderPath)
+
+  await Promise.all([
+    ...functions.beforeRender.map(transformFunction),
+    ...functions.render.map(renderFn =>
+      Promise.all([
+        transformFunction(renderFn),
+        renderFn.didRender && transformFunction(renderFn.didRender),
+      ])
+    ),
+  ])
+
+  const functionsModule = createVirtualModule({
+    id: path.resolve(__dirname, '../src/bundle/runtime/functions.ts'),
+    code: `export default ` + JSON.stringify(functions, null, 2),
+  })
+
+  Profiling.mark('generate ssr bundle')
+
+  const debugResolveId: vite.Plugin = {
+    name: '',
+    enforce: 'pre',
+    async resolveId(id, importer) {
+      const resolved = await this.resolve(id, importer, { skipSelf: true })
+      if (resolved?.id.includes('saus/core')) {
+        debugger
+      }
+      return resolved
+    },
+  }
+
   config = vite.mergeConfig(config, <vite.UserConfig>{
     plugins: [
+      debugResolveId,
       entryModule,
-      redirectModule('saus', importer =>
-        path.resolve(__dirname, '../src/bundle/runtime/index.ts')
-      ),
-      redirectModule('saus/core', importer =>
-        path.resolve(__dirname, '../src/bundle/runtime/core.ts')
-      ),
+      functionsModule,
+      ...redirectedModules,
     ],
+    ssr: {
+      external: builtins,
+      noExternal: /.+/,
+    },
     build: {
       ssr: true,
       write: false,
       rollupOptions: {
         input: entryId,
-        // output: { inlineDynamicImports: true },
       },
     },
   })
@@ -89,15 +140,9 @@ export async function bundle() {
 
   Profiling.mark('write ssr bundle')
 
-  fs.writeFileSync(
-    path.resolve('bundle.js'),
-    // @ts-ignore
-    buildResult.output[0].output[0].code
-  )
-  fs.writeFileSync(
-    path.resolve('build.json'),
-    JSON.stringify(buildResult.output, null, 2)
-  )
+  const bundle = buildResult.output[0].output[0]
+  fs.writeFileSync(path.resolve('bundle.js'), bundle.code)
+  fs.writeFileSync(path.resolve('build.json'), JSON.stringify(bundle, null, 2))
 }
 
 function createVirtualModule(module: {
@@ -112,53 +157,14 @@ function createVirtualModule(module: {
   }
 }
 
-function redirectModule(
-  redirectedId: string,
-  resolveId: (importer: string | undefined) => string | null
-): vite.Plugin {
+function redirectModule(targetId: string, replacementId: string): vite.Plugin {
   return {
-    name: 'redirect-module:' + module.id,
+    name: 'redirect-module:' + targetId,
     enforce: 'pre',
-    resolveId(id, importer) {
-      if (id === redirectedId) {
-        const resolved = resolveId(importer)
-        if (resolved) {
-          return this.resolve(resolved, importer, { skipSelf: true })
-        }
+    async resolveId(id) {
+      if (id === targetId) {
+        return replacementId
       }
     },
   }
 }
-
-// function preferExtensions(
-//   test: (id: string, importer: string | undefined) => string[] | false | void
-// ): vite.Plugin {
-//   return {
-//     name: 'prefer-extensions',
-//     enforce: 'pre',
-//     async resolveId(id, importer) {
-//       const resolved = await this.resolve(id, importer, { skipSelf: true })
-//       if (resolved) {
-//         const extensions = test(resolved.id, importer)
-//         if (!extensions) {
-//           return
-//         }
-//         const resolvedExtension = path.extname(resolved.id)
-//         const resolvedFileSansExtension = path.join(
-//           path.dirname(resolved.id),
-//           path.basename(resolved.id, resolvedExtension)
-//         )
-//         for (const extension of extensions) {
-//           if (extension === resolvedExtension) {
-//             break
-//           }
-//           id = resolvedFileSansExtension + extension
-//           if (fs.existsSync(id)) {
-//             return id
-//           }
-//         }
-//         return resolved
-//       }
-//     },
-//   }
-// }

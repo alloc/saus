@@ -178,9 +178,9 @@ export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
     : []
 }
 
-function getBabelConfig(
+export function getBabelConfig(
   filename: string,
-  config: babel.TransformOptions | babel.PluginItem[]
+  config: babel.TransformOptions | babel.PluginItem[] = {}
 ) {
   if (Array.isArray(config)) {
     config = { plugins: config }
@@ -196,6 +196,25 @@ function getBabelConfig(
     sourceMaps: true,
     ...config,
   }
+}
+
+export function getBabelProgram(source: string, filename: string) {
+  let program: NodePath<t.Program> | undefined
+  const visitor: babel.Visitor = {
+    Program: path => {
+      program = path
+      path.stop()
+    },
+  }
+
+  // Use the AST for traversal, but not code generation.
+  transformSync(source, filename, {
+    plugins: [{ visitor }],
+    sourceMaps: false,
+    code: false,
+  })
+
+  return program!
 }
 
 export const transformSync = (

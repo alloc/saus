@@ -1,4 +1,4 @@
-import { Plugin, SausContext } from '../core'
+import { extractClientFunctions, Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
@@ -16,7 +16,10 @@ export function servePlugin(
   return {
     name: 'saus:serve',
     contextUpdate(context) {
-      pageFactory = createPageFactory(context)
+      pageFactory = createPageFactory(
+        context,
+        extractClientFunctions(context.renderPath)
+      )
       init.resolve()
     },
     configureServer: server => () =>

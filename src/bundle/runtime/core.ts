@@ -1,6 +1,6 @@
 // Redirect "saus/core" imports here.
-export { render, RenderModule } from '../../core/render'
-export { matchRoute, RoutesModule } from '../../core/routes'
+export { render } from '../../core/render'
+export { createPageFactory } from '../../pages'
 export { setRenderModule, setRoutesModule } from '../../core/global'
 
 // Ignore config hooks in SSR bundle.

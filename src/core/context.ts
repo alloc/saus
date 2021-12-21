@@ -1,6 +1,5 @@
 import fs from 'fs'
 import Module from 'module'
-import esbuild from 'esbuild'
 import esModuleLexer from 'es-module-lexer'
 import type { RenderedPage } from '../pages'
 import { Deferred } from '../utils/defer'

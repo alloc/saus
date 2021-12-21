@@ -1,6 +1,7 @@
 import { expose, isWorkerRuntime } from 'threads/worker'
 import {
   createLoader,
+  extractClientFunctions,
   loadContext,
   ModuleLoader,
   RegexParam,
@@ -50,7 +51,10 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       setRenderModule(null)
       setRoutesModule(null)
     }
-    return createPageFactory(context)
+    return createPageFactory(
+      context,
+      extractClientFunctions(context.renderPath)
+    )
   })()
 
   if (isMainThread) {

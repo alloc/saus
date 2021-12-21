@@ -25,7 +25,7 @@ export function renderPlugin({
   }
 }
 
-const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
+export const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
 
 // Append the node position to render-related calls.
 function injectRenderMetadata(program: NodePath<t.Program>) {

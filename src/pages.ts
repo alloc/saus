@@ -1,18 +1,24 @@
-import { debug } from './core/debug'
-import {
+import md5Hex from 'md5-hex'
+import MagicString, { Bundle as MagicBundle } from 'magic-string'
+import type {
+  BeforeRenderHook,
   Client,
+  ClientDescription,
+  ClientFunction,
+  ClientFunctions,
+  ClientImports,
   ClientState,
-  getClient,
   Renderer,
+  RenderFunction,
+  RenderModule,
+  RenderRequest,
   Route,
   RouteParams,
+  RoutesModule,
   SausContext,
-  matchRoute,
-  RenderRequest,
-  BeforeRenderHook,
-  extractClientFunctions,
-  ClientFunctions,
 } from './core'
+import { debug } from './core/debug'
+import { matchRoute } from './core/routes'
 import { defer } from './utils/defer'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
@@ -26,13 +32,21 @@ export type PageFactory = ReturnType<typeof createPageFactory>
 export type RenderedPage = {
   path: string
   html: string
+  state?: ClientState
   client?: Client
   routeModuleId: string
 }
 
+export interface PageFactoryContext
+  extends Pick<SausContext, 'pages' | 'states'>,
+    RoutesModule,
+    RenderModule {
+  logger: { warn(msg: string): void }
+}
+
 export function createPageFactory(
-  context: SausContext,
-  functions?: ClientFunctions
+  context: PageFactoryContext,
+  functions: ClientFunctions
 ) {
   let {
     pages,
@@ -44,12 +58,6 @@ export function createPageFactory(
     beforeRenderHooks,
     logger,
   } = context
-
-  functions ??= extractClientFunctions(
-    context.renderPath,
-    renderers,
-    defaultRenderer
-  )
 
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
@@ -125,6 +133,7 @@ export function createPageFactory(
       return (pages[filename] = {
         path,
         html,
+        state,
         client,
         routeModuleId: route.moduleId,
       })
@@ -310,4 +319,97 @@ async function loadState(
     routePath: route.path,
     routeParams: params,
   }
+}
+
+async function getClient(
+  functions: ClientFunctions,
+  { client, start }: Renderer,
+  usedHooks: BeforeRenderHook[]
+): Promise<Client | undefined> {
+  if (client) {
+    const result = renderClient(
+      client,
+      functions.render.find(fn => fn.start === start)!,
+      functions.beforeRender.filter(fn =>
+        usedHooks.some(usedHook => fn.start === usedHook.start)
+      )
+    )
+    const hash = md5Hex(result.code).slice(0, 16)
+    return {
+      id: `client.${hash}.js`,
+      ...result,
+    }
+  }
+}
+
+function renderClient(
+  client: ClientDescription,
+  renderFn: RenderFunction,
+  beforeRenderFns?: ClientFunction[]
+) {
+  const script = new MagicBundle()
+  const imports = [
+    `import { onHydrate as $onHydrate } from "saus/client"`,
+    ...renderImports(client.imports),
+  ]
+
+  // The container for top-level statements
+  const topLevel = new MagicString(imports.join('\n') + '\n')
+  script.addSource(topLevel)
+
+  // The $onHydrate callback
+  const onHydrate = new MagicString('')
+  script.addSource(onHydrate)
+
+  const usedStatements = new Set<string>()
+  const insertFunction = (fn: ClientFunction, name: string) => {
+    for (const stmt of fn.referenced) {
+      if (usedStatements.has(stmt)) continue
+      usedStatements.add(stmt)
+      topLevel.append(stmt + '\n')
+    }
+    topLevel.append(`const ${name} = ${fn.function}`)
+    onHydrate.append(`${name}(request)\n`)
+  }
+
+  beforeRenderFns?.forEach((fn, i) => {
+    insertFunction(fn, `$beforeRender${i + 1}`)
+  })
+
+  insertFunction(renderFn, `$render`)
+  if (renderFn.didRender) {
+    insertFunction(renderFn.didRender, `$didRender`)
+  }
+
+  onHydrate
+    .append(`const content = await $render(routeModule, request)`)
+    .append(client.onHydrate)
+
+  // Indent the function body, then wrap with $onHydrate call.
+  onHydrate
+    .indent('  ')
+    .prepend(`$onHydrate(async (routeModule, request) => {`)
+    .append(`})`)
+
+  return {
+    code: script.toString(),
+    map: script.generateMap(),
+  }
+}
+
+function renderImports(imports: ClientImports) {
+  return Object.entries(imports).map(
+    ([source, spec]) =>
+      `import ${
+        typeof spec === 'string'
+          ? spec
+          : '{ ' +
+            spec
+              .map(spec =>
+                typeof spec === 'string' ? spec : spec[0] + ' as ' + spec[1]
+              )
+              .join(', ') +
+            ' }'
+      } from "${source}"`
+  )
 }
