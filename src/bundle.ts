@@ -54,6 +54,10 @@ export async function bundle() {
       'saus/core',
       path.resolve(__dirname, '../src/bundle/runtime/core.ts')
     ),
+    redirectModule(
+      'debug',
+      path.resolve(__dirname, '../src/bundle/runtime/debug.ts')
+    ),
   ]
 
   Profiling.mark('parse render functions')
@@ -141,8 +145,19 @@ export async function bundle() {
   Profiling.mark('write ssr bundle')
 
   const bundle = buildResult.output[0].output[0]
+  const bundleMetadata = JSON.stringify(
+    bundle,
+    (key, value) =>
+      key === 'code'
+        ? undefined
+        : key === 'modules'
+        ? Object.keys(value).filter(key => !key.startsWith('\u0000'))
+        : value,
+    2
+  )
+
   fs.writeFileSync(path.resolve('bundle.js'), bundle.code)
-  fs.writeFileSync(path.resolve('build.json'), JSON.stringify(bundle, null, 2))
+  fs.writeFileSync(path.resolve('build.json'), bundleMetadata)
 }
 
 function createVirtualModule(module: {
