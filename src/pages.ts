@@ -6,7 +6,6 @@ import type {
   ClientDescription,
   ClientFunction,
   ClientFunctions,
-  ClientImports,
   ClientState,
   Renderer,
   RenderFunction,
@@ -22,6 +21,7 @@ import { matchRoute } from './core/routes'
 import { defer } from './utils/defer'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
+import { serializeImports } from './utils/imports'
 
 export function getPageFilename(path: string) {
   return path == '/' ? 'index.html' : path.slice(1) + '.html'
@@ -350,7 +350,7 @@ function renderClient(
   const script = new MagicBundle()
   const imports = [
     `import { onHydrate as $onHydrate } from "saus/client"`,
-    ...renderImports(client.imports),
+    ...serializeImports(client.imports),
   ]
 
   // The container for top-level statements
@@ -361,55 +361,38 @@ function renderClient(
   const onHydrate = new MagicString('')
   script.addSource(onHydrate)
 
-  const usedStatements = new Set<string>()
+  const importedModules = new Set<string>()
   const insertFunction = (fn: ClientFunction, name: string) => {
     for (const stmt of fn.referenced) {
-      if (usedStatements.has(stmt)) continue
-      usedStatements.add(stmt)
+      if (importedModules.has(stmt)) continue
+      importedModules.add(stmt)
       topLevel.append(stmt + '\n')
     }
     topLevel.append(`const ${name} = ${fn.function}`)
-    onHydrate.append(`${name}(request)\n`)
+    onHydrate.append(
+      name == `$render`
+        ? `const content = await $render(routeModule, request)\n`
+        : `${name}(request)\n`
+    )
   }
 
   beforeRenderFns?.forEach((fn, i) => {
     insertFunction(fn, `$beforeRender${i + 1}`)
   })
-
   insertFunction(renderFn, `$render`)
+  onHydrate.append(client.onHydrate)
   if (renderFn.didRender) {
     insertFunction(renderFn.didRender, `$didRender`)
   }
 
-  onHydrate
-    .append(`const content = await $render(routeModule, request)`)
-    .append(client.onHydrate)
-
   // Indent the function body, then wrap with $onHydrate call.
   onHydrate
     .indent('  ')
-    .prepend(`$onHydrate(async (routeModule, request) => {`)
-    .append(`})`)
+    .prepend(`$onHydrate(async (routeModule, request) => {\n`)
+    .append(`\n})`)
 
   return {
     code: script.toString(),
     map: script.generateMap(),
   }
-}
-
-function renderImports(imports: ClientImports) {
-  return Object.entries(imports).map(
-    ([source, spec]) =>
-      `import ${
-        typeof spec === 'string'
-          ? spec
-          : '{ ' +
-            spec
-              .map(spec =>
-                typeof spec === 'string' ? spec : spec[0] + ' as ' + spec[1]
-              )
-              .join(', ') +
-            ' }'
-      } from "${source}"`
-  )
 }

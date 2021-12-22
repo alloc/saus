@@ -8,4 +8,3 @@ export * from './routes'
 export * from './vite'
 
 export { default as endent } from 'endent'
-export { default as md5Hex } from 'md5-hex'

@@ -3,7 +3,7 @@ import { spawn, ModuleThread, Thread, Worker } from 'threads'
 import { startTask } from 'misty/task'
 import path from 'path'
 import cpuCount from 'physical-cpu-count'
-import { vite, BuildOptions, RouteParams } from './core'
+import { vite, BuildOptions, RouteParams, generateRoutePaths } from './core'
 import { getPageFilename, RenderedPage } from './pages'
 import { clientPlugin } from './plugins/client'
 import { Rollup } from './rollup'
@@ -89,35 +89,10 @@ export async function build(
     }
   )
 
-  for (const route of context.routes) {
-    if (route.paths) {
-      if (!route.keys.length) {
-        errors.push({
-          path: route.path,
-          reason: `Route with "paths" needs a route parameter`,
-        })
-      } else {
-        for (const result of await route.paths()) {
-          const values = Array.isArray(result)
-            ? (result as (string | number)[])
-            : [result]
-
-          const params: RouteParams = {}
-          route.keys.forEach((key, i) => {
-            params[key] = '' + values[i]
-          })
-
-          renderPage(route.path, params)
-        }
-      }
-    } else if (!route.keys.length) {
-      renderPage(route.path)
-    }
-  }
-
-  if (context.defaultRoute) {
-    renderPage('default')
-  }
+  await generateRoutePaths(context, {
+    path: renderPage,
+    error: error => errors.push(error),
+  })
 
   await renderPage.calls
   progress.finish()

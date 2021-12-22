@@ -1,4 +1,4 @@
-import { extractClientFunctions, Plugin, SausContext } from '../core'
+import { mapClientFunctions, Plugin, SausContext } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
@@ -18,7 +18,7 @@ export function servePlugin(
     contextUpdate(context) {
       pageFactory = createPageFactory(
         context,
-        extractClientFunctions(context.renderPath)
+        mapClientFunctions(context.renderPath)
       )
       init.resolve()
     },

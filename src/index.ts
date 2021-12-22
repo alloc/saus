@@ -1,12 +1,6 @@
 export { render } from './render'
-export {
-  route,
-  defineConfig,
-  beforeRender,
-  Plugin,
-  UserConfig,
-  vite,
-} from './core'
+export { route } from './routes'
+export { defineConfig, beforeRender, Plugin, UserConfig, vite } from './core'
 
 export { htmlEscape as escape } from 'escape-goat'
 

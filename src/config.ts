@@ -6,6 +6,7 @@ import { Logger } from 'vite'
 export interface SausConfig {
   routes: string
   render: string
+  server: string
 }
 
 const sausYamlFile = 'saus.yaml'

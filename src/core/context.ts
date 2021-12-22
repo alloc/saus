@@ -10,6 +10,8 @@ import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
 import { Profiling } from '../profiling'
+import { fatal } from 'misty'
+import kleur from 'kleur'
 
 export interface SausContext extends RenderModule, RoutesModule {
   root: string
@@ -18,6 +20,8 @@ export interface SausContext extends RenderModule, RoutesModule {
   configEnv: vite.ConfigEnv
   configPath: string | null
   configHooks: string[]
+  /** Path to server entry module */
+  serverPath?: string
   /** Path to the routes module */
   routesPath: string
   /** Rendered page cache */
@@ -40,11 +44,10 @@ export async function loadContext(
   sausPlugins?: ((context: SausContext) => vite.Plugin)[]
 ): Promise<SausContext> {
   const root = inlineConfig?.root || process.cwd()
+  const isBuild = command === 'build'
   const configEnv: vite.ConfigEnv = {
     command,
-    mode:
-      inlineConfig?.mode ||
-      (command === 'build' ? 'production' : 'development'),
+    mode: inlineConfig?.mode || (isBuild ? 'production' : 'development'),
   }
 
   const logLevel = inlineConfig?.logLevel || 'info'
@@ -53,7 +56,18 @@ export async function loadContext(
   Profiling.mark('load saus.yaml')
 
   // Load "saus.yaml"
-  const { render: renderPath, routes: routesPath } = readSausYaml(root, logger)
+  const {
+    render: renderPath,
+    routes: routesPath,
+    server: serverPath,
+  } = readSausYaml(root, logger)
+
+  if (!renderPath) {
+    logger.warn(`[saus] Your "saus.yaml" config is missing a "render" property`)
+  }
+  if (!routesPath) {
+    logger.warn(`[saus] Your "saus.yaml" config is missing a "routes" property`)
+  }
 
   Profiling.mark('load user config')
 
@@ -68,11 +82,14 @@ export async function loadContext(
   const userConfig = loadResult ? loadResult.config : {}
   userConfig.mode ??= configEnv.mode
 
-  let config = vite.mergeConfig(userConfig, <vite.UserConfig>{
+  const overrides: vite.InlineConfig = {
     configFile: false,
     customLogger: logger,
     esbuild: userConfig.esbuild !== false && {
       target: userConfig.esbuild?.target || 'node14',
+    },
+    server: {
+      lazyTransform: isBuild,
     },
     ssr: {
       noExternal: ['saus/client'],
@@ -81,8 +98,9 @@ export async function loadContext(
       entries: [renderPath],
       exclude: ['saus'],
     },
-  })
+  }
 
+  let config: vite.UserConfig = vite.mergeConfig(userConfig, overrides)
   if (inlineConfig) {
     config = vite.mergeConfig(config, inlineConfig)
   }
@@ -94,6 +112,7 @@ export async function loadContext(
     configEnv,
     configPath: loadResult ? loadResult.path : null,
     configHooks: [],
+    serverPath,
     routesPath,
     routes: [],
     pages: {},

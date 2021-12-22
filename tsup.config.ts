@@ -16,4 +16,5 @@ export default defineConfig({
   format: ['cjs'],
   splitting: true,
   sourcemap: true,
+  external: Object.keys(require('./package.json').dependencies),
 })

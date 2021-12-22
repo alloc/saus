@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
 import { ParsedUrl } from '../utils/url'
-import { routesModule } from './global'
+import { SausContext } from './context'
 import { StateFragment } from './state'
 
 export { RegexParam, InferRouteParams }
@@ -94,40 +94,50 @@ export type RoutesModule = {
   defaultRoute?: Route
 }
 
-const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
-const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
+type RoutePathHandlers = {
+  path: (path: string, params?: RouteParams) => void
+  error: (error: { reason: string; path: string }) => void
+}
 
-/** Define a route */
-export function route<RoutePath extends string, Module extends object>(
-  path: RoutePath,
-  load: RouteLoader<Module>,
-  config?: RouteConfig<Module, InferRouteParams<RoutePath>>
-): void
-
-/** Define the default route */
-export function route(load: RouteLoader): void
-
-/** @internal */
-export function route(
-  pathOrLoad: string | RouteLoader,
-  maybeLoad?: RouteLoader<any>,
-  config?: RouteConfig<any, any>
+/**
+ * Using `context.routes` and `context.defaultRoute`, every known path is passed
+ * to the `path` handler. The default route generates the `default` path. Routes
+ * with dynamic params will be called once per element in their `paths` array,
+ * and you still need to call `RegexParam.inject` to get the real path.
+ */
+export async function generateRoutePaths(
+  context: SausContext,
+  handlers: RoutePathHandlers
 ) {
-  const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
-  const load = maybeLoad || (pathOrLoad as RouteLoader)
-  const route = {
-    path,
-    load,
-    moduleId: parseDynamicImport(load),
-    ...config,
-  } as Route
+  const { path: onPath, error: onError } = handlers
 
-  if (path === 'default') {
-    route.keys = []
-    route.pattern = /./
-    routesModule.defaultRoute = route
-  } else {
-    Object.assign(route, RegexParam.parse(path))
-    routesModule.routes.push(route)
+  for (const route of context.routes) {
+    if (route.paths) {
+      if (!route.keys.length) {
+        onError({
+          path: route.path,
+          reason: `Route with "paths" needs a route parameter`,
+        })
+      } else {
+        for (const result of await route.paths()) {
+          const values = Array.isArray(result)
+            ? (result as (string | number)[])
+            : [result]
+
+          const params: RouteParams = {}
+          route.keys.forEach((key, i) => {
+            params[key] = '' + values[i]
+          })
+
+          onPath(route.path, params)
+        }
+      }
+    } else if (!route.keys.length) {
+      onPath(route.path)
+    }
+  }
+
+  if (context.defaultRoute) {
+    onPath('default')
   }
 }

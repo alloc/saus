@@ -1,6 +1,6 @@
 import * as vite from 'vite'
 import path from 'path'
-import { gray } from 'kleur'
+import kleur from 'kleur'
 import { klona } from 'klona'
 import { EventEmitter } from 'events'
 import { debounce } from 'ts-debounce'
@@ -400,7 +400,7 @@ function waitForChanges(
   watcher.on('change', onChange)
   events.on('close', onClose)
 
-  logger.info(gray('Waiting for changes...'))
+  logger.info(kleur.gray('Waiting for changes...'))
 }
 
 function cloneError(e: any) {

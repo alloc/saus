@@ -45,9 +45,13 @@ cli
     process.exit(errors.length ? 1 : 0)
   })
 
-cli.command('bundle').action(async () => {
-  await (require('./bundle') as typeof import('./bundle')).bundle()
-})
+cli
+  .command('bundle [outFile]')
+  .option('--minify', `[boolean] minify the client modules`)
+  .action(async (outFile, options) => {
+    options.outFile = outFile
+    await (require('./bundle') as typeof import('./bundle')).bundle(options)
+  })
 
 cli.help()
 cli.version(require('../package.json').version)

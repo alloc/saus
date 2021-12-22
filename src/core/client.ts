@@ -14,7 +14,9 @@ import type { RouteParams } from './routes'
 import type { SourceDescription } from './vite'
 
 /** A generated client module */
-export type Client = { id: string } & SourceDescription
+export interface Client extends SourceDescription {
+  id: string
+}
 
 /** JSON state provided by the renderer and made available to the client */
 export type ClientState = Record<string, any> & {
@@ -46,6 +48,20 @@ export interface RenderFunction extends ClientFunction {
 export type ClientFunctions = {
   beforeRender: ClientFunction[]
   render: RenderFunction[]
+}
+
+export function mapClientFunctions<T>(
+  functions: ClientFunctions,
+  map: (fn: ClientFunction) => T
+): T[] {
+  const mapped: T[] = functions.beforeRender.map(map)
+  functions.render.forEach(renderFn => {
+    mapped.push(map(renderFn))
+    if (renderFn.didRender) {
+      mapped.push(map(renderFn.didRender))
+    }
+  })
+  return mapped
 }
 
 export function extractClientFunctions(filename: string): ClientFunctions {
