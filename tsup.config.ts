@@ -5,7 +5,6 @@ export default defineConfig({
     'src/cli.ts',
     'src/index.ts',
     // Submodules
-    'src/client/index.ts',
     'src/core/index.ts',
     'src/babel/index.ts',
     // Commands
