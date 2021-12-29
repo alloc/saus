@@ -4,12 +4,13 @@ export interface RenderedPage {
 }
 
 export interface ClientModule {
-  url: string
-  file: string
+  id: string
   text: string
   imports?: string[]
   exports?: string[]
 }
+
+export declare function getModuleUrl(module: ClientModule): string
 
 declare function renderPage(pageUrl: string): Promise<RenderedPage | null>
 

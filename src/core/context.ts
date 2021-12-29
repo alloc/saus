@@ -10,16 +10,17 @@ import { RoutesModule } from './routes'
 import { UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
 import { Profiling } from '../profiling'
-import { fatal } from 'misty'
-import kleur from 'kleur'
+import { HtmlContext } from './html'
 
-export interface SausContext extends RenderModule, RoutesModule {
+export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
   logger: vite.Logger
   config: UserConfig
   configEnv: vite.ConfigEnv
   configPath: string | null
   configHooks: string[]
+  /** The `saus.defaultPath` option from Vite config */
+  defaultPath: string
   /** Path to server entry module */
   serverPath?: string
   /** Path to the routes module */
@@ -85,9 +86,6 @@ export async function loadContext(
   const overrides: vite.InlineConfig = {
     configFile: false,
     customLogger: logger,
-    esbuild: userConfig.esbuild !== false && {
-      target: userConfig.esbuild?.target || 'node14',
-    },
     server: {
       lazyTransform: isBuild,
     },
@@ -112,6 +110,7 @@ export async function loadContext(
     configEnv,
     configPath: loadResult ? loadResult.path : null,
     configHooks: [],
+    defaultPath: config.saus?.defaultPath || '/404',
     serverPath,
     routesPath,
     routes: [],

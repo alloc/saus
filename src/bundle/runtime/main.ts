@@ -1,6 +1,6 @@
 import path from 'path'
 import { parseImports } from '../../utils/imports'
-import type { ParsedUrl } from '../../utils/url'
+import { ParsedUrl, parseUrl } from '../../utils/url'
 import { ClientModule, RenderedPage } from '../types'
 import config from './config'
 import { context } from './context'
@@ -13,9 +13,24 @@ import { isCSSRequest } from './utils'
 const pageFactory = createPageFactory(context, functions)
 const hydrateImport = `import { hydrate } from "saus/client"`
 
+const htmlExtension = '.html'
+const indexHtmlSuffix = '/index.html'
+
+export const getModuleUrl = (mod: ClientModule) =>
+  config.base +
+  (mod.id.endsWith(htmlExtension)
+    ? mod.id.endsWith(indexHtmlSuffix)
+      ? mod.id.slice(0, -indexHtmlSuffix.length)
+      : mod.id.slice(0, -htmlExtension.length)
+    : mod.id)
+
 export default function renderPage(
   pageUrl: string | ParsedUrl
 ): Promise<RenderedPage | null> {
+  if (!pageUrl.startsWith(config.base)) {
+    return Promise.resolve(null)
+  }
+  pageUrl = pageUrl.slice(config.base.length - 1)
   return new Promise((resolve, reject) => {
     pageFactory.resolvePage(pageUrl, (error, page) => {
       if (error) {
@@ -52,8 +67,7 @@ export default function renderPage(
       // Generated from the first matching `render` hook, its `didRender` hook
       // (if defined), and any matching `beforeRender` hooks.
       const entryModule: ClientModule | undefined = page.client && {
-        url: config.base + entryId,
-        file: path.join(config.cacheDir, entryId),
+        id: entryId,
         text: page.client.code,
       }
 
@@ -67,7 +81,7 @@ export default function renderPage(
                 const { source } = importStmt
                 entryModule.text =
                   entryModule.text.slice(0, source.start) +
-                  module.url +
+                  getModuleUrl(module) +
                   entryModule.text.slice(source.end)
               } else {
                 // Inline the module since it has no exports.
@@ -98,12 +112,13 @@ export default function renderPage(
       })
 
       for (const module of modules) {
-        if (isCSSRequest(module.url)) {
+        const url = config.base + module.id
+        if (isCSSRequest(url)) {
           headTags.push({
             tag: 'link',
             attrs: {
               rel: 'stylesheet',
-              href: module.url,
+              href: url,
             },
           })
         } else if (module !== entryModule) {
@@ -111,7 +126,7 @@ export default function renderPage(
             tag: 'link',
             attrs: {
               rel: 'modulepreload',
-              href: module.url,
+              href: url,
             },
           })
         } else {
@@ -119,21 +134,33 @@ export default function renderPage(
             tag: 'script',
             attrs: {
               type: 'module',
-              src: module.url,
+              src: url,
             },
           })
         }
       }
+
+      // Add "state.json" modules after <script> and <link> tags
+      // are generated from the `modules` array, since the page's
+      // `state` object is inlined.
+      if (typeof pageUrl == 'string') {
+        pageUrl = parseUrl(pageUrl)
+      }
+      const pagePath = pageUrl.path.slice(config.base.length)
+      modules.add({
+        id: (pagePath ? pagePath + '/' : '') + 'state.json',
+        text: JSON.stringify(page.state || {}),
+      })
 
       // Hydrate the page.
       bodyTags.push({
         tag: 'script',
         attrs: { type: 'module' },
         children: endent`
-            import * as routeModule from "${routeModule.url}"
-            ${hydrateModule.text}
-            hydrate(routeModule, "${pageUrl}")
-          `,
+          import * as routeModule from "${getModuleUrl(routeModule)}"
+          ${hydrateModule.text}
+          hydrate(routeModule, "${pageUrl}")
+        `,
       })
 
       let html = page.html

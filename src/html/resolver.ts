@@ -1,9 +1,10 @@
-import { htmlContext } from '../core/html'
+import { routesModule } from '../core/global'
+import { addHtmlVisitor } from '../core/html'
 import {
   EnforcementPhase,
   HtmlResolver,
+  HtmlResolverState,
   HtmlTagPath,
-  HtmlVisitorState,
 } from './types'
 
 const kResolverList = Symbol.for('html.ResolverList')
@@ -37,9 +38,9 @@ export function resolveHtmlImports(
   }
 
   let resolvers: HtmlResolver[]
-  let visitor = htmlContext.visitors.find(
-    ([e, visitor]) => enforce === e && kResolverList in visitor
-  )?.[1]
+  let visitor = routesModule.visitors[enforce || 'default'].find(
+    visitor => kResolverList in visitor
+  )
 
   if (visitor) {
     resolvers = Reflect.get(visitor, kResolverList)
@@ -49,22 +50,30 @@ export function resolveHtmlImports(
 
   const resolve = async (
     path: HtmlTagPath,
-    state: HtmlVisitorState,
+    state: Partial<HtmlResolverState>,
     attrs: string[]
   ) => {
-    const importer = state.page.path
+    const importer = state.page!.path
     for (const attr of attrs) {
       const id = path.attributes[attr]
       if (typeof id !== 'string') {
         continue
       }
+      state.tag = path
+      state.attr = attr
       for (const resolveId of resolvers) {
-        const resolvedId = await resolveId(id, importer, state)
+        const resolvedId = await resolveId(
+          id,
+          importer,
+          state as HtmlResolverState
+        )
         if (resolvedId != null) {
           path.setAttribute(attr, resolvedId)
           break
         }
       }
+      delete state.tag
+      delete state.attr
     }
   }
 
@@ -74,7 +83,7 @@ export function resolveHtmlImports(
     // waiting for the "close" phase.
     close(path, state) {
       const attrs = assetAttrsConfig[path.tagName]
-      return attrs && resolve(path, state, attrs)
+      return attrs && resolve(path, state as any, attrs)
     },
   }
 
@@ -82,7 +91,7 @@ export function resolveHtmlImports(
     value: resolvers,
   })
 
-  htmlContext.visitors.push([enforce, visitor])
+  addHtmlVisitor(visitor, enforce)
 }
 
 function assertType<T>(value: unknown): asserts value is T {}

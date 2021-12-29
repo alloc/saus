@@ -1,11 +1,11 @@
-import {
+import * as RegexParam from 'regexparam'
+import { routesModule } from './core/global'
+import type {
   InferRouteParams,
-  RegexParam,
   Route,
   RouteConfig,
   RouteLoader,
-} from './core'
-import { routesModule } from './core/global'
+} from './core/routes'
 
 const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
@@ -28,10 +28,19 @@ export function route(
 ) {
   const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
   const load = maybeLoad || (pathOrLoad as RouteLoader)
+
+  let moduleId: string
+  try {
+    moduleId = parseDynamicImport(load)
+  } catch (e: any) {
+    console.log('load: %O', load.toString())
+    throw Error(`Failed to parse "moduleId" for route: "${path}"\n` + e.message)
+  }
+
   const route = {
     path,
     load,
-    moduleId: parseDynamicImport(load),
+    moduleId,
     ...config,
   } as Route
 

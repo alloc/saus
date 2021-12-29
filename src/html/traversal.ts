@@ -39,6 +39,10 @@ export async function traverse(
   state: HtmlVisitorState,
   visitors: HtmlVisitor | HtmlVisitor[]
 ) {
+  if (Array.isArray(visitors) && !visitors.length) {
+    return html
+  }
+
   const editor = new MagicString(html)
   const context: HtmlTraversalContext = { editor, state }
 

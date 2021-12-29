@@ -244,11 +244,13 @@ function handleContextUpdates(
       if (module.file === context.renderPath) {
         renderConfig = setRenderModule({
           renderers: [],
-          configHooks: [],
           beforeRenderHooks: [],
         })
       } else if (module.file === context.routesPath) {
-        routesConfig = setRoutesModule({ routes: [] })
+        routesConfig = setRoutesModule({
+          routes: [],
+          visitors: { pre: [], default: [], post: [] },
+        })
       } else {
         return // Not a module we care about.
       }

@@ -27,7 +27,7 @@ export type ClientImport = {
 export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
-  { base, assetsDir, cacheDir }: RuntimeConfig,
+  { assetsDir, base }: RuntimeConfig,
   config: vite.UserConfig,
   options: BundleOptions
 ): Promise<ClientModuleMap> {
@@ -77,6 +77,7 @@ export async function generateClientModules(
   config = vite.mergeConfig(config, <vite.UserConfig>{
     plugins: [modules],
     build: {
+      target: config.saus?.client?.target || 'modules',
       rollupOptions: {
         input,
         output: {
@@ -163,8 +164,6 @@ export async function generateClientModules(
   let entryIndex = -1
   await Promise.all(
     chunks.map(async chunk => {
-      const url = base + chunk.fileName
-
       let key = chunk.fileName
       if (chunk.isEntry) {
         const importStmt = imports[++entryIndex]
@@ -202,9 +201,8 @@ export async function generateClientModules(
       }
 
       const mod: ClientModule = (moduleMap[key] = {
-        url,
+        id: chunk.fileName,
         text: chunk.code,
-        file: path.join(cacheDir, chunk.fileName),
       })
 
       if (chunk.imports.length) {
@@ -219,9 +217,8 @@ export async function generateClientModules(
   // TODO: encode image/video/audio files with base64?
   assets.forEach(asset => {
     moduleMap[asset.fileName] = {
-      url: base + asset.fileName,
+      id: asset.fileName,
       text: Buffer.from(asset.source).toString('utf8'),
-      file: path.join(cacheDir, asset.fileName),
     }
   })
 

@@ -1,7 +1,11 @@
 const rawUrlRE = /^(\/[^#?]*)(?:#[^?]*)?(?:\?(.+)?)?$/
 
 export class ParsedUrl {
-  constructor(readonly path: string, readonly searchParams: URLSearchParams) {
+  readonly path: string
+  constructor(path: string, readonly searchParams: URLSearchParams) {
+    // Remove trailing slash (except for "/" path)
+    this.path = path.replace(/(.+)\/$/, '$1')
+
     searchParams.sort()
   }
 
@@ -12,6 +16,17 @@ export class ParsedUrl {
   toString() {
     const { path, search } = this
     return search ? path + '?' + search : path
+  }
+
+  startsWith(prefix: string) {
+    return this.path.startsWith(prefix)
+  }
+
+  slice(start: number, end?: number) {
+    const sliced = Object.create(ParsedUrl.prototype)
+    sliced.path = this.path.slice(start, end)
+    sliced.searchParams = new URLSearchParams(this.searchParams)
+    return sliced as ParsedUrl
   }
 }
 

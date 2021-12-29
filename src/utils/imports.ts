@@ -34,7 +34,7 @@ export function parseImports(code: string) {
 
   let match: RegExpExecArray | null
   while ((match = importRE.exec(code))) {
-    const source = /"([^"]+)"/.exec(match[0])!
+    const source = /["']([^"']+)["']/.exec(match[0])!
     const start = match.index + source.index + 1
     const end = start + source[1].length
 

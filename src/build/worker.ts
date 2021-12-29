@@ -1,4 +1,5 @@
 import { expose, isWorkerRuntime } from 'threads/worker'
+import { RuntimeConfig } from '../bundle/runtime/config'
 import {
   createLoader,
   extractClientFunctions,
@@ -51,6 +52,19 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       setRenderModule(null)
       setRoutesModule(null)
     }
+
+    if (context.visitors) {
+      const { visitors, config: userConfig } = context
+      const config: RuntimeConfig = {
+        assetsDir: userConfig.build?.assetsDir || 'assets',
+        base: userConfig.base || '/',
+        mode: userConfig.mode || 'development',
+      }
+      const { transformHtml } = await import('../core/html')
+      context.transformHtml = (html, page) =>
+        transformHtml(html, { page, config }, visitors)
+    }
+
     return createPageFactory(
       context,
       extractClientFunctions(context.renderPath)
@@ -76,9 +90,9 @@ export async function getState(routePath: string, params?: RouteParams) {
 export async function renderPage(routePath: string, params?: RouteParams) {
   const pageFactory = (await setupPromise)!
   try {
-    if (routePath === 'default') {
+    if (routePath === context.defaultPath) {
       if (context.defaultRoute && context.defaultRenderer) {
-        return pageFactory.renderUnknownPage('/404')
+        return pageFactory.renderUnknownPage(routePath)
       }
     } else {
       const route = context.routes.find(route => route.path === routePath)!

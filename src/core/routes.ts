@@ -3,6 +3,7 @@ import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
 import { ParsedUrl } from '../utils/url'
 import { SausContext } from './context'
+import { HtmlContext } from './html'
 import { StateFragment } from './state'
 
 export { RegexParam, InferRouteParams }
@@ -87,7 +88,7 @@ export function matchRoute(path: string, route: ParsedRoute) {
  * Values set by the "routes module" defined in `saus.yaml` with
  * the `routes` path property.
  */
-export type RoutesModule = {
+export interface RoutesModule extends HtmlContext {
   /** Routes defined with the `route` function */
   routes: Route[]
   /** The route used when no route is matched */
@@ -138,6 +139,6 @@ export async function generateRoutePaths(
   }
 
   if (context.defaultRoute) {
-    onPath('default')
+    onPath(context.defaultPath)
   }
 }

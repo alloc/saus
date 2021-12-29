@@ -1,7 +1,7 @@
 export interface RuntimeConfig {
-  base: string
-  cacheDir: string
   assetsDir: string
+  base: string
+  mode: string
 }
 
 /* Stub module replaced at build time */

@@ -1,5 +1,5 @@
-import md5Hex from 'md5-hex'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
+import md5Hex from 'md5-hex'
 import type {
   BeforeRenderHook,
   Client,
@@ -19,9 +19,9 @@ import type {
 import { debug } from './core/debug'
 import { matchRoute } from './core/routes'
 import { defer } from './utils/defer'
+import { serializeImports } from './utils/imports'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
-import { serializeImports } from './utils/imports'
 
 export function getPageFilename(path: string) {
   return path == '/' ? 'index.html' : path.slice(1) + '.html'
@@ -56,6 +56,7 @@ export function createPageFactory(
     defaultRoute,
     defaultRenderer,
     beforeRenderHooks,
+    transformHtml,
     logger,
   } = context
 
@@ -112,7 +113,7 @@ export function createPageFactory(
       }
 
       debug(`Rendering page: ${path}`)
-      const html = await renderer.render(routeModule, request, renderer)
+      let html = await renderer.render(routeModule, request, renderer)
       if (html == null) {
         debug(`Nothing was rendered. Trying next renderer.`)
         return null
@@ -125,18 +126,24 @@ export function createPageFactory(
         client = await getClient(functions, renderer, usedHooks)
       }
 
-      debug(`Page ready: ${path}`)
-
-      // Currently, the page cache is only used by the saus:client plugin,
-      // since the performance impact of rendering on every request isn't
-      // bad enough to justify complicated cache invalidation.
-      return (pages[filename] = {
+      const page: RenderedPage = {
         path,
         html,
         state,
         client,
         routeModuleId: route.moduleId,
-      })
+      }
+
+      if (transformHtml) {
+        page.html = await transformHtml(page.html, page)
+      }
+
+      debug(`Page ready: ${path}`)
+
+      // Currently, the page cache is only used by the saus:client plugin,
+      // since the performance impact of rendering on every request isn't
+      // bad enough to justify complicated cache invalidation.
+      return (pages[filename] = page)
     })
 
     renderQueue = pagePromise.then(noop, noop)
@@ -334,7 +341,7 @@ async function getClient(
         usedHooks.some(usedHook => fn.start === usedHook.start)
       )
     )
-    const hash = md5Hex(result.code).slice(0, 16)
+    const hash = md5Hex(result.code).slice(0, 8)
     return {
       id: `client.${hash}.js`,
       ...result,
@@ -347,6 +354,7 @@ function renderClient(
   renderFn: RenderFunction,
   beforeRenderFns?: ClientFunction[]
 ) {
+  m
   const script = new MagicBundle()
   const imports = [
     `import { onHydrate as $onHydrate } from "saus/client"`,

@@ -1,4 +1,5 @@
-import type { IAttribute, ITag } from 'html5parser'
+import type { IAttribute as HtmlAttribute, ITag } from 'html5parser'
+import type { RuntimeConfig } from '../bundle/runtime/config'
 import type { RenderedPage } from '../pages'
 import type { HtmlTagPath, kTagPath } from './traversal'
 
@@ -6,10 +7,17 @@ type Promisable<T> = T | PromiseLike<T>
 
 export type EnforcementPhase = 'pre' | 'post'
 
+export type HtmlResolverState = HtmlVisitorState & {
+  /** The tag whose URL attribute is being resolved */
+  tag: HtmlTagPath
+  /** The URL attribute being resolved */
+  attr: string
+}
+
 export type HtmlResolver = (
   id: string,
   importer: string,
-  state: HtmlVisitorState
+  state: HtmlResolverState
 ) => Promisable<string | null | void>
 
 export type {
@@ -20,7 +28,7 @@ export type {
 } from 'html5parser'
 
 export type HtmlTag = ITag & {
-  attributeMap: Record<string, IAttribute>
+  attributeMap: Record<string, HtmlAttribute>
   [kTagPath]?: HtmlTagPath
 }
 
@@ -45,6 +53,7 @@ export type HtmlVisitorState = {
   [key: string]: any
 } & {
   page: RenderedPage
+  config: RuntimeConfig
 }
 
 export type HtmlSelector = Required<Pick<HtmlVisitor, 'open'>>

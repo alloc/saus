@@ -15,7 +15,6 @@ importers:
       '@types/source-map-support': ^0.5.4
       array-flatten: ^3.0.0
       builtin-modules: ^3.2.0
-      bundle-require: ^2.2.0
       cac: ^6.7.3
       caller-path: ^3.0.1
       catch-exit: ^1.2.2
@@ -51,7 +50,6 @@ importers:
       yaml: ^1.10.2
     dependencies:
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.16.5
-      bundle-require: 2.2.0_esbuild@0.14.8
       cac: 6.7.3
       css-what: 6.0.1
       endent: 2.1.0
@@ -94,7 +92,7 @@ importers:
       ts-debounce: 3.0.0
       tsup: 5.11.6_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117
+      vitest: 0.0.117_@alloc+vite@2.6.3-3
       yaml: 1.10.2
 
   examples/react-basic:
@@ -105,14 +103,14 @@ importers:
       '@types/node': ^16.10.2
       '@types/serve-static': ^1.13.10
       etag: ^1.8.1
-      mime: ^3.0.0
+      mrmime: ^1.0.0
       navaid: ^1.2.0
       saus: '*'
       serve-static: ^1.14.2
     dependencies:
       '@saus/react': link:../../packages/react
       '@types/etag': 1.8.1
-      mime: 3.0.0
+      mrmime: 1.0.0
       navaid: 1.2.0
       saus: link:../..
       serve-static: 1.14.2
@@ -909,6 +907,7 @@ packages:
       esbuild: '>=0.13'
     dependencies:
       esbuild: 0.14.8
+    dev: true
 
   /cac/6.7.12:
     resolution: {integrity: sha512-rM7E2ygtMkJqD9c7WnFU6fruFcN3xe4FM5yUmgxhZzIKJk4uHl9U/fhwdajGFQbQuv43FAUo1Fe8gX/oIKDeSA==}
@@ -1810,12 +1809,6 @@ packages:
     hasBin: true
     dev: false
 
-  /mime/3.0.0:
-    resolution: {integrity: sha512-jSCU7/VB1loIWBZe14aEYHU/+1UMEHoaO7qxCOVJOw9GgH72VAWppxNcjU+x9a2k3GSIBXNKxXQFqRvvZ7vr3A==}
-    engines: {node: '>=10.0.0'}
-    hasBin: true
-    dev: false
-
   /mimic-fn/2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
@@ -1843,6 +1836,11 @@ packages:
     dependencies:
       import-meta-resolve: 1.1.1
     dev: true
+
+  /mrmime/1.0.0:
+    resolution: {integrity: sha512-a70zx7zFfVO7XpnQ2IX1Myh9yY4UYvfld/dikWRnsXxbyvMcfz+u6UfgNAtH+k2QqtJuzVpv6eLTx1G2+WKZbQ==}
+    engines: {node: '>=10'}
+    dev: false
 
   /ms/2.0.0:
     resolution: {integrity: sha1-VgiurfwAvmwpAd9fmGF4jeDVl8g=}
@@ -2386,7 +2384,7 @@ packages:
     resolution: {integrity: sha512-RanEelDzP4yCwPXY5OlWMSb/wZ+tKbM1VEFDLtYdOfZvp6bfE2X8S3zqz+/uQGUd6X1RaUGOUGgisc3Rygn5JQ==}
     dev: true
 
-  /vitest/0.0.117:
+  /vitest/0.0.117_@alloc+vite@2.6.3-3:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -2409,6 +2407,7 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
+      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/2.0.2:

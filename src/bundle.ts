@@ -15,6 +15,7 @@ import type { ClientModuleMap } from './bundle/runtime/modules'
 import {
   ClientFunction,
   ClientFunctions,
+  createLoader,
   endent,
   extractClientFunctions,
   generateRoutePaths,
@@ -26,7 +27,7 @@ import { setRoutesModule } from './core/global'
 import { vite } from './core/vite'
 import { renderPlugin } from './plugins/render'
 import { Profiling } from './profiling'
-import { serializeImports } from './utils/imports'
+import { parseImports, serializeImports } from './utils/imports'
 
 const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
 
@@ -39,6 +40,7 @@ export async function bundle(options: BundleOptions) {
   const context = await loadContext('build', undefined, [renderPlugin])
 
   const outDir = context.config.build?.outDir || 'dist'
+  const bundleFormat = context.config.saus?.bundle?.format || 'cjs'
   const bundlePath = options.outFile
     ? path.resolve(options.outFile)
     : context.serverPath &&
@@ -46,7 +48,7 @@ export async function bundle(options: BundleOptions) {
         context.root,
         context.serverPath
           .replace(/^(\.\/)?src\//, outDir + '/')
-          .replace(/\.ts$/, '.js')
+          .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
       )
 
   if (!bundlePath) {
@@ -73,7 +75,8 @@ export async function bundle(options: BundleOptions) {
     runtimeConfig,
     routeImports,
     functions,
-    moduleMap
+    moduleMap,
+    bundleFormat
   )
 
   context.logger.info(
@@ -81,8 +84,12 @@ export async function bundle(options: BundleOptions) {
       ` Saving bundle as ${kleur.green(relativeToCwd(bundlePath))}`
   )
 
+  const mapFileComment =
+    '\n//# ' + 'sourceMappingURL=' + path.basename(bundlePath) + '.map'
+
   fs.mkdirSync(path.dirname(bundlePath), { recursive: true })
-  fs.writeFileSync(bundlePath, bundle.code)
+  fs.writeFileSync(bundlePath, bundle.code + mapFileComment)
+  fs.writeFileSync(bundlePath + '.map', JSON.stringify(bundle.map))
 
   if (!context.serverPath) {
     fs.copyFileSync(
@@ -233,13 +240,10 @@ async function prepareFunctions(context: SausContext) {
 
   await pluginContainer.close()
 
-  let cacheDir = config.saus?.cacheDir!
-  cacheDir ??= cacheDir !== undefined ? '' : '.cache'
-
   const runtimeConfig: RuntimeConfig = {
-    base: config.base,
     assetsDir: config.build.assetsDir,
-    cacheDir,
+    base: config.base,
+    mode: config.mode,
   }
 
   return {
@@ -260,7 +264,8 @@ async function generateBundle(
   runtimeConfig: RuntimeConfig,
   routeImports: RouteImports,
   functions: ClientFunctions,
-  moduleMap: ClientModuleMap
+  moduleMap: ClientModuleMap,
+  bundleFormat: 'esm' | 'cjs'
 ) {
   const modules = createModuleProvider()
 
@@ -276,25 +281,26 @@ async function generateBundle(
 
   let knownPaths: Promise<string> | undefined
   modules.addModule({
-    id: path.join(runtimeDir, 'paths.ts'),
+    id: path.resolve(__dirname, '../paths/index.js'),
     get code() {
       return (knownPaths ||= generateKnownPaths(context).then(serializeToEsm))
     },
   })
 
-  modules.addModule({
+  const runtimeConfigModule = modules.addModule({
     id: path.join(runtimeDir, 'config.ts'),
     code: serializeToEsm(runtimeConfig),
   })
 
   const entryId = path.resolve('.saus/main.js')
+  const runtimeId = `/@fs/${path.join(runtimeDir, 'main.ts')}`
   modules.addModule({
     id: entryId,
     code: endent`
       import "/@fs/${context.renderPath}"
       import "/@fs/${context.routesPath}"
-      import renderPage from "/@fs/${path.join(runtimeDir, 'main.ts')}"
-      export default renderPage
+      export {default, getModuleUrl} from "${runtimeId}"
+      export {default as config} from "/@fs/${runtimeConfigModule.id}"
     `,
     moduleSideEffects: 'no-treeshake',
   })
@@ -310,9 +316,13 @@ async function generateBundle(
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
+  const serverPath =
+    context.serverPath && path.resolve(context.root, context.serverPath)
+
   const overrides: vite.UserConfig = {
     plugins: [
       modules,
+      serverPath ? transformServer(serverPath) : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...redirectedModules,
       // debugSymlinkResolver(),
@@ -324,10 +334,14 @@ async function generateBundle(
     build: {
       ssr: true,
       write: false,
+      target: 'node14',
+      sourcemap: true,
       rollupOptions: {
-        input: context.serverPath
-          ? path.resolve(context.root, context.serverPath)
-          : entryId,
+        input: serverPath || entryId,
+        output: {
+          format: bundleFormat,
+          sourcemapExcludeSources: true,
+        },
       },
     },
   }
@@ -444,31 +458,72 @@ function relativeToCwd(file: string) {
   return file.startsWith('../') ? file : './' + file
 }
 
-function generateKnownPaths(context: SausContext) {
-  const { bundleRequire } =
-    require('bundle-require') as typeof import('bundle-require')
+async function generateKnownPaths(context: SausContext) {
+  const loader = await createLoader(context, {
+    cacheDir: false,
+    server: { hmr: false, wss: false, watch: false },
+  })
 
   setRoutesModule(context)
-  return bundleRequire({
-    filepath: context.routesPath,
-    external: ['saus'],
-    cwd: context.root,
-  }).then(async () => {
+  try {
+    await loader.ssrLoadModule(context.routesPath.replace(context.root, ''))
+  } finally {
     setRoutesModule(null)
+  }
 
-    const paths: string[] = []
-    const errors: { reason: string; path: string }[] = []
-    await generateRoutePaths(context, {
-      path(path, params) {
-        paths.push(params ? RegexParam.inject(path, params) : path)
-      },
-      error: error => errors.push(error),
-    })
-
-    for (const error of errors) {
-      context.logger.error(kleur.red(error.reason))
-    }
-
-    return paths
+  const paths: string[] = []
+  const errors: { reason: string; path: string }[] = []
+  await generateRoutePaths(context, {
+    path(path, params) {
+      paths.push(params ? RegexParam.inject(path, params) : path)
+    },
+    error: error => errors.push(error),
   })
+
+  for (const error of errors) {
+    context.logger.error(kleur.red(error.reason))
+  }
+
+  return paths
+}
+
+/**
+ * Wrap top-level statements in the `server` module with `setImmediate`
+ * to avoid TDZ issues.
+ */
+function transformServer(serverPath: string): vite.Plugin {
+  return {
+    name: 'saus:transformServer',
+    enforce: 'pre',
+    transform(code, id) {
+      if (id === serverPath) {
+        const editor = new MagicString(code, {
+          filename: id,
+          indentExclusionRanges: [],
+        })
+
+        // 1. Hoist all imports not grouped with the first import
+        const imports = parseImports(code)
+        const importIdx = imports.findIndex(({ end }, i) => {
+          const nextImport = imports[i + 1]
+          return !nextImport || nextImport.start > end + 1
+        })
+        const hoistEndIdx = importIdx < 0 ? 0 : imports[importIdx].end + 1
+        for (let i = importIdx + 1; i < imports.length; i++) {
+          const { start, end } = imports[i]
+          // Assume import statements always end in a line break.
+          editor.move(start, end + 1, hoistEndIdx)
+        }
+
+        // 2. Wrap all statements below the imports
+        editor.appendRight(hoistEndIdx, `\nsetImmediate(async () => {\n`)
+        editor.append(`\n})`)
+
+        return {
+          code: editor.toString(),
+          map: editor.generateMap(),
+        }
+      }
+    },
+  }
 }

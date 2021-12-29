@@ -1,5 +1,7 @@
 export { render } from './render'
 export { route } from './routes'
+export { getPageFilename } from './pages'
+export { transformHtml, resolveHtmlImports } from './html'
 export { defineConfig, beforeRender, Plugin, UserConfig, vite } from './core'
 
 export { htmlEscape as escape } from 'escape-goat'

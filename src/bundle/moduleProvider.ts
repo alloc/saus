@@ -17,7 +17,7 @@ export interface ModuleProvider extends vite.Plugin {
 export function createModuleProvider(): ModuleProvider {
   const modules = new Map<string, VirtualModule>()
   return {
-    name: 'moduleProvider',
+    name: 'saus:moduleProvider',
     enforce: 'pre',
     resolveId: id => {
       const exists = modules.has(id)

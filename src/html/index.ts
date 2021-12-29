@@ -1,4 +1,4 @@
-import { htmlContext } from '../core/html'
+import { addHtmlVisitor } from '../core/html'
 import { EnforcementPhase, HtmlVisitor } from './types'
 
 export * from './types'
@@ -29,10 +29,8 @@ export function transformHtml(
     arg = arg2!
   }
   if (Array.isArray(arg)) {
-    htmlContext.visitors.push(
-      ...arg.map(visitor => [enforce, visitor] as const)
-    )
+    arg.forEach(visitor => addHtmlVisitor(visitor, enforce))
   } else {
-    htmlContext.visitors.push([enforce, arg])
+    addHtmlVisitor(arg, enforce)
   }
 }

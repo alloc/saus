@@ -1,1 +1,2 @@
-export { default, ClientModule, RenderedPage } from '../src/bundle/types'
+declare const paths: string[]
+export default paths
