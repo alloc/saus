@@ -9,3 +9,6 @@ export const kTagPath = Symbol.for('html.TagPath')
  * the number of full AST traversals to a maximum of 3.
  */
 export const kVisitorsArray = Symbol.for('html.VisitorsArray')
+
+/** Indicates a removed or replaced node */
+export const kRemovedNode = Symbol.for('html.RemovedNode')

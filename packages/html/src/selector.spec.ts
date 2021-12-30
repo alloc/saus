@@ -1,7 +1,6 @@
 import { describe, expect, it, fn } from 'vitest'
 import { $ } from './selector'
-import { traverse as traverseImpl } from './traversal'
-import { HtmlVisitor, HtmlVisitorState } from './types'
+import { traverse } from './test'
 
 describe('CSS selectors', () => {
   it('supports child selector', async () => {
@@ -83,10 +82,3 @@ describe('CSS selectors', () => {
     })
   })
 })
-
-function traverse(html: string, visitors: HtmlVisitor | HtmlVisitor[]) {
-  const state: HtmlVisitorState = {
-    page: { path: '/', html, routeModuleId: '/main.js' },
-  }
-  return traverseImpl(html, state, visitors)
-}

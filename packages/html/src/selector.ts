@@ -5,6 +5,7 @@ import {
   Selector,
   SelectorType,
 } from 'css-what'
+import { coerceVisitFn } from './traversal'
 import {
   HtmlAttribute,
   HtmlTagPath,
@@ -12,14 +13,13 @@ import {
   HtmlVisitor,
 } from './types'
 
-export type HtmlSelector = Required<Pick<HtmlVisitor, 'open'>>
-
 /**
  * Create an `HtmlVisitor` from a CSS selector list.
  *
  * The `onMatch` function is called before descendants are traversed.
  */
-export function $(pattern: string, visitor: HtmlTagVisitor): HtmlSelector {
+export function $(pattern: string, visitor: HtmlTagVisitor): HtmlVisitor {
+  const matchers = parse(pattern)
   const match = (
     path: HtmlTagPath | undefined,
     matcher: Selector[]
@@ -59,18 +59,40 @@ export function $(pattern: string, visitor: HtmlTagVisitor): HtmlSelector {
     return true
   }
 
-  const { open, close } = expandVisitFn()
+  visitor = coerceVisitFn(visitor)
 
-  const matchers = parse(pattern)
-  return {
-    open(path, state) {
+  let matched: WeakSet<HtmlTagPath> | undefined
+  if (visitor.open) {
+    const { open } = visitor
+    matched = new WeakSet()
+    visitor.open = (path, state) => {
       for (const matcher of matchers) {
         if (match(path, matcher)) {
-          return visitor(path, state)
+          matched!.add(path)
+          return open(path, state)
         }
       }
-    },
+    }
   }
+
+  if (visitor.close) {
+    const { close } = visitor
+    visitor.close = visitor.open
+      ? (path, state) => {
+          if (matched!.has(path)) {
+            close(path, state)
+          }
+        }
+      : (path, state) => {
+          for (const matcher of matchers) {
+            if (match(path, matcher)) {
+              return close(path, state)
+            }
+          }
+        }
+  }
+
+  return visitor
 }
 
 function matchAttribute(

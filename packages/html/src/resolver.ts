@@ -1,5 +1,5 @@
-import { routesModule } from '../core/global'
-import { addHtmlVisitor } from '../core/html'
+import { routesModule } from '../../../src/core/global'
+import { addHtmlVisitor } from '../../../src/core/html'
 import {
   EnforcementPhase,
   HtmlResolver,

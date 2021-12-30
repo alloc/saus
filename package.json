@@ -28,14 +28,11 @@
   "dependencies": {
     "@babel/plugin-syntax-typescript": "^7.14.5",
     "cac": "^6.7.3",
-    "css-what": "^6.0.1",
     "endent": "^2.1.0",
     "es-module-lexer": "^0.9.3",
     "escape-goat": "^3.0.0",
-    "html5parser": "^2.0.2",
     "magic-string": "^0.25.7",
     "md5-hex": "^3.0.0",
-    "on-change": "<4",
     "terser": "^5.10.0",
     "threads": "^1.7.0",
     "vite": "npm:@alloc/vite@2.6.3-3"

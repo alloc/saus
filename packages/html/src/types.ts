@@ -32,11 +32,13 @@ export type HtmlTag = ITag & {
 
 export type { HtmlTagPath }
 
-export type HtmlTagVisitor =
-  | HtmlVisitFn
+export type HtmlVisitorArgs = [path: HtmlTagPath, state: HtmlVisitorState]
+
+export type HtmlTagVisitor<Args extends any[] = HtmlVisitorArgs> =
+  | HtmlVisitFn<Args>
   | {
-      open?: HtmlVisitFn
-      close?: HtmlVisitFn
+      open?: HtmlVisitFn<Args>
+      close?: HtmlVisitFn<Args>
     }
 
 export type HtmlVisitor = {
@@ -47,18 +49,13 @@ export type HtmlVisitor = {
   /**
    * This visitor will be called even if no `<html>` tag exists.
    */
-  html?: HtmlTagVisitor
+  html?: HtmlTagVisitor<
+    [paths: readonly HtmlTagPath[], state: HtmlVisitorState]
+  >
 }
 
-export type HtmlVisitorMap = {
-  pre: HtmlVisitor[]
-  default: HtmlVisitor[]
-  post: HtmlVisitor[]
-}
-
-export type HtmlVisitFn = (
-  path: HtmlTagPath,
-  state: HtmlVisitorState
+export type HtmlVisitFn<Args extends any[] = HtmlVisitorArgs> = (
+  ...args: Args
 ) => void | Promise<void>
 
 /**
@@ -70,5 +67,3 @@ export type HtmlVisitorState = {
   page: RenderedPage
   config: RuntimeConfig
 }
-
-export type HtmlSelector = Required<Pick<HtmlVisitor, 'open'>>

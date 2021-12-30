@@ -1,22 +1,14 @@
-import { describe, expect, it, fn } from 'vitest'
-import { HtmlTagPath, traverse as traverseImpl } from './traversal'
-import { HtmlText, HtmlVisitor, HtmlVisitorState } from './types'
+import { describe, expect, fn, it } from 'vitest'
+import { traverse } from './test'
+import { HtmlTagPath, HtmlText } from './types'
 
-describe('HTML traversal', () => {
+describe('HTML visitors', () => {
   it('calls "open" and "close" handlers', async () => {
     const visitor = { open: fn(), close: fn() }
     await traverse(`<div><div/></div>`, visitor)
 
     expect(visitor.open).toBeCalledTimes(2)
     expect(visitor.close).toBeCalledTimes(2)
-  })
-
-  it('can have method with CSS selector key', async () => {
-    const spy = fn()
-    const visitor = { 'div > div': spy }
-    await traverse(`<div><div/></div>`, visitor)
-
-    expect(spy).toBeCalledTimes(1)
   })
 
   describe('path.skip', () => {
@@ -244,10 +236,3 @@ describe('HTML traversal', () => {
     })
   })
 })
-
-function traverse(html: string, visitors: HtmlVisitor | HtmlVisitor[]) {
-  const state: HtmlVisitorState = {
-    page: { path: '/', html, routeModuleId: '/main.js' },
-  }
-  return traverseImpl(html, state, visitors)
-}
