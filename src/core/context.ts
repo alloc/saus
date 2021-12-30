@@ -1,13 +1,13 @@
 import fs from 'fs'
 import Module from 'module'
+import { resolve } from 'path'
 import esModuleLexer from 'es-module-lexer'
 import type { RenderedPage } from '../pages'
 import { Deferred } from '../utils/defer'
 import { ClientState } from './client'
-import { readSausYaml } from '../config'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { UserConfig, vite } from './vite'
+import { SausConfig, UserConfig, vite } from './vite'
 import { ConfigHook, setConfigHooks } from './config'
 import { Profiling } from '../profiling'
 import { HtmlContext } from './html'
@@ -21,8 +21,6 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   configHooks: string[]
   /** The `saus.defaultPath` option from Vite config */
   defaultPath: string
-  /** Path to server entry module */
-  serverPath?: string
   /** Path to the routes module */
   routesPath: string
   /** Rendered page cache */
@@ -54,22 +52,6 @@ export async function loadContext(
   const logLevel = inlineConfig?.logLevel || 'info'
   const logger = vite.createLogger(logLevel)
 
-  Profiling.mark('load saus.yaml')
-
-  // Load "saus.yaml"
-  const {
-    render: renderPath,
-    routes: routesPath,
-    server: serverPath,
-  } = readSausYaml(root, logger)
-
-  if (!renderPath) {
-    logger.warn(`[saus] Your "saus.yaml" config is missing a "render" property`)
-  }
-  if (!routesPath) {
-    logger.warn(`[saus] Your "saus.yaml" config is missing a "routes" property`)
-  }
-
   Profiling.mark('load user config')
 
   // Load "vite.config.ts"
@@ -82,6 +64,14 @@ export async function loadContext(
 
   const userConfig = loadResult ? loadResult.config : {}
   userConfig.mode ??= configEnv.mode
+
+  const sausConfig = userConfig.saus
+  assertSausConfig(sausConfig)
+  assertSausConfig(sausConfig, 'render')
+  assertSausConfig(sausConfig, 'routes')
+
+  const renderPath = resolve(root, sausConfig.render)
+  const routesPath = resolve(root, sausConfig.routes)
 
   const overrides: vite.InlineConfig = {
     configFile: false,
@@ -98,7 +88,7 @@ export async function loadContext(
     },
   }
 
-  let config: vite.UserConfig = vite.mergeConfig(userConfig, overrides)
+  let config = vite.mergeConfig(userConfig, overrides) as vite.UserConfig
   if (inlineConfig) {
     config = vite.mergeConfig(config, inlineConfig)
   }
@@ -106,12 +96,11 @@ export async function loadContext(
   const context: SausContext = {
     root,
     logger,
-    config,
+    config: config as UserConfig,
     configEnv,
     configPath: loadResult ? loadResult.path : null,
     configHooks: [],
-    defaultPath: config.saus?.defaultPath || '/404',
-    serverPath,
+    defaultPath: sausConfig.defaultPath || '/404',
     routesPath,
     routes: [],
     pages: {},
@@ -145,8 +134,27 @@ export async function loadContext(
     config.plugins.unshift(sausPlugins.map(p => p(context)))
   }
 
-  context.config = config
+  context.config = config as UserConfig
   return context
+}
+
+function assertSausConfig(
+  config: SausConfig | undefined
+): asserts config is SausConfig
+
+function assertSausConfig(config: SausConfig, prop: keyof SausConfig): void
+
+function assertSausConfig(
+  config: SausConfig | undefined,
+  prop?: keyof SausConfig
+) {
+  const value = prop ? config![prop] : config
+  if (!value) {
+    const keyPath = 'saus' + (prop ? '.' + prop : '')
+    throw Error(
+      `[saus] You must define the "${keyPath}" property in your Vite config`
+    )
+  }
 }
 
 export interface ModuleLoader extends vite.ViteDevServer {}

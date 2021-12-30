@@ -7,8 +7,8 @@ type Promisable<T> = T | PromiseLike<T>
 type ExcludeVoid<T> = Exclude<T, null | void>
 
 /**
- * Values that can be configured by the "render module"
- * defined in `saus.yaml` with the `render` path property.
+ * Values configurable from the `saus.render` module defined in
+ * your Vite config.
  */
 export type RenderModule = {
   /** Hooks that run before the renderer */

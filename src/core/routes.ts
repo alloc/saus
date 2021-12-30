@@ -85,8 +85,8 @@ export function matchRoute(path: string, route: ParsedRoute) {
 }
 
 /**
- * Values set by the "routes module" defined in `saus.yaml` with
- * the `routes` path property.
+ * Values configurable from the `saus.routes` module defined
+ * in your Vite config.
  */
 export interface RoutesModule extends HtmlContext {
   /** Routes defined with the `route` function */

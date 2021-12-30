@@ -1,7 +1,7 @@
 {
   "name": "saus",
   "version": "0.4.10",
-  "description": "Radically simple SSG powered by Vite",
+  "description": "Radically simple SSG/SSR powered by Vite",
   "author": "Alec Larson",
   "license": "MIT",
   "repository": "alloc/saus",
@@ -12,7 +12,10 @@
     "src",
     "dist",
     "babel",
-    "client"
+    "bundle",
+    "client",
+    "core",
+    "paths"
   ],
   "scripts": {
     "build": "rimraf dist && tsup",
@@ -67,8 +70,7 @@
     "ts-debounce": "^3.0.0",
     "tsup": "^5.11.6",
     "typescript": "^4.0.0",
-    "vitest": "*",
-    "yaml": "^1.10.2"
+    "vitest": "*"
   },
   "prettier": "@alloc/prettier-config"
 }

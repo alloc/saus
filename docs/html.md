@@ -1,6 +1,6 @@
 # HTML Manipulation
 
-Saus provides hooks for traversal and manipulation of each page's HTML. These hooks run before any Vite plugins with `transformIndexHtml` hooks, and they must be added from your `routes` module (defined in `saus.yaml`).
+Saus provides hooks for traversal and manipulation of each page's HTML. These hooks run before any Vite plugins with `transformIndexHtml` hooks, and they must be added from your `saus.routes` module (defined in your Vite config).
 
 Saus doesn't run Vite plugins within your SSR bundle, so you need to use these Saus-specific hooks (instead of `transformIndexHtml` Vite hooks) if you want to manipulate pages generated in SSR mode.
 

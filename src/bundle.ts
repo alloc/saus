@@ -5,7 +5,7 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
-import { warnOnce } from 'misty'
+import { fatal, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
@@ -37,16 +37,25 @@ export interface BundleOptions {
 }
 
 export async function bundle(options: BundleOptions) {
-  const context = await loadContext('build', undefined, [renderPlugin])
+  let context: SausContext
+  try {
+    context = await loadContext('build', undefined, [renderPlugin])
+  } catch (e: any) {
+    if (e.message.startsWith('[saus]')) {
+      fatal(e.message)
+    }
+    throw e
+  }
 
   const outDir = context.config.build?.outDir || 'dist'
-  const bundleFormat = context.config.saus?.bundle?.format || 'cjs'
+  const bundleConfig = context.config.saus.bundle || {}
+  const bundleFormat = bundleConfig.format || 'cjs'
   const bundlePath = options.outFile
     ? path.resolve(options.outFile)
-    : context.serverPath &&
+    : bundleConfig.entry &&
       path.resolve(
         context.root,
-        context.serverPath
+        bundleConfig.entry
           .replace(/^(\.\/)?src\//, outDir + '/')
           .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
       )
@@ -91,10 +100,10 @@ export async function bundle(options: BundleOptions) {
   fs.writeFileSync(bundlePath, bundle.code + mapFileComment)
   fs.writeFileSync(bundlePath + '.map', JSON.stringify(bundle.map))
 
-  if (!context.serverPath) {
+  if (!bundleConfig.entry) {
     fs.copyFileSync(
       path.resolve(__dirname, '../src/bundle/types.ts'),
-      bundlePath.replace(/(\.js)?$/, '.d.ts')
+      bundlePath.replace(/(\.[cm]js)?$/, '.d.ts')
     )
   }
 }
@@ -216,7 +225,7 @@ async function prepareFunctions(context: SausContext) {
   implicitImports.add(`import { hydrate } from "saus/client"`)
 
   // Renderer packages often import modules that help with hydrating the page.
-  for (const { imports } of config.saus?.clients || []) {
+  for (const { imports } of config.saus!.clients || []) {
     serializeImports(imports).forEach(stmt => implicitImports.add(stmt))
   }
 
@@ -316,13 +325,17 @@ async function generateBundle(
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
+  const bundleConfig = context.config.saus.bundle || {}
+  const bundleType = bundleConfig.type || 'script'
   const serverPath =
-    context.serverPath && path.resolve(context.root, context.serverPath)
+    bundleConfig.entry && path.resolve(context.root, bundleConfig.entry)
 
   const overrides: vite.UserConfig = {
     plugins: [
       modules,
-      serverPath ? transformServer(serverPath) : null,
+      serverPath && bundleType == 'script'
+        ? transformServerScript(serverPath)
+        : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...redirectedModules,
       // debugSymlinkResolver(),
@@ -491,9 +504,9 @@ async function generateKnownPaths(context: SausContext) {
  * Wrap top-level statements in the `server` module with `setImmediate`
  * to avoid TDZ issues.
  */
-function transformServer(serverPath: string): vite.Plugin {
+function transformServerScript(serverPath: string): vite.Plugin {
   return {
-    name: 'saus:transformServer',
+    name: 'saus:transformServerScript',
     enforce: 'pre',
     transform(code, id) {
       if (id === serverPath) {

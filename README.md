@@ -24,11 +24,15 @@ Run `saus build` to generate pages.
 
 Saus lets you implement client-side routing, but it still needs your routes so it can generate static pages at build time. Saus handles server-side routing and client-side hydration.
 
-Add a `routes` path to your `saus.yaml` config, so Saus knows your routes. Since your routes module runs in a Node environment, it's recommended to create a `./src/node` folder and keep your routes in there.
+Define the `saus.routes` path in your Vite config, so Saus knows your routes. Since your routes module runs in a Node environment, it's recommended to create a `./src/node` folder and keep your routes in there.
 
-```yml
-# saus.yaml
-routes: ./src/node/routes.ts
+```ts
+// vite.config.ts
+import { defineConfig } from 'saus'
+
+export default defineConfig({
+  routes: './src/node/routes.ts',
+})
 ```
 
 Routes are defined with the `route` function. They are matched in reverse order.
@@ -110,9 +114,13 @@ Saus is unopinionated about your view framework. Instead, it has a concept calle
 
 First, tell Saus where to find your render module.
 
-```yml
-# saus.yaml
-render: ./src/render.tsx
+```ts
+// vite.config.ts
+import { defineConfig } from 'saus'
+
+export default defineConfig({
+  render: './src/render.tsx',
+})
 ```
 
 Define a Saus renderer by calling the `render` function in your render module. It takes an optional route path as its first argument. If no route path is given, you've defined the default renderer.

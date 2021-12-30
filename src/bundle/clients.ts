@@ -1,13 +1,14 @@
-import terser from 'terser'
-import path from 'path'
 import { warnOnce } from 'misty'
+import path from 'path'
+import terser from 'terser'
+import { BundleOptions } from '../bundle'
 import { ClientFunctions, mapClientFunctions } from '../core'
-import { vite } from '../core/vite'
+import { UserConfig, vite } from '../core/vite'
+import { parseImports } from '../utils/imports'
 import { createModuleProvider } from './moduleProvider'
 import type { RuntimeConfig } from './runtime/config'
-import { ClientModule, ClientModuleMap } from './runtime/modules'
-import { parseImports } from '../utils/imports'
-import { BundleOptions } from '../bundle'
+import { ClientModuleMap } from './runtime/modules'
+import { ClientModule } from './types'
 
 const ID_PREFIX = 'import:'
 
@@ -28,7 +29,7 @@ export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
   { assetsDir, base }: RuntimeConfig,
-  config: vite.UserConfig,
+  config: UserConfig,
   options: BundleOptions
 ): Promise<ClientModuleMap> {
   const input: string[] = []
@@ -77,7 +78,7 @@ export async function generateClientModules(
   config = vite.mergeConfig(config, <vite.UserConfig>{
     plugins: [modules],
     build: {
-      target: config.saus?.client?.target || 'modules',
+      target: config.saus.client?.target || 'modules',
       rollupOptions: {
         input,
         output: {
@@ -88,7 +89,7 @@ export async function generateClientModules(
       minify: options.minify,
       write: false,
     },
-  })
+  }) as UserConfig
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const { output } = buildResult.output[0]

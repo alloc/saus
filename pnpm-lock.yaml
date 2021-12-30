@@ -47,7 +47,6 @@ importers:
       typescript: ^4.0.0
       vite: npm:@alloc/vite@2.6.3-3
       vitest: '*'
-      yaml: ^1.10.2
     dependencies:
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.16.5
       cac: 6.7.3
@@ -92,8 +91,7 @@ importers:
       ts-debounce: 3.0.0
       tsup: 5.11.6_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
-      yaml: 1.10.2
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -2384,7 +2382,7 @@ packages:
     resolution: {integrity: sha512-RanEelDzP4yCwPXY5OlWMSb/wZ+tKbM1VEFDLtYdOfZvp6bfE2X8S3zqz+/uQGUd6X1RaUGOUGgisc3Rygn5JQ==}
     dev: true
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -2407,7 +2405,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/2.0.2:

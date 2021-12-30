@@ -1,3 +1,0 @@
-routes: ./src/node/routes.ts
-render: ./src/render.tsx
-server: ./src/node/server.ts

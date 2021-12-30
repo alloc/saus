@@ -2,7 +2,7 @@
 
 Pre-render your pages with React and `@saus/react` will generate the module that hydrates your page on the client-side. Use JSX to render your `<head>` and `<body>` tags. Use the automatic JSX runtime and Fast Refresh.
 
-Start by importing the `render` function in your project's `src/render.tsx` module (or whichever module you set `render` to in your `saus.yaml` file).
+Start by importing the `render` function in your project's `src/render.tsx` module (or the `saus.render` module defined in your Vite config).
 
 ```ts
 import { render } from '@saus/react'
