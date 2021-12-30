@@ -5,15 +5,21 @@ import {
   Selector,
   SelectorType,
 } from 'css-what'
-import { IAttribute } from 'html5parser'
-import { HtmlSelector, HtmlTagPath, HtmlVisitFn } from './types'
+import {
+  HtmlAttribute,
+  HtmlTagPath,
+  HtmlTagVisitor,
+  HtmlVisitor,
+} from './types'
+
+export type HtmlSelector = Required<Pick<HtmlVisitor, 'open'>>
 
 /**
  * Create an `HtmlVisitor` from a CSS selector list.
  *
  * The `onMatch` function is called before descendants are traversed.
  */
-export function $(pattern: string, onMatch: HtmlVisitFn): HtmlSelector {
+export function $(pattern: string, visitor: HtmlTagVisitor): HtmlSelector {
   const match = (
     path: HtmlTagPath | undefined,
     matcher: Selector[]
@@ -53,12 +59,14 @@ export function $(pattern: string, onMatch: HtmlVisitFn): HtmlSelector {
     return true
   }
 
+  const { open, close } = expandVisitFn()
+
   const matchers = parse(pattern)
   return {
     open(path, state) {
       for (const matcher of matchers) {
         if (match(path, matcher)) {
-          return onMatch(path, state)
+          return visitor(path, state)
         }
       }
     },
@@ -66,7 +74,7 @@ export function $(pattern: string, onMatch: HtmlVisitFn): HtmlSelector {
 }
 
 function matchAttribute(
-  attribute: IAttribute | undefined,
+  attribute: HtmlAttribute | undefined,
   selector: AttributeSelector
 ) {
   if (selector.action == AttributeAction.Exists) {

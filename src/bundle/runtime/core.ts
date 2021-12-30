@@ -1,6 +1,6 @@
 // Redirect "saus/core" imports here.
-export { render, beforeRender } from '../../core/render'
-export { createPageFactory } from '../../pages'
+export * from '../../core/render'
+export * from '../../core/html'
 
 // This is also exported by "saus/src/core/client" but we
 // want to avoid processing that module, since it has heavy
@@ -11,5 +11,4 @@ export const defineClient = (x: any) => x
 export const addConfigHook = () => {}
 
 export { default as endent } from 'endent'
-export { htmlEscape as escape } from 'escape-goat'
 export { default as md5Hex } from 'md5-hex'

@@ -1,6 +1,7 @@
 export * from './config'
 export * from './context'
 export * from './client'
+export * from './html'
 export * from './state'
 export * from './render'
 export * from './renderer'
@@ -8,3 +9,7 @@ export * from './routes'
 export * from './vite'
 
 export { default as endent } from 'endent'
+export { default as md5Hex } from 'md5-hex'
+
+export type { RenderedPage } from '../pages'
+export type { RuntimeConfig } from '../bundle/runtime/config'

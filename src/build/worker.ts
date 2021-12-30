@@ -1,9 +1,9 @@
 import { expose, isWorkerRuntime } from 'threads/worker'
-import { RuntimeConfig } from '../bundle/runtime/config'
 import {
   createLoader,
   extractClientFunctions,
   loadContext,
+  mergeHtmlProcessors,
   ModuleLoader,
   RegexParam,
   RouteParams,
@@ -53,16 +53,13 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       setRoutesModule(null)
     }
 
-    if (context.visitors) {
-      const { visitors, config: userConfig } = context
-      const config: RuntimeConfig = {
-        assetsDir: userConfig.build?.assetsDir || 'assets',
-        base: userConfig.base || '/',
-        mode: userConfig.mode || 'development',
-      }
-      const { transformHtml } = await import('../core/html')
-      context.transformHtml = (html, page) =>
-        transformHtml(html, { page, config }, visitors)
+    if (context.htmlProcessors) {
+      const { config } = context
+      context.processHtml = mergeHtmlProcessors(context.htmlProcessors, {
+        assetsDir: config.build?.assetsDir || 'assets',
+        base: config.base || '/',
+        mode: config.mode || 'development',
+      })
     }
 
     return createPageFactory(

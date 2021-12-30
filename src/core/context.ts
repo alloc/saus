@@ -1,16 +1,16 @@
+import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
 import { resolve } from 'path'
-import esModuleLexer from 'es-module-lexer'
 import type { RenderedPage } from '../pages'
+import { Profiling } from '../profiling'
 import { Deferred } from '../utils/defer'
 import { ClientState } from './client'
+import { ConfigHook, setConfigHooks } from './config'
+import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { SausConfig, UserConfig, vite } from './vite'
-import { ConfigHook, setConfigHooks } from './config'
-import { Profiling } from '../profiling'
-import { HtmlContext } from './html'
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string

@@ -1,0 +1,33 @@
+{
+  "name": "@saus/html",
+  "version": "0.4.9",
+  "description": "Helpers for HTML manipulation in Saus hooks",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsup",
+    "dev": "tsup --watch",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.7",
+    "saus": "*"
+  },
+  "dependencies": {
+    "@cush/relative": "^1.0.0",
+    "chalk": "4.x",
+    "debug": "^4.3.2",
+    "misty": "^1.4.0",
+    "node-fetch": "^3.1.0",
+    "url-regex": "^5.0.0"
+  }
+}

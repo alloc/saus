@@ -1,6 +1,9 @@
-import { RuntimeConfig } from '../bundle/runtime/config'
-import { extractClientFunctions, Plugin, SausContext } from '../core'
-import { transformHtml } from '../core/html'
+import {
+  extractClientFunctions,
+  mergeHtmlProcessors,
+  Plugin,
+  SausContext,
+} from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
@@ -18,15 +21,13 @@ export function servePlugin(
   return {
     name: 'saus:serve',
     contextUpdate(context) {
-      if (context.visitors) {
-        const { visitors, config: userConfig } = context
-        const config: RuntimeConfig = {
-          assetsDir: userConfig.build?.assetsDir || 'assets',
-          base: userConfig.base || '/',
-          mode: userConfig.mode || 'development',
-        }
-        context.transformHtml = (html, page) =>
-          transformHtml(html, { page, config }, visitors)
+      if (context.htmlProcessors) {
+        const { config } = context
+        context.processHtml = mergeHtmlProcessors(context.htmlProcessors, {
+          assetsDir: config.build?.assetsDir || 'assets',
+          base: config.base || '/',
+          mode: config.mode || 'development',
+        })
       }
       pageFactory = createPageFactory(
         context,

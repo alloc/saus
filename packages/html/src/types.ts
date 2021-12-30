@@ -1,11 +1,9 @@
 import type { IAttribute as HtmlAttribute, ITag } from 'html5parser'
-import type { RuntimeConfig } from '../bundle/runtime/config'
-import type { RenderedPage } from '../pages'
-import type { HtmlTagPath, kTagPath } from './traversal'
+import type { RenderedPage, RuntimeConfig } from 'saus/core'
+import type { kTagPath } from './symbols'
+import type { HtmlTagPath } from './traversal'
 
 type Promisable<T> = T | PromiseLike<T>
-
-export type EnforcementPhase = 'pre' | 'post'
 
 export type HtmlResolverState = HtmlVisitorState & {
   /** The tag whose URL attribute is being resolved */
@@ -34,11 +32,28 @@ export type HtmlTag = ITag & {
 
 export type { HtmlTagPath }
 
+export type HtmlTagVisitor =
+  | HtmlVisitFn
+  | {
+      open?: HtmlVisitFn
+      close?: HtmlVisitFn
+    }
+
 export type HtmlVisitor = {
-  [tag: string]: HtmlVisitFn
+  [tag: string]: HtmlTagVisitor
 } & {
   open?: HtmlVisitFn
   close?: HtmlVisitFn
+  /**
+   * This visitor will be called even if no `<html>` tag exists.
+   */
+  html?: HtmlTagVisitor
+}
+
+export type HtmlVisitorMap = {
+  pre: HtmlVisitor[]
+  default: HtmlVisitor[]
+  post: HtmlVisitor[]
 }
 
 export type HtmlVisitFn = (

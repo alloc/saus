@@ -2,19 +2,48 @@ import { htmlEscape } from 'escape-goat'
 import { parse, SyntaxKind } from 'html5parser'
 import MagicString from 'magic-string'
 import onChange from 'on-change'
-import { noop } from '../utils/noop'
-import { $ } from './selector'
+import { kTagPath, kVisitorsArray } from './symbols'
+import {
+  EnforcedHandler,
+  EnforcementPhase,
+  findHtmlProcessor,
+  processHtml,
+} from 'saus/core'
 import {
   HtmlAttributeValue,
   HtmlNode,
-  HtmlSelector,
   HtmlTag,
+  HtmlTagVisitor,
   HtmlText,
   HtmlVisitor,
   HtmlVisitorState,
 } from './types'
 
-export const kTagPath = Symbol.for('html.TagPath')
+type TraverseHtmlHook = EnforcedHandler<
+  [visitor: HtmlVisitor] | [visitors: HtmlVisitor[]]
+>
+
+export const traverseHtml = ((arg, arg2) => {
+  let enforce: EnforcementPhase | undefined
+  if (!arg || typeof arg == 'string') {
+    enforce = arg
+    arg = arg2!
+  }
+  const traverse = findHtmlProcessor<TraverseHtmlFn>(
+    enforce,
+    p => kVisitorsArray in p
+  )
+  if (traverse) {
+    const visitors = traverse[kVisitorsArray]
+    if (Array.isArray(arg)) {
+      arg.forEach(visitor => visitors.push(visitor))
+    } else {
+      visitors.push(arg)
+    }
+  } else {
+    processHtml(enforce, bindVisitors(arg))
+  }
+}) as TraverseHtmlHook
 
 /** Indicates a removed or replaced node */
 const kRemovedNode = Symbol.for('html.RemovedNode')
@@ -34,71 +63,77 @@ type HtmlTraversalContext = {
   state: HtmlVisitorState
 }
 
-export async function traverse(
-  html: string,
-  state: HtmlVisitorState,
-  visitors: HtmlVisitor | HtmlVisitor[]
-) {
-  if (Array.isArray(visitors) && !visitors.length) {
-    return html
-  }
+export type TraverseHtmlFn = ReturnType<typeof bindVisitors> & {
+  [kVisitorsArray]: HtmlVisitor[]
+}
 
-  const editor = new MagicString(html)
-  const context: HtmlTraversalContext = { editor, state }
+export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
+  const visitors = Array.isArray(arg) ? arg : [arg]
 
-  for (const tag of parse(html, { setAttributeMap: true })) {
-    if (!isTag(tag)) {
-      continue
+  async function traverse(html: string, state: HtmlVisitorState) {
+    const editor = new MagicString(html)
+    const context: HtmlTraversalContext = { editor, state }
+
+    for (const tag of parse(html, { setAttributeMap: true })) {
+      if (!isTag(tag)) {
+        continue
+      }
+
+      const observer = (path: string, value: any, oldValue: any) => {
+        if (typeof value !== 'string') {
+          throw Error(`Property mutation must be string-based`)
+        }
+        const keys = path.split('.')
+        const lastKey = keys.pop() as string
+        // A text node or attribute node can have its value edited.
+        if (lastKey === 'value') {
+          const node = resolveKeyPath<HtmlText | HtmlAttributeValue>(tag, keys)
+          // Undo the change, so visitors in the same pass never affect each other.
+          node[lastKey] = oldValue
+          editor.overwrite(node.start, node.end, value)
+        }
+        // A tag node can have its name edited.
+        else if (lastKey === 'name' || lastKey === 'rawName') {
+          const node = resolveKeyPath<HtmlTag>(tag, keys)
+          // Undo the change, so visitors in the same pass never affect each other.
+          node[lastKey] = oldValue
+
+          if (lastKey === 'name') {
+            value = value.toLowerCase()
+          }
+
+          const { open, close } = node
+          editor.overwrite(
+            open.start + 1,
+            open.start + oldValue.length + 1,
+            value
+          )
+          if (close) {
+            editor.overwrite(close.start + 2, close.end - 1, value)
+          }
+        } else {
+          throw Error(`Unsupported property mutation: ${path}`)
+        }
+      }
+
+      const path = new HtmlTagPath(
+        context,
+        onChange(tag, observer, {
+          ignoreSymbols: true,
+        })
+      )
+
+      await path.traverse(visitors)
     }
 
-    const observer = (path: string, value: any, oldValue: any) => {
-      if (typeof value !== 'string') {
-        throw Error(`Property mutation must be string-based`)
-      }
-      const keys = path.split('.')
-      const lastKey = keys.pop() as string
-      // A text node or attribute node can have its value edited.
-      if (lastKey === 'value') {
-        const node = resolveKeyPath<HtmlText | HtmlAttributeValue>(tag, keys)
-        // Undo the change, so visitors in the same pass never affect each other.
-        node[lastKey] = oldValue
-        editor.overwrite(node.start, node.end, value)
-      }
-      // A tag node can have its name edited.
-      else if (lastKey === 'name' || lastKey === 'rawName') {
-        const node = resolveKeyPath<HtmlTag>(tag, keys)
-        // Undo the change, so visitors in the same pass never affect each other.
-        node[lastKey] = oldValue
-
-        if (lastKey === 'name') {
-          value = value.toLowerCase()
-        }
-
-        const { open, close } = node
-        editor.overwrite(
-          open.start + 1,
-          open.start + oldValue.length + 1,
-          value
-        )
-        if (close) {
-          editor.overwrite(close.start + 2, close.end - 1, value)
-        }
-      } else {
-        throw Error(`Unsupported property mutation: ${path}`)
-      }
-    }
-
-    const path = new HtmlTagPath(
-      context,
-      onChange(tag, observer, {
-        ignoreSymbols: true,
-      })
-    )
-
-    await path.traverse(visitors)
+    return editor.toString()
   }
 
-  return editor.toString()
+  Object.defineProperty(traverse, kVisitorsArray, {
+    value: visitors,
+  })
+
+  return traverse
 }
 
 const unaryTags = new Set(['link', 'meta', 'base'])
@@ -116,6 +151,8 @@ function getTagPath(node: HtmlTag, parentPath: HtmlTagPath) {
     parentPath
   ))
 }
+
+const noop = () => {}
 
 export class HtmlTagPath {
   constructor(
@@ -428,37 +465,21 @@ function mergeVisitors(
   }
 }
 
-const selectorRE = /[., >#*]/
+/**
+ * Coerce a visitor function into an `{ open }` visitor.
+ */
+export function coerceVisitFn(visitor: HtmlTagVisitor) {
+  return typeof visitor == 'function' ? { open: visitor } : visitor
+}
+
+const keywords = ['open', 'close', 'html']
 
 const kTagVisitor = Symbol.for('html.TagVisitor')
 
 function isTagVisitor(visitor: HtmlVisitor & { [kTagVisitor]?: boolean }) {
-  let result = visitor[kTagVisitor]
-  if (result == null) {
-    // Parse selector keys at the same time.
-    const selectors: HtmlSelector[] = []
-    for (const key in visitor) {
-      if (key !== 'open' && key !== 'close') {
-        result = true
-        if (selectorRE.test(key)) {
-          selectors.push($(key, visitor[key]))
-        }
-      }
-    }
-    if (selectors.length) {
-      const onOpen = visitor.open
-      visitor.open = async (path, state) => {
-        for (const selector of selectors) {
-          await selector.open(path, state)
-        }
-        if (onOpen) {
-          await onOpen(path, state)
-        }
-      }
-    }
-    visitor[kTagVisitor] = result
-  }
-  return result
+  return (visitor[kTagVisitor] ??= Object.keys(visitor).some(
+    key => !keywords.includes(key)
+  ))
 }
 
 function isTag(node: HtmlNode): node is HtmlTag {
