@@ -3,7 +3,7 @@
     "src",
     "packages/html/src/resolver.ts",
     "packages/html/src/types.ts",
-    "packages/html/src/traversal.spec.ts",
+    "packages/html/src/visitors.spec.ts",
     "packages/html/src/traversal.ts",
     "packages/html/src/selector.spec.ts",
     "packages/html/src/selector.ts"

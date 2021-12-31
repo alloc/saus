@@ -1,9 +1,9 @@
-import { htmlEscape } from 'escape-goat'
+import { escape } from 'saus'
 import MagicString from 'magic-string'
 import onChange from 'on-change'
 import { kRemovedNode, kTagPath } from './symbols'
-import { HtmlTag, HtmlVisitor } from './types'
-import { HtmlDocument, isTag, mergeVisitors } from './visitors'
+import { HtmlDocument, HtmlTag, HtmlVisitor } from './types'
+import { isTag, mergeVisitors } from './visitors'
 
 const noop = () => {}
 
@@ -188,7 +188,7 @@ export class HtmlTagPath {
       return this.removeAttribute(name)
     }
 
-    value = name + (typeof value == 'string' ? `="${htmlEscape(value)}"` : '')
+    value = name + (typeof value == 'string' ? `="${escape(value)}"` : '')
 
     let start: number
     let end: number

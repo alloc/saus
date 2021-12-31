@@ -89,6 +89,7 @@ importers:
 
   examples/react-basic:
     specifiers:
+      '@saus/html': '*'
       '@saus/react': '*'
       '@types/etag': ^1.8.1
       '@types/node': ^16.10.2
@@ -98,6 +99,7 @@ importers:
       navaid: ^1.2.0
       saus: '*'
     dependencies:
+      '@saus/html': link:../../packages/html
       '@saus/react': link:../../packages/react
       '@types/etag': 1.8.1
       mrmime: 1.0.0
@@ -115,6 +117,7 @@ importers:
       css-what: ^6.0.1
       debug: ^4.3.2
       html5parser: ^2.0.2
+      magic-string: ^0.25.7
       node-fetch: ^3.1.0
       on-change: <4
       saus: '*'
@@ -124,6 +127,7 @@ importers:
       css-what: 6.0.1
       debug: 4.3.3
       html5parser: 2.0.2
+      magic-string: 0.25.7
       node-fetch: 3.1.0
       on-change: 3.0.2
       url-regex: 5.0.0

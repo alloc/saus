@@ -354,7 +354,6 @@ function renderClient(
   renderFn: RenderFunction,
   beforeRenderFns?: ClientFunction[]
 ) {
-  m
   const script = new MagicBundle()
   const imports = [
     `import { onHydrate as $onHydrate } from "saus/client"`,

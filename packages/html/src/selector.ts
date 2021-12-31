@@ -5,13 +5,13 @@ import {
   Selector,
   SelectorType,
 } from 'css-what'
-import { coerceVisitFn } from './traversal'
 import {
   HtmlAttribute,
   HtmlTagPath,
   HtmlTagVisitor,
   HtmlVisitor,
 } from './types'
+import { coerceVisitFn } from './visitors'
 
 /**
  * Create an `HtmlVisitor` from a CSS selector list.
@@ -59,16 +59,20 @@ export function $(pattern: string, visitor: HtmlTagVisitor): HtmlVisitor {
     return true
   }
 
-  visitor = coerceVisitFn(visitor)
+  if (typeof visitor == 'function') {
+    visitor = { open: visitor }
+  }
 
-  let matched: WeakSet<HtmlTagPath> | undefined
+  let matched: WeakSet<HtmlTagPath>
   if (visitor.open) {
-    const { open } = visitor
-    matched = new WeakSet()
+    const { open, close } = visitor
+    if (close) {
+      matched = new WeakSet()
+    }
     visitor.open = (path, state) => {
       for (const matcher of matchers) {
         if (match(path, matcher)) {
-          matched!.add(path)
+          close && matched.add(path)
           return open(path, state)
         }
       }
@@ -79,7 +83,7 @@ export function $(pattern: string, visitor: HtmlTagVisitor): HtmlVisitor {
     const { close } = visitor
     visitor.close = visitor.open
       ? (path, state) => {
-          if (matched!.has(path)) {
+          if (matched.has(path)) {
             close(path, state)
           }
         }

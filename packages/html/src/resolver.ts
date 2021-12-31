@@ -1,11 +1,13 @@
-import { routesModule } from '../../../src/core/global'
-import { addHtmlVisitor } from '../../../src/core/html'
+import { EnforcementPhase, findHtmlProcessor } from 'saus/core'
+import { kVisitorsArray } from './symbols'
+import { traverseHtml } from './traversal'
 import {
-  EnforcementPhase,
   HtmlResolver,
   HtmlResolverState,
   HtmlTagPath,
+  HtmlVisitor,
 } from './types'
+import { TraverseVisitor } from './visitors'
 
 const kResolverList = Symbol.for('html.ResolverList')
 
@@ -30,6 +32,8 @@ export function resolveHtmlImports(
   resolver?: HtmlResolver
 ) {
   let enforce: EnforcementPhase | undefined
+  let visitor: HtmlVisitor | undefined
+
   if (typeof arg1 == 'function') {
     resolver = arg1
   } else {
@@ -37,17 +41,23 @@ export function resolveHtmlImports(
     assertType<HtmlResolver>(resolver)
   }
 
-  let resolvers: HtmlResolver[]
-  let visitor = routesModule.visitors[enforce || 'default'].find(
-    visitor => kResolverList in visitor
+  const traverseFn = findHtmlProcessor<TraverseVisitor>(
+    enforce,
+    p => kVisitorsArray in p
   )
 
-  if (visitor) {
-    resolvers = Reflect.get(visitor, kResolverList)
-    resolvers.push(resolver)
-    return
+  if (traverseFn) {
+    visitor = traverseFn[kVisitorsArray].find(
+      visitor => kResolverList in visitor
+    )
+    if (visitor) {
+      const resolvers = Reflect.get(visitor, kResolverList)
+      resolvers.push(resolver)
+      return
+    }
   }
 
+  const resolvers = [resolver]
   const resolve = async (
     path: HtmlTagPath,
     state: Partial<HtmlResolverState>,
@@ -77,7 +87,6 @@ export function resolveHtmlImports(
     }
   }
 
-  resolvers = [resolver]
   visitor = {
     // Avoid resolving the URL of a removed node by
     // waiting for the "close" phase.
@@ -91,7 +100,7 @@ export function resolveHtmlImports(
     value: resolvers,
   })
 
-  addHtmlVisitor(visitor, enforce)
+  traverseHtml(enforce, visitor)
 }
 
 function assertType<T>(value: unknown): asserts value is T {}

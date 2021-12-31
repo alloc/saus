@@ -1,7 +1,8 @@
 import type { IAttribute as HtmlAttribute, ITag } from 'html5parser'
+import type { default as MagicString } from 'magic-string'
 import type { RenderedPage, RuntimeConfig } from 'saus/core'
+import type { HtmlTagPath } from './path'
 import type { kTagPath } from './symbols'
-import type { HtmlTagPath } from './traversal'
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -19,26 +20,24 @@ export type HtmlResolver = (
 ) => Promisable<string | null | void>
 
 export type {
-  INode as HtmlNode,
-  IText as HtmlText,
   IAttribute as HtmlAttribute,
   IAttributeValue as HtmlAttributeValue,
+  INode as HtmlNode,
+  IText as HtmlText,
 } from 'html5parser'
+
+export type { HtmlTagPath }
 
 export type HtmlTag = ITag & {
   attributeMap: Record<string, HtmlAttribute>
   [kTagPath]?: HtmlTagPath
 }
 
-export type { HtmlTagPath }
-
-export type HtmlVisitorArgs = [path: HtmlTagPath, state: HtmlVisitorState]
-
-export type HtmlTagVisitor<Args extends any[] = HtmlVisitorArgs> =
-  | HtmlVisitFn<Args>
+export type HtmlTagVisitor =
+  | HtmlVisitFn
   | {
-      open?: HtmlVisitFn<Args>
-      close?: HtmlVisitFn<Args>
+      open?: HtmlVisitFn
+      close?: HtmlVisitFn
     }
 
 export type HtmlVisitor = {
@@ -47,15 +46,15 @@ export type HtmlVisitor = {
   open?: HtmlVisitFn
   close?: HtmlVisitFn
   /**
-   * This visitor will be called even if no `<html>` tag exists.
+   * This visitor will always be called, because `traverseHtml` injects
+   * an `<html>` tag if none exists.
    */
-  html?: HtmlTagVisitor<
-    [paths: readonly HtmlTagPath[], state: HtmlVisitorState]
-  >
+  html?: HtmlTagVisitor
 }
 
-export type HtmlVisitFn<Args extends any[] = HtmlVisitorArgs> = (
-  ...args: Args
+export type HtmlVisitFn = (
+  path: HtmlTagPath,
+  state: HtmlVisitorState
 ) => void | Promise<void>
 
 /**
@@ -66,4 +65,9 @@ export type HtmlVisitorState = {
 } & {
   page: RenderedPage
   config: RuntimeConfig
+}
+
+export type HtmlDocument = {
+  editor: MagicString
+  state: HtmlVisitorState
 }

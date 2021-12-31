@@ -11,6 +11,7 @@
     "etag": "^1.8.1"
   },
   "dependencies": {
+    "@saus/html": "*",
     "@saus/react": "*",
     "@types/etag": "^1.8.1",
     "mrmime": "^1.0.0",

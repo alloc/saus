@@ -8,6 +8,7 @@ import { parseImports } from '../utils/imports'
 import { createModuleProvider } from './moduleProvider'
 import type { RuntimeConfig } from './runtime/config'
 import { ClientModuleMap } from './runtime/modules'
+import { isCSSRequest } from './runtime/utils'
 import { ClientModule } from './types'
 
 const ID_PREFIX = 'import:'
@@ -76,7 +77,7 @@ export async function generateClientModules(
   }
 
   config = vite.mergeConfig(config, <vite.UserConfig>{
-    plugins: [modules],
+    plugins: [modules, fixChunkImports()],
     build: {
       target: config.saus.client?.target || 'modules',
       rollupOptions: {
@@ -245,4 +246,31 @@ function rewriteExports(text: string) {
     .replace(/^export \{ [^}]+ \};?$/gm, '')
     .replace(/^export /gm, 'import ')
     .trim()
+}
+
+/**
+ * Vite removes `.css` and other assets from the `imports` array
+ * of each rendered JS chunk, but the SSR bundles still needs those
+ * imports to be tracked.
+ */
+function fixChunkImports(): vite.Plugin {
+  return {
+    name: 'saus:fixChunkImports',
+    enforce: 'post',
+    configResolved(config) {
+      this.generateBundle = (_, bundle) => {
+        for (const id in bundle) {
+          const chunk = bundle[id]
+          if (chunk.type == 'chunk') {
+            config.chunkToEmittedCssFileMap.get(chunk)?.forEach(fileName => {
+              chunk.imports.push(fileName)
+            })
+            config.chunkToEmittedAssetsMap.get(chunk)?.forEach(fileName => {
+              chunk.imports.push(fileName)
+            })
+          }
+        }
+      }
+    },
+  }
 }

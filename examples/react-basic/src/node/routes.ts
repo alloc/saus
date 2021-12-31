@@ -1,4 +1,4 @@
-import { resolveHtmlImports, route, transformHtml } from 'saus'
+import { route } from 'saus'
 import pokemonList from '../../data/pokemon.json'
 
 route('/', () => import('../routes/Home'))

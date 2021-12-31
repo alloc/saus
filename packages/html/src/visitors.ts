@@ -1,26 +1,17 @@
-import MagicString from 'magic-string'
 import { parse, SyntaxKind } from 'html5parser'
+import MagicString from 'magic-string'
+import onChange from 'on-change'
+import { HtmlTagPath } from './path'
 import { kRemovedNode, kVisitorsArray } from './symbols'
 import {
   HtmlAttributeValue,
+  HtmlDocument,
+  HtmlNode,
   HtmlTag,
-  HtmlTagVisitor,
   HtmlText,
   HtmlVisitor,
   HtmlVisitorState,
 } from './types'
-
-/**
- * Coerce a visitor function into an `{ open }` visitor.
- */
-export const coerceVisitFn = <Args extends any[]>(
-  visitor: HtmlTagVisitor<Args>
-) => (typeof visitor == 'function' ? { open: visitor } : visitor)
-
-export type HtmlDocument = {
-  editor: MagicString
-  state: HtmlVisitorState
-}
 
 export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
   [kVisitorsArray]: HtmlVisitor[]
@@ -28,47 +19,25 @@ export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
 
 export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
   const visitors = Array.isArray(arg) ? arg : [arg]
-  const rootVisitors = visitors
-    .filter(visitor => visitor.html)
-    .map(visitor => coerceVisitFn(visitor.html!))
-
-  const rootOpenVisitors = rootVisitors
-    .map(visitor => visitor.open!)
-    .filter(Boolean)
-
-  const rootCloseVisitors = rootVisitors
-    .map(visitor => visitor.close!)
-    .filter(Boolean)
 
   async function traverse(html: string, state: HtmlVisitorState) {
+    // Ensure an <html> tag exists.
+    html = injectHtmlTag(html)
+
     const editor = new MagicString(html)
-    const context: HtmlDocument = { editor, state }
+    const document: HtmlDocument = { editor, state }
 
-    const rootPaths = parse(html, { setAttributeMap: true })
-      .filter(isTag)
-      .map(tag => {
-        const observer = createObserver(tag, editor)
-        const observedTag = onChange(tag, observer, {
-          ignoreSymbols: true,
-        })
-        return new HtmlTagPath(context, observedTag)
-      })
-
-    const hasHtmlTag = rootPaths.some(rootPath => rootPath.tagName == 'html')
-
-    if (!hasHtmlTag)
-      for (const open of rootOpenVisitors) {
-        await open(rootPaths, state)
+    for (const tag of parse(html, { setAttributeMap: true })) {
+      if (!isTag(tag)) {
+        continue
       }
-
-    for (const path of rootPaths) {
+      const observer = createObserver(tag, editor)
+      const observedTag = onChange(tag, observer, {
+        ignoreSymbols: true,
+      })
+      const path = new HtmlTagPath(document, observedTag)
       await path.traverse(visitors)
     }
-
-    if (!hasHtmlTag)
-      for (const close of rootCloseVisitors) {
-        await close(rootPaths, state)
-      }
 
     return editor.toString()
   }
@@ -78,6 +47,13 @@ export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
   })
 
   return traverse
+}
+
+function injectHtmlTag(html: string) {
+  return /<html /i.test(html)
+    ? html
+    : html.replace(/^(<!doctype html>)?/i, doctype => `${doctype}\n<html>`) +
+        `\n</html>`
 }
 
 /**
