@@ -39,6 +39,11 @@ export interface SausConfig {
      * @default "cjs"
      */
     format?: 'esm' | 'cjs'
+    /**
+     * Minify the SSR bundle.
+     * @default false
+     */
+    minify?: boolean
   }
   /**
    * Options for the client modules.
@@ -49,6 +54,11 @@ export interface SausConfig {
      * @default "modules"
      */
     target?: vite.BuildOptions['target']
+    /**
+     * Minify the client modules.
+     * @default false
+     */
+    minify?: boolean
   }
   /**
    * Renderer packages need to add their `defineClient` object

@@ -14,6 +14,8 @@
     "@saus/html": "*",
     "@saus/react": "*",
     "@types/etag": "^1.8.1",
+    "kleur": "^4.1.4",
+    "misty": "^1.4.5",
     "mrmime": "^1.0.0",
     "navaid": "^1.2.0",
     "saus": "*"

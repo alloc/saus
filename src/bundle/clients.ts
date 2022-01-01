@@ -76,10 +76,19 @@ export async function generateClientModules(
     })
   }
 
+  const clientConfig = config.saus.client || {}
+  const minify =
+    (options.minify == null ? clientConfig.minify : options.minify) !== false
+
   config = vite.mergeConfig(config, <vite.UserConfig>{
     plugins: [modules, fixChunkImports()],
+    css: {
+      minify,
+    },
     build: {
-      target: config.saus.client?.target || 'modules',
+      write: false,
+      target: clientConfig.target || 'modules',
+      minify: false,
       rollupOptions: {
         input,
         output: {
@@ -87,8 +96,6 @@ export async function generateClientModules(
         },
         preserveEntrySignatures: 'allow-extension',
       },
-      minify: options.minify,
-      write: false,
     },
   }) as UserConfig
 
@@ -193,7 +200,7 @@ export async function generateClientModules(
           chunk.code.slice(source.end)
       }
 
-      if (options.minify !== false) {
+      if (minify) {
         const minified = await terser.minify(chunk.code, {
           toplevel: chunk.exports.length > 0,
           keep_fnames: true,

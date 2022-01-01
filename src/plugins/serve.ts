@@ -4,6 +4,7 @@ import {
   Plugin,
   SausContext,
 } from '../core'
+import { getRuntimeConfig } from '../core/config'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
@@ -21,13 +22,15 @@ export function servePlugin(
   return {
     name: 'saus:serve',
     contextUpdate(context) {
+      const config = getRuntimeConfig('dev', context)
+      context.runtimeHooks.forEach(onSetup => {
+        onSetup(config)
+      })
       if (context.htmlProcessors) {
-        const { config } = context
-        context.processHtml = mergeHtmlProcessors(context.htmlProcessors, {
-          assetsDir: config.build?.assetsDir || 'assets',
-          base: config.base || '/',
-          mode: config.mode || 'development',
-        })
+        context.processHtml = mergeHtmlProcessors(
+          context.htmlProcessors,
+          config
+        )
       }
       pageFactory = createPageFactory(
         context,

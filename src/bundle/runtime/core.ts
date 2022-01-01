@@ -1,6 +1,8 @@
 // Redirect "saus/core" imports here.
 export * from '../../core/render'
 export * from '../../core/html'
+export * from '../../core/http'
+export { setup } from './context'
 
 // This is also exported by "saus/src/core/client" but we
 // want to avoid processing that module, since it has heavy

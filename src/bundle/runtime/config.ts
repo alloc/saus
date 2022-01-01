@@ -1,8 +1,4 @@
-export interface RuntimeConfig {
-  assetsDir: string
-  base: string
-  mode: string
-}
+import { RuntimeConfig } from '../../core/config'
 
 /* Stub module replaced at build time */
 export default {} as RuntimeConfig

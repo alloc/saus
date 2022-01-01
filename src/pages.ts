@@ -14,9 +14,11 @@ import type {
   Route,
   RouteParams,
   RoutesModule,
+  RuntimeConfig,
   SausContext,
 } from './core'
 import { debug } from './core/debug'
+import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { defer } from './utils/defer'
 import { serializeImports } from './utils/imports'
@@ -46,7 +48,8 @@ export interface PageFactoryContext
 
 export function createPageFactory(
   context: PageFactoryContext,
-  functions: ClientFunctions
+  functions: ClientFunctions,
+  config?: RuntimeConfig
 ) {
   let {
     pages,
@@ -56,7 +59,7 @@ export function createPageFactory(
     defaultRoute,
     defaultRenderer,
     beforeRenderHooks,
-    transformHtml,
+    processHtml,
     logger,
   } = context
 
@@ -66,6 +69,34 @@ export function createPageFactory(
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
   // caused by global state mutation.
   let renderQueue = Promise.resolve()
+
+  if (config) {
+    const setup = () => {
+      context.runtimeHooks.forEach(onSetup => {
+        onSetup(config)
+      })
+      if (context.htmlProcessors) {
+        processHtml = mergeHtmlProcessors(context.htmlProcessors, config, [
+          'pre',
+          'default',
+        ])
+      }
+    }
+
+    // For SSR script bundles, setImmediate is used to allow for runtime hooks
+    // to be initiated before the page factory is accessible. Therefore, we need
+    // to wait for those runtime hooks here.
+    if (config?.bundleType === 'script') {
+      const { promise, resolve } = defer<void>()
+      renderQueue = promise
+      setImmediate(() => {
+        setup()
+        resolve()
+      })
+    } else {
+      setup()
+    }
+  }
 
   // For mapping a pathname to its route
   const routeMap: Record<string, Route | undefined> = {}
@@ -134,8 +165,8 @@ export function createPageFactory(
         routeModuleId: route.moduleId,
       }
 
-      if (transformHtml) {
-        page.html = await transformHtml(page.html, page)
+      if (processHtml) {
+        page.html = await processHtml(page.html, page)
       }
 
       debug(`Page ready: ${path}`)

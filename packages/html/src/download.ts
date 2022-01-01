@@ -1,15 +1,14 @@
 import { relative } from '@cush/relative'
 import fs from 'fs'
 import MagicString from 'magic-string'
-import fetch, { Response } from 'node-fetch'
 import path from 'path'
-import { EnforcementPhase, md5Hex } from 'saus/core'
-import urlRegex from 'url-regex'
+import { EnforcementPhase, get, md5Hex, setup } from 'saus/core'
 import { debug } from './debug'
+import { isExternalUrl } from './isExternalUrl'
 import { HtmlTagPath } from './path'
 import { $ } from './selector'
 import { traverseHtml } from './traversal'
-import { HtmlDocument } from './types'
+import { HtmlDocument, HtmlVisitorState } from './types'
 
 type File = [FilePromise, ((url: string) => void)[]]
 type FilePromise = Promise<string | Buffer>
@@ -22,19 +21,46 @@ interface FileCache extends Map<string, File> {
   ): void
 }
 
-type DownloadOptions = {
+export type DownloadOptions = {
   enforce?: EnforcementPhase
+  skip?: (url: string) => boolean
   onRequest?: (url: string) => void
   onResponse?: (url: string, content: string | Buffer) => void
+  onWriteFile?: (fileName: string) => void
+  /**
+   * Override the default behavior of writing to the `outDir`.
+   */
+  writeFile?: (
+    fileName: string,
+    content: string | Buffer,
+    state: HtmlVisitorState
+  ) => Promise<void> | void
 }
 
-export function downloadRemoteAssets({
+/**
+ * Find any external assets referenced by each page's HTML and
+ * download them to be self-hosted. This hook does nothing when
+ * the `saus dev` command is used.
+ */
+export function downloadRemoteAssets(options?: DownloadOptions) {
+  setup(env => env.command !== 'dev' && installHtmlHook())
+}
+
+function defaultWriteFile(fileName: string, content: string | Buffer) {
+  fs.mkdirSync(path.dirname(fileName), { recursive: true })
+  fs.writeFileSync(fileName, content)
+}
+
+function installHtmlHook({
+  skip = () => false,
   onRequest,
   onResponse,
+  onWriteFile,
+  writeFile = defaultWriteFile,
   ...options
 }: DownloadOptions = {}) {
   // Reuse `fetch` calls between pages.
-  const requests: { [url: string]: Promise<Response> } = {}
+  const requests: { [url: string]: Promise<Buffer> } = {}
 
   const filesByDocument = new WeakMap<HtmlDocument, FileCache>()
   const getFiles = (tag: HtmlTagPath) => {
@@ -42,19 +68,16 @@ export function downloadRemoteAssets({
     if (!files) {
       files = new Map() as FileCache
       files.load = (url, fetch, onLoad) => {
+        if (skip(url)) {
+          return debug(`skipped asset: ${url}`)
+        }
         const file = toFilePath(url)
         const listeners = files.get(file)?.[1]
         if (listeners) {
           listeners.push(onLoad)
         } else {
-          debug(`loading file: ${url}`)
-          onRequest?.(url)
+          debug(`loading asset: ${url}`)
           const loading = fetch(url, files)
-          if (onResponse) {
-            loading.then(content => {
-              onResponse(url, content)
-            })
-          }
           files.set(file, [loading, [onLoad]])
         }
       }
@@ -66,74 +89,76 @@ export function downloadRemoteAssets({
   traverseHtml(options.enforce, [
     {
       html: {
-        async close(tag, { config }) {
+        async close(tag, state) {
+          const { config } = state
           // Don't await file promises until the entire document is processed.
           // This allows other HTML manipulation to occur while downloading.
           await Promise.all(
             Array.from(getFiles(tag), async ([file, [loading, listeners]]) => {
               const ext = path.extname(file)
-              const content = await loading
-              const contentHash = md5Hex(content).slice(0, 8)
-              const fileName = path.posix.join(
-                config.assetsDir,
-                `${file.slice(1, -ext.length)}.${contentHash}${ext}`
-              )
-              const url = config.base + fileName
-              listeners.forEach(onLoad => onLoad(url))
-              fs.writeFileSync(fileName, content)
+              try {
+                const content = await loading
+                const contentHash = md5Hex(content).slice(0, 8)
+                const fileName = path.posix.join(
+                  config.assetsDir,
+                  `${file.slice(1, -ext.length)}.${contentHash}${ext}`
+                )
+
+                const url = config.base + fileName
+                listeners.forEach(onLoad => onLoad(url))
+
+                await writeFile(fileName, content, state)
+                onWriteFile?.(fileName)
+              } catch (err) {
+                console.error(err)
+              }
             })
           )
         },
       },
     },
-    $('script[src]', (scriptTag, { config }) => {
+    $('script[src]', scriptTag => {
       const scriptUrl = scriptTag.attributes.src
-      if (typeof scriptUrl == 'string' && isRemoteAsset(scriptUrl)) {
+      if (typeof scriptUrl == 'string' && isExternalUrl(scriptUrl)) {
         const files = getFiles(scriptTag)
-        files.load(scriptUrl, fetchText, url =>
+        // Assume the script does not import anything.
+        files.load(scriptUrl, fetch, url => {
           scriptTag.setAttribute('src', url)
-        )
+        })
       }
     }),
     $('link[rel="stylesheet"]', linkTag => {
       const cssUrl = linkTag.attributes.href
-      if (typeof cssUrl == 'string' && isRemoteAsset(cssUrl)) {
+      if (typeof cssUrl == 'string' && isExternalUrl(cssUrl)) {
         const files = getFiles(linkTag)
-        files.load(cssUrl, fetchStyles, url =>
+        files.load(cssUrl, fetchStyles, url => {
           linkTag.setAttribute('href', url)
-        )
+        })
       }
     }),
   ])
 
   function fetchStyles(cssUrl: string, files: FileCache) {
-    return fetchText(cssUrl).then(cssText =>
+    return fetch(cssUrl).then(cssText =>
       replaceCssUrls(
-        cssText,
+        cssText.toString('utf8'),
         cssUrl,
         assetUrl =>
           new Promise<string>(setAssetUrl => {
-            files.load(assetUrl, fetchBuffer, setAssetUrl)
+            files.load(assetUrl, fetch, setAssetUrl)
           })
       )
     )
   }
 
-  function fetchText(url: string) {
-    return get(url).then(res => res.text())
-  }
-
-  function fetchBuffer(url: string) {
-    return get(url).then(res => res.buffer())
-  }
-
-  function get(url: string) {
+  function fetch(url: string) {
     let request = requests[url]
     if (request) {
       return request
     }
-    const download = (): Promise<Response> =>
-      fetch(url, {
+
+    const download = (): Promise<Buffer> =>
+      get(url, {
         headers: {
           // An explicit user agent ensures the most modern asset is cached.
           // In the future, we may want to send a duplicate request with an
@@ -143,21 +168,24 @@ export function downloadRemoteAssets({
           'User-Agent':
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:93.0) Gecko/20100101 Firefox/93.0',
         },
-      }).catch(err => {
-        // Connection may reset when debugging.
-        if (err.code == 'ECONNRESET') {
-          return download()
+      }).then(
+        content => {
+          onResponse?.(url, content)
+          return content
+        },
+        err => {
+          // Connection may reset when debugging.
+          if (err.code == 'ECONNRESET') {
+            return download()
+          }
+          throw err
         }
-        throw err
-      })
+      )
 
+    onRequest?.(url)
     request = requests[url] = download()
     return request
   }
-}
-
-function isRemoteAsset(url: string) {
-  return urlRegex().test(url)
 }
 
 function toFilePath(url: string) {
@@ -198,11 +226,11 @@ async function replaceCssUrls(
     if (/^\.\.?\//.test(url)) {
       url = relative(parentUrl, url) || url
       debug(`resolve "${prevUrl}" to "${url}"`)
-    } else if (!isRemoteAsset(url)) {
+    } else if (!isExternalUrl(url)) {
       url = parentUrl.slice(0, parentUrl.lastIndexOf('/') + 1) + url
       debug(`resolve "${prevUrl}" to "${url}"`)
     }
-    if (isRemoteAsset(url))
+    if (isExternalUrl(url))
       loading.push(
         Promise.resolve(replacer(url)).then(url => {
           editor.overwrite(

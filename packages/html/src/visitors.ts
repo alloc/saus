@@ -50,7 +50,7 @@ export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
 }
 
 function injectHtmlTag(html: string) {
-  return /<html /i.test(html)
+  return /<html( |>)/i.test(html)
     ? html
     : html.replace(/^(<!doctype html>)?/i, doctype => `${doctype}\n<html>`) +
         `\n</html>`
@@ -223,7 +223,7 @@ export function mergeVisitors(
   }
 }
 
-const keywords = ['open', 'close', 'html']
+const keywords = ['open', 'close']
 
 const kTagVisitor = Symbol.for('html.TagVisitor')
 

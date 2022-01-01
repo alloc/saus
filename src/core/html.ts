@@ -1,6 +1,6 @@
-import type { RuntimeConfig } from '../bundle/runtime/config'
 import type { RenderedPage } from '../pages'
 import { reduceSerial } from '../utils/reduceSerial'
+import type { RuntimeConfig } from './config'
 import { routesModule } from './global'
 
 export type HtmlContext = {
@@ -26,9 +26,25 @@ export type HtmlProcessorMap = {
   post: HtmlProcessor[]
 }
 
+export function applyHtmlProcessors(
+  html: string,
+  state: HtmlProcessorState,
+  processors: HtmlProcessor[]
+) {
+  if (!processors.length) {
+    return Promise.resolve(html)
+  }
+  return reduceSerial(
+    processors,
+    (html, processor) => processor(html, state),
+    html
+  )
+}
+
 export const mergeHtmlProcessors = (
   htmlProcessors: HtmlProcessorMap,
-  config: RuntimeConfig
+  config: RuntimeConfig,
+  phases: (keyof HtmlProcessorMap)[] = ['pre', 'default', 'post']
 ) =>
   htmlProcessors &&
   (async (html: string, page: RenderedPage) => {
@@ -36,9 +52,9 @@ export const mergeHtmlProcessors = (
     const processHtml = (html: string, processor: HtmlProcessor) =>
       processor(html, state)
 
-    html = await reduceSerial(htmlProcessors.pre, processHtml, html)
-    html = await reduceSerial(htmlProcessors.default, processHtml, html)
-    html = await reduceSerial(htmlProcessors.post, processHtml, html)
+    for (const phase of phases) {
+      html = await reduceSerial(htmlProcessors[phase], processHtml, html)
+    }
 
     return html
   })

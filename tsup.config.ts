@@ -6,6 +6,7 @@ export default defineConfig({
     'src/index.ts',
     // Submodules
     'src/core/index.ts',
+    'src/bundle/runtime/html.ts',
     'src/babel/index.ts',
     // Commands
     'src/build.ts',

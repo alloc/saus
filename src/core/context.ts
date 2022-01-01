@@ -6,7 +6,7 @@ import type { RenderedPage } from '../pages'
 import { Profiling } from '../profiling'
 import { Deferred } from '../utils/defer'
 import { ClientState } from './client'
-import { ConfigHook, setConfigHooks } from './config'
+import { ConfigHook, SausCommand, setConfigHooks } from './config'
 import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
@@ -38,14 +38,14 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
 }
 
 export async function loadContext(
-  command: 'serve' | 'build',
+  command: SausCommand,
   inlineConfig?: vite.UserConfig,
   sausPlugins?: ((context: SausContext) => vite.Plugin)[]
 ): Promise<SausContext> {
   const root = inlineConfig?.root || process.cwd()
   const isBuild = command === 'build'
   const configEnv: vite.ConfigEnv = {
-    command,
+    command: command !== 'dev' ? 'build' : 'serve',
     mode: inlineConfig?.mode || (isBuild ? 'production' : 'development'),
   }
 
@@ -103,6 +103,7 @@ export async function loadContext(
     defaultPath: sausConfig.defaultPath || '/404',
     routesPath,
     routes: [],
+    runtimeHooks: [],
     pages: {},
     states: {},
     renderPath,
@@ -113,7 +114,8 @@ export async function loadContext(
 
   Profiling.mark('load config hooks')
 
-  await loadConfigHooks(context)
+  context.configHooks = await loadConfigHooks(context.renderPath)
+
   for (const hookPath of context.configHooks) {
     const hookModule = require(hookPath)
     const configHook: ConfigHook = hookModule.__esModule
@@ -135,6 +137,7 @@ export async function loadContext(
   }
 
   context.config = config as UserConfig
+
   return context
 }
 
@@ -159,8 +162,7 @@ function assertSausConfig(
 
 export interface ModuleLoader extends vite.ViteDevServer {}
 
-export async function loadConfigHooks(context: SausContext) {
-  const importer = context.renderPath
+export async function loadConfigHooks(importer: string) {
   const require = Module.createRequire(importer)
   const code = fs
     .readFileSync(importer, 'utf8')
@@ -171,8 +173,8 @@ export async function loadConfigHooks(context: SausContext) {
   await esModuleLexer.init
   const [imports] = esModuleLexer.parse(code, importer)
 
-  // Collect config hooks from renderer packages.
-  setConfigHooks((context.configHooks = []))
+  const configHooks: string[] = []
+  setConfigHooks(configHooks)
 
   for (const imp of imports) {
     const moduleId = imp.n!
@@ -196,6 +198,7 @@ export async function loadConfigHooks(context: SausContext) {
   }
 
   setConfigHooks(null)
+  return configHooks
 }
 
 export function createLoader(

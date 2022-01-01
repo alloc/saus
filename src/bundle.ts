@@ -10,19 +10,18 @@ import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import { createModuleProvider, ModuleProvider } from './bundle/moduleProvider'
-import type { RuntimeConfig } from './bundle/runtime/config'
 import type { ClientModuleMap } from './bundle/runtime/modules'
 import {
   ClientFunction,
   ClientFunctions,
-  createLoader,
   endent,
   extractClientFunctions,
   generateRoutePaths,
-  loadContext,
   RegexParam,
   SausContext,
 } from './core'
+import type { RuntimeConfig } from './core/config'
+import { createLoader, loadContext } from './core/context'
 import { setRoutesModule } from './core/global'
 import { vite } from './core/vite'
 import { renderPlugin } from './plugins/render'
@@ -67,7 +66,7 @@ export async function bundle(options: BundleOptions) {
   }
 
   const { functions, functionImports, routeImports, runtimeConfig } =
-    await prepareFunctions(context)
+    await prepareFunctions(context, options)
 
   Profiling.mark('generate client modules')
   const moduleMap = await generateClientModules(
@@ -114,7 +113,7 @@ async function getBuildTransform(config: vite.UserConfig) {
   return [vite.createTransformer(context), context] as const
 }
 
-async function prepareFunctions(context: SausContext) {
+async function prepareFunctions(context: SausContext, options: BundleOptions) {
   const { root, renderPath } = context
 
   Profiling.mark('parse render functions')
@@ -249,10 +248,20 @@ async function prepareFunctions(context: SausContext) {
 
   await pluginContainer.close()
 
+  const bundleConfig = context.config.saus.bundle || {}
+  const outDir = path.resolve(
+    context.root,
+    context.config.build?.outDir || 'dist'
+  )
+
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
     base: config.base,
+    bundleType: bundleConfig.type || 'script',
+    command: 'bundle',
+    minify: options.minify == true,
     mode: config.mode,
+    publicDir: path.relative(outDir, config.publicDir),
   }
 
   return {
@@ -309,7 +318,7 @@ async function generateBundle(
       import "/@fs/${context.renderPath}"
       import "/@fs/${context.routesPath}"
       export {default, getModuleUrl} from "${runtimeId}"
-      export {default as config} from "/@fs/${runtimeConfigModule.id}"
+      export {default as config} from "${runtimeConfigModule.id}"
     `,
     moduleSideEffects: 'no-treeshake',
   })
@@ -330,6 +339,16 @@ async function generateBundle(
   const serverPath =
     bundleConfig.entry && path.resolve(context.root, bundleConfig.entry)
 
+  // Avoid using Node built-ins for `get` function.
+  if (bundleType == 'worker') {
+    redirectedModules.push(
+      redirectModule(
+        path.resolve(__dirname, '../src/core/http.ts'),
+        path.join(runtimeDir, 'http.ts')
+      )
+    )
+  }
+
   const overrides: vite.UserConfig = {
     plugins: [
       modules,
@@ -348,6 +367,7 @@ async function generateBundle(
       ssr: true,
       write: false,
       target: 'node14',
+      minify: bundleConfig.minify == true,
       sourcemap: true,
       rollupOptions: {
         input: serverPath || entryId,

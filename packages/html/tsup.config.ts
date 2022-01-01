@@ -1,8 +1,8 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/*'],
   format: ['cjs', 'esm'],
+  bundle: false,
   sourcemap: true,
-  external: Object.keys(require('./package.json').dependencies),
 })

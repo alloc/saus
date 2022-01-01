@@ -5,13 +5,13 @@ import { ParsedUrl, parseUrl } from '../../utils/url'
 import { ClientModule, RenderedPage } from '../types'
 import config from './config'
 import { context } from './context'
-import { endent } from './core'
+import { applyHtmlProcessors, endent } from './core'
 import functions from './functions'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
 import { isCSSRequest } from './utils'
 
-const pageFactory = createPageFactory(context, functions)
+const pageFactory = createPageFactory(context, functions, config)
 const hydrateImport = `import { hydrate } from "saus/client"`
 
 const htmlExtension = '.html'
@@ -41,18 +41,24 @@ export default function renderPage(
         return resolve(null)
       }
 
+      const seen = new Set<ClientModule>()
       const modules = new Set<ClientModule>()
+      const assets = new Set<ClientModule>()
+
       const addModule = (key: string) => {
         const module = moduleMap[key]
         if (!module) {
           return null
         }
-        if (modules.has(module)) {
+        if (seen.has(module)) {
           return module
         }
+        seen.add(module)
         module.imports?.forEach(addModule)
         if (module.exports) {
           modules.add(module)
+        } else if (!module.id.endsWith('.js')) {
+          assets.add(module)
         }
         return module
       }
@@ -114,15 +120,7 @@ export default function renderPage(
 
       for (const module of modules) {
         const url = config.base + module.id
-        if (isCSSRequest(url)) {
-          headTags.push({
-            tag: 'link',
-            attrs: {
-              rel: 'stylesheet',
-              href: url,
-            },
-          })
-        } else if (module !== entryModule) {
+        if (module !== entryModule) {
           headTags.push({
             tag: 'link',
             attrs: {
@@ -138,6 +136,21 @@ export default function renderPage(
               src: url,
             },
           })
+        }
+      }
+
+      for (const asset of assets) {
+        const url = config.base + asset.id
+        if (isCSSRequest(url)) {
+          headTags.push({
+            tag: 'link',
+            attrs: {
+              rel: 'stylesheet',
+              href: url,
+            },
+          })
+        } else {
+          // TODO: preload other assets
         }
       }
 
@@ -164,13 +177,16 @@ export default function renderPage(
         `,
       })
 
-      let html = page.html
-      html = injectToHead(html, headTags)
-      html = injectToBody(html, bodyTags)
-
-      resolve({
+      const html = injectToBody(injectToHead(page.html, headTags), bodyTags)
+      applyHtmlProcessors(
         html,
-        modules: Array.from(modules),
+        { page, config },
+        context.htmlProcessors?.post || []
+      ).then(html => {
+        resolve({
+          html,
+          modules: [...modules, ...assets],
+        })
       })
     })
   })

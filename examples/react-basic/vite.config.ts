@@ -10,6 +10,9 @@ export default defineConfig({
       format: 'esm',
     },
   },
+  build: {
+    minify: true,
+  },
   // Once you put "types": ["@saus/react"] in your tsconfig.json,
   // you can customize Babel like this:
   babel: {},

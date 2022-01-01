@@ -1,15 +1,14 @@
 import { expose, isWorkerRuntime } from 'threads/worker'
+import { createLoader, loadContext, ModuleLoader } from '../core/context'
 import {
-  createLoader,
   extractClientFunctions,
-  loadContext,
   mergeHtmlProcessors,
-  ModuleLoader,
   RegexParam,
   RouteParams,
   SausContext,
   vite,
 } from '../core'
+import { getRuntimeConfig } from '../core/config'
 import { setRenderModule, setRoutesModule } from '../core/global'
 import { createPageFactory, PageFactory } from '../pages'
 import { renderPlugin } from '../plugins/render'
@@ -53,13 +52,12 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       setRoutesModule(null)
     }
 
+    const config = getRuntimeConfig('build', context)
+    context.runtimeHooks.forEach(onSetup => {
+      onSetup(config)
+    })
     if (context.htmlProcessors) {
-      const { config } = context
-      context.processHtml = mergeHtmlProcessors(context.htmlProcessors, {
-        assetsDir: config.build?.assetsDir || 'assets',
-        base: config.base || '/',
-        mode: config.mode || 'development',
-      })
+      context.processHtml = mergeHtmlProcessors(context.htmlProcessors, config)
     }
 
     return createPageFactory(

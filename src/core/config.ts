@@ -1,7 +1,9 @@
-import path from 'path'
 import assert from 'assert'
 import callerPath from 'caller-path'
-import { ConfigEnv, UserConfig } from 'vite'
+import path from 'path'
+import type { ConfigEnv, UserConfig } from 'vite'
+import type { SausContext } from './context'
+import { renderModule } from './global'
 
 export type ConfigHook =
   | UserConfig
@@ -19,13 +21,41 @@ let configHooks: string[] | null = null
  * into the user's Vite config.
  */
 export function addConfigHook(hookPath: string, importer = callerPath()) {
-  assert(importer, 'Failed to infer where `addConfigHook` was called from')
-  assert(configHooks, 'Cannot call `addConfigHook` at this time')
-
-  hookPath = path.resolve(path.dirname(importer), hookPath)
-  configHooks.push(hookPath)
+  if (configHooks) {
+    assert(importer, 'Failed to infer where `addConfigHook` was called from')
+    hookPath = path.resolve(path.dirname(importer), hookPath)
+    configHooks.push(hookPath)
+  } else if (!renderModule) {
+    throw Error('Cannot call `addConfigHook` at this time')
+  }
 }
 
 export function setConfigHooks(hooks: string[] | null) {
   configHooks = hooks
+}
+
+export type SausCommand = 'dev' | 'build' | 'bundle'
+
+export interface RuntimeConfig {
+  assetsDir: string
+  base: string
+  bundleType?: 'script' | 'worker'
+  command: SausCommand
+  minify: boolean
+  mode: string
+  publicDir: string
+}
+
+export function getRuntimeConfig(
+  command: SausCommand,
+  { config }: SausContext
+): RuntimeConfig {
+  return {
+    assetsDir: config.build?.assetsDir || 'assets',
+    base: config.base || '/',
+    command,
+    minify: command !== 'dev' && config.build?.minify !== false,
+    mode: config.mode || (command == 'dev' ? 'development' : 'production'),
+    publicDir: config.build?.outDir || 'dist',
+  }
 }

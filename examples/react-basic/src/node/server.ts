@@ -3,10 +3,12 @@ import etag from 'etag'
 import http from 'http'
 import path from 'path'
 import * as mime from 'mrmime'
+import { gray } from 'kleur/colors'
 import { getPageFilename } from 'saus'
 import renderPage, { config, getModuleUrl, ClientModule } from 'saus/bundle'
 import knownPaths from 'saus/paths'
 import { connect } from './connect'
+import './html'
 
 const modules = new Map<string, ClientModule>()
 const publicDir = new URL('../../public', import.meta.url).pathname
@@ -14,7 +16,6 @@ const publicDir = new URL('../../public', import.meta.url).pathname
 function addModule(module: ClientModule) {
   const url = getModuleUrl(module)
   if (!modules.has(url)) {
-    console.log('addModule: %O', url)
     modules.set(url, module)
   }
 }
@@ -42,6 +43,7 @@ const app = connect()
     if (!module) {
       return next()
     }
+    console.log(gray('cached'), req.url)
     res.writeHead(200, {
       ETag: etag(module.text, { weak: true }),
       'Content-Type': mime.lookup(req.url)!,
@@ -58,6 +60,7 @@ const app = connect()
       res.end()
     }
     if (e == 404) {
+      req.url = config.base + e
       servePage(req, res, next).catch(close)
     } else {
       close(e)
@@ -74,6 +77,7 @@ async function servePage(
     if (!page) {
       return next()
     }
+    console.log(gray('rendered'), req.url)
     page.modules.forEach(addModule)
     res.writeHead(200, {
       'Content-Type': 'text/html',
@@ -95,6 +99,7 @@ async function servePublicFile(
 ) {
   try {
     const publicFile = fs.readFileSync(path.join(publicDir, req.url))
+    console.log(gray('read'), req.url)
     res.writeHead(200, {
       ETag: etag(publicFile, { weak: true }),
       'Content-Type': mime.lookup(req.url) || 'application/octet-stream',
@@ -102,8 +107,7 @@ async function servePublicFile(
     res.write(publicFile)
     res.end()
   } catch {
-    res.writeHead(404)
-    res.end()
+    throw 404
   }
 }
 

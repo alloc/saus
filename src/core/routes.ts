@@ -4,6 +4,7 @@ import * as RegexParam from 'regexparam'
 import { ParsedUrl } from '../utils/url'
 import { SausContext } from './context'
 import { HtmlContext } from './html'
+import { RuntimeHook } from './setup'
 import { StateFragment } from './state'
 
 export { RegexParam, InferRouteParams }
@@ -89,6 +90,8 @@ export function matchRoute(path: string, route: ParsedRoute) {
  * in your Vite config.
  */
 export interface RoutesModule extends HtmlContext {
+  /** These hooks are called after the routes module is loaded */
+  runtimeHooks: RuntimeHook[]
   /** Routes defined with the `route` function */
   routes: Route[]
   /** The route used when no route is matched */

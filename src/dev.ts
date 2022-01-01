@@ -1,22 +1,23 @@
-import * as vite from 'vite'
-import path from 'path'
+import { addExitCallback, removeExitCallback } from 'catch-exit'
+import { EventEmitter } from 'events'
 import kleur from 'kleur'
 import { klona } from 'klona'
-import { EventEmitter } from 'events'
+import path from 'path'
 import { debounce } from 'ts-debounce'
-import { addExitCallback, removeExitCallback } from 'catch-exit'
-import { SausContext, loadContext, RenderModule, RoutesModule } from './core'
+import * as vite from 'vite'
+import { RenderModule, RoutesModule, SausContext } from './core'
+import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
+import { setRenderModule, setRoutesModule } from './core/global'
 import { clientPlugin } from './plugins/client'
+import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
-import { renderPlugin } from './plugins/render'
-import { setRenderModule, setRoutesModule } from './core/global'
-import { steal } from './utils/steal'
 import { defer } from './utils/defer'
+import { steal } from './utils/steal'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
-  let context = await loadContext('serve', inlineConfig)
+  let context = await loadContext('dev', inlineConfig)
 
   const events = new EventEmitter()
   events.on('error', onError)
@@ -33,7 +34,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       await oldServer?.close()
 
       context.logger.clearScreen('info')
-      context = await loadContext('serve', inlineConfig)
+      context = await loadContext('dev', inlineConfig)
       server = await startServer(context, events, true)
       return server
     })
@@ -249,7 +250,7 @@ function handleContextUpdates(
       } else if (module.file === context.routesPath) {
         routesConfig = setRoutesModule({
           routes: [],
-          visitors: { pre: [], default: [], post: [] },
+          runtimeHooks: [],
         })
       } else {
         return // Not a module we care about.
@@ -273,32 +274,17 @@ function handleContextUpdates(
 
       const renderModule = entries.find(mod => mod.file == context.renderPath)
       if (renderModule && renderConfig) {
-        const oldProviders = context.configHooks.map(hook => hook.modulePath)
-        const newProviders = renderConfig.configHooks.map(
-          hook => hook.modulePath
-        )
-
-        // Check the imported modules of the renderModule to see if any
-        // old config providers are still imported. This is necessary,
-        // because SSR externals won't be re-executed by Vite.
-        for (const dep of renderModule.transformResult.deps!) {
-          const [, file] = await server.moduleGraph.resolveUrl(dep)
-          if (oldProviders.includes(file)) {
-            newProviders.push(file)
-          }
-        }
+        const newConfigHooks = await loadConfigHooks(context.renderPath)
+        const oldConfigHooks = context.configHooks
 
         // Were the imports of any config providers added or removed?
         const needsRestart =
-          oldProviders.some(file => file && !newProviders.includes(file)) ||
-          newProviders.some(file => file && !oldProviders.includes(file))
+          oldConfigHooks.some(file => file && !newConfigHooks.includes(file)) ||
+          newConfigHooks.some(file => file && !oldConfigHooks.includes(file))
 
         if (needsRestart) {
           return events.emit('restart')
         }
-
-        // No config hooks were added or removed.
-        renderConfig.configHooks = context.configHooks
 
         // Merge the latest renderers.
         Object.assign(context, renderConfig)
