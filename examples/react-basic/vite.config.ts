@@ -6,12 +6,13 @@ export default defineConfig({
     routes: './src/node/routes.ts',
     render: './src/render.tsx',
     bundle: {
+      target: 'node16',
       entry: './src/node/server.ts',
       format: 'esm',
     },
   },
   build: {
-    minify: true,
+    minify: false,
   },
   // Once you put "types": ["@saus/react"] in your tsconfig.json,
   // you can customize Babel like this:

@@ -13,6 +13,7 @@ importers:
       '@types/debug': ^4.1.7
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
+      '@types/strip-comments': ^2.0.1
       array-flatten: ^3.0.0
       builtin-modules: ^3.2.0
       cac: ^6.7.3
@@ -24,6 +25,7 @@ importers:
       endent: ^2.1.0
       es-module-lexer: ^0.9.3
       esbuild: ^0.14.8
+      escalade: ^3.1.1
       escape-goat: ^3.0.0
       is-plain-object: ^5.0.0
       kleur: ^4.1.4
@@ -37,6 +39,7 @@ importers:
       react-dom: ^17.0.2
       regexparam: ^2.0.0
       source-map-support: ^0.5.20
+      strip-comments: ^2.0.1
       terser: ^5.10.0
       threads: ^1.7.0
       ts-debounce: ^3.0.0
@@ -49,6 +52,7 @@ importers:
       cac: 6.7.3
       endent: 2.1.0
       es-module-lexer: 0.9.3
+      escalade: 3.1.1
       escape-goat: 3.0.0
       magic-string: 0.25.7
       md5-hex: 3.0.1
@@ -64,6 +68,7 @@ importers:
       '@types/debug': 4.1.7
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
+      '@types/strip-comments': 2.0.1
       array-flatten: 3.0.0
       builtin-modules: 3.2.0
       caller-path: 3.0.1
@@ -82,10 +87,11 @@ importers:
       react-dom: 17.0.2_react@17.0.2
       regexparam: 2.0.0
       source-map-support: 0.5.20
+      strip-comments: 2.0.1
       ts-debounce: 3.0.0
       tsup: 5.11.6_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -798,6 +804,10 @@ packages:
     resolution: {integrity: sha512-9zGujX1sOPg32XLyfgEB/0G9ZnrjthL/Iv1ZfuAjj8LEilHZEpQSQs1scpRXPhHzGYgWiLz9ldF1cI8JhL+yMw==}
     dependencies:
       source-map: 0.6.1
+    dev: true
+
+  /@types/strip-comments/2.0.1:
+    resolution: {integrity: sha512-7xjBu+wvKSRHSmgZoRAfUBZMIupd7634b2+uI2qeBDUvfoX+VELjuWCzlL6CF40eG/TGKwU+pqoJfvcvs3fzKA==}
     dev: true
 
   /@vitejs/plugin-react/1.0.1:
@@ -2127,6 +2137,11 @@ packages:
       ansi-regex: 5.0.1
     dev: true
 
+  /strip-comments/2.0.1:
+    resolution: {integrity: sha512-ZprKx+bBLXv067WTCALv8SSz5l2+XhpYCsVtSqlMnkAXMWDq+/ekVbl1ghqP9rUHTzv6sm/DwCOiYutU/yp1fw==}
+    engines: {node: '>=10'}
+    dev: true
+
   /strip-final-newline/2.0.0:
     resolution: {integrity: sha512-BrpvfNAE3dcvq7ll3xVumzjKjZQ5tI1sEUIKr3Uoks0XUl45St3FlatVqef9prk4jRDzhW6WZg+3bk93y6pLjA==}
     engines: {node: '>=6'}
@@ -2287,7 +2302,7 @@ packages:
     resolution: {integrity: sha512-RanEelDzP4yCwPXY5OlWMSb/wZ+tKbM1VEFDLtYdOfZvp6bfE2X8S3zqz+/uQGUd6X1RaUGOUGgisc3Rygn5JQ==}
     dev: true
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -2310,7 +2325,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/2.0.2:

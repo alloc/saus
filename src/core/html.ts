@@ -1,3 +1,4 @@
+import { ClientModule } from '../bundle/types'
 import type { RenderedPage } from '../pages'
 import { reduceSerial } from '../utils/reduceSerial'
 import type { RuntimeConfig } from './config'
@@ -11,6 +12,16 @@ export type HtmlContext = {
 export type HtmlProcessorState = Record<string, any> & {
   page: RenderedPage
   config: RuntimeConfig
+  /**
+   * Only exists in SSR bundle environment.
+   *
+   * If an HTML processor wants to provide self-hosted assets,
+   * it should add the asset to this cache for the SSR bundle
+   * to access, but make sure to also inject a `<link>` tag (or
+   * whatever makes most sense for your use case) or else the
+   * asset won't be loaded by the browser.
+   */
+  assets?: Set<ClientModule>
 }
 
 type Promisable<T> = T | PromiseLike<T>
@@ -43,12 +54,12 @@ export function applyHtmlProcessors(
 
 export const mergeHtmlProcessors = (
   htmlProcessors: HtmlProcessorMap,
-  config: RuntimeConfig,
+  getState: (page: RenderedPage) => HtmlProcessorState,
   phases: (keyof HtmlProcessorMap)[] = ['pre', 'default', 'post']
 ) =>
   htmlProcessors &&
   (async (html: string, page: RenderedPage) => {
-    const state: HtmlProcessorState = { page, config }
+    const state = getState(page)
     const processHtml = (html: string, processor: HtmlProcessor) =>
       processor(html, state)
 

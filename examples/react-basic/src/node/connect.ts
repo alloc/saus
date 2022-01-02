@@ -11,8 +11,10 @@ export function connect() {
   async function app(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    next: connect.NextFunction = () => {}
+    next?: connect.NextFunction
   ) {
+    next ||= () => onError(404)
+
     let resolve: () => void
     try {
       for (const handler of stack) {

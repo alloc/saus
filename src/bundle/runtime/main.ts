@@ -103,68 +103,42 @@ export default function renderPage(
         for (const update of updates.reverse()) {
           update()
         }
-
-        // Modules are ordered depth-first, so the entry module comes last.
-        modules.add(entryModule)
       }
 
       const headTags: HtmlTagDescriptor[] = []
       const bodyTags: HtmlTagDescriptor[] = []
 
-      // The client state needed for page hydration.
-      bodyTags.push({
-        tag: 'script',
-        attrs: { id: 'initial-state', type: 'application/json' },
-        children: JSON.stringify(page.state || {}),
-      })
+      getPreloadTagsForModules(modules, headTags)
+      getTagsForAssets(assets, headTags)
 
-      for (const module of modules) {
-        const url = config.base + module.id
-        if (module !== entryModule) {
-          headTags.push({
-            tag: 'link',
-            attrs: {
-              rel: 'modulepreload',
-              href: url,
-            },
-          })
-        } else {
-          bodyTags.push({
-            tag: 'script',
-            attrs: {
-              type: 'module',
-              src: url,
-            },
-          })
-        }
-      }
-
-      for (const asset of assets) {
-        const url = config.base + asset.id
-        if (isCSSRequest(url)) {
-          headTags.push({
-            tag: 'link',
-            attrs: {
-              rel: 'stylesheet',
-              href: url,
-            },
-          })
-        } else {
-          // TODO: preload other assets
-        }
-      }
-
-      // Add "state.json" modules after <script> and <link> tags
-      // are generated from the `modules` array, since the page's
-      // `state` object is inlined.
+      // Add "state.json" modules after "modulepreload" tags are
+      // generated from the `modules` array, since the `page.state`
+      // object is injected into the HTML as an inline script.
       if (typeof pageUrl == 'string') {
         pageUrl = parseUrl(pageUrl)
       }
       const pagePath = pageUrl.path.slice(config.base.length)
+      const pageState = JSON.stringify(page.state || {})
       modules.add({
         id: (pagePath ? pagePath + '/' : '') + 'state.json',
-        text: JSON.stringify(page.state || {}),
+        text: pageState,
       })
+      bodyTags.push({
+        tag: 'script',
+        attrs: { id: 'initial-state', type: 'application/json' },
+        children: pageState,
+      })
+
+      if (entryModule) {
+        modules.add(entryModule)
+        bodyTags.push({
+          tag: 'script',
+          attrs: {
+            type: 'module',
+            src: config.base + entryModule.id,
+          },
+        })
+      }
 
       // Hydrate the page.
       bodyTags.push({
@@ -180,14 +154,47 @@ export default function renderPage(
       const html = injectToBody(injectToHead(page.html, headTags), bodyTags)
       applyHtmlProcessors(
         html,
-        { page, config },
+        { page, config, assets },
         context.htmlProcessors?.post || []
       ).then(html => {
-        resolve({
-          html,
-          modules: [...modules, ...assets],
-        })
-      })
+        resolve({ html, modules, assets })
+      }, reject)
     })
   })
+}
+
+function getPreloadTagsForModules(
+  modules: Iterable<ClientModule>,
+  headTags: HtmlTagDescriptor[]
+) {
+  for (const module of modules) {
+    const url = config.base + module.id
+    headTags.push({
+      tag: 'link',
+      attrs: {
+        rel: 'modulepreload',
+        href: url,
+      },
+    })
+  }
+}
+
+function getTagsForAssets(
+  assets: Iterable<ClientModule>,
+  headTags: HtmlTagDescriptor[]
+) {
+  for (const asset of assets) {
+    const url = config.base + asset.id
+    if (isCSSRequest(url)) {
+      headTags.push({
+        tag: 'link',
+        attrs: {
+          rel: 'stylesheet',
+          href: url,
+        },
+      })
+    } else {
+      // TODO: preload other assets
+    }
+  }
 }

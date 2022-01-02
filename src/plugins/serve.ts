@@ -29,7 +29,7 @@ export function servePlugin(
       if (context.htmlProcessors) {
         context.processHtml = mergeHtmlProcessors(
           context.htmlProcessors,
-          config
+          page => ({ page, config })
         )
       }
       pageFactory = createPageFactory(

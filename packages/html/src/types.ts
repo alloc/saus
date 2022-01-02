@@ -1,6 +1,6 @@
 import type { IAttribute as HtmlAttribute, ITag } from 'html5parser'
 import type { default as MagicString } from 'magic-string'
-import type { RenderedPage, RuntimeConfig } from 'saus/core'
+import type { HtmlProcessorState } from 'saus/core'
 import type { HtmlTagPath } from './path'
 import type { kTagPath } from './symbols'
 
@@ -60,12 +60,7 @@ export type HtmlVisitFn = (
 /**
  * Page-specific state shared between visitors.
  */
-export type HtmlVisitorState = {
-  [key: string]: any
-} & {
-  page: RenderedPage
-  config: RuntimeConfig
-}
+export type HtmlVisitorState = HtmlProcessorState
 
 export type HtmlDocument = {
   editor: MagicString

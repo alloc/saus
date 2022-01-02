@@ -10,6 +10,7 @@ export interface HtmlTagDescriptor {
 
 const headInjectRE = /([ \t]*)<\/head>/
 const headPrependInjectRE = [/([ \t]*)<head>/, /<!doctype html>/i]
+
 export function injectToHead(
   html: string,
   tags: HtmlTagDescriptor[],
@@ -41,6 +42,7 @@ export function injectToHead(
 
 const bodyInjectRE = /([ \t]*)<\/body>/
 const bodyPrependInjectRE = /([ \t]*)<body[^>]*>/
+
 export function injectToBody(
   html: string,
   tags: HtmlTagDescriptor[],

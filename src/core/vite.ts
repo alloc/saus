@@ -35,27 +35,17 @@ export interface SausConfig {
      */
     type?: 'script' | 'worker'
     /**
+     * Set `build.target` for the SSR bundle.
+     * @default "node14"
+     */
+    target?: vite.BuildOptions['target']
+    /**
      * The module format of the generated SSR bundle.
      * @default "cjs"
      */
     format?: 'esm' | 'cjs'
     /**
      * Minify the SSR bundle.
-     * @default false
-     */
-    minify?: boolean
-  }
-  /**
-   * Options for the client modules.
-   */
-  client?: {
-    /**
-     * Set `build.target` for client modules.
-     * @default "modules"
-     */
-    target?: vite.BuildOptions['target']
-    /**
-     * Minify the client modules.
      * @default false
      */
     minify?: boolean
@@ -95,8 +85,3 @@ export interface Plugin extends vite.Plugin {
   /** Called when routes and/or render hooks are updated */
   contextUpdate?: (context: SausContext) => void
 }
-
-export type SourceDescription = Extract<
-  Exclude<ReturnType<Exclude<vite.Plugin['load'], void>>, Promise<any>>,
-  object
->

@@ -57,7 +57,10 @@ export async function setup(inlineConfig?: vite.UserConfig) {
       onSetup(config)
     })
     if (context.htmlProcessors) {
-      context.processHtml = mergeHtmlProcessors(context.htmlProcessors, config)
+      context.processHtml = mergeHtmlProcessors(
+        context.htmlProcessors,
+        page => ({ page, config })
+      )
     }
 
     return createPageFactory(

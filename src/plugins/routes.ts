@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import { babel, inferSyntaxPlugins, t } from '../babel'
-import { SausContext, SourceDescription, vite } from '../core'
+import { SausContext, vite } from '../core'
 
-const routesPathStub = path.resolve(__dirname, '../../src/client/routes.ts')
+const routesPathStub = path.resolve(__dirname, '../src/client/routes.ts')
 
 export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
   return {
@@ -22,7 +22,7 @@ export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
   }
 }
 
-function generateClientRoutes(routesPath: string) {
+export function generateClientRoutes(routesPath: string) {
   const routesModule = babel.parseSync(fs.readFileSync(routesPath, 'utf8'), {
     filename: routesPath,
     plugins: inferSyntaxPlugins(routesPath),
@@ -54,5 +54,5 @@ function generateClientRoutes(routesPath: string) {
 
   return babel.transformSync(`export default {}`, {
     plugins: [{ visitor: transformer }],
-  }) as SourceDescription
+  }) as { code: string }
 }

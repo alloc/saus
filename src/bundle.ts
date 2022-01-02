@@ -33,6 +33,7 @@ const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
 export interface BundleOptions {
   outFile?: string
   minify?: boolean
+  mode?: string
 }
 
 export async function bundle(options: BundleOptions) {
@@ -73,7 +74,7 @@ export async function bundle(options: BundleOptions) {
     functions,
     functionImports,
     runtimeConfig,
-    context.config,
+    context,
     options
   )
 
@@ -366,7 +367,7 @@ async function generateBundle(
     build: {
       ssr: true,
       write: false,
-      target: 'node14',
+      target: bundleConfig.target || 'node14',
       minify: bundleConfig.minify == true,
       sourcemap: true,
       rollupOptions: {
@@ -380,6 +381,8 @@ async function generateBundle(
   }
 
   const config: vite.UserConfig = vite.mergeConfig(context.config, overrides)
+  // const mode = config.mode || 'production'
+
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   return buildResult.output[0].output[0]
 }

@@ -11,9 +11,7 @@ import { connect } from './connect'
 import './html'
 
 const modules = new Map<string, ClientModule>()
-const publicDir = new URL('../../public', import.meta.url).pathname
-
-function addModule(module: ClientModule) {
+const addModule = (module: ClientModule) => {
   const url = getModuleUrl(module)
   if (!modules.has(url)) {
     modules.set(url, module)
@@ -28,6 +26,7 @@ for (let knownPath of knownPaths) {
     continue
   }
   page.modules.forEach(addModule)
+  page.assets.forEach(addModule)
   addModule({
     id: getPageFilename(knownPath),
     text: page.html,
@@ -46,13 +45,14 @@ const app = connect()
     console.log(gray('cached'), req.url)
     res.writeHead(200, {
       ETag: etag(module.text, { weak: true }),
-      'Content-Type': mime.lookup(req.url)!,
+      'Content-Type': mime.lookup(module.id)!,
     })
     res.write(module.text)
     return res.end()
   })
   .use(servePage)
-  .use(servePublicFile)
+  .use(servePublicDir('./', /\.(m?js|map)$/))
+  .use(servePublicDir(config.publicDir))
   .on('error', (e, req, res, next) => {
     const close = (e: any) => {
       console.error(e)
@@ -60,6 +60,7 @@ const app = connect()
       res.end()
     }
     if (e == 404) {
+      console.log(gray('unknown'), req.url)
       req.url = config.base + e
       servePage(req, res, next).catch(close)
     } else {
@@ -79,6 +80,7 @@ async function servePage(
     }
     console.log(gray('rendered'), req.url)
     page.modules.forEach(addModule)
+    page.assets.forEach(addModule)
     res.writeHead(200, {
       'Content-Type': 'text/html',
     })
@@ -92,22 +94,31 @@ async function servePage(
   }
 }
 
-async function servePublicFile(
-  req: connect.Request,
-  res: connect.Response,
-  next: connect.NextFunction
-) {
-  try {
-    const publicFile = fs.readFileSync(path.join(publicDir, req.url))
-    console.log(gray('read'), req.url)
-    res.writeHead(200, {
-      ETag: etag(publicFile, { weak: true }),
-      'Content-Type': mime.lookup(req.url) || 'application/octet-stream',
-    })
-    res.write(publicFile)
-    res.end()
-  } catch {
-    throw 404
+function servePublicDir(publicDir: string, ignore = /^$/) {
+  return async function servePublicFile(
+    req: connect.Request,
+    res: connect.Response,
+    next: connect.NextFunction
+  ) {
+    const fileName = req.url.slice(config.base.length)
+    if (ignore.test(fileName)) {
+      return next()
+    }
+    try {
+      const content = fs.readFileSync(path.join(publicDir, fileName))
+      console.log(gray('read'), req.url)
+      res.writeHead(200, {
+        ETag: etag(content, { weak: true }),
+        'Content-Type': mime.lookup(req.url) || 'application/octet-stream',
+      })
+      res.write(content)
+      res.end()
+    } catch (e: any) {
+      if (e.code == 'ENOENT') {
+        return next()
+      }
+      throw e
+    }
   }
 }
 

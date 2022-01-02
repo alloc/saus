@@ -1,15 +1,25 @@
+import escalade from 'escalade/sync'
 import { warnOnce } from 'misty'
 import path from 'path'
 import terser from 'terser'
+import stripComments from 'strip-comments'
 import { BundleOptions } from '../bundle'
-import { ClientFunctions, mapClientFunctions } from '../core'
-import { UserConfig, vite } from '../core/vite'
+import {
+  ClientFunctions,
+  mapClientFunctions,
+  RuntimeConfig,
+  SausContext,
+  UserConfig,
+  vite,
+} from '../core'
+import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
 import { createModuleProvider } from './moduleProvider'
-import type { RuntimeConfig } from './runtime/config'
 import { ClientModuleMap } from './runtime/modules'
-import { isCSSRequest } from './runtime/utils'
 import { ClientModule } from './types'
+import { slash } from './runtime/utils'
+
+const posixPath = path.posix
 
 const ID_PREFIX = 'import:'
 
@@ -30,7 +40,7 @@ export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
   { assetsDir, base }: RuntimeConfig,
-  config: UserConfig,
+  context: SausContext,
   options: BundleOptions
 ): Promise<ClientModuleMap> {
   const input: string[] = []
@@ -76,22 +86,47 @@ export async function generateClientModules(
     })
   }
 
-  const clientConfig = config.saus.client || {}
+  let { config } = context
+
+  const mode = options.mode || context.configEnv.mode
+  const isProduction = mode == 'production'
+
+  // Vite replaces `process.env.NODE_ENV` in client modules with the value
+  // at compile time (strangely), so we need to reset it here.
+  if (!isProduction) {
+    process.env.NODE_ENV = undefined
+  }
+
+  let sourceMaps = config.build?.sourcemap ?? (!isProduction && 'inline')
+  if (sourceMaps === true || sourceMaps === 'hidden') {
+    sourceMaps = false
+    context.logger.warn(
+      '`sourceMaps: ' +
+        JSON.stringify(sourceMaps) +
+        '` is not supported for SSR bundles; use "inline" instead.'
+    )
+  }
+
+  const outDir = path.resolve(context.root, config.build?.outDir || 'dist')
   const minify =
-    (options.minify == null ? clientConfig.minify : options.minify) !== false
+    options.minify == null
+      ? config.build?.minify ?? isProduction
+      : options.minify
 
   config = vite.mergeConfig(config, <vite.UserConfig>{
-    plugins: [modules, fixChunkImports()],
+    plugins: [routesPlugin(context), modules, fixChunkImports()],
+    mode,
     css: {
       minify,
     },
     build: {
       write: false,
-      target: clientConfig.target || 'modules',
       minify: false,
+      sourcemap: sourceMaps,
       rollupOptions: {
         input,
         output: {
+          dir: outDir,
           minifyInternalExports: false,
         },
         preserveEntrySignatures: 'allow-extension',
@@ -114,10 +149,19 @@ export async function generateClientModules(
     if (chunk.type !== 'chunk') {
       assets.push(chunk)
     } else {
+      if (sourceMaps == 'inline' && chunk.map?.sources.length) {
+        const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
+        chunk.map.sources = rewriteSources(chunk.map.sources, chunkDir, context)
+        console.log(chunk.fileName, chunk.map.sources)
+        chunk.code +=
+          '\n//# ' +
+          'sourceMappingURL=data:application/json;charset=utf-8;base64,' +
+          Buffer.from(JSON.stringify(chunk.map), 'utf8').toString('base64')
+      }
       chunks.push(chunk)
       if (chunk.isEntry) {
         const code = rewriteExports(chunk.code)
-        const lines = code.trim().split('\n')
+        const lines = stripComments(code).split('\n').filter(Boolean)
 
         // We want to preserve the `export` statements if
         // this chunk *cannot* be inlined, which is the case
@@ -280,4 +324,51 @@ function fixChunkImports(): vite.Plugin {
       }
     },
   }
+}
+
+/**
+ * Make sourcemap sources more useful by injecting the package name/version
+ * for external modules and rewriting paths for project files to be relative
+ * to the project root.
+ */
+function rewriteSources(
+  sources: string[],
+  chunkDir: string,
+  context: SausContext
+) {
+  const chunkDepth = chunkDir.split('/').length - 1
+  const publicDir = '/' + (context.config.publicDir || 'public') + '/'
+
+  return sources.map(sourcePath => {
+    const sourceDepth = sourcePath.startsWith('../')
+      ? sourcePath.replace(/\/[^./].+$/, '').split('/').length
+      : 0
+
+    // Handle imports of public files.
+    if (sourceDepth == chunkDepth) {
+      return publicDir + sourcePath.replace(/^(\.\.\/)+/, '')
+    }
+
+    sourcePath = path.resolve(chunkDir, sourcePath)
+    let sourceId = vite.normalizePath(path.relative(context.root, sourcePath))
+    if (sourceId[0] == '.' || sourceId.includes('/node_modules/')) {
+      const pkgPath = escalade(
+        path.dirname(sourcePath),
+        (_parent, children) => {
+          return children.find(name => name == 'package.json')
+        }
+      )
+      if (pkgPath) {
+        const pkg = require(pkgPath)
+        sourceId = posixPath.join(
+          pkg.name + '@' + pkg.version,
+          slash(path.relative(path.dirname(pkgPath), sourcePath))
+        )
+      } else {
+        sourceId = sourceId.replace(/^(\.\.\/)+/, '')
+      }
+      return '/node_modules/' + sourceId
+    }
+    return '/' + sourceId
+  })
 }

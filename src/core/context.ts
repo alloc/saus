@@ -42,7 +42,10 @@ export async function loadContext(
   inlineConfig?: vite.UserConfig,
   sausPlugins?: ((context: SausContext) => vite.Plugin)[]
 ): Promise<SausContext> {
-  const root = inlineConfig?.root || process.cwd()
+  const root = vite
+    .normalizePath(inlineConfig?.root || process.cwd())
+    .replace(/\/$/, '')
+
   const isBuild = command === 'build'
   const configEnv: vite.ConfigEnv = {
     command: command !== 'dev' ? 'build' : 'serve',

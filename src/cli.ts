@@ -47,6 +47,10 @@ cli
 
 cli
   .command('bundle [outFile]')
+  .option(
+    '--mode <mode>',
+    `[string] override the client mode (eg: development)`
+  )
   .option('--minify', `[boolean] minify the client modules`)
   .action(async (outFile, options) => {
     options.outFile = outFile

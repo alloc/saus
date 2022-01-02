@@ -1,6 +1,7 @@
 export interface RenderedPage {
   html: string
-  modules: ClientModule[]
+  modules: Set<ClientModule>
+  assets: Set<ClientModule>
 }
 
 export interface ClientModule {

@@ -76,10 +76,11 @@ export function createPageFactory(
         onSetup(config)
       })
       if (context.htmlProcessors) {
-        processHtml = mergeHtmlProcessors(context.htmlProcessors, config, [
-          'pre',
-          'default',
-        ])
+        processHtml = mergeHtmlProcessors(
+          context.htmlProcessors,
+          page => ({ page, config }),
+          ['pre', 'default']
+        )
       }
     }
 

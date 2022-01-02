@@ -11,11 +11,22 @@ import {
 } from '../babel'
 import { renderIdentRE } from '../plugins/render'
 import type { RouteParams } from './routes'
-import type { SourceDescription } from './vite'
 
 /** A generated client module */
-export interface Client extends SourceDescription {
+export interface Client {
   id: string
+  code: string
+  map?: ExistingRawSourceMap | null
+}
+
+interface ExistingRawSourceMap {
+  file?: string
+  mappings: string
+  names: string[]
+  sourceRoot?: string
+  sources: string[]
+  sourcesContent?: string[]
+  version: number
 }
 
 /** JSON state provided by the renderer and made available to the client */
