@@ -52,7 +52,10 @@ export function clientPlugin(context: SausContext): Plugin {
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
-          filename = getPageFilename(path.replace(/\?.*$/, ''))
+          filename = getPageFilename(
+            path.replace(/\?.*$/, ''),
+            context.basePath
+          )
         }
 
         const page = pages[filename]
@@ -117,7 +120,9 @@ export function clientPlugin(context: SausContext): Plugin {
           tag: 'script',
           attrs: { type: 'module' },
           children: endent`
-            import * as routeModule from "${routeModuleId}"
+            import * as routeModule from "${
+              context.basePath + routeModuleId.slice(1)
+            }"
             import { hydrate } from "${sausClientId}"
             hydrate(routeModule, "${path}")
           `,
@@ -128,7 +133,10 @@ export function clientPlugin(context: SausContext): Plugin {
           tags.push({
             injectTo: 'head',
             tag: 'link',
-            attrs: { href, rel: 'stylesheet' },
+            attrs: {
+              href: context.basePath + href.slice(1),
+              rel: 'stylesheet',
+            },
           })
         )
 

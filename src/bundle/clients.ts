@@ -328,7 +328,7 @@ function fixChunkImports(): vite.Plugin {
 
 /**
  * Make sourcemap sources more useful by injecting the package name/version
- * for external modules and rewriting paths for project files to be relative
+ * for external modules and by rewriting paths for project files to be relative
  * to the project root.
  */
 function rewriteSources(
@@ -365,6 +365,7 @@ function rewriteSources(
           slash(path.relative(path.dirname(pkgPath), sourcePath))
         )
       } else {
+        // No "package.json" was found, so just remove the "../" parts.
         sourceId = sourceId.replace(/^(\.\.\/)+/, '')
       }
       return '/node_modules/' + sourceId

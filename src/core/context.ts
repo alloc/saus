@@ -19,6 +19,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   configEnv: vite.ConfigEnv
   configPath: string | null
   configHooks: string[]
+  /** The URL prefix for all pages */
+  basePath: string
   /** The `saus.defaultPath` option from Vite config */
   defaultPath: string
   /** Path to the routes module */
@@ -103,6 +105,7 @@ export async function loadContext(
     configEnv,
     configPath: loadResult ? loadResult.path : null,
     configHooks: [],
+    basePath: config.base || '/',
     defaultPath: sausConfig.defaultPath || '/404',
     routesPath,
     routes: [],

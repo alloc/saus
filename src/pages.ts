@@ -1,5 +1,6 @@
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
+import path from 'path'
 import type {
   BeforeRenderHook,
   Client,
@@ -25,8 +26,17 @@ import { serializeImports } from './utils/imports'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
 
-export function getPageFilename(path: string) {
-  return path == '/' ? 'index.html' : path.slice(1) + '.html'
+/**
+ * Get the `.html` filename for a given URL pathname.
+ *
+ * Beware: Trailing slashes are treated as `/index.html` and querystrings
+ * are not supported.
+ */
+export function getPageFilename(path: string, basePath?: string) {
+  if (basePath && path == basePath.slice(0, -1)) {
+    return basePath.slice(1) + 'index.html'
+  }
+  return path.slice(1) + (path.endsWith('/') ? 'index.html' : '.html')
 }
 
 export type PageFactory = ReturnType<typeof createPageFactory>
@@ -40,7 +50,7 @@ export type RenderedPage = {
 }
 
 export interface PageFactoryContext
-  extends Pick<SausContext, 'pages' | 'states'>,
+  extends Pick<SausContext, 'basePath' | 'pages' | 'states'>,
     RoutesModule,
     RenderModule {
   logger: { warn(msg: string): void }
@@ -60,6 +70,7 @@ export function createPageFactory(
     defaultRenderer,
     beforeRenderHooks,
     processHtml,
+    basePath,
     logger,
   } = context
 
@@ -151,7 +162,8 @@ export function createPageFactory(
         return null
       }
 
-      const filename = getPageFilename(path)
+      const filename = getPageFilename(path, basePath)
+
       let client = pages[filename]?.client
       if (!client) {
         debug(`Generating client module`)
@@ -374,8 +386,9 @@ async function getClient(
       )
     )
     const hash = md5Hex(result.code).slice(0, 8)
+    const ext = path.extname(functions.filename)
     return {
-      id: `client.${hash}.js`,
+      id: `client.${hash}${ext}`,
       ...result,
     }
   }

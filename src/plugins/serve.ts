@@ -40,7 +40,15 @@ export function servePlugin(
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {
-        const url = req.originalUrl!.replace(/#[^?]*/, '')
+        let url = req.originalUrl!
+        if (!url.startsWith(context.basePath)) {
+          return next()
+        }
+
+        // Remove URL fragment, but keep querystring
+        url = url.replace(/#[^?]*/, '')
+        // Remove base path
+        url = url.slice(context.basePath.length - 1) || '/'
 
         let { reloadId } = context
         try {

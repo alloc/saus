@@ -13,11 +13,7 @@ render((module, { params }) => {
   <head>
     <meta charSet="utf-8" />
     <title>Pokemon Wiki</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href={import.meta.env.BASE_URL + 'favicon.svg'}
-    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link
       href="https://cdn.jsdelivr.net/npm/modern-normalize@1.1.0/modern-normalize.min.css"
       rel="stylesheet"

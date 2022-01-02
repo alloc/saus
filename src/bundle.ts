@@ -11,6 +11,7 @@ import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import { createModuleProvider, ModuleProvider } from './bundle/moduleProvider'
 import type { ClientModuleMap } from './bundle/runtime/modules'
+import { slash } from './bundle/runtime/utils'
 import {
   ClientFunction,
   ClientFunctions,
@@ -85,7 +86,8 @@ export async function bundle(options: BundleOptions) {
     routeImports,
     functions,
     moduleMap,
-    bundleFormat
+    bundleFormat,
+    bundlePath
   )
 
   context.logger.info(
@@ -284,7 +286,8 @@ async function generateBundle(
   routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
-  bundleFormat: 'esm' | 'cjs'
+  bundleFormat: 'esm' | 'cjs',
+  bundlePath: string
 ) {
   const modules = createModuleProvider()
 
@@ -373,6 +376,7 @@ async function generateBundle(
       rollupOptions: {
         input: serverPath || entryId,
         output: {
+          dir: path.dirname(bundlePath),
           format: bundleFormat,
           sourcemapExcludeSources: true,
         },

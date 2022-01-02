@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import { isCSSRequest } from './bundle/runtime/utils'
 
 export function collectCss(
   mod: vite.ModuleNode,
@@ -18,5 +19,5 @@ export function collectCss(
 }
 
 function isCssModule(mod: vite.ModuleNode) {
-  return mod.url.endsWith('.css') || (mod.id && /\?vue&type=style/.test(mod.id))
+  return isCSSRequest(mod.url) || (mod.id && /\?vue&type=style/.test(mod.id))
 }

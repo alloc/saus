@@ -57,6 +57,7 @@ export interface RenderFunction extends ClientFunction {
 }
 
 export type ClientFunctions = {
+  filename: string
   beforeRender: ClientFunction[]
   render: RenderFunction[]
 }
@@ -174,6 +175,7 @@ export function extractClientFunctions(filename: string): ClientFunctions {
   }
 
   return {
+    filename,
     beforeRender: beforeRenderFns.map(defineClientFunction),
     render: renderFns.map(path => {
       const fn = defineClientFunction(path) as RenderFunction
