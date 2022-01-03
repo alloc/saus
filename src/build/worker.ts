@@ -24,6 +24,7 @@ export async function setup(inlineConfig?: vite.UserConfig) {
   context = await loadContext('build', inlineConfig, [
     renderPlugin,
     routesPlugin,
+    stripBasePath,
   ])
 
   loader = await createLoader(context, {
@@ -43,6 +44,7 @@ export async function setup(inlineConfig?: vite.UserConfig) {
         )
       )
     } catch (e: any) {
+      console.log('Worker failed to load: %O', e.message)
       if (e.message !== 'Server is closed') {
         if (isMainThread) throw e
         return console.error(e)
@@ -72,6 +74,20 @@ export async function setup(inlineConfig?: vite.UserConfig) {
   if (isMainThread) {
     // …except on the main thread, where cancellation is unsupported.
     return setupPromise.then(() => context)
+  }
+}
+
+function stripBasePath(context: SausContext): vite.Plugin {
+  return {
+    name: 'saus:stripBasePath',
+    resolveId(id, importer) {
+      if (id.startsWith(context.basePath)) {
+        id = id.slice(context.basePath.length - 1)
+        return this.resolve(id, importer, {
+          skipSelf: true,
+        })
+      }
+    },
   }
 }
 

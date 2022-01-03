@@ -148,13 +148,16 @@ export async function loadContext(
 }
 
 function assertSausConfig(
-  config: SausConfig | undefined
+  config: Partial<SausConfig> | undefined
 ): asserts config is SausConfig
 
-function assertSausConfig(config: SausConfig, prop: keyof SausConfig): void
+function assertSausConfig(
+  config: Partial<SausConfig>,
+  prop: keyof SausConfig
+): void
 
 function assertSausConfig(
-  config: SausConfig | undefined,
+  config: Partial<SausConfig> | undefined,
   prop?: keyof SausConfig
 ) {
   const value = prop ? config![prop] : config
@@ -209,7 +212,7 @@ export async function loadConfigHooks(importer: string) {
 
 export function createLoader(
   context: SausContext,
-  inlineConfig?: UserConfig
+  inlineConfig?: vite.UserConfig
 ): Promise<ModuleLoader> {
   return vite.createServer({
     ...context.config,

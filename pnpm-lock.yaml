@@ -32,12 +32,13 @@ importers:
       klona: ^2.0.4
       magic-string: ^0.25.7
       md5-hex: ^3.0.0
-      misty: ^1.4.4
+      misty: ^1.4.5
       physical-cpu-count: ^2.0.0
       prettier: ^2.0.5
       react: ^17.0.2
       react-dom: ^17.0.2
       regexparam: ^2.0.0
+      shared-log: ^1.2.4
       source-map-support: ^0.5.20
       strip-comments: ^2.0.1
       terser: ^5.10.0
@@ -55,6 +56,7 @@ importers:
       escape-goat: 3.0.0
       magic-string: 0.25.7
       md5-hex: 3.0.1
+      shared-log: 1.2.4
       terser: 5.10.0
       threads: 1.7.0
       vite: /@alloc/vite/2.6.3-3
@@ -80,7 +82,7 @@ importers:
       is-plain-object: 5.0.0
       kleur: 4.1.4
       klona: 2.0.4
-      misty: 1.4.4
+      misty: 1.4.5
       physical-cpu-count: 2.0.0
       prettier: 2.4.1
       react: 17.0.2
@@ -825,11 +827,6 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: false
-
-  /ansi-regex/5.0.1:
-    resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
-    engines: {node: '>=8'}
-    dev: true
 
   /ansi-styles/3.2.1:
     resolution: {integrity: sha512-VT0ZI6kZRdTh8YyJw3SMbYm/u+NqfsAxEpWO0Pf9sq8/e94WxxOpPKx9FR1FlyCtOVDNOQ+8ntlqFxiRc+r5qA==}
@@ -1796,20 +1793,11 @@ packages:
   /minimist/1.2.5:
     resolution: {integrity: sha512-FM9nNUYrRBAELZQT3xeZQ7fmMOBg6nWNmJKTcgsJeaLstP/UODVpGsr5OhXhhXg6f+qtJ8uiZ+PUxkDWcgIXLw==}
 
-  /misty/1.4.4:
-    resolution: {integrity: sha512-6kj1toJz5dvghnz2GjkjhwiEmY+LTFydVDtomKdyqPY6wDwsYHfdkRXP0DcrsoCQhwLcFLsZM8HRolXGKHT4pw==}
-    dependencies:
-      kleur: 4.1.4
-      shared-log: 1.2.4
-      strip-ansi: 6.0.1
-    dev: true
-
   /misty/1.4.5:
     resolution: {integrity: sha512-S9KV0StLXRDiEik+sVUBW7+vetofsf750CjAFYREB1FmlcG2ntvniNzJDpAjWeJAwB2yL6Z3URezkdGiWyoTvw==}
     dependencies:
       kleur: 4.1.4
       shared-log: 1.2.4
-    dev: false
 
   /mlly/0.2.10:
     resolution: {integrity: sha512-xfyW6c2QBGArtctzNnTV5leOKX8nOMz2simeubtXofdsdSJFSNw+Ncvrs8kxcN3pBrQLXuYBHNFV6NgZ5Ryf4A==}
@@ -2129,13 +2117,6 @@ packages:
   /sourcemap-codec/1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
     dev: false
-
-  /strip-ansi/6.0.1:
-    resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
-    engines: {node: '>=8'}
-    dependencies:
-      ansi-regex: 5.0.1
-    dev: true
 
   /strip-comments/2.0.1:
     resolution: {integrity: sha512-ZprKx+bBLXv067WTCALv8SSz5l2+XhpYCsVtSqlMnkAXMWDq+/ekVbl1ghqP9rUHTzv6sm/DwCOiYutU/yp1fw==}

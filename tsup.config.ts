@@ -8,6 +8,7 @@ export default defineConfig({
     'src/core/index.ts',
     'src/bundle/runtime/html.ts',
     'src/babel/index.ts',
+    'src/build/worker.ts',
     // Commands
     'src/build.ts',
     'src/bundle.ts',

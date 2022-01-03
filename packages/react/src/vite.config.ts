@@ -7,6 +7,9 @@ export default (config: UserConfig) =>
     saus: {
       clients: [client],
     },
+    ssr: {
+      external: ['react', 'react-dom'],
+    },
     optimizeDeps: {
       include: ['react', 'react-dom'],
       exclude: ['@saus/react'],

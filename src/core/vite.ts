@@ -60,7 +60,7 @@ export interface SausConfig {
 
 declare module 'vite' {
   interface UserConfig {
-    saus?: SausConfig
+    saus?: Partial<SausConfig>
   }
 }
 
@@ -74,12 +74,13 @@ export interface BuildOptions extends vite.BuildOptions {
   force?: boolean
 }
 
-export const defineConfig = (
+type Promisable<T> = T | Promise<T>
+
+export const defineConfig = vite.defineConfig as (
   config:
-    | UserConfig
-    | Promise<UserConfig>
-    | ((env: vite.ConfigEnv) => UserConfig | Promise<UserConfig>)
-) => vite.defineConfig(config)
+    | Promisable<vite.UserConfig>
+    | ((env: vite.ConfigEnv) => Promisable<vite.UserConfig>)
+) => vite.UserConfigExport
 
 export interface Plugin extends vite.Plugin {
   /** Called when routes and/or render hooks are updated */
