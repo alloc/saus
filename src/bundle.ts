@@ -19,7 +19,6 @@ import {
   extractClientFunctions,
   generateRoutePaths,
   RegexParam,
-  RoutePathErrorHandler,
   SausBundleConfig,
   SausContext,
 } from './core'
@@ -518,10 +517,7 @@ function relativeToCwd(file: string) {
   return file.startsWith('../') ? file : './' + file
 }
 
-async function generateKnownPaths(
-  context: SausContext,
-  onError: RoutePathErrorHandler
-) {
+async function generateKnownPaths(context: SausContext) {
   const loader = await createLoader(context, {
     cacheDir: false,
     server: { hmr: false, wss: false, watch: false },
@@ -535,12 +531,17 @@ async function generateKnownPaths(
   }
 
   const paths: string[] = []
+  const errors: { reason: string; path: string }[] = []
   await generateRoutePaths(context, {
     path(path, params) {
       paths.push(params ? RegexParam.inject(path, params) : path)
     },
-    error: onError,
+    error: error => errors.push(error),
   })
+
+  for (const error of errors) {
+    context.logger.error(kleur.red(error.reason))
+  }
 
   return paths
 }

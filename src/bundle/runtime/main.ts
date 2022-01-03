@@ -114,13 +114,9 @@ export default function renderPage(
       // Add "state.json" modules after "modulepreload" tags are
       // generated from the `modules` array, since the `page.state`
       // object is injected into the HTML as an inline script.
-      if (typeof pageUrl == 'string') {
-        pageUrl = parseUrl(pageUrl)
-      }
-      const pagePath = pageUrl.path.slice(config.base.length)
       const pageState = JSON.stringify(page.state || {})
       modules.add({
-        id: (pagePath ? pagePath + '/' : '') + 'state.json',
+        id: joinUrls(pageUrl.toString(), 'state.json'),
         text: pageState,
       })
       bodyTags.push({
@@ -161,6 +157,20 @@ export default function renderPage(
       }, reject)
     })
   })
+}
+
+function joinUrls(url: string, suffix: string) {
+  const hasTrailingSlash = url[url.length - 1] == '/'
+  return (
+    url +
+    (suffix[0] == '/'
+      ? hasTrailingSlash
+        ? suffix.slice(1)
+        : suffix
+      : hasTrailingSlash
+      ? suffix
+      : '/' + suffix)
+  )
 }
 
 function getPreloadTagsForModules(

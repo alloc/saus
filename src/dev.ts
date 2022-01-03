@@ -17,7 +17,7 @@ import { defer } from './utils/defer'
 import { steal } from './utils/steal'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
-  let context = await loadContext('dev', inlineConfig)
+  let context = await loadContext('serve', inlineConfig)
 
   const events = new EventEmitter()
   events.on('error', onError)
@@ -34,7 +34,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       await oldServer?.close()
 
       context.logger.clearScreen('info')
-      context = await loadContext('dev', inlineConfig)
+      context = await loadContext('serve', inlineConfig)
       server = await startServer(context, events, true)
       return server
     })

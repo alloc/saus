@@ -34,28 +34,12 @@ export function setConfigHooks(hooks: string[] | null) {
   configHooks = hooks
 }
 
-export type SausCommand = 'dev' | 'build' | 'bundle'
-
 export interface RuntimeConfig {
   assetsDir: string
   base: string
   bundleType?: 'script' | 'worker'
-  command: SausCommand
+  command: 'dev' | 'bundle'
   minify: boolean
   mode: string
   publicDir: string
-}
-
-export function getRuntimeConfig(
-  command: SausCommand,
-  { config }: SausContext
-): RuntimeConfig {
-  return {
-    assetsDir: config.build?.assetsDir || 'assets',
-    base: config.base || '/',
-    command,
-    minify: command !== 'dev' && config.build?.minify !== false,
-    mode: config.mode || (command == 'dev' ? 'development' : 'production'),
-    publicDir: config.build?.outDir || 'dist',
-  }
 }

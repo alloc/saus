@@ -40,7 +40,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
 }
 
 export async function loadContext(
-  command: SausCommand,
+  command: 'build' | 'serve',
   inlineConfig?: vite.UserConfig,
   sausPlugins?: ((context: SausContext) => vite.Plugin)[]
 ): Promise<SausContext> {
@@ -50,7 +50,7 @@ export async function loadContext(
 
   const isBuild = command === 'build'
   const configEnv: vite.ConfigEnv = {
-    command: command !== 'dev' ? 'build' : 'serve',
+    command,
     mode: inlineConfig?.mode || (isBuild ? 'production' : 'development'),
   }
 

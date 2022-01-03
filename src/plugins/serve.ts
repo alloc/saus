@@ -2,9 +2,9 @@ import {
   extractClientFunctions,
   mergeHtmlProcessors,
   Plugin,
+  RuntimeConfig,
   SausContext,
 } from '../core'
-import { getRuntimeConfig } from '../core/config'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
 
@@ -22,7 +22,14 @@ export function servePlugin(
   return {
     name: 'saus:serve',
     contextUpdate(context) {
-      const config = getRuntimeConfig('dev', context)
+      const config: RuntimeConfig = {
+        assetsDir: context.config.build?.assetsDir || 'assets',
+        base: context.config.base || '/',
+        command: 'dev',
+        minify: false,
+        mode: context.config.mode || 'development',
+        publicDir: context.config.publicDir || 'public',
+      }
       context.runtimeHooks.forEach(onSetup => {
         onSetup(config)
       })
