@@ -26,6 +26,7 @@
     "node": ">=14"
   },
   "dependencies": {
+    "@babel/core": "^7.16.7",
     "@babel/plugin-syntax-typescript": "^7.14.5",
     "cac": "^6.7.3",
     "endent": "^2.1.0",
@@ -35,13 +36,12 @@
     "md5-hex": "^3.0.0",
     "shared-log": "^1.2.4",
     "terser": "^5.10.0",
-    "threads": "^1.7.0",
+    "tinypool": "^0.1.0",
     "vite": "npm:@alloc/vite@2.6.3-3"
   },
   "devDependencies": {
     "@alloc/fast-rimraf": "^1.0.8",
     "@alloc/prettier-config": "^1.0.0",
-    "@babel/core": "^7.16.5",
     "@babel/helper-annotate-as-pure": "^7.15.4",
     "@rollup/pluginutils": "^4.1.2",
     "@types/debug": "^4.1.7",
@@ -61,7 +61,6 @@
     "kleur": "^4.1.4",
     "klona": "^2.0.4",
     "misty": "^1.4.5",
-    "physical-cpu-count": "^2.0.0",
     "prettier": "^2.0.5",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

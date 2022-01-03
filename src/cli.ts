@@ -23,26 +23,33 @@ cli
 
 cli
   .command('build')
-  .option(
-    '--minify [minifier]',
-    `[boolean | "terser" | "esbuild"] enable/disable minification, ` +
-      `or specify minifier to use (default: esbuild)`
-  )
-  .option('--force', `[boolean] clear the rollup cache`)
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
+  .option('--minify', `[boolean] minify the client modules`)
+  .option('--outDir <dir>', `[string] output directory (default: dist)`)
+  .option(
+    '--emptyOutDir',
+    `[boolean] force empty outDir when it's outside of root`
+  )
   .action(async (options: BuildOptions) => {
     const { build } = require('./build') as typeof import('./build')
-    const { pages, errors } = await build({ build: options })
-    if (errors.length) {
-      console.log('')
-      for (const error of errors) {
-        console.error(color.red(`Failed to render`), error.path)
-        console.error(`  ` + color.gray(error.reason))
+    try {
+      const { pages, errors } = await build({ build: options })
+      if (errors.length) {
         console.log('')
+        for (const error of errors) {
+          console.error(color.red(`Failed to render`), error.path)
+          console.error(`  ` + color.gray(error.reason))
+          console.log('')
+        }
       }
+      success(`${pages.size} pages rendered.`)
+      process.exit(errors.length ? 1 : 0)
+    } catch (e: any) {
+      if (e.message.startsWith('[saus]')) {
+        fatal(e.message)
+      }
+      throw e
     }
-    success(`${pages.length} pages rendered.`)
-    process.exit(errors.length ? 1 : 0)
   })
 
 cli
@@ -68,7 +75,7 @@ cli
     })
 
     try {
-      let { code, map } = await bundle(options, context)
+      let { code, map } = await bundle(context, options)
       if (noWrite) {
         const { toInlineSourceMap } =
           require('./bundle/sourceMap') as typeof import('./bundle/sourceMap')
