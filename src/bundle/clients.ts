@@ -1,7 +1,6 @@
 import escalade from 'escalade/sync'
 import { warnOnce } from 'misty'
 import path from 'path'
-import terser from 'terser'
 import stripComments from 'strip-comments'
 import { BundleOptions } from '../bundle'
 import {
@@ -243,6 +242,7 @@ export async function generateClientModules(
       }
 
       if (minify) {
+        const terser = await import('terser')
         const minified = await terser.minify(chunk.code, {
           toplevel: chunk.exports.length > 0,
           keep_fnames: true,

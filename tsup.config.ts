@@ -14,7 +14,7 @@ export default defineConfig({
     'src/bundle.ts',
     'src/dev.ts',
   ],
-  format: ['cjs'],
+  format: ['esm'],
   splitting: true,
   sourcemap: true,
   external: Object.keys(require('./package.json').dependencies),

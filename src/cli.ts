@@ -1,4 +1,3 @@
-import 'source-map-support/register'
 import { fatal, success } from 'misty'
 import color from 'kleur'
 import cac from 'cac'

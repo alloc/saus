@@ -1,7 +1,7 @@
 import * as babel from '@babel/core'
 import { dataToEsm } from '@rollup/pluginutils'
 import builtins from 'builtin-modules'
-import esModuleLexer from 'es-module-lexer'
+import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'

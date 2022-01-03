@@ -1,4 +1,4 @@
-import esModuleLexer from 'es-module-lexer'
+import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
 import { resolve } from 'path'

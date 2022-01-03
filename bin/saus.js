@@ -4,4 +4,5 @@ if (/(^| )saus:\*( |$)/.test(process.env.DEBUG || '')) {
   process.env.DEBUG += ' saus'
 }
 
-require('../dist/cli').default.parse()
+import cli from '../dist/cli.js'
+cli.parse()
