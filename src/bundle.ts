@@ -11,7 +11,7 @@ import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import { createModuleProvider, ModuleProvider } from './bundle/moduleProvider'
 import type { ClientModuleMap } from './bundle/runtime/modules'
-import { slash } from './bundle/runtime/utils'
+import { SourceMap } from './bundle/sourceMap'
 import {
   ClientFunction,
   ClientFunctions,
@@ -35,19 +35,21 @@ export interface BundleOptions {
   outFile?: string
   minify?: boolean
   mode?: string
+  write?: boolean
 }
 
-export async function bundle(options: BundleOptions) {
-  let context: SausContext
+export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
   try {
-    context = await loadContext('build', undefined, [renderPlugin])
+    return await loadContext('build', inlineConfig, [renderPlugin])
   } catch (e: any) {
     if (e.message.startsWith('[saus]')) {
       fatal(e.message)
     }
     throw e
   }
+}
 
+export async function bundle(options: BundleOptions, context: SausContext) {
   const outDir = context.config.build?.outDir || 'dist'
   const bundleConfig = context.config.saus.bundle || {}
   const bundleFormat = bundleConfig.format || 'cjs'
@@ -62,9 +64,7 @@ export async function bundle(options: BundleOptions) {
       )
 
   if (!bundlePath) {
-    return context.logger.error(
-      kleur.red(`[saus] Must provide a destination path`)
-    )
+    throw Error(`[saus] Must provide a destination path`)
   }
 
   const { functions, functionImports, routeImports, runtimeConfig } =
@@ -90,23 +90,30 @@ export async function bundle(options: BundleOptions) {
     bundlePath
   )
 
-  context.logger.info(
-    kleur.bold('[saus]') +
-      ` Saving bundle as ${kleur.green(relativeToCwd(bundlePath))}`
-  )
-
-  const mapFileComment =
-    '\n//# ' + 'sourceMappingURL=' + path.basename(bundlePath) + '.map'
-
-  fs.mkdirSync(path.dirname(bundlePath), { recursive: true })
-  fs.writeFileSync(bundlePath, bundle.code + mapFileComment)
-  fs.writeFileSync(bundlePath + '.map', JSON.stringify(bundle.map))
-
-  if (!bundleConfig.entry) {
-    fs.copyFileSync(
-      path.resolve(__dirname, '../src/bundle/types.ts'),
-      bundlePath.replace(/(\.[cm]js)?$/, '.d.ts')
+  if (options.write !== false) {
+    context.logger.info(
+      kleur.bold('[saus]') +
+        ` Saving bundle as ${kleur.green(relativeToCwd(bundlePath))}`
     )
+
+    const mapFileComment =
+      '\n//# ' + 'sourceMappingURL=' + path.basename(bundlePath) + '.map'
+
+    fs.mkdirSync(path.dirname(bundlePath), { recursive: true })
+    fs.writeFileSync(bundlePath, bundle.code + mapFileComment)
+    fs.writeFileSync(bundlePath + '.map', JSON.stringify(bundle.map))
+
+    if (!bundleConfig.entry) {
+      fs.copyFileSync(
+        path.resolve(__dirname, '../src/bundle/types.ts'),
+        bundlePath.replace(/(\.[cm]js)?$/, '.d.ts')
+      )
+    }
+  }
+
+  return bundle as {
+    code: string
+    map: SourceMap
   }
 }
 

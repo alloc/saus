@@ -18,6 +18,7 @@ import { createModuleProvider } from './moduleProvider'
 import { ClientModuleMap } from './runtime/modules'
 import { ClientModule } from './types'
 import { slash } from './runtime/utils'
+import { toInlineSourceMap } from './sourceMap'
 
 const posixPath = path.posix
 
@@ -153,10 +154,7 @@ export async function generateClientModules(
         const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
         chunk.map.sources = rewriteSources(chunk.map.sources, chunkDir, context)
         console.log(chunk.fileName, chunk.map.sources)
-        chunk.code +=
-          '\n//# ' +
-          'sourceMappingURL=data:application/json;charset=utf-8;base64,' +
-          Buffer.from(JSON.stringify(chunk.map), 'utf8').toString('base64')
+        chunk.code += toInlineSourceMap(chunk.map)
       }
       chunks.push(chunk)
       if (chunk.isEntry) {

@@ -1,5 +1,5 @@
 import 'source-map-support/register'
-import { success } from 'misty'
+import { fatal, success } from 'misty'
 import color from 'kleur'
 import cac from 'cac'
 import { BuildOptions, vite } from './core'
@@ -54,7 +54,34 @@ cli
   .option('--minify', `[boolean] minify the client modules`)
   .action(async (outFile, options) => {
     options.outFile = outFile
-    await (require('./bundle') as typeof import('./bundle')).bundle(options)
+
+    const noWrite = !process.stdout.isTTY && !process.env.CI
+    if (noWrite) {
+      options.write = false
+    }
+
+    const { bundle, loadBundleContext } =
+      require('./bundle') as typeof import('./bundle')
+
+    const context = await loadBundleContext({
+      logLevel: noWrite ? 'silent' : undefined,
+    })
+
+    try {
+      let { code, map } = await bundle(options, context)
+      if (noWrite) {
+        const { toInlineSourceMap } =
+          require('./bundle/sourceMap') as typeof import('./bundle/sourceMap')
+
+        code += toInlineSourceMap(map)
+        process.stdout.write(code)
+      }
+    } catch (e: any) {
+      if (e.message.startsWith('[saus]')) {
+        fatal(e.message)
+      }
+      throw e
+    }
   })
 
 cli.help()
