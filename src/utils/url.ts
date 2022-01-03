@@ -1,4 +1,8 @@
+import { URLSearchParams } from 'url'
+
 const rawUrlRE = /^(\/[^#?]*)(?:#[^?]*)?(?:\?(.+)?)?$/
+
+export type { URLSearchParams }
 
 export class ParsedUrl {
   readonly path: string

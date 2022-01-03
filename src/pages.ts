@@ -206,7 +206,7 @@ export function createPageFactory(
         state.then(() =>
           Promise.all(
             (typeof route.include == 'function'
-              ? route.include(url)
+              ? route.include(url, params)
               : route.include!
             ).map(fragment => fragment.load())
           )

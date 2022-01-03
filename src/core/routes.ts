@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
-import { ParsedUrl } from '../utils/url'
+import { ParsedUrl, URLSearchParams } from '../utils/url'
 import { SausContext } from './context'
 import { HtmlContext } from './html'
 import { RuntimeHook } from './setup'
@@ -61,7 +61,7 @@ export interface RouteConfig<
    */
   include?:
     | StateFragment<any, []>[]
-    | ((url: ParsedUrl) => StateFragment<any, []>[])
+    | ((url: ParsedUrl, params: RouteParams) => StateFragment<any, []>[])
 }
 
 export interface ParsedRoute {
