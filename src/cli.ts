@@ -1,7 +1,8 @@
 import 'source-map-support/register'
-import { fatal, success } from 'misty'
-import color from 'kleur'
 import cac from 'cac'
+import { red, gray } from 'kleur/colors'
+import { fatal, success } from 'misty'
+import log from 'shared-log'
 import { BuildOptions, vite } from './core'
 
 const cli = cac('saus')
@@ -35,11 +36,11 @@ cli
     try {
       const { pages, errors } = await build({ build: options })
       if (errors.length) {
-        console.log('')
+        log('')
         for (const error of errors) {
-          console.error(color.red(`Failed to render`), error.path)
-          console.error(`  ` + color.gray(error.reason))
-          console.log('')
+          log.error(red(`Failed to render`), error.path)
+          log.error(`  ` + gray(error.reason))
+          log('')
         }
       }
       success(`${pages.size} pages rendered.`)
