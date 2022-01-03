@@ -19,6 +19,8 @@ import {
   extractClientFunctions,
   generateRoutePaths,
   RegexParam,
+  RoutePathErrorHandler,
+  SausBundleConfig,
   SausContext,
 } from './core'
 import type { RuntimeConfig } from './core/config'
@@ -32,6 +34,7 @@ import { parseImports, serializeImports } from './utils/imports'
 const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
 
 export interface BundleOptions {
+  entry?: string | null
   outFile?: string
   minify?: boolean
   mode?: string
@@ -79,6 +82,14 @@ export async function bundle(options: BundleOptions, context: SausContext) {
     options
   )
 
+  let bundleEntry = options.entry
+  if (bundleEntry === undefined) {
+    bundleEntry = bundleConfig.entry || null
+  }
+  if (bundleEntry) {
+    bundleEntry = path.resolve(context.root, bundleEntry)
+  }
+
   Profiling.mark('generate ssr bundle')
   const bundle = await generateBundle(
     context,
@@ -86,6 +97,8 @@ export async function bundle(options: BundleOptions, context: SausContext) {
     routeImports,
     functions,
     moduleMap,
+    bundleEntry,
+    bundleConfig,
     bundleFormat,
     bundlePath
   )
@@ -293,6 +306,8 @@ async function generateBundle(
   routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
+  bundleEntry: string | null,
+  bundleConfig: SausBundleConfig,
   bundleFormat: 'esm' | 'cjs',
   bundlePath: string
 ) {
@@ -345,10 +360,7 @@ async function generateBundle(
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
-  const bundleConfig = context.config.saus.bundle || {}
   const bundleType = bundleConfig.type || 'script'
-  const serverPath =
-    bundleConfig.entry && path.resolve(context.root, bundleConfig.entry)
 
   // Avoid using Node built-ins for `get` function.
   if (bundleType == 'worker') {
@@ -363,8 +375,8 @@ async function generateBundle(
   const overrides: vite.UserConfig = {
     plugins: [
       modules,
-      serverPath && bundleType == 'script'
-        ? transformServerScript(serverPath)
+      bundleEntry && bundleType == 'script'
+        ? transformServerScript(bundleEntry)
         : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...redirectedModules,
@@ -381,7 +393,7 @@ async function generateBundle(
       minify: bundleConfig.minify == true,
       sourcemap: true,
       rollupOptions: {
-        input: serverPath || entryId,
+        input: bundleEntry || entryId,
         output: {
           dir: path.dirname(bundlePath),
           format: bundleFormat,
@@ -505,7 +517,10 @@ function relativeToCwd(file: string) {
   return file.startsWith('../') ? file : './' + file
 }
 
-async function generateKnownPaths(context: SausContext) {
+async function generateKnownPaths(
+  context: SausContext,
+  onError: RoutePathErrorHandler
+) {
   const loader = await createLoader(context, {
     cacheDir: false,
     server: { hmr: false, wss: false, watch: false },
@@ -519,17 +534,12 @@ async function generateKnownPaths(context: SausContext) {
   }
 
   const paths: string[] = []
-  const errors: { reason: string; path: string }[] = []
   await generateRoutePaths(context, {
     path(path, params) {
       paths.push(params ? RegexParam.inject(path, params) : path)
     },
-    error: error => errors.push(error),
+    error: onError,
   })
-
-  for (const error of errors) {
-    context.logger.error(kleur.red(error.reason))
-  }
 
   return paths
 }

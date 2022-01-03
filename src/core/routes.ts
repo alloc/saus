@@ -98,9 +98,15 @@ export interface RoutesModule extends HtmlContext {
   defaultRoute?: Route
 }
 
+export type RoutePathHandler = (path: string, params?: RouteParams) => void
+export type RoutePathErrorHandler = (error: {
+  reason: string
+  path: string
+}) => void
+
 type RoutePathHandlers = {
-  path: (path: string, params?: RouteParams) => void
-  error: (error: { reason: string; path: string }) => void
+  path: RoutePathHandler
+  error: RoutePathErrorHandler
 }
 
 /**
