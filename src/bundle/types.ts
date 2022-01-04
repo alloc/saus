@@ -1,4 +1,5 @@
 export interface RenderedPage {
+  id: string
   html: string
   modules: Set<ClientModule>
   assets: Set<ClientModule>

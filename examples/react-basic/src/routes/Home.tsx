@@ -1,4 +1,5 @@
 import pokemon from '../../data/pokemon.json'
+import { Link } from '../components/Link'
 
 export default function Home() {
   return (
@@ -6,11 +7,11 @@ export default function Home() {
       <h1>Home</h1>
       <div>
         {pokemon.map((name, i) => (
-          <a key={i} href={'/pokemon/' + name.toLowerCase()}>
+          <Link key={i} href={'/pokemon/' + name.toLowerCase()}>
             {name}
-          </a>
+          </Link>
         ))}
-        <a href="/broken-link">404 Test</a>
+        <Link href="/broken-link">404 Test</Link>
       </div>
     </>
   )

@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { Link } from '../components/Link'
 import { scrapedText } from '../state'
 
 export default function Pokemon({ name }: { name: string }) {
@@ -6,7 +7,7 @@ export default function Pokemon({ name }: { name: string }) {
   return (
     <div className="pokemon">
       <h1>{name[0].toUpperCase() + name.slice(1)}</h1>
-      <a href={import.meta.env.BASE_URL}>Go back</a>
+      <Link href="/">Go back</Link>
       <img src={'/' + name + '.webp'} crossOrigin="anonymous" />
       <div className="content">
         {sections.map((section, i) => (

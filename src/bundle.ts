@@ -33,6 +33,7 @@ import { parseImports, serializeImports } from './utils/imports'
 const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
 
 export interface BundleOptions {
+  absoluteSources?: boolean
   entry?: string | null
   format?: 'esm' | 'cjs'
   minify?: boolean
@@ -53,21 +54,38 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
 }
 
 export async function bundle(context: SausContext, options: BundleOptions) {
-  const outDir = context.config.build?.outDir || 'dist'
   const bundleConfig = context.config.saus.bundle || {}
+
+  let bundleEntry = options.entry
+  if (bundleEntry === undefined) {
+    bundleEntry = bundleConfig.entry
+  }
+  if (bundleEntry) {
+    bundleEntry = path.resolve(context.root, bundleEntry)
+  }
+
+  const outDir = context.config.build?.outDir || 'dist'
   const bundleFormat = options.format || bundleConfig.format || 'cjs'
   const bundlePath = options.outFile
     ? path.resolve(options.outFile)
-    : bundleConfig.entry &&
-      path.resolve(
+    : bundleEntry
+    ? path.resolve(
         context.root,
-        bundleConfig.entry
+        bundleEntry
           .replace(/^(\.\/)?src\//, outDir + '/')
           .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
       )
+    : null!
 
-  if (!bundlePath) {
-    throw Error(`[saus] Must provide a destination path`)
+  const shouldWrite =
+    options.write !== false && context.config.build?.write !== false
+
+  if (!bundlePath && shouldWrite) {
+    throw Error(
+      `[saus] The "outFile" option must be provided when ` +
+        `"saus.bundle.entry" is not defined in your Vite config ` +
+        `(and the "write" option is not false).`
+    )
   }
 
   const { functions, functionImports, routeImports, runtimeConfig } =
@@ -82,15 +100,8 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     options
   )
 
-  let bundleEntry = options.entry
-  if (bundleEntry === undefined) {
-    bundleEntry = bundleConfig.entry || null
-  }
-  if (bundleEntry) {
-    bundleEntry = path.resolve(context.root, bundleEntry)
-  }
-
   Profiling.mark('generate ssr bundle')
+  const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
   const bundle = await generateBundle(
     context,
     runtimeConfig,
@@ -100,10 +111,17 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     bundleEntry,
     bundleConfig,
     bundleFormat,
-    bundlePath
+    bundleDir
   )
 
-  if (options.write !== false) {
+  const sourceMap = bundle.map
+  if (sourceMap && options.absoluteSources) {
+    sourceMap.sources = sourceMap.sources.map(source => {
+      return path.resolve(bundleDir, source)
+    })
+  }
+
+  if (shouldWrite) {
     context.logger.info(
       kleur.bold('[saus]') +
         ` Saving bundle as ${kleur.green(relativeToCwd(bundlePath))}`
@@ -306,10 +324,10 @@ async function generateBundle(
   routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
-  bundleEntry: string | null,
+  bundleEntry: string | null | undefined,
   bundleConfig: SausBundleConfig,
   bundleFormat: 'esm' | 'cjs',
-  bundlePath: string
+  bundleDir: string
 ) {
   const modules = createModuleProvider()
 
@@ -343,7 +361,8 @@ async function generateBundle(
     code: endent`
       import "/@fs/${context.renderPath}"
       import "/@fs/${context.routesPath}"
-      export {default, getModuleUrl} from "${runtimeId}"
+      export * from "${runtimeId}"
+      export {default} from "${runtimeId}"
       export {default as config} from "${runtimeConfigModule.id}"
     `,
     moduleSideEffects: 'no-treeshake',
@@ -356,6 +375,10 @@ async function generateBundle(
     redirectModule(
       path.resolve(__dirname, '../src/core/global.ts'),
       path.join(runtimeDir, 'global.ts')
+    ),
+    redirectModule(
+      path.resolve(__dirname, '../src/client/cache.ts'),
+      path.join(runtimeDir, 'context.ts')
     ),
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
@@ -380,6 +403,7 @@ async function generateBundle(
         : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...redirectedModules,
+      ...(bundleConfig.plugins || []),
       // debugSymlinkResolver(),
     ],
     ssr: {
@@ -395,7 +419,7 @@ async function generateBundle(
       rollupOptions: {
         input: bundleEntry || entryId,
         output: {
-          dir: path.dirname(bundlePath),
+          dir: bundleDir,
           format: bundleFormat,
           sourcemapExcludeSources: true,
         },
@@ -403,10 +427,10 @@ async function generateBundle(
     },
   }
 
-  const config: vite.UserConfig = vite.mergeConfig(context.config, overrides)
-  // const mode = config.mode || 'production'
+  const buildResult = (await vite.build(
+    vite.mergeConfig(context.config, overrides)
+  )) as vite.ViteBuild
 
-  const buildResult = (await vite.build(config)) as vite.ViteBuild
   return buildResult.output[0].output[0]
 }
 
@@ -498,19 +522,19 @@ function rewriteRouteImports(
 }
 
 // @ts-ignore
-function debugSymlinkResolver(): vite.Plugin {
-  return {
-    name: 'debugSymlinkResolver',
-    configResolved(config) {
-      const { symlinkResolver } = config
-      this.generateBundle = () => {
-        console.log('cacheSize: %O', symlinkResolver.cacheSize)
-        console.log('cacheHits: %O', symlinkResolver.cacheHits)
-        console.log('fsCalls:   %O', symlinkResolver.fsCalls)
-      }
-    },
-  }
-}
+// function debugSymlinkResolver(): vite.Plugin {
+//   return {
+//     name: 'debugSymlinkResolver',
+//     configResolved(config) {
+//       const { symlinkResolver } = config
+//       this.generateBundle = () => {
+//         console.log('cacheSize: %O', symlinkResolver.cacheSize)
+//         console.log('cacheHits: %O', symlinkResolver.cacheHits)
+//         console.log('fsCalls:   %O', symlinkResolver.fsCalls)
+//       }
+//     },
+//   }
+// }
 
 function relativeToCwd(file: string) {
   file = path.relative(process.cwd(), file)

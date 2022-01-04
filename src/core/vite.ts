@@ -31,6 +31,10 @@ export interface SausBundleConfig {
    * @default false
    */
   minify?: boolean
+  /**
+   * Plugins applied to the SSR bundle only.
+   */
+  plugins?: vite.PluginOption[]
 }
 
 export interface SausConfig {

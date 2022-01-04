@@ -33,7 +33,6 @@ export function route(
   try {
     moduleId = parseDynamicImport(load)
   } catch (e: any) {
-    console.log('load: %O', load.toString())
     throw Error(`Failed to parse "moduleId" for route: "${path}"\n` + e.message)
   }
 

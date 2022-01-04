@@ -4,7 +4,6 @@ import http from 'http'
 import path from 'path'
 import * as mime from 'mrmime'
 import { gray } from 'kleur/colors'
-import { getPageFilename } from 'saus'
 import renderPage, { config, getModuleUrl, ClientModule } from 'saus/bundle'
 import knownPaths from 'saus/paths'
 import { connect } from './connect'
@@ -28,7 +27,7 @@ for (let knownPath of knownPaths) {
   page.modules.forEach(addModule)
   page.assets.forEach(addModule)
   addModule({
-    id: getPageFilename(knownPath),
+    id: page.id,
     text: page.html,
   })
 }

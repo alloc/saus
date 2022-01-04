@@ -1,7 +1,7 @@
 import path from 'path'
-import { createPageFactory } from '../../pages'
+import { createPageFactory, getPageFilename } from '../../pages'
 import { parseImports } from '../../utils/imports'
-import { ParsedUrl, parseUrl } from '../../utils/url'
+import { ParsedUrl } from '../../utils/url'
 import { ClientModule, RenderedPage } from '../types'
 import config from './config'
 import { context } from './context'
@@ -11,8 +11,6 @@ import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
 import { isCSSRequest } from './utils'
 
-const pageFactory = createPageFactory(context, functions, config)
-const hydrateImport = `import { hydrate } from "saus/client"`
 
 const htmlExtension = '.html'
 const indexHtmlSuffix = '/index.html'
@@ -24,6 +22,9 @@ export const getModuleUrl = (mod: ClientModule) =>
       ? mod.id.slice(0, -indexHtmlSuffix.length)
       : mod.id.slice(0, -htmlExtension.length)
     : mod.id)
+
+const pageFactory = createPageFactory(context, functions, config)
+const hydrateImport = `import { hydrate } from "saus/client"`
 
 export default function renderPage(
   pageUrl: string | ParsedUrl
@@ -153,7 +154,12 @@ export default function renderPage(
         { page, config, assets },
         context.htmlProcessors?.post || []
       ).then(html => {
-        resolve({ html, modules, assets })
+        resolve({
+          id: getPageFilename(pageUrl.toString()),
+          html,
+          modules,
+          assets,
+        })
       }, reject)
     })
   })

@@ -1,6 +1,5 @@
 export { render } from './render'
 export { route } from './routes'
-export { getPageFilename } from './pages'
 export { beforeRender, Plugin, UserConfig, vite } from './core'
 
 export { htmlEscape as escape } from 'escape-goat'

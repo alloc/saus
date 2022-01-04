@@ -1,10 +1,12 @@
 import type { PageFactoryContext } from '../../pages'
+import config from './config'
 
 export const context: PageFactoryContext = {
   pages: {},
   loadingStateCache: new Map(),
   loadedStateCache: new Map(),
   logger: { warn: console.warn },
+  basePath: config.base,
   beforeRenderHooks: [],
   runtimeHooks: [],
   renderers: [],

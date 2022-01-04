@@ -1,6 +1,9 @@
 import http from 'http'
 import https from 'https'
 
+type URL = import('url').URL
+declare const URL: typeof import('url').URL
+
 type GetOptions = { headers?: Record<string, string> }
 
 /**
@@ -26,15 +29,19 @@ function resolvedGet(
   const request = urlToHttpOptions(url)
   request.headers = opts.headers
 
+  const trace = Error()
+
   return (url.protocol == 'http' ? http : https)
     .request(request, resp => {
       const chunks: Buffer[] = []
       resp.on('data', chunk => {
         chunks.push(chunk)
       })
-      resp.on('close', reject)
-      resp.on('error', reject)
-      resp.on('end', () => {
+      resp.on('error', e => {
+        trace.message = e.message
+        reject(trace)
+      })
+      resp.on('close', () => {
         if (isRedirect(resp) && redirectCount < 10) {
           return resolvedGet(
             resp.headers.location,
@@ -47,12 +54,14 @@ function resolvedGet(
         if (resp.statusCode == 200) {
           return resolve(Buffer.concat(chunks))
         }
-        reject(
-          Error(`Request to ${url} ended with status code ${resp.statusCode}`)
-        )
+        trace.message = `Request to ${url} ended with status code ${resp.statusCode}.`
+        reject(trace)
       })
     })
-    .on('error', reject)
+    .on('error', e => {
+      trace.message = e.message
+      reject(trace)
+    })
     .end()
 }
 

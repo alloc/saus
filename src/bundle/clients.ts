@@ -159,7 +159,6 @@ export async function generateClientModules(
       if (sourceMaps == 'inline' && chunk.map?.sources.length) {
         const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
         chunk.map.sources = rewriteSources(chunk.map.sources, chunkDir, context)
-        console.log(chunk.fileName, chunk.map.sources)
         chunk.code += toInlineSourceMap(chunk.map)
       }
       chunks.push(chunk)
