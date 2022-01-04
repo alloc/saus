@@ -10,6 +10,7 @@ import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
 import { setRenderModule, setRoutesModule } from './core/global'
 import { clientPlugin } from './plugins/client'
+import { transformClientState } from './plugins/clientState'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
@@ -95,10 +96,11 @@ async function startServer(
         clientPlugin(context),
         routesPlugin(context),
         renderPlugin(context),
+        transformClientState(),
       ],
     },
     config
-  )
+  ) as any
 
   const server = await vite.createServer(config)
   const watcher = server.watcher!

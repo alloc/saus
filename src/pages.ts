@@ -1,6 +1,7 @@
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import path from 'path'
+import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
   Client,
@@ -22,6 +23,7 @@ import { debug } from './core/debug'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { defer } from './utils/defer'
+import { dset } from './utils/dset'
 import { serializeImports } from './utils/imports'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
@@ -49,8 +51,14 @@ export type RenderedPage = {
   routeModuleId: string
 }
 
+type SausContextKeys =
+  | 'basePath'
+  | 'pages'
+  | 'loadingStateCache'
+  | 'loadedStateCache'
+
 export interface PageFactoryContext
-  extends Pick<SausContext, 'basePath' | 'pages' | 'states'>,
+  extends Pick<SausContext, SausContextKeys>,
     RoutesModule,
     RenderModule {
   logger: { warn(msg: string): void }
@@ -63,7 +71,8 @@ export function createPageFactory(
 ) {
   let {
     pages,
-    states,
+    loadingStateCache,
+    loadedStateCache,
     routes,
     renderers,
     defaultRoute,
@@ -73,6 +82,12 @@ export function createPageFactory(
     basePath,
     logger,
   } = context
+
+  const getState = withCache(
+    loadingStateCache,
+    loadedStateCache,
+    () => undefined
+  )
 
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
@@ -194,26 +209,28 @@ export function createPageFactory(
     return pagePromise
   }
 
-  function resolveState(url: ParsedUrl, params: RouteParams, route: Route) {
-    let state = states[url.path]
-    if (!state) {
-      state = states[url.path] = defer()
-      loadState(route, url, params).then(state.resolve, error => {
-        delete states[url.path]
-        state.reject(error)
-      })
+  function getPageState(
+    url: ParsedUrl,
+    params: RouteParams,
+    route: Route
+  ): Promise<ClientState> {
+    return getState(url.path, async () => {
+      const statePromise = loadPageState(route, url, params)
       if (route.include) {
-        state.then(() =>
-          Promise.all(
-            (typeof route.include == 'function'
-              ? route.include(url, params)
-              : route.include!
-            ).map(fragment => fragment.load())
-          )
+        // Load state fragments used by this route.
+        await Promise.all(
+          (typeof route.include == 'function'
+            ? route.include(url, params)
+            : route.include!
+          ).map(async fragment => {
+            const value = await fragment.load()
+            const fragments = ((await statePromise).$ ??= {})
+            dset(fragments, fragment.prefix.split('∫'), value)
+          })
         )
       }
-    }
-    return state.promise
+      return statePromise
+    })
   }
 
   /**
@@ -242,7 +259,7 @@ export function createPageFactory(
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
-    const state = await resolveState(url, params, defaultRoute)
+    const state = await getPageState(url, params, defaultRoute)
     return renderDefaultPage(url, state, defaultRoute)
   }
 
@@ -254,7 +271,7 @@ export function createPageFactory(
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
-    const state = await resolveState(url, params, route)
+    const state = await getPageState(url, params, route)
     for (const renderer of renderers) {
       if (renderer.test(url.path)) {
         const page = await renderPage(url, state, route, renderer)
@@ -340,24 +357,22 @@ export function createPageFactory(
       }
 
       let params: RouteParams | undefined
+      let route = (routeMap[url.path] ||= routes.find(
+        route => (params = matchRoute((url as ParsedUrl).path, route))
+      ))
 
-      const route =
-        (routeMap[url.path] ||= routes.find(
-          route => (params = matchRoute((url as ParsedUrl).path, route))
-        )) || defaultRoute
+      if (!route && (route = defaultRoute)) {
+        params = matchRoute(url.path, route)!
+      }
 
       if (route) {
-        if (!states[url.path]) {
-          params ??= matchRoute(url.path, route)!
-          await renderRoute(url, params, route)
-        }
-        return states[url.path]?.promise
+        return getPageState(url, params!, route)
       }
     },
   }
 }
 
-async function loadState(
+async function loadPageState(
   route: Route,
   url: ParsedUrl,
   params: RouteParams

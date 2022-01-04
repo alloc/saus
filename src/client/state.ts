@@ -1,7 +1,8 @@
 import type { ClientState, ResolvedState, StateFragment } from '../core'
-import { states } from './cache'
+import { loadedStateCache, loadingStateCache } from './cache'
+import { withCache } from './withCache'
 
-let initialState: ClientState
+export let initialState: ClientState
 
 declare const document: { querySelector: (selector: string) => any }
 
@@ -10,29 +11,42 @@ if (!import.meta.env.SSR) {
   initialState = JSON.parse(stateScript.textContent)
   stateScript.remove()
 
+  // Unpack any state fragments.
+  if (initialState.$) {
+    for (const [prefix, calls] of Object.entries(initialState.$)) {
+      for (const [call, state] of Object.entries(calls)) {
+        loadedStateCache.set(prefix + '∫' + call, state)
+      }
+    }
+    delete initialState.$
+  }
+
   const pageUrl =
     location.pathname.slice(import.meta.env.BASE_URL.length - 1) +
     location.search
 
-  states[pageUrl] = Promise.resolve(initialState)
+  loadedStateCache.set(pageUrl, initialState)
 }
 
 /**
  * Load client state for the given URL, using the local cache if possible.
  *
- * The `url` must not contain either a hash fragment (eg: `#foo`) or
- * search query (eg: `?foo`).
+ * The `pageUrl` argument must not contain either a hash fragment (eg: `#foo`)
+ * or a search query (eg: `?foo`).
  */
-function loadClientState(url: string): Promise<ClientState> {
-  let state = states[url]
-  if (!state && typeof fetch !== 'undefined') {
-    const stateUrl = url.replace(/\/?$/, '/state.json')
-    state = states[url] = fetch(stateUrl).then(res => res.json())
+export const loadClientState: {
+  (pageUrl: string): Promise<ClientState>
+  /**
+   * Use the same cache that Saus keeps page-specific state in.
+   */
+  <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
+} = withCache(loadingStateCache, loadedStateCache, pageUrl => {
+  if (typeof fetch !== 'undefined') {
+    const stateUrl = pageUrl.replace(/\/?$/, '/state.json')
+    return () => fetch(stateUrl).then(res => res.json())
   }
-  return state
-}
+})
 
-export { initialState, loadClientState }
 export type { ClientState }
 
 /**
@@ -48,54 +62,65 @@ export function defineStateFragment<T, Args extends any[]>(
   loadImpl: (...args: Args) => T
 ): StateFragment<ResolvedState<T>, Args> {
   function toCacheKey(args: any[]) {
-    return [prefix, ...args].join(':')
+    return prefix + '∫' + JSON.stringify(args)
   }
   return {
+    prefix,
     get(...args) {
-      const key = toCacheKey(args)
-      const state: any = states[key]
-      if (state && prefix in state) {
-        return state[prefix]
+      const cacheKey = toCacheKey(args)
+      if (loadedStateCache.has(cacheKey)) {
+        return loadedStateCache.get(cacheKey)
       }
       throw Error(
-        `Failed to access "${key}" state. ` +
+        `Failed to access "${cacheKey}" state. ` +
           `This fragment is not included by the route config.`
       )
     },
-    async load(...args) {
-      const key = toCacheKey(args)
-      if (key in states) {
-        return states[key]
-      }
-      let result: any = loadImpl(...args)
-      if (result && typeof result == 'object') {
-        // When an array is returned, await its elements.
-        if (Array.isArray(result)) {
-          result = (await Promise.all(result)).map(unwrapDefault)
-        }
+    load(...args) {
+      const cacheKey = toCacheKey(args)
+      return loadClientState(cacheKey, async () => {
+        try {
+          let result: any = loadImpl(...args)
+          if (result && typeof result == 'object') {
+            // When an array is returned, await its elements.
+            if (Array.isArray(result)) {
+              result = (await Promise.all(result)).map(unwrapDefault)
+            }
 
-        // When an object is returned, await its property values.
-        else if (result.constructor == Object)
-          await Promise.all(
-            Object.keys(result).map(async key => {
-              result[key] = unwrapDefault(await result[key])
-            })
-          )
-        else {
-          // When a promise is returned, await it.
-          if (result.constructor == Promise) {
-            result = await result
+            // When an object is returned, await its property values.
+            else if (result.constructor == Object)
+              await Promise.all(
+                Object.keys(result).map(async key => {
+                  result[key] = unwrapDefault(await result[key])
+                })
+              )
+            else {
+              // When a promise is returned, await it.
+              if (result.constructor == Promise) {
+                result = await result
+              }
+              // When a module is returned/resolved and it only contains
+              // a default export, unwrap the default export.
+              result = unwrapDefault(result)
+            }
           }
-          // When a module is returned/resolved and it only contains
-          // a default export, unwrap the default export.
-          result = unwrapDefault(result)
+          return result
+        } catch (e: any) {
+          const errorPrefix = `[saus] Failed to load "${cacheKey}" state fragment.`
+          if (e instanceof Error) {
+            e.message = errorPrefix + ' ' + e.message
+          } else if (e && !import.meta.env.SSR) {
+            console.error(errorPrefix)
+          } else {
+            e = new Error(errorPrefix)
+          }
+          throw e
         }
-      }
-      states[key] = result
-      return result
+      })
     },
     bind(...args) {
       return {
+        prefix: toCacheKey(args),
         get: (this.get as Function).bind(this, ...args),
         load: (this.load as Function).bind(this, ...args),
         bind() {

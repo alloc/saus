@@ -1,3 +1,12 @@
-import type { ClientState } from '../core'
+/**
+ * To avoid duplicate promises for the same state, we keep track
+ * of which state is loading.
+ *
+ * Keys may be a page URL or a user-provided state fragment identifier.
+ */
+export const loadingStateCache = new Map<string, Promise<any>>()
 
-export const states: Record<string, Promise<ClientState>> = {}
+/**
+ * Keys may be a page URL or a user-provided state fragment identifier.
+ */
+export const loadedStateCache = new Map<string, any>()

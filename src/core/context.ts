@@ -5,8 +5,7 @@ import { resolve } from 'path'
 import type { RenderedPage } from '../pages'
 import { Profiling } from '../profiling'
 import { Deferred } from '../utils/defer'
-import { ClientState } from './client'
-import { ConfigHook, SausCommand, setConfigHooks } from './config'
+import { ConfigHook, setConfigHooks } from './config'
 import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
@@ -27,8 +26,10 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   routesPath: string
   /** Rendered page cache */
   pages: Record<string, RenderedPage>
-  /** Client state cache */
-  states: Record<string, Deferred<ClientState>>
+  /** Page states currently being loaded */
+  loadingStateCache: Map<string, Promise<any>>
+  /** Page states which have been loaded */
+  loadedStateCache: Map<string, any>
   /** Path to the render module */
   renderPath: string
   /** The SSR context used when loading routes */
@@ -111,7 +112,8 @@ export async function loadContext(
     routes: [],
     runtimeHooks: [],
     pages: {},
-    states: {},
+    loadingStateCache: new Map(),
+    loadedStateCache: new Map(),
     renderPath,
     renderers: [],
     beforeRenderHooks: [],

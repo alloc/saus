@@ -1,4 +1,5 @@
 export interface StateFragment<T = any, Args extends any[] = any[]> {
+  prefix: string
   load(...args: Args): Promise<T>
   bind(...args: Args): StateFragment<T, []>
   get(...args: Args): T

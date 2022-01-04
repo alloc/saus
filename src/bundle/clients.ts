@@ -19,6 +19,7 @@ import { ClientModuleMap } from './runtime/modules'
 import { ClientModule } from './types'
 import { slash } from './runtime/utils'
 import { toInlineSourceMap } from './sourceMap'
+import { transformClientState } from '../plugins/clientState'
 
 const posixPath = path.posix
 
@@ -115,7 +116,12 @@ export async function generateClientModules(
       : options.minify
 
   config = vite.mergeConfig(config, <vite.UserConfig>{
-    plugins: [routesPlugin(context), modules, fixChunkImports()],
+    plugins: [
+      routesPlugin(context),
+      modules,
+      fixChunkImports(),
+      transformClientState(),
+    ],
     mode,
     css: {
       minify,
