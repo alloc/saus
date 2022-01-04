@@ -11,6 +11,7 @@ import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
 import { isCSSRequest } from './utils'
 
+export { writePages, printFiles } from '../../build/write'
 
 const htmlExtension = '.html'
 const indexHtmlSuffix = '/index.html'

@@ -1,11 +1,10 @@
 import fs from 'fs'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
-import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
 import type { BuildWorker } from './build/worker'
+import { printFiles, writePages } from './build/write'
 import { bundle, loadBundleContext } from './bundle'
-import { toInlineSourceMap } from './bundle/sourceMap'
 import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
@@ -17,7 +16,6 @@ import {
 } from './core'
 import { createLoader } from './core/context'
 import { setRoutesModule } from './core/global'
-import { getPageFilename } from './pages'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -32,12 +30,12 @@ export async function build(
   const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
   loading.finish(`${routeCount} routes loaded.`)
 
-  let { code, map } = await bundle(context, {
+  const { code, map } = await bundle(context, {
+    write: false,
     entry: null,
     format: 'cjs',
-    write: false,
+    absoluteSources: true,
   })
-  code += toInlineSourceMap(map)
 
   let pageCount = 0
   let renderCount = 0
@@ -57,11 +55,12 @@ export async function build(
 
   const worker = new WorkerPool({
     filename: path.resolve(__dirname, 'build/worker.js'),
-    workerData: code,
+    workerData: { code, map },
     maxThreads: inlineConfig?.build?.maxWorkers,
+    idleTimeout: 2000,
   }) as BuildWorker
 
-  const pages = new Map<string, RenderedPage>()
+  const pages: RenderedPage[] = []
   const errors: FailedPage[] = []
   const failedRoutes = new Set<string>()
 
@@ -72,8 +71,7 @@ export async function build(
     try {
       const page = await worker.run(context.basePath + pageUrl.slice(1))
       if (page) {
-        const filename = getPageFilename(pageUrl)
-        pages.set(filename, page)
+        pages.push(page)
         renderCount++
       } else {
         pageCount--
@@ -109,29 +107,12 @@ export async function build(
   if (buildOptions.write !== false) {
     const outDir = path.resolve(context.root, buildOptions.outDir || 'dist')
     prepareOutDir(outDir, buildOptions.emptyOutDir, context)
-
-    const files: Record<string, number> = {}
-    const writeFile = (file: string, content: string) => {
-      const name = path.relative(outDir, file)
-      if (files[name] == null) {
-        files[name] = content.length / 1024
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, content)
-      }
-    }
-
-    for (const [filename, page] of pages) {
-      writeFile(path.join(outDir, filename), page.html)
-      for (const module of [...page.modules, ...page.assets]) {
-        writeFile(path.join(outDir, module.id), module.text)
-      }
-    }
-
+    const files = writePages(pages, outDir)
     printFiles(
       context.logger,
       files,
       vite.normalizePath(path.relative(context.root, outDir)) + '/',
-      buildOptions.chunkSizeWarningLimit ?? 500
+      buildOptions.chunkSizeWarningLimit
     )
   }
 
@@ -216,33 +197,5 @@ function copyDir(srcDir: string, destDir: string): void {
     } else {
       fs.copyFileSync(srcFile, destFile)
     }
-  }
-}
-
-type Color = typeof green
-const writeColors: Record<string, Color> = {
-  '.js': cyan,
-  '.css': magenta,
-  '.html': blue,
-  '.map': gray,
-}
-
-function printFiles(
-  logger: vite.Logger,
-  files: Record<string, number>,
-  outDir: string,
-  chunkLimit: number
-) {
-  const maxLength = Object.keys(files).reduce(
-    (maxLength, file) => Math.max(maxLength, file.length),
-    0
-  )
-  for (const [file, kibs] of Object.entries(files)) {
-    const color = writeColors[path.extname(file)] || green
-    const fileName = gray(outDir) + color(file.padEnd(maxLength + 2))
-    const fileSize = (kibs > chunkLimit ? yellow : dim)(
-      `${kibs.toFixed(2)} KiB`
-    )
-    logger.info(fileName + ' ' + fileSize)
   }
 }
