@@ -217,8 +217,11 @@ export async function loadConfigHooks(importer: string) {
       delete require.cache[modulePath]
       try {
         require(modulePath)
-      } catch (e) {
-        console.error(e)
+      } catch (e: any) {
+        // Ignore non-CJS modules
+        if (!e.message.startsWith('Cannot use import')) {
+          console.error(e)
+        }
       }
     } catch {}
   }
