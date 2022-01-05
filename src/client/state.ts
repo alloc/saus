@@ -11,21 +11,23 @@ if (!import.meta.env.SSR) {
   initialState = JSON.parse(stateScript.textContent)
   stateScript.remove()
 
-  // Unpack any state fragments.
-  if (initialState.$) {
-    for (const [prefix, calls] of Object.entries(initialState.$)) {
-      for (const [call, state] of Object.entries(calls)) {
-        loadedStateCache.set(prefix + '∫' + call, state)
-      }
-    }
-    delete initialState.$
-  }
-
   const pageUrl =
     location.pathname.slice(import.meta.env.BASE_URL.length - 1) +
     location.search
 
   loadedStateCache.set(pageUrl, initialState)
+  unpackStateFragments(initialState)
+}
+
+function unpackStateFragments(state: ClientState) {
+  if (state.$) {
+    for (const [prefix, calls] of Object.entries(state.$)) {
+      for (const [call, state] of Object.entries(calls)) {
+        loadedStateCache.set(prefix + '∫' + call, state)
+      }
+    }
+    delete state.$
+  }
 }
 
 /**
@@ -41,9 +43,14 @@ export const loadClientState: {
    */
   <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
 } = withCache(loadingStateCache, loadedStateCache, pageUrl => {
-  if (typeof fetch !== 'undefined') {
+  if (pageUrl[0] == '/' && typeof fetch !== 'undefined') {
     const stateUrl = pageUrl.replace(/\/?$/, '/state.json')
-    return () => fetch(stateUrl).then(res => res.json())
+    return () =>
+      fetch(stateUrl).then(async res => {
+        const state = await res.json()
+        unpackStateFragments(state)
+        return state
+      })
   }
 })
 

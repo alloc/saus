@@ -14,6 +14,7 @@ import type {
   RenderModule,
   RenderRequest,
   Route,
+  RouteInclude,
   RouteParams,
   RoutesModule,
   RuntimeConfig,
@@ -83,11 +84,13 @@ export function createPageFactory(
     logger,
   } = context
 
-  const getState = withCache(
+  const resolveState = withCache<ClientState>(
     loadingStateCache,
-    loadedStateCache,
-    () => undefined
+    loadedStateCache
   )
+
+  const getPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
+    resolveState(url.path, () => loadPageState(route, url, params))
 
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
@@ -207,30 +210,6 @@ export function createPageFactory(
 
     renderQueue = pagePromise.then(noop, noop)
     return pagePromise
-  }
-
-  function getPageState(
-    url: ParsedUrl,
-    params: RouteParams,
-    route: Route
-  ): Promise<ClientState> {
-    return getState(url.path, async () => {
-      const statePromise = loadPageState(route, url, params)
-      if (route.include) {
-        // Load state fragments used by this route.
-        await Promise.all(
-          (typeof route.include == 'function'
-            ? route.include(url, params)
-            : route.include!
-          ).map(async fragment => {
-            const value = await fragment.load()
-            const fragments = ((await statePromise).$ ??= {})
-            dset(fragments, fragment.prefix.split('∫'), value)
-          })
-        )
-      }
-      return statePromise
-    })
   }
 
   /**
@@ -372,19 +351,43 @@ export function createPageFactory(
   }
 }
 
+async function loadStateFragments(
+  include: RouteInclude,
+  url: ParsedUrl,
+  params: RouteParams
+) {
+  return Promise.all(
+    (typeof include == 'function' ? include(url, params) : include).map(
+      async fragment => [fragment.prefix, await fragment.load()]
+    )
+  )
+}
+
 async function loadPageState(
   route: Route,
   url: ParsedUrl,
   params: RouteParams
 ): Promise<ClientState> {
-  const state =
-    route.state && (await route.state(Object.values(params), url.searchParams))
+  // Start loading fragments before awaiting the root-level state.
+  const loadingFragments =
+    route.include && loadStateFragments(route.include, url, params)
 
-  return {
-    ...state,
-    routePath: route.path,
-    routeParams: params,
+  const state = (
+    route.state
+      ? await route.state(Object.values(params), url.searchParams)
+      : {}
+  ) as ClientState
+
+  if (loadingFragments) {
+    const fragments = (state.$ ??= {})
+    for (const [keyPath, value] of await loadingFragments) {
+      dset(fragments, keyPath.split('∫'), value)
+    }
   }
+
+  state.routePath = route.path
+  state.routeParams = params
+  return state
 }
 
 async function getClient(

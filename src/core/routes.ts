@@ -35,6 +35,11 @@ type InferRouteProps<T extends object> = T extends ComponentType<infer Props>
 
 type Promisable<T> = T | PromiseLike<T>
 
+/** A value that defines which state fragments are needed by a route. */
+export type RouteInclude =
+  | StateFragment<any, []>[]
+  | ((url: ParsedUrl, params: RouteParams) => StateFragment<any, []>[])
+
 export interface RouteConfig<
   Module extends object = RouteModule,
   Params extends object = RouteParams
@@ -59,9 +64,7 @@ export interface RouteConfig<
    * you should define those arguments with the `bind` method. If no arguments
    * are expected, pass the state fragment without calling any method.
    */
-  include?:
-    | StateFragment<any, []>[]
-    | ((url: ParsedUrl, params: RouteParams) => StateFragment<any, []>[])
+  include?: RouteInclude
 }
 
 export interface ParsedRoute {

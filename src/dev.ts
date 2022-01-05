@@ -218,7 +218,11 @@ function injectDevCache(context: SausContext): vite.SSRPlugin {
   return {
     setExports(id) {
       if (id == cachePath) {
-        return { states: context.states }
+        const cache: typeof import('./client/cache') = {
+          loadedStateCache: context.loadedStateCache,
+          loadingStateCache: context.loadingStateCache,
+        }
+        return cache
       }
     },
   }
