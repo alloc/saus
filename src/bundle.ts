@@ -413,7 +413,6 @@ async function generateBundle(
         : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...redirectedModules,
-      ...(bundleConfig.plugins || []),
       // debugSymlinkResolver(),
     ],
     ssr: {
