@@ -5,35 +5,8 @@ import {
   StateFragment,
 } from '../core'
 import { loadedStateCache, loadingStateCache } from './cache'
+import { unpackStateFragments } from './unpack'
 import { withCache } from './withCache'
-
-export let initialState: ClientState
-
-declare const document: { querySelector: (selector: string) => any }
-
-if (!import.meta.env.SSR) {
-  const stateScript = document.querySelector('#initial-state')
-  initialState = JSON.parse(stateScript.textContent)
-  stateScript.remove()
-
-  const pageUrl =
-    location.pathname.slice(import.meta.env.BASE_URL.length - 1) +
-    location.search
-
-  loadedStateCache.set(pageUrl, initialState)
-  unpackStateFragments(initialState)
-}
-
-function unpackStateFragments(state: ClientState) {
-  if (state.$) {
-    for (const [prefix, calls] of Object.entries(state.$)) {
-      for (const [call, state] of Object.entries(calls)) {
-        loadedStateCache.set(prefix + '∫' + call, state)
-      }
-    }
-    delete state.$
-  }
-}
 
 /**
  * Load client state for the given URL, using the local cache if possible.
