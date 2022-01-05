@@ -1,6 +1,7 @@
 export { render } from './render'
 export { route } from './routes'
 export { beforeRender, Plugin, UserConfig, vite } from './core'
+export { copyPublicDir } from './plugins/publicDir'
 
 export { htmlEscape as escape } from 'escape-goat'
 

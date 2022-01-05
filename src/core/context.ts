@@ -1,3 +1,4 @@
+import { flatten } from 'array-flatten'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
@@ -9,10 +10,11 @@ import { ConfigHook, setConfigHooks } from './config'
 import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { SausConfig, UserConfig, vite } from './vite'
+import { Plugin, SausConfig, SausPlugin, UserConfig, vite } from './vite'
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
+  plugins: ({ name: string } & SausPlugin)[]
   logger: vite.Logger
   config: UserConfig
   configEnv: vite.ConfigEnv
@@ -101,6 +103,10 @@ export async function loadContext(
 
   const context: SausContext = {
     root,
+    plugins: flattenPlugins<Plugin>(
+      config.plugins || [],
+      p => p && p.saus && !(p.apply && p.apply !== command)
+    ).map(p => ({ ...p.saus, name: p.name })),
     logger,
     config: config as UserConfig,
     configEnv,
@@ -148,6 +154,14 @@ export async function loadContext(
 
   return context
 }
+
+const flattenPlugins = <T extends vite.Plugin>(
+  plugins: (vite.PluginOption | vite.PluginOption[])[],
+  filter = (p: T | false | null | undefined): any => !!p
+) =>
+  flatten(
+    vite.sortUserPlugins(flatten(plugins).filter(filter) as vite.Plugin[])
+  ) as T[]
 
 function assertSausConfig(
   config: Partial<SausConfig> | undefined

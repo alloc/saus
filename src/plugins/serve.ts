@@ -21,29 +21,31 @@ export function servePlugin(
 
   return {
     name: 'saus:serve',
-    contextUpdate(context) {
-      const config: RuntimeConfig = {
-        assetsDir: context.config.build?.assetsDir || 'assets',
-        base: context.config.base || '/',
-        command: 'dev',
-        minify: false,
-        mode: context.config.mode || 'development',
-        publicDir: context.config.publicDir || 'public',
-      }
-      context.runtimeHooks.forEach(onSetup => {
-        onSetup(config)
-      })
-      if (context.htmlProcessors) {
-        context.processHtml = mergeHtmlProcessors(
-          context.htmlProcessors,
-          page => ({ page, config })
+    saus: {
+      onContext(context) {
+        const config: RuntimeConfig = {
+          assetsDir: context.config.build?.assetsDir || 'assets',
+          base: context.config.base || '/',
+          command: 'dev',
+          minify: false,
+          mode: context.config.mode || 'development',
+          publicDir: context.config.publicDir || 'public',
+        }
+        context.runtimeHooks.forEach(onSetup => {
+          onSetup(config)
+        })
+        if (context.htmlProcessors) {
+          context.processHtml = mergeHtmlProcessors(
+            context.htmlProcessors,
+            page => ({ page, config })
+          )
+        }
+        pageFactory = createPageFactory(
+          context,
+          extractClientFunctions(context.renderPath)
         )
-      }
-      pageFactory = createPageFactory(
-        context,
-        extractClientFunctions(context.renderPath)
-      )
-      init.resolve()
+        init.resolve()
+      },
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {

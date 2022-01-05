@@ -54,6 +54,10 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
 }
 
 export async function bundle(context: SausContext, options: BundleOptions) {
+  for (const plugin of context.plugins) {
+    plugin.onContext?.(context)
+  }
+
   const bundleConfig = context.config.saus.bundle || {}
 
   let bundleEntry = options.entry
@@ -102,7 +106,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
 
   Profiling.mark('generate ssr bundle')
   const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
-  const bundle = await generateBundle(
+  const { code, map } = await generateBundle(
     context,
     runtimeConfig,
     routeImports,
@@ -114,38 +118,44 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     bundleDir
   )
 
-  const sourceMap = bundle.map
-  if (sourceMap && options.absoluteSources) {
-    sourceMap.sources = sourceMap.sources.map(source => {
+  if (map && options.absoluteSources) {
+    map.sources = map.sources.map(source => {
       return path.resolve(bundleDir, source)
     })
   }
 
+  const bundle = {
+    path: bundlePath,
+    code,
+    map: map as SourceMap | undefined,
+  }
+
   if (shouldWrite) {
+    for (const plugin of context.plugins) {
+      plugin.onWriteBundle?.(bundle)
+    }
+
     context.logger.info(
       kleur.bold('[saus]') +
-        ` Saving bundle as ${kleur.green(relativeToCwd(bundlePath))}`
+        ` Saving bundle as ${kleur.green(relativeToCwd(bundle.path))}`
     )
 
     const mapFileComment =
-      '\n//# ' + 'sourceMappingURL=' + path.basename(bundlePath) + '.map'
+      '\n//# ' + 'sourceMappingURL=' + path.basename(bundle.path) + '.map'
 
-    fs.mkdirSync(path.dirname(bundlePath), { recursive: true })
-    fs.writeFileSync(bundlePath, bundle.code + mapFileComment)
-    fs.writeFileSync(bundlePath + '.map', JSON.stringify(bundle.map))
+    fs.mkdirSync(path.dirname(bundle.path), { recursive: true })
+    fs.writeFileSync(bundle.path, bundle.code + mapFileComment)
+    fs.writeFileSync(bundle.path + '.map', JSON.stringify(bundle.map))
 
     if (!bundleConfig.entry) {
       fs.copyFileSync(
         path.resolve(__dirname, '../src/bundle/types.ts'),
-        bundlePath.replace(/(\.[cm]js)?$/, '.d.ts')
+        bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
       )
     }
   }
 
-  return bundle as {
-    code: string
-    map: SourceMap
-  }
+  return bundle
 }
 
 async function getBuildTransform(config: vite.UserConfig) {

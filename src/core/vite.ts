@@ -1,4 +1,6 @@
 import * as vite from 'vite'
+import { SourceMap } from '../bundle/sourceMap'
+import { RenderedPage } from '../bundle/types'
 import { ClientDescription } from './client'
 import { SausContext } from './context'
 
@@ -31,10 +33,6 @@ export interface SausBundleConfig {
    * @default false
    */
   minify?: boolean
-  /**
-   * Plugins applied to the SSR bundle only.
-   */
-  plugins?: vite.PluginOption[]
 }
 
 export interface SausConfig {
@@ -87,7 +85,23 @@ export const defineConfig = vite.defineConfig as (
     | ((env: vite.ConfigEnv) => Promisable<vite.UserConfig>)
 ) => vite.UserConfigExport
 
+export interface SausPlugin {
+  /**
+   * Called when the Saus context is created or replaced.
+   * When `saus dev` is used, this hook is also called when
+   * the routes/renderers are updated.
+   */
+  onContext?: (context: SausContext) => void
+  /** Called before the SSR bundle is written to disk */
+  onWriteBundle?: (bundle: {
+    path: string
+    code: string
+    map?: SourceMap
+  }) => void
+  /** Called before rendered pages are written to disk */
+  onWritePages?: (pages: RenderedPage[]) => void
+}
+
 export interface Plugin extends vite.Plugin {
-  /** Called when routes and/or render hooks are updated */
-  contextUpdate?: (context: SausContext) => void
+  saus?: SausPlugin
 }

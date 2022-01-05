@@ -16,6 +16,7 @@ import {
 } from './core'
 import { createLoader } from './core/context'
 import { setRoutesModule } from './core/global'
+import { copyPublicDir } from './plugins/publicDir'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -23,6 +24,13 @@ export async function build(
   inlineConfig?: vite.UserConfig & { build?: BuildOptions }
 ) {
   const context = await loadBundleContext(inlineConfig)
+
+  // By default, public files are copied by `saus build` but not
+  // copied by `saus bundle` command. But this plugin may have been
+  // added manually in their Vite config, so avoid copying twice.
+  if (context.plugins.every(p => p.name !== copyPublicDir.name)) {
+    context.plugins.push(copyPublicDir())
+  }
 
   const loading = startTask('Loading routes...')
   await loadRoutes(context)
@@ -107,6 +115,9 @@ export async function build(
   if (buildOptions.write !== false) {
     const outDir = path.resolve(context.root, buildOptions.outDir || 'dist')
     prepareOutDir(outDir, buildOptions.emptyOutDir, context)
+    for (const plugin of context.plugins) {
+      plugin.onWritePages?.(pages)
+    }
     const files = writePages(pages, outDir)
     printFiles(
       context.logger,
@@ -154,13 +165,6 @@ function prepareOutDir(
       emptyDir(outDir, ['.git'])
     }
   }
-  let publicDir = context.config.publicDir ?? 'public'
-  if (publicDir) {
-    publicDir = path.resolve(context.root, publicDir)
-    if (fs.existsSync(publicDir)) {
-      copyDir(publicDir, outDir)
-    }
-  }
 }
 
 /**
@@ -179,23 +183,6 @@ function emptyDir(dir: string, skip?: string[]): void {
       fs.rmdirSync(abs)
     } else {
       fs.unlinkSync(abs)
-    }
-  }
-}
-
-function copyDir(srcDir: string, destDir: string): void {
-  fs.mkdirSync(destDir, { recursive: true })
-  for (const file of fs.readdirSync(srcDir)) {
-    const srcFile = path.resolve(srcDir, file)
-    if (srcFile === destDir) {
-      continue
-    }
-    const destFile = path.resolve(destDir, file)
-    const stat = fs.statSync(srcFile)
-    if (stat.isDirectory()) {
-      copyDir(srcFile, destFile)
-    } else {
-      fs.copyFileSync(srcFile, destFile)
     }
   }
 }

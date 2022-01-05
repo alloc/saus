@@ -155,7 +155,7 @@ async function startServer(
   }
 
   // Tell plugins to update local state derived from Saus context.
-  emitContextUpdate(server, context)
+  emitContextUpdate(context)
 
   // This plugin handles updated modules, so it's not needed until
   // the server has been initialized.
@@ -224,15 +224,10 @@ function injectDevCache(context: SausContext): vite.SSRPlugin {
   }
 }
 
-function emitContextUpdate(server: vite.ViteDevServer, context: SausContext) {
-  for (const plugin of server.config.plugins)
-    hasContextUpdateHook(plugin) && plugin.contextUpdate(context)
-}
-
-function hasContextUpdateHook(
-  plugin: any
-): plugin is { contextUpdate: (context: SausContext) => void } {
-  return !!plugin.contextUpdate
+function emitContextUpdate(context: SausContext) {
+  for (const plugin of context.plugins) {
+    plugin.onContext?.(context)
+  }
 }
 
 function handleContextUpdates(
@@ -309,7 +304,7 @@ function handleContextUpdates(
         })
 
         // Update plugins that rely on Saus context.
-        emitContextUpdate(server, context)
+        emitContextUpdate(context)
       }
 
       // Allow another reload to commence.
