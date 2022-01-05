@@ -16,7 +16,6 @@ import {
 } from './core'
 import { createLoader } from './core/context'
 import { setRoutesModule } from './core/global'
-import { copyPublicDir } from './plugins/publicDir'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -24,13 +23,6 @@ export async function build(
   inlineConfig?: vite.UserConfig & { build?: BuildOptions }
 ) {
   const context = await loadBundleContext(inlineConfig)
-
-  // By default, public files are copied by `saus build` but not
-  // copied by `saus bundle` command. But this plugin may have been
-  // added manually in their Vite config, so avoid copying twice.
-  if (context.plugins.every(p => p.name !== copyPublicDir.name)) {
-    context.plugins.push(copyPublicDir())
-  }
 
   const loading = startTask('Loading routes...')
   await loadRoutes(context)

@@ -5,9 +5,6 @@ import { Plugin } from '../core'
 /**
  * Copy files from `publicDir` into the `build.outDir` directory,
  * as defined in your Vite config.
- *
- * The `saus build` command uses this plugin by default, while the
- * `saus bundle` command does not.
  */
 export function copyPublicDir(): Plugin {
   let publicDir: string | false
