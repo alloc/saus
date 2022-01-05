@@ -213,6 +213,9 @@ export async function loadConfigHooks(importer: string) {
       // and assume the module in question relies on Vite resolution,
       // which means it can't provide a config hook.
       const modulePath = require.resolve(moduleId)
+      if (!modulePath.endsWith('.js')) {
+        continue
+      }
 
       delete require.cache[modulePath]
       try {
