@@ -118,6 +118,7 @@ export async function loadContext(
     routes: [],
     runtimeHooks: [],
     pages: {},
+    defaultState: [],
     loadingStateCache: new Map(),
     loadedStateCache: new Map(),
     renderPath,

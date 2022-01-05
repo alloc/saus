@@ -252,6 +252,7 @@ function handleContextUpdates(
         routesConfig = setRoutesModule({
           routes: [],
           runtimeHooks: [],
+          defaultState: [],
         })
       } else {
         return // Not a module we care about.

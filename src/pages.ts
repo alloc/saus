@@ -77,6 +77,7 @@ export function createPageFactory(
     loadedStateCache,
     routes,
     renderers,
+    defaultState,
     defaultRoute,
     defaultRenderer,
     beforeRenderHooks,
@@ -91,7 +92,59 @@ export function createPageFactory(
   )
 
   const getPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    resolveState(url.path, () => loadPageState(route, url, params))
+    resolveState(url.path, async () => {
+      // Start loading fragments before awaiting the root-level state.
+      let loadingFragments = route.include
+        ? loadStateFragments(route.include, url, params)
+        : Promise.resolve([])
+
+      if (defaultState.length) {
+        const promises = defaultState.map(include =>
+          loadStateFragments(include, url, params)
+        )
+        loadingFragments = loadingFragments.then(async loadedFragments => {
+          for (const entries of await Promise.all(promises)) {
+            loadedFragments.push(...entries)
+          }
+          return loadedFragments
+        })
+      }
+
+      const state = (
+        route.state
+          ? await route.state(Object.values(params), url.searchParams)
+          : {}
+      ) as ClientState
+
+      // State fragments may exist within the root-level state,
+      // so we need to load that as well.
+      for (const [key, fragment] of Object.entries(state)) {
+        if (isStateFragment(fragment)) {
+          const loadingFragment = fragment.load()
+          loadingFragments = (loadingFragments || Promise.resolve([])).then(
+            async loadedFragments => {
+              loadedFragments.push([
+                fragment.prefix,
+                (state[key] = await loadingFragment),
+              ])
+              return loadedFragments
+            }
+          )
+        }
+      }
+
+      const fragments = await loadingFragments
+      if (fragments.length) {
+        const fragmentCache = (state.$ ??= {})
+        for (const [keyPath, value] of fragments) {
+          dset(fragmentCache, keyPath.split('∫'), value)
+        }
+      }
+
+      state.routePath = route.path
+      state.routeParams = params
+      return state
+    })
 
   routes = [...routes].reverse()
   renderers = [...renderers].reverse()
@@ -359,53 +412,9 @@ async function loadStateFragments(
 ) {
   return Promise.all(
     (typeof include == 'function' ? include(url, params) : include).map(
-      async fragment => [fragment.prefix, await fragment.load()]
+      async fragment => [fragment.prefix, await fragment.load()] as const
     )
   )
-}
-
-async function loadPageState(
-  route: Route,
-  url: ParsedUrl,
-  params: RouteParams
-): Promise<ClientState> {
-  // Start loading fragments before awaiting the root-level state.
-  let loadingFragments =
-    route.include && loadStateFragments(route.include, url, params)
-
-  const state = (
-    route.state
-      ? await route.state(Object.values(params), url.searchParams)
-      : {}
-  ) as ClientState
-
-  // State fragments may exist within the root-level state,
-  // so we need to load that as well.
-  for (const [key, fragment] of Object.entries(state)) {
-    if (isStateFragment(fragment)) {
-      const loadingFragment = fragment.load()
-      loadingFragments = (loadingFragments || Promise.resolve([])).then(
-        async loadedFragments => {
-          loadedFragments.push([
-            fragment.prefix,
-            (state[key] = await loadingFragment),
-          ])
-          return loadedFragments
-        }
-      )
-    }
-  }
-
-  if (loadingFragments) {
-    const fragments = (state.$ ??= {})
-    for (const [keyPath, value] of await loadingFragments) {
-      dset(fragments, keyPath.split('∫'), value)
-    }
-  }
-
-  state.routePath = route.path
-  state.routeParams = params
-  return state
 }
 
 async function getClient(
