@@ -1,4 +1,7 @@
+export const kStateFragment = Symbol.for('saus.StateFragment')
+
 export interface StateFragment<T = any, Args extends any[] = any[]> {
+  [kStateFragment]: true
   prefix: string
   load(...args: Args): Promise<T>
   bind(...args: Args): StateFragment<T, []>

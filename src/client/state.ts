@@ -1,4 +1,9 @@
-import type { ClientState, ResolvedState, StateFragment } from '../core'
+import {
+  ClientState,
+  kStateFragment,
+  ResolvedState,
+  StateFragment,
+} from '../core'
 import { loadedStateCache, loadingStateCache } from './cache'
 import { withCache } from './withCache'
 
@@ -54,7 +59,10 @@ export const loadClientState: {
   }
 })
 
-export type { ClientState }
+export type { ClientState, StateFragment }
+
+export const isStateFragment = (arg: any): arg is StateFragment =>
+  !!(arg && arg[kStateFragment])
 
 /**
  * State isolates are loaded at compile time. Their loader function receives the
@@ -72,6 +80,7 @@ export function defineStateFragment<T, Args extends any[]>(
     return prefix + '∫' + JSON.stringify(args)
   }
   return {
+    [kStateFragment]: true,
     prefix,
     get(...args) {
       const cacheKey = toCacheKey(args)
@@ -127,6 +136,7 @@ export function defineStateFragment<T, Args extends any[]>(
     },
     bind(...args) {
       return {
+        [kStateFragment]: true,
         prefix: toCacheKey(args),
         get: (this.get as Function).bind(this, ...args),
         load: (this.load as Function).bind(this, ...args),

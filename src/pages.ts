@@ -20,6 +20,7 @@ import type {
   RuntimeConfig,
   SausContext,
 } from './core'
+import { isStateFragment } from './client/state'
 import { debug } from './core/debug'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
@@ -369,7 +370,7 @@ async function loadPageState(
   params: RouteParams
 ): Promise<ClientState> {
   // Start loading fragments before awaiting the root-level state.
-  const loadingFragments =
+  let loadingFragments =
     route.include && loadStateFragments(route.include, url, params)
 
   const state = (
@@ -377,6 +378,23 @@ async function loadPageState(
       ? await route.state(Object.values(params), url.searchParams)
       : {}
   ) as ClientState
+
+  // State fragments may exist within the root-level state,
+  // so we need to load that as well.
+  for (const [key, fragment] of Object.entries(state)) {
+    if (isStateFragment(fragment)) {
+      const loadingFragment = fragment.load()
+      loadingFragments = (loadingFragments || Promise.resolve([])).then(
+        async loadedFragments => {
+          loadedFragments.push([
+            fragment.prefix,
+            (state[key] = await loadingFragment),
+          ])
+          return loadedFragments
+        }
+      )
+    }
+  }
 
   if (loadingFragments) {
     const fragments = (state.$ ??= {})
