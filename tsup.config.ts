@@ -18,4 +18,5 @@ export default defineConfig({
   splitting: true,
   sourcemap: true,
   external: Object.keys(require('./package.json').dependencies),
+  clean: true,
 })
