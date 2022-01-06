@@ -1,6 +1,6 @@
 {
   "name": "@saus/html",
-  "version": "0.4.9",
+  "version": "0.1.0",
   "description": "Helpers for HTML manipulation in Saus hooks",
   "license": "MIT",
   "main": "dist/index.js",
