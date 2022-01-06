@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import { ModuleProvider } from '../bundle/moduleProvider'
 import { SourceMap } from '../bundle/sourceMap'
 import { RenderedPage } from '../bundle/types'
 import { ClientDescription } from './client'
@@ -92,13 +93,24 @@ export interface SausPlugin {
    * the routes/renderers are updated.
    */
   onContext?: (context: SausContext) => void
-  /** Called before the SSR bundle is written to disk */
+  /**
+   * Define virtual modules and/or return an array of side-effectful module
+   * identifiers to be imported by the SSR bundle.
+   */
+  fetchBundleImports?: (modules: ModuleProvider) => string[] | null | void
+  /**
+   * Called before the SSR bundle is written to disk.
+   * This is only called when `saus bundle` is used.
+   */
   onWriteBundle?: (bundle: {
     path: string
     code: string
     map?: SourceMap
   }) => void
-  /** Called before rendered pages are written to disk */
+  /**
+   * Called before rendered pages are written to disk.
+   * This is only called when `saus build` is used.
+   */
   onWritePages?: (pages: RenderedPage[]) => void
 }
 

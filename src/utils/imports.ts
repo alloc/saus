@@ -1,19 +1,27 @@
 import type { ClientImports } from '../core'
 
-export function serializeImports(imports: ClientImports) {
-  return Object.entries(imports).map(
+export function serializeImports(imports: ClientImports | string[]) {
+  return (
+    Array.isArray(imports)
+      ? imports.map(source => [source, ''])
+      : Object.entries(imports)
+  ).map(
     ([source, spec]) =>
       `import ${
         typeof spec === 'string'
           ? spec
+            ? spec + ' from '
+            : ''
+          : spec.length == 0
+          ? ''
           : '{ ' +
             spec
               .map(spec =>
                 typeof spec === 'string' ? spec : spec[0] + ' as ' + spec[1]
               )
               .join(', ') +
-            ' }'
-      } from "${source}"`
+            ' } from '
+      }"${source}"`
   )
 }
 

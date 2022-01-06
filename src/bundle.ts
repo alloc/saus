@@ -365,11 +365,18 @@ async function generateBundle(
     code: serializeToEsm(runtimeConfig),
   })
 
+  const pluginImports = new Set<string>()
+  for (const plugin of context.plugins) {
+    const imports = plugin.fetchBundleImports?.(modules)
+    imports?.forEach(source => pluginImports.add(source))
+  }
+
   const entryId = path.resolve('.saus/main.js')
   const runtimeId = `/@fs/${path.join(runtimeDir, 'main.ts')}`
   modules.addModule({
     id: entryId,
     code: endent`
+      ${serializeImports(Array.from(pluginImports))}
       import "/@fs/${context.renderPath}"
       import "/@fs/${context.routesPath}"
       export * from "${runtimeId}"
