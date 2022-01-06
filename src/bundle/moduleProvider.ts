@@ -9,12 +9,12 @@ export interface VirtualModule {
   moduleSideEffects?: boolean | 'no-treeshake'
 }
 
-export interface ModuleProvider extends vite.Plugin {
+export interface ModuleProvider {
   modules: ReadonlyMap<string, VirtualModule>
   addModule(module: VirtualModule): VirtualModule
 }
 
-export function createModuleProvider(): ModuleProvider {
+export function createModuleProvider(): ModuleProvider & vite.Plugin {
   const modules = new Map<string, VirtualModule>()
   return {
     name: 'saus:moduleProvider',
