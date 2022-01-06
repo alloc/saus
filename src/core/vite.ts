@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import { PublicFile } from '../plugins/publicDir'
 import { ModuleProvider } from '../bundle/moduleProvider'
 import { SourceMap } from '../bundle/sourceMap'
 import { RenderedPage } from '../bundle/types'
@@ -93,6 +94,11 @@ export interface SausPlugin {
    * the routes/renderers are updated.
    */
   onContext?: (context: SausContext) => void
+  /**
+   * Transform files from the `publicDir` when the `copyPublicDir`
+   * plugin is active in the project.
+   */
+  transformPublicFile?: (file: PublicFile) => Promisable<void>
   /**
    * Define virtual modules and/or return an array of side-effectful module
    * identifiers to be imported by the SSR bundle.
