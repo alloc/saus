@@ -1,5 +1,5 @@
 import type { RenderRequest } from '../core'
-import { initialState as state } from './state'
+import { initialState as state } from './bootstrap'
 import routes from './routes'
 
 const urlPathRegex = /^(.+?)(?:#[^?]*)?(?:\?(.*))?$/

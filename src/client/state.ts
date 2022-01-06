@@ -1,12 +1,9 @@
-import {
-  ClientState,
-  kStateFragment,
-  ResolvedState,
-  StateFragment,
-} from '../core'
+import type { ClientState, ResolvedState, StateFragment } from '../core'
 import { loadedStateCache, loadingStateCache } from './cache'
 import { unpackStateFragments } from './unpack'
 import { withCache } from './withCache'
+
+const kStateFragment = Symbol.for('saus.StateFragment')
 
 /**
  * Load client state for the given URL, using the local cache if possible.
@@ -53,6 +50,7 @@ export function defineStateFragment<T, Args extends any[]>(
     return prefix + '∫' + JSON.stringify(args)
   }
   return {
+    // @ts-ignore
     [kStateFragment]: true,
     prefix,
     get(...args) {
