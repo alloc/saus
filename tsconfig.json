@@ -1,18 +1,10 @@
 {
-  "include": [
-    "src",
-    "packages/html/src/resolver.ts",
-    "packages/html/src/types.ts",
-    "packages/html/src/visitors.spec.ts",
-    "packages/html/src/traversal.ts",
-    "packages/html/src/selector.spec.ts",
-    "packages/html/src/selector.ts"
-  ],
+  "include": ["src"],
   "exclude": ["src/client"],
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
-    "lib": ["es2018"],
+    "lib": ["es2019"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noUnusedLocals": true,
