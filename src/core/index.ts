@@ -7,6 +7,7 @@ export * from './renderer'
 export * from './routes'
 export * from './setup'
 export * from './state'
+export * from '../utils/esm'
 export * from './vite'
 
 export { default as endent } from 'endent'

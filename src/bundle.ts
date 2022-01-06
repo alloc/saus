@@ -1,5 +1,4 @@
 import * as babel from '@babel/core'
-import { dataToEsm } from '@rollup/pluginutils'
 import builtins from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
@@ -21,6 +20,7 @@ import {
   RegexParam,
   SausBundleConfig,
   SausContext,
+  serializeToEsm,
 } from './core'
 import type { RuntimeConfig } from './core/config'
 import { createLoader, loadContext } from './core/context'
@@ -323,10 +323,6 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
     routeImports,
     runtimeConfig,
   }
-}
-
-function serializeToEsm(data: unknown) {
-  return dataToEsm(data, { indent: '  ', namedExports: false })
 }
 
 async function generateBundle(
