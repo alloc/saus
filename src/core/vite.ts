@@ -97,7 +97,9 @@ export interface SausPlugin {
    * Define virtual modules and/or return an array of side-effectful module
    * identifiers to be imported by the SSR bundle.
    */
-  fetchBundleImports?: (modules: ModuleProvider) => string[] | null | void
+  fetchBundleImports?: (
+    modules: ModuleProvider
+  ) => Promisable<string[] | null | void>
   /**
    * Called before the SSR bundle is written to disk.
    * This is only called when `saus bundle` is used.

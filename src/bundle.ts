@@ -367,8 +367,10 @@ async function generateBundle(
 
   const pluginImports = new Set<string>()
   for (const plugin of context.plugins) {
-    const imports = plugin.fetchBundleImports?.(modules)
-    imports?.forEach(source => pluginImports.add(source))
+    if (plugin.fetchBundleImports) {
+      const imports = await plugin.fetchBundleImports(modules)
+      imports?.forEach(source => pluginImports.add(source))
+    }
   }
 
   const entryId = path.resolve('.saus/main.js')
