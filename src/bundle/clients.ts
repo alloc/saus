@@ -1,8 +1,8 @@
 import escalade from 'escalade/sync'
 import { warnOnce } from 'misty'
 import path from 'path'
-import terser from 'terser'
 import stripComments from 'strip-comments'
+import terser from 'terser'
 import { BundleOptions } from '../bundle'
 import {
   ClientFunctions,
@@ -12,14 +12,15 @@ import {
   UserConfig,
   vite,
 } from '../core'
+import { transformClientState } from '../plugins/clientState'
+import { debugForbiddenImports } from '../plugins/debug'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
 import { createModuleProvider } from './moduleProvider'
 import { ClientModuleMap } from './runtime/modules'
-import { ClientModule } from './types'
 import { slash } from './runtime/utils'
 import { toInlineSourceMap } from './sourceMap'
-import { transformClientState } from '../plugins/clientState'
+import { ClientModule } from './types'
 
 const posixPath = path.posix
 
@@ -117,6 +118,11 @@ export async function generateClientModules(
 
   config = vite.mergeConfig(config, <vite.UserConfig>{
     plugins: [
+      debugForbiddenImports([
+        'vite',
+        './src/core/index.ts',
+        './src/core/context.ts',
+      ]),
       routesPlugin(context),
       modules,
       fixChunkImports(),

@@ -21,12 +21,12 @@ export function createModuleProvider(): ModuleProvider {
     enforce: 'pre',
     resolveId: id => {
       const exists = modules.has(id)
-      debug(`resolveId: ${id}${exists ? ` (exists)` : ``}`)
       return exists ? id : null
     },
     async load(id) {
       const module = modules.get(id)
       if (module) {
+        debug(`load: ${id}`)
         return { ...module, code: await module.code }
       }
     },

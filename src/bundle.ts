@@ -26,6 +26,7 @@ import type { RuntimeConfig } from './core/config'
 import { createLoader, loadContext } from './core/context'
 import { setRoutesModule } from './core/global'
 import { vite } from './core/vite'
+import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
 import { Profiling } from './profiling'
 import { parseImports, serializeImports } from './utils/imports'
@@ -407,6 +408,11 @@ async function generateBundle(
 
   const overrides: vite.UserConfig = {
     plugins: [
+      debugForbiddenImports([
+        'vite',
+        './src/core/index.ts',
+        './src/core/context.ts',
+      ]),
       modules,
       bundleEntry && bundleType == 'script'
         ? transformServerScript(bundleEntry)
@@ -529,21 +535,6 @@ function rewriteRouteImports(
     },
   }
 }
-
-// @ts-ignore
-// function debugSymlinkResolver(): vite.Plugin {
-//   return {
-//     name: 'debugSymlinkResolver',
-//     configResolved(config) {
-//       const { symlinkResolver } = config
-//       this.generateBundle = () => {
-//         console.log('cacheSize: %O', symlinkResolver.cacheSize)
-//         console.log('cacheHits: %O', symlinkResolver.cacheHits)
-//         console.log('fsCalls:   %O', symlinkResolver.fsCalls)
-//       }
-//     },
-//   }
-// }
 
 function relativeToCwd(file: string) {
   file = path.relative(process.cwd(), file)
