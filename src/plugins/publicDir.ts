@@ -41,6 +41,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
   return {
     name: copyPublicDir.name,
     apply: 'build',
+    enforce: 'pre',
     resolveId(id) {
       return resolveId?.(id)
     },
