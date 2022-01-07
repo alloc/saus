@@ -57,6 +57,7 @@ export async function build(
   const outDir = path.resolve(context.root, buildOptions.outDir)
 
   prepareOutDir(outDir, buildOptions.emptyOutDir, context)
+  process.chdir(outDir)
 
   const worker = new WorkerPool({
     filename: path.resolve(__dirname, 'build/worker.js'),
