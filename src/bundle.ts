@@ -23,8 +23,8 @@ import {
   serializeToEsm,
 } from './core'
 import type { RuntimeConfig } from './core/config'
-import { createLoader, loadContext } from './core/context'
-import { setRoutesModule } from './core/global'
+import { loadContext } from './core/context'
+import { loadRoutes } from './core/loadRoutes'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
@@ -547,17 +547,7 @@ function relativeToCwd(file: string) {
 }
 
 async function generateKnownPaths(context: SausContext) {
-  const loader = await createLoader(context, {
-    cacheDir: false,
-    server: { hmr: false, wss: false, watch: false },
-  })
-
-  setRoutesModule(context)
-  try {
-    await loader.ssrLoadModule(context.routesPath.replace(context.root, ''))
-  } finally {
-    setRoutesModule(null)
-  }
+  await loadRoutes(context)
 
   const paths: string[] = []
   const errors: { reason: string; path: string }[] = []

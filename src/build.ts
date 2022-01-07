@@ -9,13 +9,12 @@ import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
+  loadRoutes,
   RegexParam,
   RouteParams,
   SausContext,
   vite,
 } from './core'
-import { createLoader } from './core/context'
-import { setRoutesModule } from './core/global'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -123,20 +122,6 @@ export async function build(
     pages,
     errors,
   }
-}
-
-async function loadRoutes(context: SausContext) {
-  const loader = await createLoader(context, {
-    cacheDir: false,
-    server: { hmr: false, wss: false, watch: false },
-  })
-  setRoutesModule(context)
-  try {
-    await loader.ssrLoadModule(context.routesPath.replace(context.root, ''))
-  } finally {
-    setRoutesModule(null)
-  }
-  await loader.close()
 }
 
 function prepareOutDir(
