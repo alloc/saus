@@ -1,13 +1,13 @@
 import * as vite from 'vite'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { babel, transformSync, t, NodePath } from '../babel'
-import { SausContext } from '../core'
+import { SausConfig } from '../core'
 import { isClientUrl } from './client'
 
-export function renderPlugin({
-  renderPath,
-  configEnv,
-}: SausContext): vite.Plugin {
+export function renderPlugin(
+  { render: renderPath }: SausConfig,
+  configEnv: vite.ConfigEnv
+): vite.Plugin {
   return {
     name: 'saus:render',
     enforce: 'pre',

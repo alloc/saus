@@ -1,7 +1,6 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import kleur from 'kleur'
-import { klona } from 'klona'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
@@ -14,13 +13,22 @@ import { transformClientState } from './plugins/clientState'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
+import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
-import { steal } from './utils/steal'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
-  let context = await loadContext('serve', inlineConfig)
-
   const events = new EventEmitter()
+  const createContext = () =>
+    loadContext('serve', inlineConfig, [
+      servePlugin(e => events.emit('error', e)),
+      clientPlugin,
+      routesPlugin,
+      renderPlugin,
+      transformClientState,
+    ])
+
+  let context = await createContext()
+
   events.on('error', onError)
   events.on('restart', restart)
 
@@ -35,7 +43,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       await oldServer?.close()
 
       context.logger.clearScreen('info')
-      context = await loadContext('serve', inlineConfig)
+      context = await createContext()
       server = await startServer(context, events, true)
       return server
     })
@@ -81,28 +89,7 @@ async function startServer(
   events: EventEmitter,
   isRestart?: boolean
 ) {
-  let { config } = context
-
-  // Clone the config, but not its plugins.
-  const plugins = steal(config, 'plugins')
-  config = klona(config)
-  config.plugins = plugins
-
-  // Prepend the Saus dev plugins.
-  config = vite.mergeConfig(
-    <vite.UserConfig>{
-      plugins: [
-        servePlugin(context, e => events.emit('error', e)),
-        clientPlugin(context),
-        routesPlugin(context),
-        renderPlugin(context),
-        transformClientState(),
-      ],
-    },
-    config
-  ) as any
-
-  const server = await vite.createServer(config)
+  const server = await vite.createServer(context.config)
   const watcher = server.watcher!
 
   // Listen immediately to ensure `buildStart` hook is called.
@@ -119,10 +106,7 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const moduleCache = (context.ssrContext = vite.ssrCreateContext(server, [
-    injectDevCache(context),
-  ]))
-
+  const moduleCache = vite.ssrCreateContext(server, [injectDevCache(context)])
   const loadSausModules = () =>
     server.ssrLoadModule(
       [context.routesPath, context.renderPath].map(file =>
@@ -159,7 +143,7 @@ async function startServer(
 
   // This plugin handles updated modules, so it's not needed until
   // the server has been initialized.
-  moduleCache.plugins.push(handleContextUpdates(context, server, events))
+  moduleCache.plugins.push(handleContextUpdates(context, events))
 
   const changedFiles = new Set<string>()
   const scheduleReload = debounce(async () => {
@@ -228,15 +212,8 @@ function injectDevCache(context: SausContext): vite.SSRPlugin {
   }
 }
 
-function emitContextUpdate(context: SausContext) {
-  for (const plugin of context.plugins) {
-    plugin.onContext?.(context)
-  }
-}
-
 function handleContextUpdates(
   context: SausContext,
-  server: vite.ViteDevServer,
   events: EventEmitter
 ): vite.SSRPlugin {
   let renderConfig: RenderModule | null

@@ -1,11 +1,15 @@
 import fs from 'fs'
 import path from 'path'
 import { babel, inferSyntaxPlugins, t } from '../babel'
-import { SausContext, vite } from '../core'
+import { SausConfig, vite } from '../core'
 
 const routesPathStub = path.resolve(__dirname, '../src/client/routes.ts')
 
-export function routesPlugin({ routesPath }: SausContext): vite.Plugin {
+/**
+ * This plugin extracts the `route` calls from the routes module,
+ * so any Node-specific logic is removed for client-side use.
+ */
+export function routesPlugin({ routes: routesPath }: SausConfig): vite.Plugin {
   return {
     name: 'saus:routes',
     enforce: 'pre',

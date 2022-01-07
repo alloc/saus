@@ -67,11 +67,15 @@ export interface SausConfig {
 declare module 'vite' {
   interface UserConfig {
     saus?: Partial<SausConfig>
+    /**
+     * Filter the stack trace from an SSR error so there's
+     * less noise from files you don't care about.
+     */
+    filterStack?: (source: string) => boolean
   }
 }
 
 export interface UserConfig extends vite.UserConfig {
-  filterStack?: (source: string) => boolean
   saus: SausConfig
 }
 
@@ -93,7 +97,7 @@ export interface SausPlugin {
    * When `saus dev` is used, this hook is also called when
    * the routes/renderers are updated.
    */
-  onContext?: (context: SausContext) => void
+  onContext?: (context: SausContext) => Promisable<void>
   /**
    * Transform files from the `publicDir` when the `copyPublicDir`
    * plugin is active in the project.

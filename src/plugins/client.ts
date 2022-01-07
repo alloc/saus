@@ -1,7 +1,7 @@
 import endent from 'endent'
 import { warn } from 'misty'
 import * as vite from 'vite'
-import { SausContext, Plugin } from '../core'
+import { SausContext, Plugin, SausConfig } from '../core'
 import { getPageFilename } from '../pages'
 import { collectCss } from '../preload'
 
@@ -15,15 +15,27 @@ export function getClientUrl(id: string) {
   return clientPrefix + id
 }
 
-export function clientPlugin(context: SausContext): Plugin {
-  const { renderPath, pages, states, configEnv } = context
-
-  let server: vite.ViteDevServer | undefined
+/**
+ * This plugin is responsible for serving the generated client
+ * modules in serve mode.
+ */
+export function clientPlugin(
+  { render: renderPath }: SausConfig,
+  configEnv: vite.ConfigEnv
+): Plugin {
+  let server: vite.ViteDevServer
+  let context: SausContext
 
   return {
     name: 'saus:client',
+    apply: 'serve',
     configureServer(s) {
       server = s
+    },
+    saus: {
+      onContext(c) {
+        context = c
+      },
     },
     resolveId(id, importer) {
       if (isClientUrl(id)) {
@@ -40,7 +52,9 @@ export function clientPlugin(context: SausContext): Plugin {
         id = id.replace(clientPrefix, '')
 
         // Find a page that uses this client.
-        const page = Object.values(pages).find(page => id === page.client?.id)
+        const page = Object.values(context.pages).find(
+          page => id === page.client?.id
+        )
         if (page) {
           return page.client!.code
         }
@@ -100,7 +114,7 @@ export function clientPlugin(context: SausContext): Plugin {
         // Even though we could embed this JSON string into the hydration
         // script, making the HTML parser aware of its JSON format allows
         // it to be parsed earlier than it otherwise would be.
-        const state = await states[page.path]
+        const state = context.loadedStateCache.get(page.path)
         if (!state) {
           warn(`Missing client state for page: "${page.path}"`)
         }

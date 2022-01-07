@@ -1,4 +1,5 @@
 import { flatten } from 'array-flatten'
+import arrify from 'arrify'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
@@ -10,16 +11,28 @@ import { ConfigHook, setConfigHooks } from './config'
 import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { Plugin, SausConfig, SausPlugin, UserConfig, vite } from './vite'
+import { Plugin, SausConfig, SausPlugin, vite } from './vite'
+
+type ResolvedConfig = vite.ResolvedConfig & {
+  readonly saus: Readonly<SausConfig>
+}
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
   plugins: ({ name: string } & SausPlugin)[]
   logger: vite.Logger
-  config: UserConfig
-  configEnv: vite.ConfigEnv
-  configPath: string | null
+  config: ResolvedConfig
+  configPath: string | undefined
   configHooks: string[]
+  userConfig: vite.UserConfig
+  /**
+   * Use this instead of `this.config` when an extra Vite build is needed,
+   * or else you risk corrupting the Vite plugin state.
+   */
+  resolveConfig: (
+    command: 'build' | 'serve',
+    inlineConfig?: vite.UserConfig
+  ) => Promise<ResolvedConfig>
   /** The URL prefix for all pages */
   basePath: string
   /** The `saus.defaultPath` option from Vite config */
@@ -34,135 +47,171 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   loadedStateCache: Map<string, any>
   /** Path to the render module */
   renderPath: string
-  /** The SSR context used when loading routes */
-  ssrContext?: vite.SSRContext
   /** For checking if a page is outdated since rendering began */
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
 }
 
+type InlinePlugin = (
+  sausConfig: SausConfig,
+  configEnv: vite.ConfigEnv
+) => Plugin
+
 export async function loadContext(
   command: 'build' | 'serve',
-  inlineConfig?: vite.UserConfig,
-  sausPlugins?: ((context: SausContext) => vite.Plugin)[]
+  inlineConfig: vite.InlineConfig = {},
+  inlinePlugins?: InlinePlugin[]
 ): Promise<SausContext> {
-  const root = vite
-    .normalizePath(inlineConfig?.root || process.cwd())
-    .replace(/\/$/, '')
+  let configHooks: string[] | undefined
 
-  const isBuild = command === 'build'
-  const configEnv: vite.ConfigEnv = {
-    command,
-    mode: inlineConfig?.mode || (isBuild ? 'production' : 'development'),
-  }
-
-  const logLevel = inlineConfig?.logLevel || 'info'
-  const logger = vite.createLogger(logLevel)
-
-  Profiling.mark('load user config')
-
-  // Load "vite.config.ts"
-  const loadResult = await vite.loadConfigFromFile(
-    configEnv,
-    undefined,
-    root,
-    logLevel
+  const resolveConfig = getConfigResolver(
+    inlinePlugins,
+    async renderPath => (configHooks ??= await loadConfigHooks(renderPath))
   )
 
-  const userConfig = loadResult ? loadResult.config : {}
-  userConfig.mode ??= configEnv.mode
-
-  const sausConfig = userConfig.saus
-  assertSausConfig(sausConfig)
-  assertSausConfig(sausConfig, 'render')
-  assertSausConfig(sausConfig, 'routes')
-
-  const renderPath = resolve(root, sausConfig.render)
-  const routesPath = resolve(root, sausConfig.routes)
-
-  const overrides: vite.InlineConfig = {
-    configFile: false,
-    customLogger: logger,
-    server: {
-      lazyTransform: isBuild,
-    },
-    ssr: {
-      noExternal: ['saus/client'],
-    },
-    optimizeDeps: {
-      entries: [renderPath],
-      exclude: ['saus'],
-    },
-  }
-
-  let config = vite.mergeConfig(userConfig, overrides) as vite.UserConfig
-  if (inlineConfig) {
-    config = vite.mergeConfig(config, inlineConfig)
-  }
-
+  const config = await resolveConfig(command, inlineConfig)
   const context: SausContext = {
-    root,
-    plugins: flattenPlugins<Plugin>(
-      config.plugins || [],
-      p => p && p.saus && !(p.apply && p.apply !== command)
-    ).map(p => ({ ...p.saus, name: p.name })),
-    logger,
-    config: config as UserConfig,
-    configEnv,
-    configPath: loadResult ? loadResult.path : null,
+    root: config.root,
+    plugins: getSausPlugins(config),
+    logger: config.logger,
+    config,
+    configPath: config.configFile,
     configHooks: [],
-    basePath: config.base || '/',
-    defaultPath: sausConfig.defaultPath || '/404',
-    routesPath,
+    userConfig: config.inlineConfig,
+    resolveConfig,
+    basePath: config.base,
+    defaultPath: config.saus.defaultPath || '/404',
+    routesPath: config.saus.routes,
     routes: [],
     runtimeHooks: [],
     pages: {},
     defaultState: [],
     loadingStateCache: new Map(),
     loadedStateCache: new Map(),
-    renderPath,
+    renderPath: config.saus.render,
     renderers: [],
     beforeRenderHooks: [],
     reloadId: 0,
   }
 
-  Profiling.mark('load config hooks')
-
-  context.configHooks = await loadConfigHooks(context.renderPath)
-
-  for (const hookPath of context.configHooks) {
-    const hookModule = require(hookPath)
-    const configHook: ConfigHook = hookModule.__esModule
-      ? hookModule.default
-      : hookModule
-
-    const result = await (typeof configHook == 'function'
-      ? configHook(config, configEnv)
-      : configHook)
-
-    if (result) {
-      config = vite.mergeConfig(config, result)
-    }
-  }
-
-  if (sausPlugins) {
-    config.plugins ||= []
-    config.plugins.unshift(sausPlugins.map(p => p(context)))
-  }
-
-  context.config = config as UserConfig
-
   return context
 }
 
-const flattenPlugins = <T extends vite.Plugin>(
-  plugins: (vite.PluginOption | vite.PluginOption[])[],
-  filter = (p: T | false | null | undefined): any => !!p
-) =>
-  flatten(
-    vite.sortUserPlugins(flatten(plugins).filter(filter) as vite.Plugin[])
-  ) as T[]
+const getSausPlugins = (config: vite.ResolvedConfig) =>
+  flattenPlugins(config.plugins as Plugin[], p => {
+    if (!p || !p.saus) {
+      return false
+    }
+    if (typeof p.apply == 'function') {
+      return p.apply(config.inlineConfig, {
+        command: config.command,
+        mode: config.mode,
+      })
+    }
+    return !p.apply || p.apply == config.command
+  }).map(p => ({
+    name: p.name,
+    ...p.saus,
+  }))
+
+function flattenPlugins<T extends vite.Plugin>(
+  plugins: readonly T[],
+  filter?: (p: T) => any
+) {
+  const filtered: vite.Plugin[] = filter ? plugins.filter(filter) : [...plugins]
+  return flatten(vite.sortUserPlugins(filtered)) as T[]
+}
+
+function getConfigResolver(
+  inlinePlugins: InlinePlugin[] | undefined,
+  getConfigHooks: (renderPath: string) => Promise<string[]>
+) {
+  return async (
+    command: 'build' | 'serve',
+    inlineConfig: vite.InlineConfig = {}
+  ) => {
+    const root = (inlineConfig.root = vite
+      .normalizePath(resolve(inlineConfig.root || './'))
+      .replace(/\/$/, ''))
+
+    const isBuild = command == 'build'
+    const defaultMode = isBuild ? 'production' : 'development'
+    const configEnv: vite.ConfigEnv = {
+      command,
+      mode: inlineConfig.mode || defaultMode,
+    }
+
+    const defaultConfig: vite.InlineConfig = {
+      configFile: false,
+      server: {
+        preTransformRequests: !isBuild,
+      },
+      ssr: {
+        noExternal: ['saus/client'],
+      },
+      optimizeDeps: {
+        exclude: ['saus'],
+      },
+    }
+
+    inlineConfig = vite.mergeConfig(defaultConfig, inlineConfig)
+
+    const loadResult = await vite.loadConfigFromFile(
+      configEnv,
+      undefined,
+      inlineConfig.root,
+      inlineConfig.logLevel
+    )
+
+    if (!loadResult) {
+      throw Error(`[saus] No "vite.config.js" file was found`)
+    }
+
+    let userConfig: vite.UserConfig = vite.mergeConfig(
+      loadResult.config,
+      inlineConfig
+    )
+
+    const sausConfig = userConfig.saus
+    assertSausConfig(sausConfig)
+    assertSausConfig(sausConfig, 'render')
+    assertSausConfig(sausConfig, 'routes')
+    sausConfig.render = resolve(root, sausConfig.render)
+    sausConfig.routes = resolve(root, sausConfig.routes)
+
+    if (inlinePlugins) {
+      userConfig.plugins ??= []
+      userConfig.plugins.unshift(
+        ...inlinePlugins.map(create => create(sausConfig, configEnv))
+      )
+    }
+
+    for (const hookPath of await getConfigHooks(sausConfig.render)) {
+      const hookModule = require(hookPath)
+      const configHook: ConfigHook = hookModule.__esModule
+        ? hookModule.default
+        : hookModule
+
+      if (typeof configHook !== 'function') {
+        throw Error(`[saus] Config hook must export a function: ${hookPath}`)
+      }
+      const result = await configHook(userConfig, configEnv)
+      if (result) {
+        userConfig = vite.mergeConfig(userConfig, result)
+      }
+    }
+
+    const config = await vite.resolveConfig(userConfig, command, defaultMode)
+
+    config.optimizeDeps.entries = [
+      ...arrify(config.optimizeDeps.entries),
+      sausConfig.render,
+    ]
+
+    return config as ResolvedConfig
+  }
+}
 
 function assertSausConfig(
   config: Partial<SausConfig> | undefined

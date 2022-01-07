@@ -89,9 +89,9 @@ export async function generateClientModules(
     })
   }
 
-  let { config } = context
+  let { config, userConfig } = context
 
-  const mode = options.mode || context.configEnv.mode
+  const mode = options.mode || config.mode
   const isProduction = mode == 'production'
 
   // Vite replaces `process.env.NODE_ENV` in client modules with the value
@@ -100,7 +100,7 @@ export async function generateClientModules(
     process.env.NODE_ENV = undefined
   }
 
-  let sourceMaps = config.build?.sourcemap ?? (!isProduction && 'inline')
+  let sourceMaps = userConfig.build?.sourcemap ?? (!isProduction && 'inline')
   if (sourceMaps === true || sourceMaps === 'hidden') {
     sourceMaps = false
     context.logger.warn(
@@ -110,20 +110,20 @@ export async function generateClientModules(
     )
   }
 
-  const outDir = path.resolve(context.root, config.build?.outDir || 'dist')
+  const outDir = config.build.outDir
   const minify =
     options.minify == null
-      ? config.build?.minify ?? isProduction
+      ? (userConfig.build?.minify ?? isProduction) !== false
       : options.minify
 
-  config = vite.mergeConfig(config, <vite.UserConfig>{
+  config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([
         'vite',
         './src/core/index.ts',
         './src/core/context.ts',
       ]),
-      routesPlugin(context),
+      routesPlugin(config.saus),
       modules,
       fixChunkImports(),
       transformClientState(),
@@ -145,7 +145,7 @@ export async function generateClientModules(
         preserveEntrySignatures: 'allow-extension',
       },
     },
-  }) as UserConfig
+  })
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const { output } = buildResult.output[0]

@@ -68,7 +68,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     bundleEntry = path.resolve(context.root, bundleEntry)
   }
 
-  const outDir = context.config.build?.outDir || 'dist'
+  const outDir = context.userConfig.build?.outDir || 'dist'
   const bundleFormat = options.format || bundleConfig.format || 'cjs'
   const bundlePath = options.outFile
     ? path.resolve(options.outFile)
@@ -82,7 +82,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     : null!
 
   const shouldWrite =
-    options.write !== false && context.config.build?.write !== false
+    options.write !== false && context.config.build.write !== false
 
   if (!bundlePath && shouldWrite) {
     throw Error(
@@ -156,14 +156,13 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   return bundle
 }
 
-async function getBuildTransform(config: vite.UserConfig) {
-  const resolvedConfig = await vite.resolveConfig(config, 'build')
-  const context = await vite.createTransformContext(resolvedConfig, false)
+async function getBuildTransform(config: vite.ResolvedConfig) {
+  const context = await vite.createTransformContext(config, false)
   return [vite.createTransformer(context), context] as const
 }
 
 async function prepareFunctions(context: SausContext, options: BundleOptions) {
-  const { root, renderPath } = context
+  const { root, renderPath, config } = context
 
   Profiling.mark('parse render functions')
   const functions = extractClientFunctions(renderPath)
@@ -173,11 +172,10 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
   const functionModules = createModuleProvider()
   const functionImports: { [stmt: string]: ClientImport } = {}
 
-  const [transform, { config, pluginContainer }] = await getBuildTransform(
-    vite.mergeConfig(context.config, {
-      plugins: [functionModules],
-    })
-  )
+  const [transform, { pluginContainer }] = await getBuildTransform({
+    ...config,
+    plugins: [functionModules, ...config.plugins],
+  })
 
   const babelConfig = getBabelConfig(renderPath)
   const parseFile = (code: string) =>
@@ -273,7 +271,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
   implicitImports.add(`import { hydrate } from "saus/client"`)
 
   // Renderer packages often import modules that help with hydrating the page.
-  for (const { imports } of config.saus!.clients || []) {
+  for (const { imports } of config.saus.clients || []) {
     serializeImports(imports).forEach(stmt => implicitImports.add(stmt))
   }
 
@@ -297,11 +295,8 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
 
   await pluginContainer.close()
 
-  const bundleConfig = context.config.saus.bundle || {}
-  const outDir = path.resolve(
-    context.root,
-    context.config.build?.outDir || 'dist'
-  )
+  const bundleConfig = config.saus.bundle || {}
+  const outDir = path.resolve(config.root, config.build.outDir)
 
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
@@ -408,7 +403,7 @@ async function generateBundle(
     )
   }
 
-  const overrides: vite.UserConfig = {
+  const config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([
         'vite',
@@ -442,12 +437,9 @@ async function generateBundle(
         },
       },
     },
-  }
+  })
 
-  const buildResult = (await vite.build(
-    vite.mergeConfig(context.config, overrides)
-  )) as vite.ViteBuild
-
+  const buildResult = (await vite.build(config)) as vite.ViteBuild
   return buildResult.output[0].output[0]
 }
 

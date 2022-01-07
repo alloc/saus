@@ -10,40 +10,44 @@ import { defer } from '../utils/defer'
 
 const stateSuffix = /\/state\.json$/
 
-export function servePlugin(
-  context: SausContext,
-  onError: (e: any) => void
-): Plugin {
+export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
   // The server starts before Saus is ready, so we stall
   // any early page requests until it is.
   let init = defer<void>()
   let pageFactory: PageFactory
+  let context: SausContext
 
   return {
     name: 'saus:serve',
     saus: {
-      onContext(context) {
+      onContext(c) {
+        context = c
+
         const config: RuntimeConfig = {
-          assetsDir: context.config.build?.assetsDir || 'assets',
-          base: context.config.base || '/',
+          assetsDir: context.config.build.assetsDir,
+          base: context.basePath,
           command: 'dev',
           minify: false,
-          mode: context.config.mode || 'development',
-          publicDir: context.config.publicDir || 'public',
+          mode: context.config.mode,
+          publicDir: context.config.publicDir,
         }
+
         context.runtimeHooks.forEach(onSetup => {
           onSetup(config)
         })
+
         if (context.htmlProcessors) {
           context.processHtml = mergeHtmlProcessors(
             context.htmlProcessors,
             page => ({ page, config })
           )
         }
+
         pageFactory = createPageFactory(
           context,
           extractClientFunctions(context.renderPath)
         )
+
         init.resolve()
       },
     },
