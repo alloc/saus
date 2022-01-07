@@ -15,6 +15,7 @@ import {
   SausContext,
   vite,
 } from './core'
+import { callPlugins } from './utils/callPlugins'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -106,9 +107,7 @@ export async function build(
   if (buildOptions.write !== false) {
     const outDir = path.resolve(context.root, buildOptions.outDir || 'dist')
     prepareOutDir(outDir, buildOptions.emptyOutDir, context)
-    for (const plugin of context.plugins) {
-      plugin.onWritePages?.(pages)
-    }
+    await callPlugins(context.plugins, 'onWritePages', pages)
     const files = writePages(pages, outDir)
     printFiles(
       context.logger,

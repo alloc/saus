@@ -29,6 +29,7 @@ import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
 import { Profiling } from './profiling'
+import { callPlugins } from './utils/callPlugins'
 import { parseImports, serializeImports } from './utils/imports'
 
 const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
@@ -55,9 +56,7 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
 }
 
 export async function bundle(context: SausContext, options: BundleOptions) {
-  for (const plugin of context.plugins) {
-    plugin.onContext?.(context)
-  }
+  await callPlugins(context.plugins, 'onContext', context)
 
   const bundleConfig = context.config.saus.bundle || {}
 
@@ -132,9 +131,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   }
 
   if (shouldWrite) {
-    for (const plugin of context.plugins) {
-      plugin.onWriteBundle?.(bundle)
-    }
+    await callPlugins(context.plugins, 'onWriteBundle', bundle)
 
     context.logger.info(
       kleur.bold('[saus]') +

@@ -155,7 +155,7 @@ async function startServer(
   }
 
   // Tell plugins to update local state derived from Saus context.
-  emitContextUpdate(context)
+  await callPlugins(context.plugins, 'onContext', context)
 
   // This plugin handles updated modules, so it's not needed until
   // the server has been initialized.
@@ -309,7 +309,7 @@ function handleContextUpdates(
         })
 
         // Update plugins that rely on Saus context.
-        emitContextUpdate(context)
+        await callPlugins(context.plugins, 'onContext', context)
       }
 
       // Allow another reload to commence.
