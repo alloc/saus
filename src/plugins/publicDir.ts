@@ -16,8 +16,7 @@ export type CopyPublicOptions = {
  */
 export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
   let resolveId: ((id: string) => string | undefined) | undefined
-  let transform: PublicFileTransform | undefined
-  let publicDir: string | false
+  let publicDir: string
   let outDir: string
 
   const copiedFiles = new Map<string, string>()
@@ -46,9 +45,9 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
       return resolveId?.(id)
     },
     saus: {
-      onContext(context) {
-        outDir = context.config.build?.outDir ?? 'dist'
-        publicDir = context.config.publicDir ?? 'public'
+      async onContext(context) {
+        outDir = context.config.build.outDir
+        publicDir = context.config.publicDir
         if (publicDir) {
           publicDir = path.resolve(context.root, publicDir)
         }
@@ -61,6 +60,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
           transformers.push(options.transform)
         }
 
+        let transform: PublicFileTransform | undefined
         if (transformers.length) {
           transform = async file => {
             const { name } = file
@@ -72,8 +72,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
             }
           }
         }
-      },
-      async fetchBundleImports(modules) {
+
         if (publicDir && fs.existsSync(publicDir)) {
           await collectFiles(
             publicDir,
@@ -84,6 +83,8 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
             transform
           )
         }
+      },
+      async fetchBundleImports(modules) {
         if (renamedFiles.size) {
           const renameMap = Object.fromEntries(renamedFiles.entries())
           console.log({ renameMap })
