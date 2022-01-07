@@ -21,14 +21,11 @@ export function withCache(
   ) => (() => Promise<any>) | undefined = () => undefined
 ) {
   return (cacheKey: string, loader = getDefaultLoader(cacheKey)) => {
-    if (!loader) {
-      return Promise.resolve()
-    }
     if (loadedStateCache.has(cacheKey)) {
       return Promise.resolve(loadedStateCache.get(cacheKey))
     }
     let loadingState = loadingStateCache.get(cacheKey)
-    if (!loadingState) {
+    if (!loadingState && loader) {
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader()
