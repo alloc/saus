@@ -43,7 +43,7 @@ cli
           log('')
         }
       }
-      success(`${pages.size} pages rendered.`)
+      success(`${pages.length} pages rendered.`)
       process.exit(errors.length ? 1 : 0)
     } catch (e: any) {
       if (e.message.startsWith('[saus]')) {
