@@ -137,7 +137,7 @@ export function createPageFactory(
       if (fragments.length) {
         const fragmentCache = (state.$ ??= {})
         for (const [keyPath, value] of fragments) {
-          dset(fragmentCache, keyPath.split('∫'), value)
+          dset(fragmentCache, keyPath.split(';'), value)
         }
       }
 

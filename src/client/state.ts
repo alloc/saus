@@ -47,7 +47,7 @@ export function defineStateFragment<T, Args extends any[]>(
   loadImpl: (...args: Args) => T
 ): StateFragment<ResolvedState<T>, Args> {
   function toCacheKey(args: any[]) {
-    return prefix + '∫' + JSON.stringify(args)
+    return prefix + ';' + JSON.stringify(args)
   }
   return {
     // @ts-ignore
