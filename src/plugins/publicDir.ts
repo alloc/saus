@@ -1,11 +1,13 @@
 import fs from 'fs'
 import path from 'path'
+import { createFilter } from '@rollup/pluginutils'
 import { Plugin, endent, serializeToEsm } from '../core'
 
 export type PublicFileTransform = (file: PublicFile) => Promise<void> | void
 
 export type CopyPublicOptions = {
   transform?: PublicFileTransform
+  exclude?: string | RegExp | (string | RegExp)[]
 }
 
 /**
@@ -32,6 +34,10 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
       fs.writeFileSync(destPath, buffer)
     }
   }
+
+  const isExcluded = createFilter(options.exclude || /^$/, undefined, {
+    resolve: false,
+  })
 
   return {
     name: copyPublicDir.name,
@@ -74,6 +80,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
             outDir,
             copiedFiles,
             writtenFiles,
+            isExcluded,
             transform
           )
         }
@@ -112,18 +119,23 @@ async function collectFiles(
   destDir: string,
   copiedFiles: Map<string, string>,
   writtenFiles: Map<string, Buffer>,
+  isExcluded: (id: string) => boolean,
   transform?: (file: PublicFile) => Promise<void> | void,
   srcRoot = srcDir,
   destRoot = destDir
 ): Promise<void> {
   for (const name of fs.readdirSync(srcDir)) {
     const srcPath = path.join(srcDir, name)
+    if (isExcluded(name) || isExcluded(srcPath)) {
+      continue
+    }
     if (fs.statSync(srcPath).isDirectory()) {
       await collectFiles(
         srcPath,
         path.join(destDir, name),
         copiedFiles,
         writtenFiles,
+        isExcluded,
         transform,
         srcRoot,
         destRoot
