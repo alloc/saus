@@ -4,11 +4,9 @@ import { unpackStateFragments } from './unpack'
 
 export let initialState: ClientState
 
-declare const document: { querySelector: (selector: string) => any }
-
 if (!import.meta.env.SSR) {
-  const stateScript = document.querySelector('#initial-state')
-  initialState = JSON.parse(stateScript.textContent)
+  const stateScript = document.querySelector('#initial-state')!
+  initialState = JSON.parse(stateScript.textContent!)
   stateScript.remove()
 
   const pageUrl =

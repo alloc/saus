@@ -3,6 +3,7 @@
   "include": ["./"],
   "exclude": [],
   "compilerOptions": {
+    "lib": ["dom", "esnext"],
     "module": "esnext",
     "types": ["vite/client"]
   }
