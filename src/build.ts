@@ -53,6 +53,11 @@ export async function build(
     (await dynamicImport('tinypool')) as typeof import('tinypool')
   ).default
 
+  const buildOptions = context.config.build
+  const outDir = path.resolve(context.root, buildOptions.outDir)
+
+  prepareOutDir(outDir, buildOptions.emptyOutDir, context)
+
   const worker = new WorkerPool({
     filename: path.resolve(__dirname, 'build/worker.js'),
     workerData: { code, map },
@@ -103,10 +108,7 @@ export async function build(
 
   await worker.destroy()
 
-  const buildOptions = context.config.build || {}
   if (buildOptions.write !== false) {
-    const outDir = path.resolve(context.root, buildOptions.outDir || 'dist')
-    prepareOutDir(outDir, buildOptions.emptyOutDir, context)
     await callPlugins(context.plugins, 'onWritePages', pages)
     const files = writePages(pages, outDir)
     printFiles(
