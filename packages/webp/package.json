@@ -1,0 +1,30 @@
+{
+  "name": "@saus/webp",
+  "version": "0.1.0",
+  "description": "Convert images to WEBP format",
+  "license": "MIT",
+  "main": "dist/convert.js",
+  "module": "dist/convert.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsup",
+    "dev": "tsup --watch",
+    "prepare": "yarn build"
+  },
+  "dependencies": {
+    "@rollup/pluginutils": "^4.1.2",
+    "imagemin": "^7",
+    "imagemin-webp": "^6"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "@types/imagemin-webp": "^7.0.0",
+    "saus": "*"
+  }
+}
