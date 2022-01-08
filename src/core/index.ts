@@ -8,7 +8,7 @@ export * from './routes'
 export * from './loadRoutes'
 export * from './setup'
 export * from './state'
-export * from '../utils/esm'
+export * from '../utils/dataToEsm'
 export * from './vite'
 
 export { default as endent } from 'endent'

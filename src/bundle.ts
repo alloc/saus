@@ -14,13 +14,13 @@ import { SourceMap } from './bundle/sourceMap'
 import {
   ClientFunction,
   ClientFunctions,
+  dataToEsm,
   endent,
   extractClientFunctions,
   generateRoutePaths,
   RegexParam,
   SausBundleConfig,
   SausContext,
-  serializeToEsm,
 } from './core'
 import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
@@ -332,25 +332,25 @@ async function generateBundle(
 
   modules.addModule({
     id: path.join(runtimeDir, 'functions.ts'),
-    code: serializeToEsm(functions),
+    code: dataToEsm(functions),
   })
 
   modules.addModule({
     id: path.join(runtimeDir, 'modules.ts'),
-    code: serializeToEsm(moduleMap),
+    code: dataToEsm(moduleMap),
   })
 
   let knownPaths: Promise<string> | undefined
   modules.addModule({
     id: path.resolve(__dirname, '../paths/index.js'),
     get code() {
-      return (knownPaths ||= generateKnownPaths(context).then(serializeToEsm))
+      return (knownPaths ||= generateKnownPaths(context).then(dataToEsm))
     },
   })
 
   const runtimeConfigModule = modules.addModule({
     id: path.join(runtimeDir, 'config.ts'),
-    code: serializeToEsm(runtimeConfig),
+    code: dataToEsm(runtimeConfig),
   })
 
   const pluginImports = new Set<string>()

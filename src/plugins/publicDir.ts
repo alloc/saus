@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createFilter } from '@rollup/pluginutils'
-import { Plugin, endent, serializeToEsm } from '../core'
+import { Plugin, endent, dataToEsm } from '../core'
 
 export type PublicFileTransform = (file: PublicFile) => Promise<void> | void
 
@@ -98,7 +98,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
             id: '@saus/copyPublicDir/renamer.js',
             code: endent`
               import {resolveHtmlImports} from "@saus/html"
-              ${serializeToEsm(renameMap, 'const renameMap')}
+              ${dataToEsm(renameMap, 'const renameMap')}
               resolveHtmlImports(id => renameMap[id])
             `,
           })
