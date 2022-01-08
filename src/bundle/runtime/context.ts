@@ -3,10 +3,14 @@ import config from './config'
 
 export const context: PageFactoryContext = {
   pages: {},
+  defaultPath: config.defaultPath,
   defaultState: [],
   loadingStateCache: new Map(),
   loadedStateCache: new Map(),
-  logger: { warn: console.warn },
+  logger: {
+    warn: console.warn,
+    error: console.error,
+  },
   basePath: config.base,
   beforeRenderHooks: [],
   runtimeHooks: [],

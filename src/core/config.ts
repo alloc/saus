@@ -2,16 +2,12 @@ import assert from 'assert'
 import callerPath from 'caller-path'
 import path from 'path'
 import type { ConfigEnv, UserConfig } from 'vite'
-import type { SausContext } from './context'
 import { renderModule } from './global'
 
-export type ConfigHook =
-  | UserConfig
-  | Promise<UserConfig>
-  | ((
-      config: UserConfig,
-      env: ConfigEnv
-    ) => UserConfig | Promise<UserConfig> | null)
+export type ConfigHook = (
+  config: UserConfig,
+  env: ConfigEnv
+) => UserConfig | Promise<UserConfig> | null
 
 /** Paths to modules that inject Vite config */
 let configHooks: string[] | null = null
@@ -39,7 +35,9 @@ export interface RuntimeConfig {
   base: string
   bundleType?: 'script' | 'worker'
   command: 'dev' | 'bundle'
+  defaultPath: string
   minify: boolean
   mode: string
   publicDir: string
+  stateCacheUrl: string
 }

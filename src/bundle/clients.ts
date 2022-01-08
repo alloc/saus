@@ -9,7 +9,6 @@ import {
   mapClientFunctions,
   RuntimeConfig,
   SausContext,
-  UserConfig,
   vite,
 } from '../core'
 import { transformClientState } from '../plugins/clientState'
@@ -42,7 +41,7 @@ export type ClientImport = {
 export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
-  { assetsDir, base }: RuntimeConfig,
+  runtimeConfig: RuntimeConfig,
   context: SausContext,
   options: BundleOptions
 ): Promise<ClientModuleMap> {
@@ -185,6 +184,15 @@ export async function generateClientModules(
       }
     }
   })
+
+  const isStateCache = (chunk: OutputChunk) =>
+    chunk.exports.includes('loadedStateCache')
+
+  const { assetsDir, base } = runtimeConfig
+
+  // The state cache is imported by state modules created on-demand,
+  // so its URL needs to be known at runtime.
+  runtimeConfig.stateCacheUrl = chunks.find(isStateCache)!.fileName
 
   const unresolvedImports = Object.keys(importMap)
   mapClientFunctions(functions, fn => {

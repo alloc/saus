@@ -3,3 +3,8 @@ export { default as routes } from './routes'
 export * from './bootstrap'
 export * from './hydrate'
 export * from './state'
+export * from '../core/stateModules'
+
+// Public utility functions
+export * from '../utils/unwrapDefault'
+export * from '../utils/resolveModules'

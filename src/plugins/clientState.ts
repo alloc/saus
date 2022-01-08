@@ -3,7 +3,7 @@ import { SourceMap } from '../bundle/sourceMap'
 import { Plugin } from '../core/vite'
 
 /**
- * Transform `defineStateFragment` calls for client-side use.
+ * Transform `defineStateModule` calls for client-side use.
  */
 export function transformClientState(): Plugin {
   const includeRE = /\.m?[tj]sx?$/
@@ -17,13 +17,13 @@ export function transformClientState(): Plugin {
       if (id.includes('/saus/src/client/')) {
         return // Saus core modules
       }
-      if (/\bdefineStateFragment\b/.test(code)) {
+      if (/\bdefineStateModule\b/.test(code)) {
         const result = await transformAsync(code, id, [
           {
             visitor: {
               CallExpression(path) {
                 const callee = path.get('callee')
-                if (callee.isIdentifier({ name: 'defineStateFragment' })) {
+                if (callee.isIdentifier({ name: 'defineStateModule' })) {
                   // Remove the loader function.
                   path.get('arguments')[1].remove()
                 }

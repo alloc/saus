@@ -2,8 +2,10 @@ import {
   extractClientFunctions,
   mergeHtmlProcessors,
   Plugin,
+  renderStateModule,
   RuntimeConfig,
   SausContext,
+  stateCacheUrl,
 } from '../core'
 import { createPageFactory, PageFactory } from '../pages'
 import { defer } from '../utils/defer'
@@ -27,9 +29,11 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           assetsDir: context.config.build.assetsDir,
           base: context.basePath,
           command: 'dev',
+          defaultPath: context.defaultPath,
           minify: false,
           mode: context.config.mode,
           publicDir: context.config.publicDir,
+          stateCacheUrl,
         }
 
         context.runtimeHooks.forEach(onSetup => {
@@ -99,6 +103,24 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
               return { error }
             }
           } else {
+            if (url.endsWith('.js')) {
+              const state = await pageFactory.getState(url)
+              if (state) {
+                const stateModule = renderStateModule(
+                  url.slice(1, -3),
+                  state,
+                  stateCacheUrl
+                )
+                return {
+                  body: stateModule,
+                  headers: [
+                    ['Content-Type', 'application/javascript'],
+                    ['Content-Length', Buffer.byteLength(stateModule)],
+                  ],
+                }
+              }
+            }
+
             let response: Response | undefined
             await pageFactory.resolvePage(url, async (error, page) => {
               if (page) {

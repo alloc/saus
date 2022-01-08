@@ -19,13 +19,13 @@ import type {
   RoutesModule,
   RuntimeConfig,
   SausContext,
+  StateModule,
 } from './core'
-import { isStateFragment } from './client/state'
 import { debug } from './core/debug'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
+import { isStateModule } from './core/stateModules'
 import { defer } from './utils/defer'
-import { dset } from './utils/dset'
 import { serializeImports } from './utils/imports'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
@@ -50,11 +50,13 @@ export type RenderedPage = {
   html: string
   state?: ClientState
   client?: Client
+  stateModules: string[]
   routeModuleId: string
 }
 
 type SausContextKeys =
   | 'basePath'
+  | 'defaultPath'
   | 'pages'
   | 'loadingStateCache'
   | 'loadedStateCache'
@@ -63,7 +65,12 @@ export interface PageFactoryContext
   extends Pick<SausContext, SausContextKeys>,
     RoutesModule,
     RenderModule {
-  logger: { warn(msg: string): void }
+  logger: { warn(msg: string): void; error(msg: string): void }
+}
+
+interface PageState extends ClientState {
+  /** The IDs of any state modules needed by this page. */
+  $: string[] | undefined
 }
 
 export function createPageFactory(
@@ -86,64 +93,67 @@ export function createPageFactory(
     logger,
   } = context
 
-  const resolveState = withCache<ClientState>(
-    loadingStateCache,
-    loadedStateCache
-  )
+  const resolveState = withCache<PageState>(loadingStateCache, loadedStateCache)
+
+  const loadStateModule = (
+    loaded: Map<string, Promise<any>>,
+    state: StateModule
+  ) => {
+    let loading = loaded.get(state.id)
+    if (!loading) {
+      loading = resolveState(state.id, state.load)
+      loaded.set(state.id, loading)
+    }
+    return loading
+  }
+
+  const loadStateModules = (
+    loaded: Map<string, Promise<any>>,
+    include: RouteInclude,
+    url: ParsedUrl,
+    params: RouteParams
+  ) => {
+    const included =
+      typeof include == 'function' ? include(url, params) : include
+    return included.map(loadStateModule.bind(null, loaded))
+  }
 
   const getPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     resolveState(url.path, async () => {
-      // Start loading fragments before awaiting the root-level state.
-      let loadingFragments = route.include
-        ? loadStateFragments(route.include, url, params)
-        : Promise.resolve([])
+      let pageState: PageState
 
-      if (defaultState.length) {
-        const promises = defaultState.map(include =>
-          loadStateFragments(include, url, params)
-        )
-        loadingFragments = loadingFragments.then(async loadedFragments => {
-          for (const entries of await Promise.all(promises)) {
-            loadedFragments.push(...entries)
+      // State modules start loading before the root-level state is awaited.
+      const pendingStateModules = new Map<string, Promise<any>>()
+      for (const include of defaultState.concat(route.include || [])) {
+        loadStateModules(pendingStateModules, include, url, params)
+      }
+
+      if (route.state) {
+        pageState = (await route.state(
+          Object.values(params),
+          url.searchParams
+        )) as any
+
+        // Load any embedded state modules.
+        JSON.stringify(pageState, (key, state) => {
+          if (!isStateModule(state)) {
+            return state
           }
-          return loadedFragments
+          loadStateModule(pendingStateModules, state)
+          pageState[key] = { '@import': '/' + state.id + '.js' }
         })
+      } else {
+        pageState = {} as any
       }
 
-      const state = (
-        route.state
-          ? await route.state(Object.values(params), url.searchParams)
-          : {}
-      ) as ClientState
-
-      // State fragments may exist within the root-level state,
-      // so we need to load that as well.
-      for (const [key, fragment] of Object.entries(state)) {
-        if (isStateFragment(fragment)) {
-          const loadingFragment = fragment.load()
-          loadingFragments = (loadingFragments || Promise.resolve([])).then(
-            async loadedFragments => {
-              loadedFragments.push([
-                fragment.prefix,
-                (state[key] = await loadingFragment),
-              ])
-              return loadedFragments
-            }
-          )
-        }
+      if (pendingStateModules.size) {
+        await Promise.all(pendingStateModules.values())
+        pageState.$ = Array.from(pendingStateModules.keys())
       }
 
-      const fragments = await loadingFragments
-      if (fragments.length) {
-        const fragmentCache = (state.$ ??= {})
-        for (const [keyPath, value] of fragments) {
-          dset(fragmentCache, keyPath.split(';'), value)
-        }
-      }
-
-      state.routePath = route.path
-      state.routeParams = params
-      return state
+      pageState.routePath = route.path
+      pageState.routeParams = params
+      return pageState
     })
 
   routes = [...routes].reverse()
@@ -196,13 +206,16 @@ export function createPageFactory(
   // The main logic for rendering a page.
   function renderPage(
     url: ParsedUrl,
-    state: ClientState,
+    state: PageState,
     route: Route,
     renderer: Renderer
   ): Promise<RenderedPage | null> {
     debug(`Page queued: ${url}`)
     const pagePromise = renderQueue.then(async () => {
       debug(`Page next up: ${url}`)
+
+      const stateModules = state.$ || []
+      delete state.$
 
       const { path } = url
       const request: RenderRequest = {
@@ -247,6 +260,7 @@ export function createPageFactory(
         html,
         state,
         client,
+        stateModules,
         routeModuleId: route.moduleId,
       }
 
@@ -272,7 +286,7 @@ export function createPageFactory(
    */
   async function renderDefaultPage(
     url: ParsedUrl,
-    state: ClientState,
+    state: PageState,
     route: Route
   ) {
     if (defaultRenderer) {
@@ -389,6 +403,14 @@ export function createPageFactory(
         url = parseUrl(url)
       }
 
+      // Direct access of a state module.
+      if (url.path.endsWith('.js')) {
+        const stateModule = await resolveState(url.path.slice(1, -3))
+        if (stateModule) {
+          return stateModule
+        }
+      }
+
       let params: RouteParams | undefined
       let route = (routeMap[url.path] ||= routes.find(
         route => (params = matchRoute((url as ParsedUrl).path, route))
@@ -403,18 +425,6 @@ export function createPageFactory(
       }
     },
   }
-}
-
-async function loadStateFragments(
-  include: RouteInclude,
-  url: ParsedUrl,
-  params: RouteParams
-) {
-  return Promise.all(
-    (typeof include == 'function' ? include(url, params) : include).map(
-      async fragment => [fragment.prefix, await fragment.load()] as const
-    )
-  )
 }
 
 async function getClient(

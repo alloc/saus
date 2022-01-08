@@ -1,15 +1,8 @@
 import { routesModule } from './global'
 import { RegexParam, RouteInclude } from './routes'
 
-export interface StateFragment<T = any, Args extends any[] = any[]> {
-  prefix: string
-  load(...args: Args): Promise<T>
-  bind(...args: Args): StateFragment<T, []>
-  get(...args: Args): T
-}
-
 /**
- * Include the provided state fragments in all routes by default.
+ * Include the provided state modules in all routes by default.
  *
  * The `patterns` argument is an array of route patterns that lets you
  * select which pages will receive the state. These patterns may

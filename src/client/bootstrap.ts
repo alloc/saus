@@ -1,6 +1,5 @@
 import type { ClientState } from '../core'
 import { loadedStateCache } from './cache'
-import { unpackStateFragments } from './unpack'
 
 export let initialState: ClientState
 
@@ -14,5 +13,4 @@ if (!import.meta.env.SSR) {
     location.search
 
   loadedStateCache.set(pageUrl, initialState)
-  unpackStateFragments(initialState)
 }

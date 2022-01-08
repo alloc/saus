@@ -1,4 +1,4 @@
-import { defineStateFragment } from 'saus/client'
+import { defineStateModule } from 'saus/client'
 import { get } from 'saus/core'
 import cheerio from 'cheerio'
 
@@ -6,7 +6,7 @@ import cheerio from 'cheerio'
  * Scrape paragraphs about the physiology and behavior of
  * each pokemon.
  */
-export const scrapedText = defineStateFragment(
+export const scrapedText = defineStateModule(
   'scrapedText',
   async (name: string) => {
     const sections: { title: string; body: string[] }[] = []

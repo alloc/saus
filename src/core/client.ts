@@ -1,5 +1,6 @@
 import fs from 'fs'
 import MagicString from 'magic-string'
+import path from 'path'
 import {
   flattenCallChain,
   getBabelProgram,
@@ -11,6 +12,9 @@ import {
 } from '../babel'
 import { renderIdentRE } from '../plugins/render'
 import type { RouteParams } from './routes'
+
+export const stateCacheUrl =
+  '/@fs' + path.resolve(__dirname, '../src/client/cache.ts')
 
 /** A generated client module */
 export interface Client {
@@ -35,11 +39,6 @@ export type ClientState = Record<string, any> & {
   routePath: string
   routeParams: RouteParams
   error?: any
-  /**
-   * State fragments are stored here, to be injected into the client's
-   * state cache during hydration.
-   */
-  $?: Record<string, any>
 }
 /**
  * Client fragments represent a portion of a render module,

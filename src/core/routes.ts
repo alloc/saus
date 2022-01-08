@@ -5,7 +5,7 @@ import { ParsedUrl, URLSearchParams } from '../utils/url'
 import { SausContext } from './context'
 import { HtmlContext } from './html'
 import { RuntimeHook } from './setup'
-import { StateFragment } from './state'
+import { StateModule } from './stateModules'
 
 export { RegexParam, InferRouteParams }
 
@@ -35,10 +35,10 @@ type InferRouteProps<T extends object> = T extends ComponentType<infer Props>
 
 type Promisable<T> = T | PromiseLike<T>
 
-/** A value that defines which state fragments are needed by a route. */
+/** A value that defines which state modules are needed by a route. */
 export type RouteInclude =
-  | StateFragment<any, []>[]
-  | ((url: ParsedUrl, params: RouteParams) => StateFragment<any, []>[])
+  | StateModule<any, []>[]
+  | ((url: ParsedUrl, params: RouteParams) => StateModule<any, []>[])
 
 export interface RouteConfig<
   Module extends object = RouteModule,
@@ -58,11 +58,11 @@ export interface RouteConfig<
     searchParams: URLSearchParams
   ) => Promisable<InferRouteProps<Module>>
   /**
-   * Declare which state fragments are required by this route.
+   * Declare which state modules are required by this route.
    *
-   * For state fragments whose `load` method expects one or more arguments,
+   * For state modules whose `load` method expects one or more arguments,
    * you should define those arguments with the `bind` method. If no arguments
-   * are expected, pass the state fragment without calling any method.
+   * are expected, pass the state module without calling any method.
    */
   include?: RouteInclude
 }
@@ -115,7 +115,7 @@ type RoutePathHandlers = {
  * and you still need to call `RegexParam.inject` to get the real path.
  */
 export async function generateRoutePaths(
-  context: SausContext,
+  context: Pick<SausContext, 'routes' | 'defaultRoute' | 'defaultPath'>,
   handlers: RoutePathHandlers
 ) {
   const { path: onPath, error: onError } = handlers

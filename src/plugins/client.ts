@@ -72,7 +72,7 @@ export function clientPlugin(
           )
         }
 
-        const page = pages[filename]
+        const page = context.pages[filename]
         const routeModuleId = page.routeModuleId
         const cssUrls = new Set<string>()
 

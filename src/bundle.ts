@@ -295,9 +295,12 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
     base: config.base,
     bundleType: bundleConfig.type || 'script',
     command: 'bundle',
+    defaultPath: context.defaultPath,
     minify: options.minify == true,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
+    // Replaced by the `generateClientModules` function.
+    stateCacheUrl: '',
   }
 
   // The functions are now transpiled to plain JavaScript.

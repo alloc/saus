@@ -4,7 +4,7 @@ import kleur from 'kleur'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import { RenderModule, RoutesModule, SausContext } from './core'
+import { RenderModule, RoutesModule, SausContext, stateCacheUrl } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
 import { setRenderModule, setRoutesModule } from './core/global'
@@ -198,10 +198,9 @@ async function startServer(
  * made within the `src/client/state.ts` module.
  */
 function injectDevCache(context: SausContext): vite.SSRPlugin {
-  const cachePath = '/@fs' + path.resolve(__dirname, '../src/client/cache.ts')
   return {
     setExports(id) {
-      if (id == cachePath) {
+      if (id == stateCacheUrl) {
         const cache: typeof import('./client/cache') = {
           loadedStateCache: context.loadedStateCache,
           loadingStateCache: context.loadingStateCache,

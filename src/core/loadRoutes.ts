@@ -9,7 +9,7 @@ import { setRoutesModule } from './global'
 import { vite } from './vite'
 
 const sausRoot = vite.normalizePath(path.resolve(__dirname, '..')) + '/'
-const noExternal = /\/(client|examples|node_modules|packages)\//
+const noExternal = /\/(client|examples|node_modules|packages|src)\//
 const isExternal = (id: string) =>
   id.startsWith(sausRoot) && !noExternal.test(id)
 

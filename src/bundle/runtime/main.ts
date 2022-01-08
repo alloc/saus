@@ -1,4 +1,5 @@
 import path from 'path'
+import { renderStateModule } from '../../core/renderStateModule'
 import { createPageFactory, getPageFilename } from '../../pages'
 import { parseImports } from '../../utils/imports'
 import { ParsedUrl } from '../../utils/url'
@@ -11,7 +12,7 @@ import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
 import { isCSSRequest } from './utils'
 
-export { writePages, printFiles } from '../../build/write'
+export { printFiles, writePages } from '../../build/write'
 
 const htmlExtension = '.html'
 const indexHtmlSuffix = '/index.html'
@@ -75,9 +76,11 @@ export default function renderPage(
       // The entry module that imports all other client modules.
       // Generated from the first matching `render` hook, its `didRender` hook
       // (if defined), and any matching `beforeRender` hooks.
+      const entryImports: string[] = []
       const entryModule: ClientModule | undefined = page.client && {
         id: entryId,
         text: page.client.code,
+        imports: entryImports,
       }
 
       if (entryModule) {
@@ -85,6 +88,11 @@ export default function renderPage(
         for (const importStmt of parseImports(entryModule.text)) {
           const module = addModule(importStmt.text)
           if (module) {
+            if (module.exports) {
+              entryImports.push(module.id)
+            } else if (module.imports) {
+              entryImports.push(...module.imports)
+            }
             updates.push(() => {
               if (module.exports) {
                 const { source } = importStmt
@@ -105,6 +113,21 @@ export default function renderPage(
         for (const update of updates.reverse()) {
           update()
         }
+      }
+
+      const stateModuleUrls: string[] = []
+      for (const stateId of [...page.stateModules].reverse()) {
+        const stateModuleId = 'state/' + stateId + '.js'
+        stateModuleUrls.push(config.base + stateModuleId)
+        modules.add({
+          id: stateModuleId,
+          text: renderStateModule(
+            stateId,
+            context.loadedStateCache.get(stateId),
+            config.base + config.stateCacheUrl
+          ),
+          exports: ['default'],
+        })
       }
 
       const headTags: HtmlTagDescriptor[] = []
@@ -144,6 +167,7 @@ export default function renderPage(
         attrs: { type: 'module' },
         children: endent`
           import * as routeModule from "${getModuleUrl(routeModule)}"
+          ${stateModuleUrls.map(url => `import "${url}"`).join('\n')}
           ${hydrateModule.text}
           hydrate(routeModule, "${pageUrl}")
         `,

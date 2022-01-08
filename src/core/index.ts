@@ -8,6 +8,8 @@ export * from './routes'
 export * from './loadRoutes'
 export * from './setup'
 export * from './state'
+export * from './stateModules'
+export * from './renderStateModule'
 export * from '../utils/dataToEsm'
 export * from './vite'
 
