@@ -1,4 +1,3 @@
-import type { IAttribute as HtmlAttribute, ITag } from 'html5parser'
 import type { default as MagicString } from 'magic-string'
 import type { HtmlProcessorState } from 'saus/core'
 import type { HtmlTagPath } from './path'
@@ -19,19 +18,47 @@ export type HtmlResolver = (
   state: HtmlResolverState
 ) => Promisable<string | null | void>
 
-export type {
-  IAttribute as HtmlAttribute,
-  IAttributeValue as HtmlAttributeValue,
-  INode as HtmlNode,
-  IText as HtmlText,
-} from 'html5parser'
+export type HtmlNode = {
+  type?: 'Text' | 'Tag' | 'Comment'
+  start: number
+  end: number
+}
 
-export type { HtmlTagPath }
+export type HtmlText = HtmlNode & {
+  type: 'Text'
+  value: string
+}
 
-export type HtmlTag = ITag & {
-  attributeMap: Record<string, HtmlAttribute>
+export type HtmlAttributeValue = HtmlNode & {
+  value: string
+  quote: '"' | "'"
+}
+
+export type HtmlAttribute = HtmlNode & {
+  name: HtmlText
+  value?: HtmlAttributeValue
+}
+
+export type HtmlComment = HtmlNode & {
+  type: 'Comment'
+  value: string
+}
+
+export type HtmlTextLike = HtmlText | HtmlComment | HtmlAttributeValue
+
+export type HtmlTag = HtmlNode & {
+  type: 'Tag'
+  open: HtmlNode
+  name: string
+  rawName: string
+  close?: HtmlNode
+  attributes: HtmlAttribute[]
+  attributeMap: Record<string, HtmlAttribute | undefined>
+  body?: (HtmlTag | HtmlText | HtmlComment)[]
   [kTagPath]?: HtmlTagPath
 }
+
+export type { HtmlTagPath }
 
 export type HtmlTagVisitor =
   | HtmlVisitFn

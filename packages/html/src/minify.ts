@@ -14,6 +14,8 @@ export const minifyHtml = (
     env =>
       (options.force || env.command !== 'dev') &&
       processHtml('post', html =>
-        html.replace(/>\s+([^\s])/g, '>$1').replace(/([^\s])\s+</g, '$1<')
+        html
+          .replace(/(^|>)\s+([^\s])/g, '$1$2')
+          .replace(/([^\s])\s+(<|$)/g, '$1$2')
       )
   )

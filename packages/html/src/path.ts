@@ -3,7 +3,7 @@ import MagicString from 'magic-string'
 import onChange from 'on-change'
 import { kRemovedNode, kTagPath } from './symbols'
 import { HtmlDocument, HtmlTag, HtmlVisitor } from './types'
-import { isTag, mergeVisitors } from './visitors'
+import { mergeVisitors } from './visitors'
 
 const noop = () => {}
 
@@ -74,7 +74,7 @@ export class HtmlTagPath {
   set innerHTML(html: string) {
     if (this.node.body) {
       for (const childNode of this.node.body) {
-        if (isTag(childNode)) {
+        if (childNode.type == 'Tag') {
           const childPath = getTagPath(childNode, this)
           childPath[kRemovedNode] = true
         }
@@ -105,7 +105,7 @@ export class HtmlTagPath {
       const shouldSkip = await mergedVisitor.open(path)
       if (!shouldSkip && path.node.body)
         for (const childProxy of path.node.body) {
-          if (isTag(childProxy)) {
+          if (childProxy.type == 'Tag') {
             const childNode = onChange.target(childProxy)
             const childPath = getTagPath(childNode, path)
             if (!childPath[kRemovedNode]) {

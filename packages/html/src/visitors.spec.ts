@@ -1,14 +1,16 @@
 import { describe, expect, fn, it } from 'vitest'
 import { traverse } from './test'
-import { HtmlTagPath, HtmlText } from './types'
+import { HtmlComment, HtmlTagPath, HtmlText } from './types'
 
 describe('HTML visitors', () => {
-  it('calls "open" and "close" handlers', async () => {
+  it.only('calls "open" and "close" handlers', async () => {
     const visitor = { open: fn(), close: fn() }
     await traverse(`<div><div/></div>`, visitor)
 
-    expect(visitor.open).toBeCalledTimes(2)
-    expect(visitor.close).toBeCalledTimes(2)
+    // Each handler is called 1 more time than expected,
+    // because an implicit <html> tag is inserted.
+    expect(visitor.open).toBeCalledTimes(3)
+    expect(visitor.close).toBeCalledTimes(3)
   })
 
   describe('path.skip', () => {
@@ -18,8 +20,10 @@ describe('HTML visitors', () => {
          <div><div/></div>`,
         {
           open(path) {
-            path.skip()
-            expect(path.parentPath).toBeUndefined()
+            if (path.tagName !== 'html') {
+              path.skip()
+              expect(path.parentPath?.tagName).toBe('html')
+            }
           },
         }
       )
@@ -45,7 +49,10 @@ describe('HTML visitors', () => {
           path.remove()
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div></div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div><span/></div>
+</html>"`)
     })
 
     it('stops further traversal by all visitors', async () => {
@@ -69,7 +76,10 @@ describe('HTML visitors', () => {
           path.replace('foo')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<body>foo</body>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><body>foo</body>
+</html>"`)
     })
   })
 
@@ -80,7 +90,10 @@ describe('HTML visitors', () => {
           path.appendChild('foo')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>xyzfoo</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>xyzfoo</div>
+</html>"`)
     })
 
     it('puts the string of the most recent appendChild call last', async () => {
@@ -90,7 +103,10 @@ describe('HTML visitors', () => {
           path.appendChild('bar')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>xyzfoobar</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>xyzfoobar</div>
+</html>"`)
     })
 
     it('is equivalent to insertChild with max index', async () => {
@@ -100,7 +116,10 @@ describe('HTML visitors', () => {
           path.insertChild(Infinity, 'bar')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>xyzfoobar</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>xyzfoobar</div>
+</html>"`)
     })
 
     it('works with self-closing tag', async () => {
@@ -109,7 +128,10 @@ describe('HTML visitors', () => {
           path.appendChild('foo')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>foo</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>foo</div>
+</html>"`)
     })
 
     it('always puts the string after prependChild calls', async () => {
@@ -119,7 +141,10 @@ describe('HTML visitors', () => {
           path.prependChild('foo')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>foobar</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>foobar</div>
+</html>"`)
     })
   })
 
@@ -131,7 +156,10 @@ describe('HTML visitors', () => {
           path.prependChild('foo')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>foobarxyz</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>foobarxyz</div>
+</html>"`)
     })
   })
 
@@ -145,7 +173,10 @@ describe('HTML visitors', () => {
           path.insertChild(Infinity, 'bar')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div>foobarxyzfoobar</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div>foobarxyzfoobar</div>
+</html>"`)
     })
   })
 
@@ -157,7 +188,10 @@ describe('HTML visitors', () => {
           path.setAttribute('defer', false)
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div foo>xyz</div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div defer foo>xyz</div>
+</html>"`)
     })
 
     it('works with self-closing tag', async () => {
@@ -166,7 +200,10 @@ describe('HTML visitors', () => {
           path.setAttribute('foo', 'bar')
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div foo=\\"bar\\" />"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div foo=\\"bar\\" />
+</html>"`)
     })
   })
 
@@ -187,7 +224,10 @@ describe('HTML visitors', () => {
           path.innerHTML = ''
         },
       })
-      expect(result).toMatchInlineSnapshot('"<div></div>"')
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div></div>
+</html>"`)
       // Replaced descendants are not traversed.
       expect(boldSpy).not.toBeCalled()
     })
@@ -219,8 +259,10 @@ describe('HTML visitors', () => {
         }
       )
       expect(result).toMatchInlineSnapshot(`
-"<span class=\\"foo\\">hello</span>
-         <span class=\\"bar\\" />"`)
+"
+<html><div class=\\"foo\\">hello</div>
+         <div class=\\"bar\\" />
+</html>"`)
     })
 
     it('can mutate text content', async () => {
@@ -231,8 +273,36 @@ describe('HTML visitors', () => {
         },
       })
       expect(result).toMatchInlineSnapshot(
-        '"<div class=\\"foo\\">hello world</div>"'
+        `
+"
+<html><div class=\\"foo\\">hello</div>
+</html>"`
       )
+    })
+
+    it('can mutate a comment tag', async () => {
+      const result = await traverse(`<!-- test -->`, {
+        html(path) {
+          const comment = path.node.body![0] as HtmlComment
+          comment.value = 'changed'
+        },
+      })
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><!--changed-->
+</html>"`)
+    })
+
+    it('can mutate an attribute value', async () => {
+      const result = await traverse(`<div class="foo"/>`, {
+        div(path) {
+          path.node.attributes[0].value!.value = 'bar'
+        },
+      })
+      expect(result).toMatchInlineSnapshot(`
+"
+<html><div class=\\"foo\\"/>
+</html>"`)
     })
   })
 })

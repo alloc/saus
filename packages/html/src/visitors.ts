@@ -1,14 +1,12 @@
-import { parse, SyntaxKind } from 'html5parser'
 import MagicString from 'magic-string'
 import onChange from 'on-change'
+import { parseHtml } from './parser'
 import { HtmlTagPath } from './path'
 import { kRemovedNode, kVisitorsArray } from './symbols'
 import {
-  HtmlAttributeValue,
   HtmlDocument,
-  HtmlNode,
   HtmlTag,
-  HtmlText,
+  HtmlTextLike,
   HtmlVisitor,
   HtmlVisitorState,
 } from './types'
@@ -27,8 +25,8 @@ export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
     const editor = new MagicString(html)
     const document: HtmlDocument = { editor, state }
 
-    for (const tag of parse(html, { setAttributeMap: true })) {
-      if (!isTag(tag)) {
+    for (const tag of parseHtml(html)) {
+      if (tag.type == 'Comment') {
         continue
       }
       const observer = createObserver(tag, editor)
@@ -70,10 +68,14 @@ const createObserver =
     const lastKey = keys.pop() as string
     // A text node or attribute node can have its value edited.
     if (lastKey === 'value') {
-      const node = resolveKeyPath<HtmlText | HtmlAttributeValue>(tag, keys)
+      const node = resolveKeyPath<HtmlTextLike>(tag, keys)
       // Undo the change, so visitors in the same pass never affect each other.
       node[lastKey] = oldValue
-      editor.overwrite(node.start, node.end, value)
+      editor.overwrite(
+        node.start + (node.type == 'Text' ? 0 : node.type == 'Comment' ? 4 : 1),
+        node.end - (node.type == 'Text' ? 0 : node.type == 'Comment' ? 3 : 1),
+        value
+      )
     }
     // A tag node can have its name edited.
     else if (lastKey === 'name' || lastKey === 'rawName') {
@@ -231,10 +233,6 @@ function isTagVisitor(visitor: HtmlVisitor & { [kTagVisitor]?: boolean }) {
   return (visitor[kTagVisitor] ??= Object.keys(visitor).some(
     key => !keywords.includes(key)
   ))
-}
-
-export function isTag(node: HtmlNode): node is HtmlTag {
-  return node.type == SyntaxKind.Tag
 }
 
 function isDescendant(

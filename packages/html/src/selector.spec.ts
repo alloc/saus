@@ -23,13 +23,13 @@ describe('CSS selectors', () => {
     expect(callback).toBeCalledTimes(1)
   })
 
-  it.only('supports id selector', async () => {
+  it('supports id selector', async () => {
     const callback = fn()
     await traverse(`<div id="foo" />`, $('#foo', callback))
     expect(callback).toBeCalledTimes(1)
   })
 
-  it.only('supports class selector', async () => {
+  it('supports class selector', async () => {
     const callback = fn()
     await traverse(
       `<span />

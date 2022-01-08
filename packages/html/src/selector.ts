@@ -11,7 +11,6 @@ import {
   HtmlTagVisitor,
   HtmlVisitor,
 } from './types'
-import { coerceVisitFn } from './visitors'
 
 /**
  * Create an `HtmlVisitor` from a CSS selector list.

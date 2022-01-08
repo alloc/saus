@@ -1,0 +1,343 @@
+// Vitest Snapshot v1
+
+exports[`parseHtml > parses attributes 1`] = `
+[
+  {
+    "attributeMap": {
+      "bool": {
+        "end": 9,
+        "name": {
+          "end": 9,
+          "start": 5,
+          "type": "Text",
+          "value": "bool",
+        },
+        "start": 5,
+        "value": undefined,
+      },
+      "class": {
+        "end": 21,
+        "name": {
+          "end": 15,
+          "start": 10,
+          "type": "Text",
+          "value": "class",
+        },
+        "start": 10,
+        "value": {
+          "end": 21,
+          "quote": "\\"",
+          "start": 16,
+          "value": "foo",
+        },
+      },
+    },
+    "attributes": [
+      {
+        "end": 9,
+        "name": {
+          "end": 9,
+          "start": 5,
+          "type": "Text",
+          "value": "bool",
+        },
+        "start": 5,
+        "value": undefined,
+      },
+      {
+        "end": 21,
+        "name": {
+          "end": 15,
+          "start": 10,
+          "type": "Text",
+          "value": "class",
+        },
+        "start": 10,
+        "value": {
+          "end": 21,
+          "quote": "\\"",
+          "start": 16,
+          "value": "foo",
+        },
+      },
+    ],
+    "body": [
+      {
+        "attributeMap": {
+          "bool": {
+            "end": 32,
+            "name": {
+              "end": 32,
+              "start": 28,
+              "type": "Text",
+              "value": "bool",
+            },
+            "start": 28,
+            "value": undefined,
+          },
+        },
+        "attributes": [
+          {
+            "end": 32,
+            "name": {
+              "end": 32,
+              "start": 28,
+              "type": "Text",
+              "value": "bool",
+            },
+            "start": 28,
+            "value": undefined,
+          },
+        ],
+        "end": 34,
+        "name": "span",
+        "open": {
+          "end": 34,
+          "start": 22,
+        },
+        "rawName": "span",
+        "start": 22,
+        "type": "Tag",
+      },
+    ],
+    "close": {
+      "end": 40,
+      "start": 34,
+    },
+    "end": 40,
+    "name": "div",
+    "open": {
+      "end": 22,
+      "start": 0,
+    },
+    "rawName": "div",
+    "start": 0,
+    "type": "Tag",
+  },
+]
+`;
+
+exports[`parseHtml > parses comments 1`] = `
+[
+  {
+    "end": 7,
+    "start": 0,
+    "type": "Comment",
+    "value": "",
+  },
+  {
+    "attributeMap": {},
+    "attributes": [],
+    "body": [
+      {
+        "end": 32,
+        "start": 12,
+        "type": "Comment",
+        "value": " Hello world ",
+      },
+    ],
+    "close": {
+      "end": 38,
+      "start": 32,
+    },
+    "end": 38,
+    "name": "div",
+    "open": {
+      "end": 12,
+      "start": 7,
+    },
+    "rawName": "div",
+    "start": 7,
+    "type": "Tag",
+  },
+]
+`;
+
+exports[`parseHtml > parses implicit self-closing tags 1`] = `
+[
+  {
+    "attributeMap": {
+      "html": {
+        "end": 14,
+        "name": {
+          "end": 14,
+          "start": 10,
+          "type": "Text",
+          "value": "html",
+        },
+        "start": 10,
+        "value": undefined,
+      },
+    },
+    "attributes": [
+      {
+        "end": 14,
+        "name": {
+          "end": 14,
+          "start": 10,
+          "type": "Text",
+          "value": "html",
+        },
+        "start": 10,
+        "value": undefined,
+      },
+    ],
+    "end": 15,
+    "name": "!doctype",
+    "open": {
+      "end": 15,
+      "start": 0,
+    },
+    "rawName": "!DOCTYPE",
+    "start": 0,
+    "type": "Tag",
+  },
+  {
+    "attributeMap": {
+      "content": {
+        "end": 55,
+        "name": {
+          "end": 47,
+          "start": 40,
+          "type": "Text",
+          "value": "content",
+        },
+        "start": 40,
+        "value": {
+          "end": 55,
+          "quote": "\\"",
+          "start": 48,
+          "value": "(3,3)",
+        },
+      },
+      "name": {
+        "end": 39,
+        "name": {
+          "end": 25,
+          "start": 21,
+          "type": "Text",
+          "value": "name",
+        },
+        "start": 21,
+        "value": {
+          "end": 39,
+          "quote": "\\"",
+          "start": 26,
+          "value": "description",
+        },
+      },
+    },
+    "attributes": [
+      {
+        "end": 39,
+        "name": {
+          "end": 25,
+          "start": 21,
+          "type": "Text",
+          "value": "name",
+        },
+        "start": 21,
+        "value": {
+          "end": 39,
+          "quote": "\\"",
+          "start": 26,
+          "value": "description",
+        },
+      },
+      {
+        "end": 55,
+        "name": {
+          "end": 47,
+          "start": 40,
+          "type": "Text",
+          "value": "content",
+        },
+        "start": 40,
+        "value": {
+          "end": 55,
+          "quote": "\\"",
+          "start": 48,
+          "value": "(3,3)",
+        },
+      },
+    ],
+    "end": 56,
+    "name": "meta",
+    "open": {
+      "end": 56,
+      "start": 15,
+    },
+    "rawName": "meta",
+    "start": 15,
+    "type": "Tag",
+  },
+]
+`;
+
+exports[`parseHtml > parses tags and text 1`] = `
+[
+  {
+    "attributeMap": {},
+    "attributes": [],
+    "body": [
+      {
+        "attributeMap": {},
+        "attributes": [],
+        "body": [
+          {
+            "attributeMap": {},
+            "attributes": [],
+            "end": 11,
+            "name": "br",
+            "open": {
+              "end": 11,
+              "start": 5,
+            },
+            "rawName": "br",
+            "start": 5,
+            "type": "Tag",
+          },
+          {
+            "end": 22,
+            "start": 11,
+            "type": "Text",
+            "value": "<span>Hello",
+          },
+        ],
+        "close": {
+          "end": 29,
+          "start": 22,
+        },
+        "end": 29,
+        "name": "span",
+        "open": {
+          "end": 17,
+          "start": 11,
+        },
+        "rawName": "span",
+        "start": 11,
+        "type": "Tag",
+      },
+      {
+        "end": 35,
+        "start": 29,
+        "type": "Text",
+        "value": " world",
+      },
+    ],
+    "close": {
+      "end": 41,
+      "start": 35,
+    },
+    "end": 41,
+    "name": "div",
+    "open": {
+      "end": 5,
+      "start": 0,
+    },
+    "rawName": "div",
+    "start": 0,
+    "type": "Tag",
+  },
+]
+`;

@@ -26,7 +26,6 @@
     "@cush/relative": "^1.0.0",
     "css-what": "^6.0.1",
     "debug": "^4.3.2",
-    "html5parser": "^2.0.2",
     "magic-string": "^0.25.7",
     "on-change": "<4"
   }
