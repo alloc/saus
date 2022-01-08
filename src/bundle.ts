@@ -300,6 +300,9 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
     publicDir: path.relative(outDir, config.publicDir),
   }
 
+  // The functions are now transpiled to plain JavaScript.
+  functions.filename = functions.filename.replace(/\.[^.]+$/, '.js')
+
   return {
     functions,
     functionImports,
