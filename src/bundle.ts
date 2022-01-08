@@ -56,27 +56,22 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   await callPlugins(context.plugins, 'onContext', context)
 
   const bundleConfig = context.config.saus.bundle || {}
+  const bundleFormat = options.format || bundleConfig.format || 'cjs'
 
-  let bundleEntry = options.entry
-  if (bundleEntry === undefined) {
-    bundleEntry = bundleConfig.entry
-  }
-  if (bundleEntry) {
-    bundleEntry = path.resolve(context.root, bundleEntry)
-  }
+  let bundlePath = options.outFile ? path.resolve(options.outFile) : null!
+  let bundleEntry =
+    options.entry !== undefined ? options.entry : bundleConfig.entry
 
   const outDir = context.userConfig.build?.outDir || 'dist'
-  const bundleFormat = options.format || bundleConfig.format || 'cjs'
-  const bundlePath = options.outFile
-    ? path.resolve(options.outFile)
-    : bundleEntry
-    ? path.resolve(
-        context.root,
-        bundleEntry
-          .replace(/^(\.\/)?src\//, outDir + '/')
-          .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
-      )
-    : null!
+  if (bundleEntry) {
+    bundlePath = path.resolve(
+      context.root,
+      bundleEntry
+        .replace(/^(\.\/)?src\//, outDir + '/')
+        .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
+    )
+    bundleEntry = path.resolve(context.root, bundleEntry)
+  }
 
   const shouldWrite =
     options.write !== false && context.config.build.write !== false
