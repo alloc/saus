@@ -1,6 +1,6 @@
-import { RawSourceMap as SourceMap } from 'source-map'
+import { RawSourceMap } from 'source-map'
 
-export type { SourceMap }
+export interface SourceMap extends Omit<RawSourceMap, 'version'> {}
 
 export function toInlineSourceMap(map: SourceMap) {
   return (
