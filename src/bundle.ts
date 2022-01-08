@@ -17,14 +17,11 @@ import {
   dataToEsm,
   endent,
   extractClientFunctions,
-  generateRoutePaths,
-  RegexParam,
   SausBundleConfig,
   SausContext,
 } from './core'
 import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
-import { loadRoutes } from './core/loadRoutes'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
@@ -340,14 +337,6 @@ async function generateBundle(
     code: dataToEsm(moduleMap),
   })
 
-  let knownPaths: Promise<string> | undefined
-  modules.addModule({
-    id: path.resolve(__dirname, '../paths/index.js'),
-    get code() {
-      return (knownPaths ||= generateKnownPaths(context).then(dataToEsm))
-    },
-  })
-
   const runtimeConfigModule = modules.addModule({
     id: path.join(runtimeDir, 'config.ts'),
     code: dataToEsm(runtimeConfig),
@@ -380,6 +369,7 @@ async function generateBundle(
     redirectModule('saus', path.join(runtimeDir, 'index.ts')),
     redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
     redirectModule('saus/bundle', entryId),
+    redirectModule('saus/paths', path.join(runtimeDir, 'paths.ts')),
     redirectModule(
       path.resolve(__dirname, '../src/core/global.ts'),
       path.join(runtimeDir, 'global.ts')
@@ -533,25 +523,6 @@ function rewriteRouteImports(
 function relativeToCwd(file: string) {
   file = path.relative(process.cwd(), file)
   return file.startsWith('../') ? file : './' + file
-}
-
-async function generateKnownPaths(context: SausContext) {
-  await loadRoutes(context)
-
-  const paths: string[] = []
-  const errors: { reason: string; path: string }[] = []
-  await generateRoutePaths(context, {
-    path(path, params) {
-      paths.push(params ? RegexParam.inject(path, params) : path)
-    },
-    error: error => errors.push(error),
-  })
-
-  for (const error of errors) {
-    context.logger.error(kleur.red(error.reason))
-  }
-
-  return paths
 }
 
 /**
