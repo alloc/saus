@@ -1,6 +1,7 @@
 import { route } from 'saus'
 import pokemonList from '../../data/pokemon.json'
 import { scrapedText } from '../state'
+import './html'
 
 route('/', () => import('../routes/Home'))
 
