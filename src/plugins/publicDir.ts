@@ -14,7 +14,7 @@ export type CopyPublicOptions = {
  * Copy files from `publicDir` into the `build.outDir` directory,
  * as defined in your Vite config.
  */
-export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
+export function copyPublicDir(options: CopyPublicOptions = {}) {
   let resolveId: ((id: string) => string | undefined) | undefined
   let publicDir: string
   let outDir: string
@@ -38,13 +38,18 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
     resolve: false,
   })
 
-  return {
-    name: copyPublicDir.name,
+  const resolver: Plugin = {
+    name: 'publicDir:resolver',
     apply: 'build',
     enforce: 'pre',
     resolveId(id) {
       return resolveId?.(id)
     },
+  }
+
+  const copier: Plugin = {
+    name: 'publicDir:copier',
+    apply: 'build',
     saus: {
       async onContext(context) {
         outDir = context.config.build.outDir
@@ -110,6 +115,8 @@ export function copyPublicDir(options: CopyPublicOptions = {}): Plugin {
       onWritePages: commitFiles,
     },
   }
+
+  return [resolver, copier]
 }
 
 const mkdirSync = memoizeFn(fs.mkdirSync, (mkdirSync, dir: string) => {
