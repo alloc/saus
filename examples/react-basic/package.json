@@ -14,7 +14,6 @@
     "@saus/html": "*",
     "@saus/react": "*",
     "@types/etag": "^1.8.1",
-    "cheerio": "^1.0.0-rc.10",
     "kleur": "^4.1.4",
     "misty": "^1.4.5",
     "mrmime": "^1.0.0",

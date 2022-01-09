@@ -1,6 +1,6 @@
+import { $, createVisitor } from '@saus/html'
 import { defineStateModule } from 'saus/client'
 import { get } from 'saus/core'
-import cheerio from 'cheerio'
 
 /**
  * Scrape paragraphs about the physiology and behavior of
@@ -13,23 +13,24 @@ export const scrapedText = defineStateModule(
 
     const wikiUrl = `https://pokemon.fandom.com/wiki/${name}`
     const wikiHtml = (await get(wikiUrl)).toString('utf8')
-    const $ = cheerio.load(wikiHtml)
 
-    $('#Physiology, #Behavior')
-      .parent()
-      .each((_, heading) => {
-        const siblings = $(heading).parent().children().toArray()
+    const isHeading = $('h1, h2, h3')
+    const process = createVisitor<void>(
+      $('#Physiology, #Behavior', heading => {
+        const siblings = heading.parentPath!.children()
         const headingIndex = siblings.indexOf(heading)
         const nextHeadingIndex = siblings.findIndex(
-          (sibling, i) => i > headingIndex && $(sibling).is('h1, h2, h3')
+          (sibling, i) => i > headingIndex && isHeading(sibling)
         )
         const paragraphs = siblings.slice(headingIndex + 1, nextHeadingIndex)
         sections.push({
-          title: $(heading).text(),
-          body: paragraphs.map(p => $(p).text()),
+          title: heading.innerHTML,
+          body: paragraphs.map(p => p.innerHTML),
         })
       })
+    )
 
+    await process(wikiHtml)
     return { sections }
   }
 )
