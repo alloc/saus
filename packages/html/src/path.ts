@@ -128,6 +128,35 @@ export class HtmlTagPath<State = HtmlVisitorState> {
     return traversePath(this)
   }
 
+  children() {
+    const children: HtmlTagPath<State>[] = []
+    this.node.body?.forEach(childNode => {
+      if (childNode.type == 'Tag') {
+        children.push(getTagPath(childNode, this))
+      }
+    })
+    return children
+  }
+
+  async findChild<T>(
+    iterator: (
+      child: HtmlTagPath<State>,
+      index: number,
+      siblings: HtmlTagPath<State>[]
+    ) => Promise<T | null | void> | T | null | void
+  ) {
+    const children = this.children()
+    for (let i = 0; i < children.length; i++) {
+      const childPath = children[i]
+      if (!childPath[kRemovedNode]) {
+        const result = await iterator(children[i], i, children)
+        if (result != null) {
+          return result
+        }
+      }
+    }
+  }
+
   remove() {
     this[kRemovedNode] = true
     this.editor.remove(this.node.start, this.node.end)
