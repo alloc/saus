@@ -27,6 +27,7 @@ import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
+import { dedupe } from './utils/dedupe'
 import { parseImports, serializeImports } from './utils/imports'
 
 const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
@@ -484,7 +485,7 @@ function rewriteRouteImports(
     id: path.join(runtimeDir, 'routes.ts'),
     code: [
       `export default {`,
-      ...Array.from(
+      ...dedupe(
         routeImports.values(),
         url => `  "${url}": () => import("${url}"),`
       ),
