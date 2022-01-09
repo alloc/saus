@@ -12,12 +12,23 @@ import {
   HtmlVisitor,
 } from './types'
 
+export type HtmlMatcher = (path: HtmlTagPath<any> | undefined) => boolean
+
 /**
  * Create an `HtmlVisitor` from a CSS selector list.
- *
- * The `onMatch` function is called before descendants are traversed.
  */
-export function $(pattern: string, visitor: HtmlTagVisitor): HtmlVisitor {
+export function $<State>(
+  pattern: string,
+  visitor: HtmlTagVisitor<State>
+): HtmlVisitor<State>
+
+/**
+ * Create an `HtmlMatcher` function that tests against `HtmlTagPath` objects.
+ */
+export function $(pattern: string): HtmlMatcher
+
+/** @internal */
+export function $(pattern: string, visitor?: HtmlTagVisitor) {
   const matchers = parse(pattern)
   const match = (
     path: HtmlTagPath | undefined,
@@ -56,6 +67,10 @@ export function $(pattern: string, visitor: HtmlTagVisitor): HtmlVisitor {
       }
     }
     return true
+  }
+
+  if (!visitor) {
+    return (path: HtmlTagPath) => matchers.some(matcher => match(path, matcher))
   }
 
   if (typeof visitor == 'function') {
