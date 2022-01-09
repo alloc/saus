@@ -38,6 +38,10 @@ export type ClientImport = {
   isImplicit?: boolean
 }
 
+type OutputArray = vite.RollupOutput['output']
+type OutputChunk = OutputArray[0] & { lines?: string[] }
+type OutputAsset = Exclude<OutputArray[number], OutputChunk>
+
 export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
@@ -115,6 +119,8 @@ export async function generateClientModules(
       ? (userConfig.build?.minify ?? isProduction) !== false
       : options.minify
 
+  const removedImports = new Map<OutputChunk, string[]>()
+
   config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([
@@ -124,7 +130,7 @@ export async function generateClientModules(
       ]),
       routesPlugin(config.saus),
       modules,
-      fixChunkImports(),
+      fixChunkImports(removedImports),
       transformClientState(),
     ],
     mode,
@@ -149,10 +155,6 @@ export async function generateClientModules(
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const { output } = buildResult.output[0]
 
-  type OutputArray = vite.RollupOutput['output']
-  type OutputChunk = OutputArray[0] & { lines?: string[] }
-  type OutputAsset = Exclude<OutputArray[number], OutputChunk>
-
   const entryChunks: OutputChunk[] = []
   const chunks: OutputChunk[] = []
   const assets: OutputAsset[] = []
@@ -161,6 +163,11 @@ export async function generateClientModules(
     if (chunk.type !== 'chunk') {
       assets.push(chunk)
     } else {
+      // Restore imports that Vite removed.
+      const restoredImports = removedImports.get(chunk)
+      if (restoredImports) {
+        chunk.imports.push(...restoredImports)
+      }
       if (sourceMaps == 'inline' && chunk.map?.sources.length) {
         const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
         chunk.map.sources = rewriteSources(chunk.map.sources, chunkDir, context)
@@ -321,7 +328,7 @@ function rewriteExports(text: string) {
  * of each rendered JS chunk, but the SSR bundles still needs those
  * imports to be tracked.
  */
-function fixChunkImports(): vite.Plugin {
+function fixChunkImports(cache: Map<OutputChunk, string[]>): vite.Plugin {
   return {
     name: 'saus:fixChunkImports',
     enforce: 'post',
@@ -330,12 +337,13 @@ function fixChunkImports(): vite.Plugin {
         for (const id in bundle) {
           const chunk = bundle[id]
           if (chunk.type == 'chunk') {
-            config.chunkToEmittedCssFileMap.get(chunk)?.forEach(fileName => {
-              chunk.imports.push(fileName)
-            })
-            config.chunkToEmittedAssetsMap.get(chunk)?.forEach(fileName => {
-              chunk.imports.push(fileName)
-            })
+            const imports = [
+              ...(config.chunkToEmittedCssFileMap.get(chunk) || []),
+              ...(config.chunkToEmittedAssetsMap.get(chunk) || []),
+            ]
+            if (imports.length) {
+              cache.set(chunk, imports)
+            }
           }
         }
       }
