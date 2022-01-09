@@ -32,27 +32,27 @@ export function generateClientRoutes(routesPath: string) {
     plugins: inferSyntaxPlugins(routesPath),
   })!
 
-  const exports: t.ObjectProperty[] = []
+  const exports: Record<string, t.ObjectProperty> = {}
   babel.traverse(routesModule, {
     CallExpression(path) {
       const callee = path.get('callee')
       if (callee.isIdentifier({ name: 'route' })) {
         const [routePath, importFn] = path.node.arguments as [
-          t.StringLiteral,
+          t.StringLiteral | t.ArrowFunctionExpression,
           t.ArrowFunctionExpression
         ]
-        exports.push(
-          t.isArrowFunctionExpression(routePath)
-            ? t.objectProperty(t.identifier('default'), routePath)
-            : t.objectProperty(routePath, importFn)
-        )
+        if (t.isArrowFunctionExpression(routePath)) {
+          exports.default = t.objectProperty(t.identifier('default'), routePath)
+        } else {
+          exports[routePath.value] = t.objectProperty(routePath, importFn)
+        }
       }
     },
   })
 
   const transformer: babel.Visitor = {
     ObjectExpression(path) {
-      path.node.properties.push(...exports)
+      path.node.properties.push(...Object.values(exports))
     },
   }
 
