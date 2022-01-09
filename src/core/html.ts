@@ -26,21 +26,21 @@ export type HtmlProcessorState = Record<string, any> & {
 
 type Promisable<T> = T | PromiseLike<T>
 
-export type HtmlProcessor = (
+export type HtmlProcessor<State = HtmlProcessorState> = (
   html: string,
-  state: HtmlProcessorState
+  state: State
 ) => Promisable<string | null | void>
 
-export type HtmlProcessorMap = {
-  pre: HtmlProcessor[]
-  default: HtmlProcessor[]
-  post: HtmlProcessor[]
+export type HtmlProcessorMap<State = HtmlProcessorState> = {
+  pre: HtmlProcessor<State>[]
+  default: HtmlProcessor<State>[]
+  post: HtmlProcessor<State>[]
 }
 
-export function applyHtmlProcessors(
+export function applyHtmlProcessors<State>(
   html: string,
-  state: HtmlProcessorState,
-  processors: HtmlProcessor[]
+  state: State,
+  processors: HtmlProcessor<State>[]
 ) {
   if (!processors.length) {
     return Promise.resolve(html)
@@ -52,15 +52,15 @@ export function applyHtmlProcessors(
   )
 }
 
-export const mergeHtmlProcessors = (
-  htmlProcessors: HtmlProcessorMap,
-  getState: (page: RenderedPage) => HtmlProcessorState,
+export const mergeHtmlProcessors = <State>(
+  htmlProcessors: HtmlProcessorMap<State>,
+  getState: (page: RenderedPage) => State,
   phases: (keyof HtmlProcessorMap)[] = ['pre', 'default', 'post']
 ) =>
   htmlProcessors &&
   (async (html: string, page: RenderedPage) => {
     const state = getState(page)
-    const processHtml = (html: string, processor: HtmlProcessor) =>
+    const processHtml = (html: string, processor: HtmlProcessor<State>) =>
       processor(html, state)
 
     for (const phase of phases) {

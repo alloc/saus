@@ -15,15 +15,17 @@ export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
   [kVisitorsArray]: HtmlVisitor[]
 }
 
-export function bindVisitors(arg: HtmlVisitor | HtmlVisitor[]) {
+export function bindVisitors<State>(
+  arg: HtmlVisitor<State> | HtmlVisitor<State>[]
+) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
-  async function traverse(html: string, state: HtmlVisitorState) {
+  async function traverse(html: string, state: State) {
     // Ensure an <html> tag exists.
     html = injectHtmlTag(html)
 
     const editor = new MagicString(html)
-    const document: HtmlDocument = { editor, state }
+    const document: HtmlDocument<State> = { editor, state }
 
     for (const tag of parseHtml(html)) {
       if (tag.type == 'Comment') {
@@ -107,9 +109,9 @@ function resolveKeyPath<T = any>(value: any, keys: string[], index = 0): T {
   return value as T
 }
 
-export function mergeVisitors(
-  arg: HtmlVisitor | HtmlVisitor[],
-  state: HtmlVisitorState
+export function mergeVisitors<State = HtmlVisitorState>(
+  arg: HtmlVisitor<State> | HtmlVisitor<State>[],
+  state: State
 ) {
   const visitors = Array.isArray(arg) ? arg : [arg]
   const skippedVisitorsByPath = new Map<HtmlTagPath, Set<HtmlVisitor>>()

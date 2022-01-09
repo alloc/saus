@@ -2,12 +2,15 @@ import { escape } from 'saus'
 import MagicString from 'magic-string'
 import onChange from 'on-change'
 import { kRemovedNode, kTagPath } from './symbols'
-import { HtmlDocument, HtmlTag, HtmlVisitor } from './types'
+import { HtmlDocument, HtmlTag, HtmlVisitor, HtmlVisitorState } from './types'
 import { mergeVisitors } from './visitors'
 
 const noop = () => {}
 
-function getTagPath(node: HtmlTag, parentPath: HtmlTagPath) {
+function getTagPath<State>(
+  node: HtmlTag,
+  parentPath: HtmlTagPath<State>
+): HtmlTagPath<State> {
   return (node[kTagPath] ||= new HtmlTagPath(
     parentPath.document,
     node,
@@ -23,11 +26,11 @@ type InsertionMethod =
   | 'appendLeft'
   | 'appendRight'
 
-export class HtmlTagPath {
+export class HtmlTagPath<State = HtmlVisitorState> {
   constructor(
-    readonly document: HtmlDocument,
+    readonly document: HtmlDocument<State>,
     readonly node: HtmlTag,
-    readonly parentPath?: HtmlTagPath
+    readonly parentPath?: HtmlTagPath<State>
   ) {
     this.parentNode = parentPath?.node
     this.editor = document.editor
@@ -97,7 +100,7 @@ export class HtmlTagPath {
    */
   skip: () => void
 
-  traverse(visitors: HtmlVisitor | HtmlVisitor[]) {
+  traverse(visitors: HtmlVisitor<State> | HtmlVisitor<State>[]) {
     const mergedVisitor = mergeVisitors(visitors, this.document.state)
     const traversePath = async (path: HtmlTagPath) => {
       path.skip = () => mergedVisitor.skip(path)

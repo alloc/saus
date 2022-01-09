@@ -55,33 +55,33 @@ export type HtmlTag = HtmlNode & {
   attributes: HtmlAttribute[]
   attributeMap: Record<string, HtmlAttribute | undefined>
   body?: (HtmlTag | HtmlText | HtmlComment)[]
-  [kTagPath]?: HtmlTagPath
+  [kTagPath]?: HtmlTagPath<any>
 }
 
 export type { HtmlTagPath }
 
-export type HtmlTagVisitor =
-  | HtmlVisitFn
+export type HtmlTagVisitor<State = HtmlVisitorState> =
+  | HtmlVisitFn<State>
   | {
-      open?: HtmlVisitFn
-      close?: HtmlVisitFn
+      open?: HtmlVisitFn<State>
+      close?: HtmlVisitFn<State>
     }
 
-export type HtmlVisitor = {
-  [tag: string]: HtmlTagVisitor
+export type HtmlVisitor<State = HtmlVisitorState> = {
+  [tag: string]: HtmlTagVisitor<State>
 } & {
-  open?: HtmlVisitFn
-  close?: HtmlVisitFn
+  open?: HtmlVisitFn<State>
+  close?: HtmlVisitFn<State>
   /**
    * This visitor will always be called, because `traverseHtml` injects
    * an `<html>` tag if none exists.
    */
-  html?: HtmlTagVisitor
+  html?: HtmlTagVisitor<State>
 }
 
-export type HtmlVisitFn = (
-  path: HtmlTagPath,
-  state: HtmlVisitorState
+export type HtmlVisitFn<State = HtmlVisitorState> = (
+  path: HtmlTagPath<State>,
+  state: State
 ) => void | Promise<void>
 
 /**
@@ -89,7 +89,7 @@ export type HtmlVisitFn = (
  */
 export type HtmlVisitorState = HtmlProcessorState
 
-export type HtmlDocument = {
+export type HtmlDocument<State = HtmlVisitorState> = {
   editor: MagicString
-  state: HtmlVisitorState
+  state: State
 }
