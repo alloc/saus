@@ -2,10 +2,10 @@ import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import * as RegexParam from 'regexparam'
 import { ParsedUrl, URLSearchParams } from '../utils/url'
-import { SausContext } from './context'
-import { HtmlContext } from './html'
-import { RuntimeHook } from './setup'
-import { StateModule } from './stateModules'
+import type { SausContext } from './context'
+import type { HtmlContext } from './html'
+import type { RuntimeHook } from './setup'
+import type { StateModule } from './stateModules'
 
 export { RegexParam, InferRouteParams }
 

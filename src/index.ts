@@ -1,9 +1,7 @@
-export { render } from './render'
-export { route } from './routes'
-export { beforeRender, includeState, Plugin, UserConfig, vite } from './core'
-export * from './plugins/publicDir'
+import { vite, UserConfig } from './core'
 
-export { htmlEscape as escape } from 'escape-goat'
+export * from './api'
+export { Plugin, UserConfig, vite } from './core'
 
 type BuildFactory = typeof import('./build').build
 type ServerFactory = typeof import('./dev').createServer
@@ -17,8 +15,6 @@ export const createServer: ServerFactory = async inlineConfig => {
   const { createServer } = await import('./dev')
   return createServer(inlineConfig)
 }
-
-import { vite, UserConfig } from './core'
 
 type Promisable<T> = T | Promise<T>
 
