@@ -5,6 +5,7 @@ import fs from 'fs'
 import Module from 'module'
 import { resolve } from 'path'
 import type { RenderedPage } from '../pages'
+import { callPlugins } from '../utils/callPlugins'
 import { Deferred } from '../utils/defer'
 import { ConfigHook, setConfigHooks } from './config'
 import { HtmlContext } from './html'
@@ -18,7 +19,7 @@ type ResolvedConfig = vite.ResolvedConfig & {
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
-  plugins: ({ name: string } & SausPlugin)[]
+  plugins: readonly ({ name: string } & SausPlugin)[]
   logger: vite.Logger
   config: ResolvedConfig
   configPath: string | undefined
@@ -62,39 +63,40 @@ export async function loadContext(
   inlineConfig: vite.InlineConfig = {},
   inlinePlugins?: InlinePlugin[]
 ): Promise<SausContext> {
-  let configHooks: string[] | undefined
+  let context: SausContext | undefined
+  let configHooks: string[]
 
   const resolveConfig = getConfigResolver(
     inlinePlugins,
-    async renderPath => (configHooks ??= await loadConfigHooks(renderPath))
+    async renderPath => (configHooks ||= await loadConfigHooks(renderPath)),
+    config =>
+      (context ||= {
+        root: config.root,
+        plugins: null!,
+        logger: config.logger,
+        config,
+        configPath: config.configFile,
+        configHooks,
+        userConfig: config.inlineConfig,
+        resolveConfig,
+        basePath: config.base,
+        defaultPath: config.saus.defaultPath || '/404',
+        routesPath: config.saus.routes,
+        routes: [],
+        runtimeHooks: [],
+        pages: {},
+        defaultState: [],
+        loadingStateCache: new Map(),
+        loadedStateCache: new Map(),
+        renderPath: config.saus.render,
+        renderers: [],
+        beforeRenderHooks: [],
+        reloadId: 0,
+      })
   )
 
-  const config = await resolveConfig(command, inlineConfig)
-  const context: SausContext = {
-    root: config.root,
-    plugins: getSausPlugins(config),
-    logger: config.logger,
-    config,
-    configPath: config.configFile,
-    configHooks: [],
-    userConfig: config.inlineConfig,
-    resolveConfig,
-    basePath: config.base,
-    defaultPath: config.saus.defaultPath || '/404',
-    routesPath: config.saus.routes,
-    routes: [],
-    runtimeHooks: [],
-    pages: {},
-    defaultState: [],
-    loadingStateCache: new Map(),
-    loadedStateCache: new Map(),
-    renderPath: config.saus.render,
-    renderers: [],
-    beforeRenderHooks: [],
-    reloadId: 0,
-  }
-
-  return context
+  await resolveConfig(command, inlineConfig)
+  return context!
 }
 
 const getSausPlugins = (config: vite.ResolvedConfig) =>
@@ -124,7 +126,8 @@ function flattenPlugins<T extends vite.Plugin>(
 
 function getConfigResolver(
   inlinePlugins: InlinePlugin[] | undefined,
-  getConfigHooks: (renderPath: string) => Promise<string[]>
+  getConfigHooks: (renderPath: string) => Promise<string[]>,
+  getContext: (config: ResolvedConfig) => SausContext
 ) {
   return async (
     command: 'build' | 'serve',
@@ -201,14 +204,28 @@ function getConfigResolver(
       }
     }
 
-    const config = await vite.resolveConfig(userConfig, command, defaultMode)
+    const config = (await vite.resolveConfig(
+      userConfig,
+      command,
+      defaultMode
+    )) as ResolvedConfig
 
     config.optimizeDeps.entries = [
       ...arrify(config.optimizeDeps.entries),
       sausConfig.render,
     ]
 
-    return config as ResolvedConfig
+    const context = getContext(config)
+    const sausPlugins = getSausPlugins(config)
+    context.plugins ||= sausPlugins
+
+    // In build mode, call `onContext` hooks right after `configResolved` hooks.
+    // In serve mode, routes are loaded before `onContext` hooks are called.
+    if (config.command == 'build') {
+      await callPlugins(sausPlugins, 'onContext', context)
+    }
+
+    return config
   }
 }
 

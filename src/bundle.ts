@@ -54,8 +54,6 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
 }
 
 export async function bundle(context: SausContext, options: BundleOptions) {
-  await callPlugins(context.plugins, 'onContext', context)
-
   const bundleConfig = context.config.saus.bundle || {}
   const bundleFormat = options.format || bundleConfig.format || 'cjs'
 
