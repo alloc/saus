@@ -12,6 +12,12 @@ type TraverseHtmlHook = EnforcedHandler<
   [visitor: HtmlVisitor] | [visitors: HtmlVisitor[]]
 >
 
+/**
+ * Hook into the page HTML processing pipeline with a Babel-style AST
+ * visitor. Pass an `enforce` phase to change how this visitor will
+ * influence other visitors. Visitors of the same phase are never
+ * influenced by each other.
+ */
 export const traverseHtml = ((arg, arg2) => {
   let enforce: EnforcementPhase | undefined
   if (!arg || typeof arg == 'string') {
