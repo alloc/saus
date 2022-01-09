@@ -135,7 +135,7 @@ async function collectFiles(
 ): Promise<void> {
   for (const name of fs.readdirSync(srcDir)) {
     const srcPath = path.join(srcDir, name)
-    if (isExcluded(name) || isExcluded(srcPath)) {
+    if (isExcluded(name) || isExcluded(path.relative(srcPath, srcRoot))) {
       continue
     }
     if (fs.statSync(srcPath).isDirectory()) {
