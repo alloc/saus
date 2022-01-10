@@ -1,4 +1,4 @@
-import { ClientDescription } from './client'
+import type { ClientDescription } from './client'
 import { RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
 import { RegexParam } from './routes'
