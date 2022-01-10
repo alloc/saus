@@ -1,7 +1,13 @@
 import fs from 'fs'
 import path from 'path'
+import createDebug from 'debug'
+import { green } from 'kleur/colors'
 import { createFilter } from '@rollup/pluginutils'
 import { Plugin, endent, dataToEsm } from '../core'
+import { success } from 'misty'
+
+const isDebug = !!process.env.DEBUG
+const debug = createDebug('saus:publicDir')
 
 export type PublicFileTransform = (file: PublicFile) => Promise<void> | void
 
@@ -24,6 +30,9 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
   const renamedFiles = new Map<string, string>()
 
   function commitFiles() {
+    if (!publicDir) {
+      return
+    }
     for (const [srcPath, destPath] of copiedFiles) {
       mkdirSync(path.dirname(destPath))
       fs.copyFileSync(srcPath, destPath)
@@ -32,6 +41,14 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
       mkdirSync(path.dirname(destPath))
       fs.writeFileSync(destPath, buffer)
     }
+    success(
+      `${copiedFiles.size + writtenFiles.size} files copied from ${green(
+        path
+          .relative(process.cwd(), publicDir)
+          .replace(/^([^.])/, './$1')
+          .replace(/([^/])$/, '$1/')
+      )}`
+    )
   }
 
   const isExcluded = createFilter(options.exclude || /^$/, undefined, {
@@ -93,7 +110,6 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
       async fetchBundleImports(modules) {
         if (renamedFiles.size) {
           const renameMap = Object.fromEntries(renamedFiles.entries())
-          console.log({ renameMap })
 
           // Rewrite JS imports of public files.
           resolveId = id => renameMap[id]
@@ -135,7 +151,9 @@ async function collectFiles(
 ): Promise<void> {
   for (const name of fs.readdirSync(srcDir)) {
     const srcPath = path.join(srcDir, name)
-    if (isExcluded(name) || isExcluded(path.relative(srcPath, srcRoot))) {
+    const srcRelativePath = srcPath.slice(srcRoot.length + 1)
+    if (isExcluded(name) || isExcluded(srcRelativePath)) {
+      isDebug && debug(`Excluded path: "${srcRelativePath}"`)
       continue
     }
     if (fs.statSync(srcPath).isDirectory()) {
@@ -150,16 +168,17 @@ async function collectFiles(
         destRoot
       )
     } else if (transform) {
-      const file = new PublicFile(srcPath.slice(srcRoot.length + 1), srcPath)
+      const file = new PublicFile(srcRelativePath, srcPath)
       await transform(file)
-      if (!Object.getOwnPropertyDescriptor(file, 'skipped')) {
-        const destPath = path.join(destRoot, file.name)
-        mkdirSync(path.dirname(destPath))
-        if (Object.getOwnPropertyDescriptor(file, 'buffer')) {
-          writtenFiles.set(destPath, file.buffer)
-        } else {
-          copiedFiles.set(srcPath, destPath)
-        }
+      if (Object.getOwnPropertyDescriptor(file, 'skipped')) {
+        isDebug && debug(`Skipped file: "${file.name}"`)
+        continue
+      }
+      const destPath = path.join(destRoot, file.name)
+      if (Object.getOwnPropertyDescriptor(file, 'buffer')) {
+        writtenFiles.set(destPath, file.buffer)
+      } else {
+        copiedFiles.set(srcPath, destPath)
       }
     } else {
       copiedFiles.set(srcPath, path.join(destDir, name))
