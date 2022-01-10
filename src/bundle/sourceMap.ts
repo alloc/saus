@@ -1,6 +1,11 @@
-import { RawSourceMap } from 'source-map'
-
-export interface SourceMap extends Omit<RawSourceMap, 'version'> {}
+export interface SourceMap {
+  version: number
+  file: string
+  sources: string[]
+  sourcesContent: string[]
+  names: string[]
+  mappings: string
+}
 
 export function toInlineSourceMap(map: SourceMap) {
   return (
