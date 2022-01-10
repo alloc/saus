@@ -1,4 +1,5 @@
 import * as babel from '@babel/core'
+import arrify from 'arrify'
 import builtins from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
@@ -402,8 +403,11 @@ async function generateBundle(
       ]),
       modules,
       rewriteRouteImports(context.routesPath, routeImports, modules),
-      wrapAsyncInit(context.routesPath),
-      bundleEntry && bundleType == 'script' ? wrapAsyncInit(bundleEntry) : null,
+      bundleEntry &&
+      bundleType == 'script' &&
+      !supportTopLevelAwait(bundleConfig)
+        ? wrapAsyncInit()
+        : null,
       ...redirectedModules,
       // debugSymlinkResolver(),
     ],
@@ -526,51 +530,33 @@ function relativeToCwd(file: string) {
   return file.startsWith('../') ? file : './' + file
 }
 
-/**
- * Wrap top-level statements with `setImmediate` to avoid TDZ issues
- * but still run async statements in serial order like they would at
- * the top level.
- */
-function wrapAsyncInit(targetModuleId: string): vite.Plugin {
-  const asyncInitId = path.join(runtimeDir, 'init.ts')
+// Technically, top-level await is available since Node 14.8 but Esbuild
+// complains when this feature is used with a "node14" target environment.
+function supportTopLevelAwait(bundleConfig: SausBundleConfig = {}) {
+  const target = bundleConfig.target || 'node14'
+  return arrify(target).some(
+    target => target.startsWith('node') && Number(target.slice(4)) >= 15
+  )
+}
 
+/**
+ * Wrap the entire SSR bundle with an async IIFE, so top-level await
+ * is possible in Node 14 and under.
+ */
+function wrapAsyncInit(): vite.Plugin {
   return {
     name: 'saus:wrapAsyncInit',
     enforce: 'pre',
-    transform(code, id) {
-      if (id === targetModuleId) {
-        const editor = new MagicString(code, {
-          filename: id,
-          indentExclusionRanges: [],
-        })
+    renderChunk(code) {
+      const editor = new MagicString(code)
 
-        // 1. Hoist all imports not grouped with the first import
-        const imports = parseImports(code)
-        const importIdx = imports.findIndex(({ end }, i) => {
-          const nextImport = imports[i + 1]
-          return !nextImport || nextImport.start > end + 1
-        })
-        const hoistEndIdx = importIdx < 0 ? 0 : imports[importIdx].end + 1
-        for (let i = importIdx + 1; i < imports.length; i++) {
-          const { start, end } = imports[i]
-          // Assume import statements always end in a line break.
-          editor.move(start, end + 1, hoistEndIdx)
-        }
+      const lastImport = parseImports(code).pop()
+      editor.appendRight(lastImport?.end || 0, `\n;(async () => {`)
+      editor.append(`\n})()`)
 
-        // 2. Import __saus_init__ helper
-        editor.prependRight(
-          hoistEndIdx,
-          `\nimport __saus_init__ from "/@fs/${asyncInitId}"`
-        )
-
-        // 3. Wrap all statements below the imports
-        editor.appendRight(hoistEndIdx, `\n__saus_init__(async () => {\n`)
-        editor.append(`\n})`)
-
-        return {
-          code: editor.toString(),
-          map: editor.generateMap(),
-        }
+      return {
+        code: editor.toString(),
+        map: editor.generateMap(),
       }
     },
   }
