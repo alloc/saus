@@ -409,7 +409,6 @@ async function generateBundle(
       // debugSymlinkResolver(),
     ],
     ssr: {
-      external: builtins as string[],
       noExternal: /.+/,
     },
     build: {
@@ -428,6 +427,9 @@ async function generateBundle(
       },
     },
   })
+
+  // Externalize Node built-ins only.
+  config.ssr!.external = builtins as string[]
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   return buildResult.output[0].output[0]
