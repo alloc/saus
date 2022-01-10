@@ -1,2 +1,2 @@
-declare const paths: string[]
-export default paths
+declare const getKnownPaths: () => Promise<string[]>
+export default getKnownPaths
