@@ -461,7 +461,7 @@ async function resolveRouteImports(
   for (const imp of esModuleLexer.parse(code, routesPath)[0]) {
     if (imp.d >= 0) {
       const resolved = await pluginContainer.resolveId(imp.n!, routesPath)
-      if (resolved) {
+      if (resolved && !resolved.external) {
         const relativeId = path.relative(root, resolved.id)
         const resolvedUrl = relativeId.startsWith('..')
           ? '/@fs/' + resolved.id
