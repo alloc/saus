@@ -401,10 +401,9 @@ async function generateBundle(
         './src/core/context.ts',
       ]),
       modules,
-      bundleEntry && bundleType == 'script'
-        ? transformServerScript(bundleEntry)
-        : null,
       rewriteRouteImports(context.routesPath, routeImports, modules),
+      wrapAsyncInit(context.routesPath),
+      bundleEntry && bundleType == 'script' ? wrapAsyncInit(bundleEntry) : null,
       ...redirectedModules,
       // debugSymlinkResolver(),
     ],
@@ -528,15 +527,18 @@ function relativeToCwd(file: string) {
 }
 
 /**
- * Wrap top-level statements in the `server` module with `setImmediate`
- * to avoid TDZ issues.
+ * Wrap top-level statements with `setImmediate` to avoid TDZ issues
+ * but still run async statements in serial order like they would at
+ * the top level.
  */
-function transformServerScript(serverPath: string): vite.Plugin {
+function wrapAsyncInit(targetModuleId: string): vite.Plugin {
+  const asyncInitId = path.join(runtimeDir, 'init.ts')
+
   return {
-    name: 'saus:transformServerScript',
+    name: 'saus:wrapAsyncInit',
     enforce: 'pre',
     transform(code, id) {
-      if (id === serverPath) {
+      if (id === targetModuleId) {
         const editor = new MagicString(code, {
           filename: id,
           indentExclusionRanges: [],
@@ -555,8 +557,14 @@ function transformServerScript(serverPath: string): vite.Plugin {
           editor.move(start, end + 1, hoistEndIdx)
         }
 
-        // 2. Wrap all statements below the imports
-        editor.appendRight(hoistEndIdx, `\nsetImmediate(async () => {\n`)
+        // 2. Import __saus_init__ helper
+        editor.prependRight(
+          hoistEndIdx,
+          `\nimport __saus_init__ from "/@fs/${asyncInitId}"`
+        )
+
+        // 3. Wrap all statements below the imports
+        editor.appendRight(hoistEndIdx, `\n__saus_init__(async () => {\n`)
         editor.append(`\n})`)
 
         return {
