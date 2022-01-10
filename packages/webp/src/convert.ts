@@ -16,6 +16,8 @@ export interface Options extends WebpOptions {
   exclude?: (string | RegExp)[]
   /** Disable logging */
   silent?: boolean
+  /** Log every file that is converted */
+  verbose?: boolean
 }
 
 const urlRE = /(\?|&)url(?:&|$)/
@@ -76,6 +78,9 @@ export function convertToWebp(options: Options = {}): Plugin {
 
         try {
           buffer = await convert(buffer)
+          if (options.verbose) {
+            success(`[webp] Converted file: "${id}"`)
+          }
         } catch (e: any) {
           logger.error(`[!] Converting "${id}" to WebP failed. ${e.message}`)
           return
