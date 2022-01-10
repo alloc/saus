@@ -1,6 +1,7 @@
 import { vite, UserConfig } from './core'
 
 export * from './api'
+export * from './plugins/publicDir'
 export { Plugin, UserConfig, vite } from './core'
 
 type BuildFactory = typeof import('./build').build
