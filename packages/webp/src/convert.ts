@@ -69,11 +69,11 @@ export function convertToWebp(options: Options = {}): Plugin {
         let buffer!: Buffer
         try {
           buffer = await fs.readFile(id)
-        } catch {}
-
-        if (id[0] === '/') {
-          const publicId = path.join(config.publicDir, id.slice(1))
-          buffer = await fs.readFile(publicId)
+        } catch {
+          if (id[0] === '/') {
+            const publicId = path.join(config.publicDir, id.slice(1))
+            buffer = await fs.readFile(publicId)
+          }
         }
 
         try {
