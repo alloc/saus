@@ -222,6 +222,7 @@ function getConfigResolver(
     config.optimizeDeps.entries = [
       ...arrify(config.optimizeDeps.entries),
       sausConfig.render,
+      resolve(__dirname, '../client/index.js'),
     ]
 
     const context = getContext(config)
