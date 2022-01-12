@@ -138,6 +138,7 @@ export async function generateClientModules(
       minify,
     },
     build: {
+      ssr: false,
       write: false,
       minify: false,
       sourcemap: sourceMaps,
@@ -183,7 +184,6 @@ export async function generateClientModules(
         // when it consists of more than just imports.
         if (lines.every(line => line.startsWith('import '))) {
           chunk.code = code
-          chunk.lines = lines
           chunk.exports = []
         }
 
@@ -210,23 +210,12 @@ export async function generateClientModules(
       if (importStmt && !importStmt.isImplicit) {
         const index = unresolvedImports.indexOf(stmt)
         const chunk = entryChunks[index]
-        if (chunk.lines) {
-          const inlinedImports = chunk.lines.map(stmt => {
-            return stmt.replace(/"([^"]+)"/, (_, source) =>
-              quotes(base + path.join(assetsDir, source))
-            )
-          })
-          updates.push(() => {
-            fn.referenced.splice(i, 1, ...inlinedImports)
-          })
-        } else {
-          updates.push(() => {
-            fn.referenced[i] = stmt.replace(
-              quotes(importStmt.id),
-              quotes(base + chunk.fileName)
-            )
-          })
-        }
+        updates.push(() => {
+          fn.referenced[i] = stmt.replace(
+            quotes(importStmt.id),
+            quotes(base + chunk.fileName)
+          )
+        })
       } else {
         warnOnce(`Import not resolved: "${stmt}"`)
       }
@@ -253,7 +242,7 @@ export async function generateClientModules(
           key = unresolvedImports[entryIndex]
         } else {
           key = importStmt.code.replace(
-            quotes(importStmt.source),
+            /["'][^"']+["']/,
             quotes(base + chunk.fileName)
           )
         }

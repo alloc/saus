@@ -1,7 +1,6 @@
 import * as babel from '@babel/core'
 import arrify from 'arrify'
 import builtins from 'builtin-modules'
-import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
@@ -9,9 +8,15 @@ import { fatal, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
-import { createModuleProvider, ModuleProvider } from './bundle/moduleProvider'
+import { runtimeDir } from './bundle/constants'
+import { createModuleProvider } from './bundle/moduleProvider'
 import type { ClientModuleMap } from './bundle/runtime/modules'
 import { SourceMap } from './bundle/sourceMap'
+import {
+  bundleRoutes,
+  resolveRouteImports,
+  RouteImports,
+} from './bundle/ssrRoutes'
 import {
   ClientFunction,
   ClientFunctions,
@@ -28,10 +33,7 @@ import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
-import { dedupe } from './utils/dedupe'
 import { parseImports, serializeImports } from './utils/imports'
-
-const runtimeDir = path.resolve(__dirname, '../src/bundle/runtime')
 
 export interface BundleOptions {
   absoluteSources?: boolean
@@ -55,8 +57,9 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
 }
 
 export async function bundle(context: SausContext, options: BundleOptions) {
-  const bundleConfig = context.config.saus.bundle || {}
+  const bundleConfig = { ...context.config.saus.bundle }
   const bundleFormat = options.format || bundleConfig.format || 'cjs'
+  bundleConfig.format = bundleFormat
 
   let bundlePath = options.outFile ? path.resolve(options.outFile) : null!
   let bundleEntry =
@@ -270,7 +273,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
   const routeImports = await resolveRouteImports(context, pluginContainer)
 
   // Every route has a module imported by the inlined client module.
-  for (const url of routeImports.values()) {
+  for (const { url } of routeImports.values()) {
     implicitImports.add(`import * as routeModule from "${url}"`)
   }
 
@@ -351,17 +354,21 @@ async function generateBundle(
     }
   }
 
-  const entryId = path.resolve('.saus/main.js')
+  const entryId = '\0saus/main.js'
   const runtimeId = `/@fs/${path.join(runtimeDir, 'main.ts')}`
   modules.addModule({
     id: entryId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
-      import "/@fs/${context.renderPath}"
-      import "/@fs/${context.routesPath}"
+      ${renderAppImports(
+        context,
+        runtimeId,
+        runtimeConfigModule.id,
+        bundleFormat
+      )}
       export * from "${runtimeId}"
-      export {default} from "${runtimeId}"
-      export {default as config} from "${runtimeConfigModule.id}"
+      export { default } from "${runtimeId}"
+      export { default as config } from "${runtimeConfigModule.id}"
     `,
     moduleSideEffects: 'no-treeshake',
   })
@@ -370,7 +377,6 @@ async function generateBundle(
     redirectModule('saus', path.join(runtimeDir, 'index.ts')),
     redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
     redirectModule('saus/bundle', entryId),
-    redirectModule('saus/paths', path.join(runtimeDir, 'paths.ts')),
     redirectModule(
       path.resolve(__dirname, '../src/core/global.ts'),
       path.join(runtimeDir, 'global.ts')
@@ -396,13 +402,13 @@ async function generateBundle(
 
   const config = await context.resolveConfig('build', {
     plugins: [
+      await bundleRoutes(routeImports, context, bundleFormat == 'cjs'),
       debugForbiddenImports([
         'vite',
         './src/core/index.ts',
         './src/core/context.ts',
       ]),
       modules,
-      rewriteRouteImports(context.routesPath, routeImports, modules),
       bundleEntry &&
       bundleType == 'script' &&
       !supportTopLevelAwait(bundleConfig)
@@ -411,11 +417,7 @@ async function generateBundle(
       ...redirectedModules,
       // debugSymlinkResolver(),
     ],
-    ssr: {
-      noExternal: /.+/,
-    },
     build: {
-      ssr: true,
       write: false,
       target: bundleConfig.target || 'node14',
       minify: bundleConfig.minify == true,
@@ -438,6 +440,36 @@ async function generateBundle(
   return buildResult.output[0].output[0]
 }
 
+function renderAppImports(
+  context: SausContext,
+  runtimeId: string,
+  runtimeConfigId: string,
+  bundleFormat: string
+) {
+  // Top-level await is not supported in CommonJS builds,
+  // so we must inject a setup function into the page factory.
+  if (bundleFormat == 'cjs') {
+    return endent`
+      import cacheRoutes from "${context.routesPath}"
+      import cacheRenderers from "${context.renderPath}"
+      import runtimeConfig from "${runtimeConfigId}"
+      import { getPageFactory } from "${runtimeId}"
+      runtimeConfig.pageFactory = getPageFactory(async () => {
+        await cacheRoutes()
+        await cacheRenderers()
+      })
+    `
+  }
+  // Otherwise, the routes and renderers will cache themselves.
+  return endent`
+    import "${context.routesPath}"
+    import "${context.renderPath}"
+    import runtimeConfig from "${runtimeConfigId}"
+    import { getPageFactory } from "${runtimeId}"
+    runtimeConfig.pageFactory = getPageFactory()
+  `
+}
+
 function redirectModule(targetId: string, replacementId: string): vite.Plugin {
   return {
     name: 'redirect-module:' + targetId,
@@ -448,78 +480,6 @@ function redirectModule(targetId: string, replacementId: string): vite.Plugin {
       }
       if (id === targetId) {
         return replacementId
-      }
-    },
-  }
-}
-
-type RouteImports = Map<esModuleLexer.ImportSpecifier, string>
-
-async function resolveRouteImports(
-  { root, routesPath }: SausContext,
-  pluginContainer: vite.PluginContainer
-): Promise<RouteImports> {
-  const routeImports: RouteImports = new Map()
-
-  const code = fs.readFileSync(routesPath, 'utf8')
-  for (const imp of esModuleLexer.parse(code, routesPath)[0]) {
-    if (imp.d >= 0) {
-      const resolved = await pluginContainer.resolveId(imp.n!, routesPath)
-      if (resolved && !resolved.external) {
-        const relativeId = path.relative(root, resolved.id)
-        const resolvedUrl = relativeId.startsWith('..')
-          ? '/@fs/' + resolved.id
-          : '/' + relativeId
-
-        routeImports.set(imp, resolvedUrl)
-      }
-    }
-  }
-
-  return routeImports
-}
-
-function rewriteRouteImports(
-  routesPath: string,
-  routeImports: RouteImports,
-  modules: ModuleProvider
-): vite.Plugin {
-  modules.addModule({
-    id: path.join(runtimeDir, 'routes.ts'),
-    code: [
-      `export default {`,
-      ...dedupe(
-        routeImports.values(),
-        url => `  "${url}": () => import("${url}"),`
-      ),
-      `}`,
-    ].join('\n'),
-  })
-
-  return {
-    name: 'saus:rewriteRouteImports',
-    enforce: 'pre',
-    async transform(code, id) {
-      if (id === routesPath) {
-        const s = new MagicString(code, {
-          filename: routesPath,
-          indentExclusionRanges: [],
-        })
-        const importIdent = '__vite_ssr_dynamic_import__'
-        s.prepend(
-          `import ${importIdent} from "/@fs/${path.join(
-            runtimeDir,
-            'import.ts'
-          )}"\n`
-        )
-        for (const [imp, resolvedUrl] of routeImports.entries()) {
-          s.overwrite(imp.s + 1, imp.e - 1, resolvedUrl)
-          s.overwrite(imp.d, imp.d + 6, importIdent)
-        }
-        return {
-          code: s.toString(),
-          map: s.generateMap({ hires: true }),
-        }
       }
     },
   }

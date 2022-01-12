@@ -2,6 +2,7 @@ import assert from 'assert'
 import callerPath from 'caller-path'
 import path from 'path'
 import type { ConfigEnv, UserConfig } from 'vite'
+import type { PageFactory } from '../pages'
 import { renderModule } from './global'
 
 export type ConfigHook = (
@@ -38,6 +39,7 @@ export interface RuntimeConfig {
   defaultPath: string
   minify: boolean
   mode: string
+  pageFactory?: PageFactory
   publicDir: string
   stateCacheUrl: string
 }

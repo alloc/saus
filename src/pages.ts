@@ -1,6 +1,7 @@
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import path from 'path'
+import { ssrRequire } from './bundle/ssrModules'
 import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
@@ -76,7 +77,8 @@ interface PageState extends ClientState {
 export function createPageFactory(
   context: PageFactoryContext,
   functions: ClientFunctions,
-  config?: RuntimeConfig
+  config?: RuntimeConfig,
+  setup?: () => Promise<any>
 ) {
   let {
     pages,
@@ -156,15 +158,15 @@ export function createPageFactory(
       return pageState
     })
 
-  routes = [...routes].reverse()
-  renderers = [...renderers].reverse()
-
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
   // caused by global state mutation.
   let renderQueue = Promise.resolve()
 
   if (config) {
-    const setup = () => {
+    renderQueue = renderQueue.then(async () => {
+      if (setup) {
+        await setup()
+      }
       context.runtimeHooks.forEach(onSetup => {
         onSetup(config)
       })
@@ -175,21 +177,14 @@ export function createPageFactory(
           ['pre', 'default']
         )
       }
-    }
-
-    // For SSR script bundles, setImmediate is used to allow for runtime hooks
-    // to be initiated before the page factory is accessible. Therefore, we need
-    // to wait for those runtime hooks here.
-    if (config?.bundleType === 'script') {
-      const { promise, resolve } = defer<void>()
-      renderQueue = promise
-      setImmediate(() => {
-        setup()
-        resolve()
-      })
-    } else {
-      setup()
-    }
+      routes = [...context.routes].reverse()
+      renderers = [...context.renderers].reverse()
+      defaultRoute = context.defaultRoute
+      defaultRenderer = context.defaultRenderer
+    })
+  } else {
+    routes = [...routes].reverse()
+    renderers = [...renderers].reverse()
   }
 
   // For mapping a pathname to its route
@@ -225,6 +220,7 @@ export function createPageFactory(
         state,
       }
 
+      debugger
       debug(`Loading route: ${route.moduleId}`)
       const routeModule = await route.load()
 
@@ -357,6 +353,7 @@ export function createPageFactory(
       let route: Route | undefined
       let error: any
 
+      debugger
       try {
         route = routeMap[url.path]
         if (route) {
@@ -374,6 +371,7 @@ export function createPageFactory(
           }
         }
       } catch (e: any) {
+        debugger
         error = e
       }
 

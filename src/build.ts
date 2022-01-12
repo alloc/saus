@@ -143,6 +143,8 @@ function prepareOutDir(
     } else if (emptyOutDir !== false) {
       emptyDir(outDir, ['.git'])
     }
+  } else {
+    fs.mkdirSync(outDir, { recursive: true })
   }
 }
 

@@ -7,7 +7,7 @@ import type {
   RouteLoader,
 } from './core/routes'
 
-const importRE = /\b__vite_ssr_dynamic_import__\(["']([^"']+)["']\)/
+const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
 
 /** Define a route */

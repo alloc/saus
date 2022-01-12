@@ -1,8 +1,8 @@
 export interface SourceMap {
   version: number
-  file: string
+  file?: string
   sources: string[]
-  sourcesContent: string[]
+  sourcesContent?: string[]
   names: string[]
   mappings: string
 }

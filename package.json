@@ -14,8 +14,7 @@
     "babel",
     "bundle",
     "client",
-    "core",
-    "paths"
+    "core"
   ],
   "scripts": {
     "build": "rimraf dist && tsup",

@@ -3,7 +3,7 @@ import { context } from './context'
 
 const { logger } = context
 
-export default async function getKnownPaths() {
+export async function getKnownPaths() {
   const paths: string[] = []
   const errors: { reason: string; path: string }[] = []
 

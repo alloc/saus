@@ -1,0 +1,15 @@
+// Vitest Snapshot v1
+
+exports[`esmToCjs > named exports > rewrites bindings 1`] = `"exports.foo = 1"`;
+
+exports[`esmToCjs > named exports > rewrites bindings 2`] = `"exports.foo = 2"`;
+
+exports[`esmToCjs > named exports > rewrites classes 1`] = `"exports.Foo = class Foo {}"`;
+
+exports[`esmToCjs > named exports > rewrites functions 1`] = `"exports.foo = function foo() {}"`;
+
+exports[`esmToCjs > named exports > rewrites identifiers 1`] = `
+"const Foo = 1, Bar = 2
+exports.Foo = Foo
+exports.default = Bar"
+`;

@@ -161,6 +161,14 @@ export function getImportDeclarations(program: NodePath<t.Program>) {
     ) as NodePath<t.ImportDeclaration>[]
 }
 
+export function getExportDeclarations(program: NodePath<t.Program>) {
+  return program
+    .get('body')
+    .filter(stmt =>
+      stmt.isExportDeclaration()
+    ) as NodePath<t.ExportDeclaration>[]
+}
+
 export function getFirstAncestor(
   path: NodePath,
   test: (path: NodePath) => boolean

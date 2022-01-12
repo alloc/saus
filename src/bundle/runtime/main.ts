@@ -13,6 +13,12 @@ import moduleMap from './modules'
 import { isCSSRequest } from './utils'
 
 export { printFiles, writePages } from '../../build/write'
+export { getKnownPaths } from './paths'
+export { moduleMap }
+
+/** @internal */
+export const getPageFactory = (setup?: () => Promise<any>) =>
+  createPageFactory(context, functions, config, setup)
 
 const htmlExtension = '.html'
 const indexHtmlSuffix = '/index.html'
@@ -25,7 +31,6 @@ export const getModuleUrl = (mod: ClientModule) =>
       : mod.id.slice(0, -htmlExtension.length)
     : mod.id)
 
-const pageFactory = createPageFactory(context, functions, config)
 const hydrateImport = `import { hydrate } from "saus/client"`
 
 export default function renderPage(
@@ -36,7 +41,7 @@ export default function renderPage(
   }
   pageUrl = pageUrl.slice(config.base.length - 1)
   return new Promise((resolve, reject) => {
-    pageFactory.resolvePage(pageUrl, (error, page) => {
+    config.pageFactory!.resolvePage(pageUrl, (error, page) => {
       if (error) {
         return reject(error)
       }
@@ -76,22 +81,21 @@ export default function renderPage(
       // The entry module that imports all other client modules.
       // Generated from the first matching `render` hook, its `didRender` hook
       // (if defined), and any matching `beforeRender` hooks.
-      const entryImports: string[] = []
       const entryModule: ClientModule | undefined = page.client && {
         id: entryId,
         text: page.client.code,
-        imports: entryImports,
       }
 
       if (entryModule) {
+        const entryImports = new Set<string>()
         const updates: (() => void)[] = []
         for (const importStmt of parseImports(entryModule.text)) {
           const module = addModule(importStmt.text)
           if (module) {
             if (module.exports) {
-              entryImports.push(module.id)
+              entryImports.add(module.id)
             } else if (module.imports) {
-              entryImports.push(...module.imports)
+              module.imports.forEach(id => entryImports.add(id))
             }
             updates.push(() => {
               if (module.exports) {
@@ -113,6 +117,7 @@ export default function renderPage(
         for (const update of updates.reverse()) {
           update()
         }
+        entryModule.imports = Array.from(entryImports)
       }
 
       const stateModuleUrls: string[] = []

@@ -38,7 +38,7 @@ export type ParsedImport = {
 
 export function parseImports(code: string) {
   const imports: ParsedImport[] = []
-  const importRE = /^import .+/gm
+  const importRE = /\bimport (?:[\n\s\S]+? from )?["']([^"']+)["'];?/g
 
   let match: RegExpExecArray | null
   while ((match = importRE.exec(code))) {

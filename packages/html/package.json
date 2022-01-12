@@ -27,6 +27,6 @@
     "css-what": "^6.0.1",
     "debug": "^4.3.2",
     "magic-string": "^0.25.7",
-    "on-change": "<4"
+    "on-change": "^4.0.0"
   }
 }
