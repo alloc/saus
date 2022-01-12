@@ -121,22 +121,21 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
               }
             }
 
-            let response: Response | undefined
-            await pageFactory.resolvePage(url, async (error, page) => {
+            try {
+              const page = await pageFactory.render(url)
               if (page) {
                 const html = await server.transformIndexHtml(url, page.html)
-                response = {
+                return {
                   body: html,
                   headers: [
                     ['Content-Type', 'text/html; charset=utf-8'],
                     ['Content-Length', Buffer.byteLength(html)],
                   ],
                 }
-              } else if (error) {
-                response = { error }
               }
-            })
-            return response
+            } catch (error) {
+              return { error }
+            }
           }
         }
 

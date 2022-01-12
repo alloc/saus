@@ -160,10 +160,10 @@ export function createPageFactory(
 
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
   // caused by global state mutation.
-  let renderQueue = Promise.resolve()
+  let renderQueue: Promise<void>
 
   if (config) {
-    renderQueue = renderQueue.then(async () => {
+    renderQueue = (async () => {
       if (setup) {
         await setup()
       }
@@ -181,10 +181,11 @@ export function createPageFactory(
       renderers = [...context.renderers].reverse()
       defaultRoute = context.defaultRoute
       defaultRenderer = context.defaultRenderer
-    })
+    })()
   } else {
     routes = [...routes].reverse()
     renderers = [...renderers].reverse()
+    renderQueue = Promise.resolve()
   }
 
   // For mapping a pathname to its route
@@ -199,92 +200,79 @@ export function createPageFactory(
   }
 
   // The main logic for rendering a page.
-  function renderPage(
+  async function renderPage(
     url: ParsedUrl,
     state: PageState,
     route: Route,
     renderer: Renderer
   ): Promise<RenderedPage | null> {
-    debug(`Page queued: ${url}`)
-    const pagePromise = renderQueue.then(async () => {
-      debug(`Page next up: ${url}`)
+    const stateModules = state.$ || []
+    delete state.$
 
-      const stateModules = state.$ || []
-      delete state.$
+    const { path } = url
+    const request: RenderRequest = {
+      path,
+      query: url.search,
+      params: state.routeParams,
+      state,
+    }
 
-      const { path } = url
-      const request: RenderRequest = {
-        path,
-        query: url.search,
-        params: state.routeParams,
-        state,
+    debug(`Loading route: ${route.moduleId}`)
+    const routeModule = await route.load()
+
+    if (beforeRenderHooks.length) {
+      debug(`Running beforeRender hooks`)
+    }
+
+    const usedHooks: BeforeRenderHook[] = []
+    for (const hook of beforeRenderHooks) {
+      if (!hook.test || hook.test(path)) {
+        usedHooks.push(hook)
+        await hook(request)
       }
+    }
 
-      debugger
-      debug(`Loading route: ${route.moduleId}`)
-      const routeModule = await route.load()
+    debug(`Rendering page: ${path}`)
+    let html = await renderer.render(routeModule, request, renderer)
+    if (html == null) {
+      debug(`Nothing was rendered. Trying next renderer.`)
+      return null
+    }
 
-      if (beforeRenderHooks.length) {
-        debug(`Running beforeRender hooks`)
-      }
+    const filename = getPageFilename(path, basePath)
 
-      const usedHooks: BeforeRenderHook[] = []
-      for (const hook of beforeRenderHooks) {
-        if (!hook.test || hook.test(path)) {
-          usedHooks.push(hook)
-          await hook(request)
-        }
-      }
+    let client = pages[filename]?.client
+    if (!client) {
+      debug(`Generating client module`)
+      client = await getClient(functions, renderer, usedHooks)
+    }
 
-      debug(`Rendering page: ${path}`)
-      let html = await renderer.render(routeModule, request, renderer)
-      if (html == null) {
-        debug(`Nothing was rendered. Trying next renderer.`)
-        return null
-      }
+    const page: RenderedPage = {
+      path,
+      html,
+      state,
+      client,
+      stateModules,
+      routeModuleId: route.moduleId,
+    }
 
-      const filename = getPageFilename(path, basePath)
+    if (processHtml) {
+      page.html = await processHtml(page.html, page)
+    }
 
-      let client = pages[filename]?.client
-      if (!client) {
-        debug(`Generating client module`)
-        client = await getClient(functions, renderer, usedHooks)
-      }
+    debug(`Page ready: ${path}`)
 
-      const page: RenderedPage = {
-        path,
-        html,
-        state,
-        client,
-        stateModules,
-        routeModuleId: route.moduleId,
-      }
-
-      if (processHtml) {
-        page.html = await processHtml(page.html, page)
-      }
-
-      debug(`Page ready: ${path}`)
-
-      // Currently, the page cache is only used by the saus:client plugin,
-      // since the performance impact of rendering on every request isn't
-      // bad enough to justify complicated cache invalidation.
-      return (pages[filename] = page)
-    })
-
-    renderQueue = pagePromise.then(noop, noop)
-    return pagePromise
+    // Currently, the page cache is only used by the saus:client plugin,
+    // since the performance impact of rendering on every request isn't
+    // bad enough to justify complicated cache invalidation.
+    return (pages[filename] = page)
   }
 
   /**
    * Use the default renderer to render HTML for the given `url`.
    * If the given `route` is undefined, nothing is rendered.
    */
-  async function renderDefaultPage(
-    url: ParsedUrl,
-    state: PageState,
-    route: Route
-  ) {
+  function renderDefaultPage(url: ParsedUrl, state: PageState, route: Route) {
     if (defaultRenderer) {
       return renderPage(url, state, route, defaultRenderer)
     }
@@ -292,28 +280,19 @@ export function createPageFactory(
     return null
   }
 
-  async function renderUnknownPage(
-    url: string | ParsedUrl,
-    params: RouteParams = {}
-  ) {
+  async function renderUnknownPage(url: ParsedUrl, params: RouteParams = {}) {
     if (!defaultRoute) {
       return null
-    }
-    if (typeof url == 'string') {
-      url = parseUrl(url)
     }
     const state = await getPageState(url, params, defaultRoute)
     return renderDefaultPage(url, state, defaultRoute)
   }
 
   async function renderRoute(
-    url: string | ParsedUrl,
+    url: ParsedUrl,
     params: RouteParams,
     route: Route
   ) {
-    if (typeof url == 'string') {
-      url = parseUrl(url)
-    }
     const state = await getPageState(url, params, route)
     for (const renderer of renderers) {
       if (renderer.test(url.path)) {
@@ -326,73 +305,92 @@ export function createPageFactory(
     return renderDefaultPage(url, state, route)
   }
 
+  // For reuse of pending `renderPage` calls
+  const pendingPagePromises = new Map<string, Promise<RenderedPage | null>>()
+
+  const resolvePage = (
+    url: string | ParsedUrl,
+    renderPage: (url: ParsedUrl) => Promise<RenderedPage | null>
+  ) => {
+    if (typeof url == 'string') {
+      url = parseUrl(url)
+    }
+    let pagePath = url.path
+    let pagePromise = pendingPagePromises.get(pagePath)
+    if (!pagePromise) {
+      debug(`Page queued: ${url}`)
+      pagePromise = renderQueue
+        .then(() => {
+          debug(`Page next up: ${url}`)
+          return renderPage(url as ParsedUrl)
+        })
+        .finally(() => {
+          pendingPagePromises.delete(pagePath)
+        })
+
+      pendingPagePromises.set(pagePath, pagePromise)
+      renderQueue = pagePromise.then(noop, noop)
+    }
+    return pagePromise
+  }
+
   return {
+    /**
+     * Use the default route to render HTML for the given `url`.
+     */
+    renderUnknownPage: async (url: string | ParsedUrl, params?: RouteParams) =>
+      resolvePage(url, url => renderUnknownPage(url, params)),
     /**
      * Skip route matching and render HTML for the given `url` using
      * the given route and params.
      */
-    renderRoute,
-    /**
-     * Use the default route to render HTML for the given `url`.
-     */
-    renderUnknownPage,
+    renderRoute: (url: string | ParsedUrl, params: RouteParams, route: Route) =>
+      resolvePage(url, url => renderRoute(url, params, route)),
     /**
      * Find a matching route to render HTML for the given `url`.
      */
-    async resolvePage(
-      url: string | ParsedUrl,
-      next: (
-        error?: Error | null,
-        result?: RenderedPage | null
-      ) => Promise<void> | void
-    ) {
-      if (typeof url == 'string') {
-        url = parseUrl(url)
-      }
-
-      let route: Route | undefined
-      let error: any
-
-      debugger
-      try {
-        route = routeMap[url.path]
-        if (route) {
-          const params = matchRoute(url.path, route)!
-          const page = await renderRoute(url, params, route)
-          return next(null, page)
+    render: (url: string | ParsedUrl) =>
+      resolvePage(url, async url => {
+        if (typeof url == 'string') {
+          url = parseUrl(url)
         }
-        for (route of routes) {
-          const params = matchRoute(url.path, route)
-          if (params) {
-            routeMap[url.path] = route
 
-            const page = await renderRoute(url, params, route)
-            return next(null, page)
-          }
-        }
-      } catch (e: any) {
-        debugger
-        error = e
-      }
+        let route: Route | undefined
+        let error: any
 
-      // Skip requests with file extension, unless explicitly
-      // handled by a non-default renderer.
-      if (!error && /\.[^/]+$/.test(url.path)) {
-        return next()
-      }
-
-      // Render the fallback page.
-      if (defaultRenderer && defaultRoute) {
         try {
-          const page = await renderUnknownPage(url, { error })
-          return next(null, page)
+          route = routeMap[url.path]
+          if (route) {
+            const params = matchRoute(url.path, route)!
+            return await renderRoute(url, params, route)
+          }
+          for (route of routes) {
+            const params = matchRoute(url.path, route)
+            if (params) {
+              routeMap[url.path] = route
+              return await renderRoute(url, params, route)
+            }
+          }
         } catch (e: any) {
           error = e
         }
-      }
 
-      return next(error)
-    },
+        // Skip requests with file extension, unless explicitly
+        // handled by a non-default renderer.
+        if (!error && /\.[^/]+$/.test(url.path)) {
+          return null
+        }
+
+        // Render the fallback page.
+        if (defaultRenderer && defaultRoute) {
+          return await renderUnknownPage(url, { error })
+        }
+
+        if (error) {
+          throw error
+        }
+        return null
+      }),
     /**
      * Get the client state for the given URL.
      */
