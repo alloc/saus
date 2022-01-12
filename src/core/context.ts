@@ -60,13 +60,14 @@ type InlinePlugin = (
 
 export async function loadContext(
   command: 'build' | 'serve',
-  inlineConfig: vite.InlineConfig = {},
+  inlineConfig?: vite.InlineConfig,
   inlinePlugins?: InlinePlugin[]
 ): Promise<SausContext> {
   let context: SausContext | undefined
   let configHooks: string[]
 
   const resolveConfig = getConfigResolver(
+    inlineConfig || {},
     inlinePlugins,
     async renderPath => (configHooks ||= await loadConfigHooks(renderPath)),
     config =>
@@ -95,7 +96,7 @@ export async function loadContext(
       })
   )
 
-  await resolveConfig(command, inlineConfig)
+  await resolveConfig(command)
   return context!
 }
 
@@ -125,42 +126,47 @@ function flattenPlugins<T extends vite.Plugin>(
 }
 
 function getConfigResolver(
+  defaultConfig: vite.InlineConfig,
   inlinePlugins: InlinePlugin[] | undefined,
   getConfigHooks: (renderPath: string) => Promise<string[]>,
   getContext: (config: ResolvedConfig) => SausContext
 ) {
   return async (
     command: 'build' | 'serve',
-    inlineConfig: vite.InlineConfig = {}
+    inlineConfig?: vite.InlineConfig
   ) => {
-    const root = (inlineConfig.root = vite
-      .normalizePath(resolve(inlineConfig.root || './'))
-      .replace(/\/$/, ''))
-
     const isBuild = command == 'build'
+
+    inlineConfig = vite.mergeConfig(
+      {
+        configFile: false,
+        server: {
+          preTransformRequests: !isBuild,
+        },
+        ssr: {
+          noExternal: isBuild ? true : ['saus/client'],
+        },
+        build: {
+          ssr: true,
+        },
+        optimizeDeps: {
+          exclude: ['saus'],
+        },
+      },
+      inlineConfig
+        ? vite.mergeConfig(defaultConfig, inlineConfig)
+        : defaultConfig
+    )
+
     const defaultMode = isBuild ? 'production' : 'development'
     const configEnv: vite.ConfigEnv = {
       command,
       mode: inlineConfig.mode || defaultMode,
     }
 
-    const defaultConfig: vite.InlineConfig = {
-      configFile: false,
-      server: {
-        preTransformRequests: !isBuild,
-      },
-      ssr: {
-        noExternal: isBuild ? true : ['saus/client'],
-      },
-      build: {
-        ssr: inlineConfig.build?.ssr ?? true,
-      },
-      optimizeDeps: {
-        exclude: ['saus'],
-      },
-    }
-
-    inlineConfig = vite.mergeConfig(defaultConfig, inlineConfig)
+    const root = (inlineConfig.root = vite
+      .normalizePath(resolve(inlineConfig.root || './'))
+      .replace(/\/$/, ''))
 
     const loadResult = await vite.loadConfigFromFile(
       configEnv,
