@@ -4,10 +4,15 @@ import http from 'http'
 import path from 'path'
 import * as mime from 'mrmime'
 import { gray } from 'kleur/colors'
-import renderPage, { config, getModuleUrl, ClientModule } from 'saus/bundle'
-import knownPaths from 'saus/paths'
+import renderPage, {
+  config,
+  getKnownPaths,
+  getModuleUrl,
+  ClientModule,
+} from 'saus/bundle'
 import { connect } from './connect'
-import './html'
+import { startTask } from 'misty/task'
+import { success } from 'misty'
 
 const modules = new Map<string, ClientModule>()
 const addModule = (module: ClientModule) => {
@@ -17,13 +22,18 @@ const addModule = (module: ClientModule) => {
   }
 }
 
+let pageCount = 0
+
 // Pre-render all known pages.
-for (let knownPath of knownPaths) {
+for (let knownPath of await getKnownPaths()) {
+  const task = startTask(`Rendering "${knownPath}"`)
   const page = await renderPage(config.base + knownPath.slice(1))
+  task.finish()
   if (!page) {
     console.warn(`[!] Page for "${knownPath}" was null`)
     continue
   }
+  pageCount++
   page.modules.forEach(addModule)
   page.assets.forEach(addModule)
   addModule({
@@ -31,6 +41,8 @@ for (let knownPath of knownPaths) {
     text: page.html,
   })
 }
+
+success(`${pageCount} pages were pre-rendered.`)
 
 const app = connect()
   .use((req, res, next) => {
