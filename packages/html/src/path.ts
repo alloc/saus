@@ -102,7 +102,7 @@ export class HtmlTagPath<State = HtmlVisitorState> {
 
   traverse(visitors: HtmlVisitor<State> | HtmlVisitor<State>[]) {
     const mergedVisitor = mergeVisitors(visitors, this.document.state)
-    const traversePath = async (path: HtmlTagPath) => {
+    const traversePath = async (path: HtmlTagPath<State>) => {
       path.skip = () => mergedVisitor.skip(path)
 
       const shouldSkip = await mergedVisitor.open(path)

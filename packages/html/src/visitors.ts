@@ -114,25 +114,26 @@ export function mergeVisitors<State = HtmlVisitorState>(
   state: State
 ) {
   const visitors = Array.isArray(arg) ? arg : [arg]
-  const skippedVisitorsByPath = new Map<HtmlTagPath, Set<HtmlVisitor>>()
-  const skippedPathsByVisitor = new Map<HtmlVisitor, HtmlTagPath>()
+
+  type Visitor = HtmlVisitor<State>
+  type TagPath = HtmlTagPath<State>
+
+  const skippedVisitorsByPath = new Map<TagPath, Set<Visitor>>()
+  const skippedPathsByVisitor = new Map<Visitor, TagPath>()
 
   /** The visitor targeted by `path.skip` calls. */
-  let currentVisitor: HtmlVisitor | null = null
+  let currentVisitor: Visitor | null = null
   /** Visitors with an `open` listener. */
-  let openVisitors: HtmlVisitor[]
+  let openVisitors: Visitor[]
   /** Visitors with tag-specific listeners. */
-  let tagVisitors: HtmlVisitor[]
+  let tagVisitors: Visitor[]
   /** Visitors with a `close` listener. */
-  let closeVisitors: HtmlVisitor[]
+  let closeVisitors: Visitor[]
 
   const visit = async (
-    path: HtmlTagPath,
-    visitor: HtmlVisitor,
-    handler: (
-      path: HtmlTagPath,
-      state: HtmlVisitorState
-    ) => void | Promise<void>
+    path: TagPath,
+    visitor: Visitor,
+    handler: (path: TagPath, state: State) => void | Promise<void>
   ) => {
     currentVisitor = visitor
     await handler(path, state)
@@ -148,7 +149,7 @@ export function mergeVisitors<State = HtmlVisitorState>(
 
   resetVisitors()
   return {
-    async open(path: HtmlTagPath) {
+    async open(path: TagPath) {
       for (const visitor of openVisitors) {
         await visit(path, visitor, visitor.open!)
         if (path[kRemovedNode]) {
@@ -170,7 +171,7 @@ export function mergeVisitors<State = HtmlVisitorState>(
       // Avoid traversing descendants if no visitors are eligible.
       return !openVisitors.length && !tagVisitors.length
     },
-    async close(path: HtmlTagPath) {
+    async close(path: TagPath) {
       const skippedVisitors = skippedVisitorsByPath.get(path)
       if (skippedVisitors) {
         skippedVisitors.forEach(visitor => {
@@ -198,7 +199,7 @@ export function mergeVisitors<State = HtmlVisitorState>(
         }
       }
     },
-    skip(path: HtmlTagPath) {
+    skip(path: TagPath) {
       if (!currentVisitor) {
         return
       }
@@ -231,15 +232,15 @@ const keywords = ['open', 'close']
 
 const kTagVisitor = Symbol.for('html.TagVisitor')
 
-function isTagVisitor(visitor: HtmlVisitor & { [kTagVisitor]?: boolean }) {
+function isTagVisitor(visitor: HtmlVisitor<any> & { [kTagVisitor]?: boolean }) {
   return (visitor[kTagVisitor] ??= Object.keys(visitor).some(
     key => !keywords.includes(key)
   ))
 }
 
 function isDescendant(
-  childPath: HtmlTagPath | undefined,
-  parentPath: HtmlTagPath
+  childPath: HtmlTagPath<any> | undefined,
+  parentPath: HtmlTagPath<any>
 ) {
   while (childPath) {
     if (childPath == parentPath) {
