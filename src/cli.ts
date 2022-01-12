@@ -60,6 +60,7 @@ cli
     `[string] override the client mode (eg: development)`
   )
   .option('--minify', `[boolean] minify the client modules`)
+  .option('--sourcemap', `[boolean] enable/disable source maps`)
   .action(async (outFile, options) => {
     options.outFile = outFile
 
@@ -73,15 +74,17 @@ cli
 
     const context = await loadBundleContext({
       logLevel: noWrite ? 'silent' : undefined,
+      build: { sourcemap: options.sourcemap },
     })
 
     try {
       let { code, map } = await bundle(context, options)
       if (noWrite) {
-        const { toInlineSourceMap } =
-          require('./bundle/sourceMap') as typeof import('./bundle/sourceMap')
-
-        code += toInlineSourceMap(map)
+        if (map) {
+          const { toInlineSourceMap } =
+            require('./bundle/sourceMap') as typeof import('./bundle/sourceMap')
+          code += toInlineSourceMap(map)
+        }
         process.stdout.write(code)
       }
     } catch (e: any) {

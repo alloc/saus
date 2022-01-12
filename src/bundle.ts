@@ -133,12 +133,13 @@ export async function bundle(context: SausContext, options: BundleOptions) {
         ` Saving bundle as ${kleur.green(relativeToCwd(bundle.path))}`
     )
 
-    const mapFileComment =
-      '\n//# ' + 'sourceMappingURL=' + path.basename(bundle.path) + '.map'
-
     fs.mkdirSync(path.dirname(bundle.path), { recursive: true })
-    fs.writeFileSync(bundle.path, bundle.code + mapFileComment)
-    fs.writeFileSync(bundle.path + '.map', JSON.stringify(bundle.map))
+    if (bundle.map) {
+      fs.writeFileSync(bundle.path + '.map', JSON.stringify(bundle.map))
+      bundle.code +=
+        '\n//# ' + 'sourceMappingURL=' + path.basename(bundle.path) + '.map'
+    }
+    fs.writeFileSync(bundle.path, bundle.code)
 
     if (!bundleConfig.entry) {
       fs.copyFileSync(
@@ -421,7 +422,6 @@ async function generateBundle(
       write: false,
       target: bundleConfig.target || 'node14',
       minify: bundleConfig.minify == true,
-      sourcemap: true,
       rollupOptions: {
         input: bundleEntry || entryId,
         output: {
