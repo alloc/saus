@@ -1,5 +1,5 @@
 import MagicString from 'magic-string'
-import onChange from 'on-change'
+import { onChange } from './onChange'
 import { parseHtml } from './parser'
 import { HtmlTagPath } from './path'
 import { kRemovedNode, kVisitorsArray } from './symbols'
@@ -32,9 +32,7 @@ export function bindVisitors<State>(
         continue
       }
       const observer = createObserver(tag, editor)
-      const observedTag = onChange(tag, observer, {
-        ignoreSymbols: true,
-      })
+      const observedTag = onChange(tag, observer)
       const path = new HtmlTagPath(document, observedTag)
       await path.traverse(visitors)
     }
@@ -62,15 +60,14 @@ function injectHtmlTag(html: string) {
  */
 const createObserver =
   (tag: HtmlTag, editor: MagicString) =>
-  (path: string, value: any, oldValue: any) => {
+  (keyPath: string[], value: any, oldValue: any) => {
     if (typeof value !== 'string') {
       throw Error(`Property mutation must be string-based`)
     }
-    const keys = path.split('.')
-    const lastKey = keys.pop() as string
+    const lastKey = keyPath.pop() as string
     // A text node or attribute node can have its value edited.
     if (lastKey === 'value') {
-      const node = resolveKeyPath<HtmlTextLike>(tag, keys)
+      const node = resolveKeyPath<HtmlTextLike>(tag, keyPath)
       // Undo the change, so visitors in the same pass never affect each other.
       node[lastKey] = oldValue
       editor.overwrite(
@@ -81,7 +78,7 @@ const createObserver =
     }
     // A tag node can have its name edited.
     else if (lastKey === 'name' || lastKey === 'rawName') {
-      const node = resolveKeyPath<HtmlTag>(tag, keys)
+      const node = resolveKeyPath<HtmlTag>(tag, keyPath)
       // Undo the change, so visitors in the same pass never affect each other.
       node[lastKey] = oldValue
 
@@ -95,7 +92,7 @@ const createObserver =
         editor.overwrite(close.start + 2, close.end - 1, value)
       }
     } else {
-      throw Error(`Unsupported property mutation: ${path}`)
+      throw Error(`Unsupported property mutation: ${keyPath.join('.')}`)
     }
   }
 

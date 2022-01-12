@@ -129,14 +129,12 @@ importers:
       css-what: ^6.0.1
       debug: ^4.3.2
       magic-string: ^0.25.7
-      on-change: ^4.0.0
       saus: '*'
     dependencies:
       '@cush/relative': 1.0.0
       css-what: 6.0.1
       debug: 4.3.3
       magic-string: 0.25.7
-      on-change: 4.0.0
     devDependencies:
       '@types/debug': 4.1.7
       saus: link:../..
@@ -2756,11 +2754,6 @@ packages:
 
   /objectorarray/1.0.5:
     resolution: {integrity: sha512-eJJDYkhJFFbBBAxeh8xW+weHlkI28n2ZdQV/J/DNfWfSKlGEf2xcfAbZTv3riEXHAhL9SVOTs2pRmXiSTf78xg==}
-    dev: false
-
-  /on-change/4.0.0:
-    resolution: {integrity: sha512-PTu7C9Jsz4b+sNMDpH0eZFTr7uxdOtoDWRnhaVNK50bgrrnW5nvbWI0jm5DG9qOoTnIhBzE9xoKVFPD9xgtbdg==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
     dev: false
 
   /once/1.4.0:
