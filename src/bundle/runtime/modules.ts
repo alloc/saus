@@ -10,4 +10,5 @@ export interface ClientModuleMap {
 }
 
 /* Stub module replaced at build time */
-export default {} as ClientModuleMap
+declare const moduleMap: ClientModuleMap
+export default moduleMap
