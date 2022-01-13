@@ -8,8 +8,11 @@ import {
 } from './types'
 
 // An ">" or "/" signal the end of a tag name or attribute list.
-// This also returns true when HTML abruptly ends.
-let isClosing = (char: string | undefined) => ~'>/'.indexOf(char || '')
+// This also returns false when HTML abruptly ends.
+let notClosed = (char: string | undefined) => '>/'.indexOf(char || '') < 0
+
+// Spaces, tabs, and line breaks all end an identifier.
+let notSpaced = (char: string) => /\S/.test(char)
 
 export function parseHtml(html: string) {
   let pos = -1
@@ -58,7 +61,7 @@ export function parseHtml(html: string) {
       } else {
         start = pos
         rawName = ''
-        while (!isClosing(html[pos + 1]) && html[++pos] != ' ') {
+        while (notClosed(html[pos + 1]) && notSpaced(html[++pos])) {
           rawName += html[pos]
         }
         stack.push(wip)
@@ -107,16 +110,16 @@ export function parseHtml(html: string) {
   return document
 
   function parseAttributes(wip: HtmlTag) {
-    while (!isClosing(html[pos + 1])) {
+    while (notClosed(html[pos + 1])) {
       let rawName = html[++pos]
       // Attribute names cannot start with space or hyphen
-      if (rawName != ' ' && rawName != '-') {
+      if (notSpaced(rawName) && rawName != '-') {
         let name = { type: 'Text' as const, start: pos } as HtmlText
         let value: HtmlAttributeValue | undefined
 
         // Assume no whitespace between attribute name
         // and the "=" that comes after (if one exists).
-        while (!isClosing(html[pos + 1]) && html[pos + 1] != ' ') {
+        while (notClosed(html[pos + 1]) && notSpaced(html[pos + 1])) {
           let char = html[++pos]
           if (char == '=') {
             name.end = pos
