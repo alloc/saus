@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.7",
+    "recrawl-sync": "^2.2.1",
     "saus": "*"
   },
   "dependencies": {
