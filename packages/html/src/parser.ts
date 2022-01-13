@@ -64,6 +64,10 @@ export function parseHtml(html: string) {
         while (notClosed(html[pos + 1]) && notSpaced(html[++pos])) {
           rawName += html[pos]
         }
+        if (wip && body.length) {
+          wip.body = body
+          body = []
+        }
         stack.push(wip)
         parseAttributes(
           (wip = {
@@ -99,8 +103,8 @@ export function parseHtml(html: string) {
         let parent = stack.pop()
         if (body.length) {
           wip.body = body
-          body = (parent && parent.body) || []
         }
+        body = (parent && parent.body) || []
         wip.end = pos + 1
         appendTo(wip, (wip = parent))
       }
