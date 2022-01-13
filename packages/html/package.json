@@ -8,7 +8,9 @@
   "types": "index.d.ts",
   "files": [
     "src",
-    "dist"
+    "dist",
+    "private",
+    "index.d.ts"
   ],
   "scripts": {
     "build": "rimraf dist && tsup",
