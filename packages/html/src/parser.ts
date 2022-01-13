@@ -172,7 +172,6 @@ export function parseHtml(html: string) {
 }
 
 let selfClosingTags = new Set([
-  '!--',
   '!doctype',
   'area',
   'base',
