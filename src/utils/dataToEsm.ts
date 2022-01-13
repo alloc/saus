@@ -1,37 +1,67 @@
+import { noop } from './noop'
+
 const indent = '  '
 const varDeclRE = /^(const|let|var) /
 
-export function dataToEsm(data: unknown, variable?: string) {
+type Replacer = (key: string, value: any) => string | void
+
+/**
+ * Convert almost any kind of data to ESM code.
+ *
+ * By default, `export default` is prepended to the generated code,
+ * but the `variable` argument lets you change that. For example,
+ * you could pass `"foo"` to prepend `const foo =`, pass an empty
+ * string to prepend nothing, or `"let foo"` for a `let foo =` prefix.
+ *
+ * The `replacer` argument lets you selectively override which code
+ * is generated from a specific value.
+ */
+export function dataToEsm(
+  data: unknown,
+  variable?: string | null,
+  replacer: Replacer = noop
+) {
   const prefix = variable
     ? (varDeclRE.test(variable) ? '' : 'const ') + variable + ' = '
-    : 'export default '
+    : variable !== ''
+    ? 'export default '
+    : ''
 
-  return prefix + serialize(data, '')
+  return prefix + serialize(data, [], replacer)
 }
 
-function serialize(obj: unknown, baseIndent: string): string {
-  if (
-    obj == null ||
-    obj === Infinity ||
-    obj === -Infinity ||
-    Number.isNaN(obj) ||
-    obj instanceof RegExp
-  ) {
-    return String(obj)
+function serialize(
+  value: unknown,
+  keyPath: string[],
+  replacer: Replacer
+): string {
+  const key = keyPath.length ? keyPath[keyPath.length - 1] : ''
+  const replacement = replacer(key, value)
+  if (typeof replacement === 'string') {
+    return replacement
   }
-  if (obj === 0 && 1 / obj === -Infinity) {
+  if (
+    value == null ||
+    value === Infinity ||
+    value === -Infinity ||
+    Number.isNaN(value) ||
+    value instanceof RegExp
+  ) {
+    return String(value)
+  }
+  if (value === 0 && 1 / value === -Infinity) {
     return '-0'
   }
-  if (obj instanceof Date) {
-    return `new Date(${obj.getTime()})`
+  if (value instanceof Date) {
+    return `new Date(${value.getTime()})`
   }
-  if (Array.isArray(obj)) {
-    return serializeArray(obj, baseIndent)
+  if (Array.isArray(value)) {
+    return serializeArray(value, keyPath, replacer)
   }
-  if (typeof obj === 'object') {
-    return serializeObject(obj!, baseIndent)
+  if (typeof value === 'object') {
+    return serializeObject(value, keyPath, replacer)
   }
-  return stringify(obj)
+  return stringify(value)
 }
 
 function stringify(obj: unknown): string {
@@ -41,30 +71,39 @@ function stringify(obj: unknown): string {
   )
 }
 
-function serializeArray<T>(arr: T[], baseIndent: string): string {
+function serializeArray<T>(
+  arr: T[],
+  keyPath: string[],
+  replacer: Replacer
+): string {
   let output = '['
+  const baseIndent = indent.repeat(keyPath.length)
   const separator = `\n${baseIndent}${indent}`
   for (let i = 0; i < arr.length; i++) {
-    const key = arr[i]
     output += `${i > 0 ? ',' : ''}${separator}${serialize(
-      key,
-      baseIndent + indent
+      arr[i],
+      keyPath.concat(String(i)),
+      replacer
     )}`
   }
   return `${output}\n${baseIndent}]`
 }
 
-function serializeObject(obj: object, baseIndent: string): string {
+function serializeObject(
+  obj: object,
+  keyPath: string[],
+  replacer: Replacer
+): string {
   let output = '{'
+  const baseIndent = indent.repeat(keyPath.length)
   const separator = `\n${baseIndent}${indent}`
-  const entries = Object.entries(obj)
-  for (let i = 0; i < entries.length; i++) {
-    const [key, value] = entries[i]
+  Object.entries(obj).forEach(([key, value], i) => {
     const legalName = /^[$_a-z0-9]+$/i.test(key) ? key : stringify(key)
     output += `${i > 0 ? ',' : ''}${separator}${legalName}: ${serialize(
       value,
-      baseIndent + indent
+      keyPath.concat(String(key)),
+      replacer
     )}`
-  }
+  })
   return `${output}${indent ? `\n${baseIndent}` : ''}}`
 }
