@@ -92,6 +92,14 @@ export function parseHtml(html: string) {
 
         // Assume "/>" never has a space between / and >
         done = html[pos - 1] == '/' || selfClosingTags.has(wip.name)
+
+        // Handle tags with non-HTML text content.
+        if (!done && /^(script|style)$/.test(wip.name)) {
+          pos = html.indexOf(`</${wip.rawName}>`, pos) - 1
+          if (pos < 0) {
+            break
+          }
+        }
       }
       // Closing tags like </div>
       else if ((done = wip.close)) {
