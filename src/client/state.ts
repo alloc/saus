@@ -1,4 +1,6 @@
 import type { ClientState, StateModule } from '../core'
+import { getPageFilename } from '../utils/getPageFilename'
+import { unwrapDefault } from '../utils/unwrapDefault'
 import { loadedStateCache, loadingStateCache } from './cache'
 import { withCache } from './withCache'
 
@@ -17,38 +19,8 @@ export const loadClientState: {
    */
   <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
 } = withCache(loadingStateCache, loadedStateCache, pageUrl => {
-  if (pageUrl[0] == '/' && typeof fetch !== 'undefined') {
-    const stateUrl = pageUrl.replace(/\/?$/, '/state.json')
-
-    return async () => {
-      const resp = await fetch(stateUrl)
-
-      type ResolvedStateModule = [Record<string, any>, string, any]
-      const pendingStateModules: Promise<ResolvedStateModule>[] = []
-
-      const state = JSON.parse(await resp.text(), function (key, value) {
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-          return value
-        }
-        // Embedded state modules must be dynamically imported.
-        const url = value['@import']
-        if (typeof url == 'string' && Object.keys(value).length == 1) {
-          pendingStateModules.push(
-            import(url).then(value => [this, key, value])
-          )
-          return null
-        }
-        return value
-      })
-
-      if (pendingStateModules.length) {
-        const resolvedStateModules = await Promise.all(pendingStateModules)
-        for (const [parent, key, value] of resolvedStateModules) {
-          parent[key] = value
-        }
-      }
-
-      return state
-    }
+  if (pageUrl[0] == '/') {
+    const stateUrl = getPageFilename(pageUrl) + '.js'
+    return async () => import(/* @vite-ignore */ stateUrl).then(unwrapDefault)
   }
 })

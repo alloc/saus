@@ -1,5 +1,4 @@
-import type { RenderRequest } from '../core'
-import { initialState as state } from './bootstrap'
+import type { ClientState, RenderRequest } from '../core'
 import routes from './routes'
 
 const urlPathRegex = /^(.+?)(?:#[^?]*)?(?:\?(.*))?$/
@@ -8,7 +7,7 @@ export type HydrateFn = (routeModule: any, request: RenderRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: object, url: string) {
+export function hydrate(routeModule: object, state: ClientState, url: string) {
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }

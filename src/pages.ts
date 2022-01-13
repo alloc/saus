@@ -1,7 +1,6 @@
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import path from 'path'
-import { ssrRequire } from './bundle/ssrModules'
 import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
@@ -26,30 +25,17 @@ import { debug } from './core/debug'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { isStateModule } from './core/stateModules'
-import { defer } from './utils/defer'
+import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
-
-/**
- * Get the `.html` filename for a given URL pathname.
- *
- * Beware: Trailing slashes are treated as `/index.html` and querystrings
- * are not supported.
- */
-export function getPageFilename(path: string, basePath?: string) {
-  if (basePath && path == basePath.slice(0, -1)) {
-    return basePath.slice(1) + 'index.html'
-  }
-  return path.slice(1) + (path.endsWith('/') ? 'index.html' : '.html')
-}
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
 export type RenderedPage = {
   path: string
   html: string
-  state?: ClientState
+  state: PageState
   client?: Client
   stateModules: string[]
   routeModuleId: string
@@ -69,9 +55,9 @@ export interface PageFactoryContext
   logger: { warn(msg: string): void; error(msg: string): void }
 }
 
-interface PageState extends ClientState {
+export interface PageState extends ClientState {
   /** The IDs of any state modules needed by this page. */
-  $: string[] | undefined
+  $: string[]
 }
 
 export function createPageFactory(
@@ -103,7 +89,10 @@ export function createPageFactory(
   ) => {
     let loading = loaded.get(state.id)
     if (!loading) {
-      loading = resolveState(state.id, state.load)
+      loading = resolveState(state.id, state.load).catch(error => {
+        logger.error(error.stack)
+        return null
+      })
       loaded.set(state.id, loading)
     }
     return loading
@@ -142,16 +131,16 @@ export function createPageFactory(
             return state
           }
           loadStateModule(pendingStateModules, state)
-          pageState[key] = { '@import': '/' + state.id + '.js' }
+          pageState[key] = { '@import': state.id }
         })
       } else {
         pageState = {} as any
       }
 
-      if (pendingStateModules.size) {
-        await Promise.all(pendingStateModules.values())
-        pageState.$ = Array.from(pendingStateModules.keys())
-      }
+      await Promise.all(pendingStateModules.values())
+      Object.defineProperty(pageState, '$', {
+        value: Array.from(pendingStateModules.keys()),
+      })
 
       pageState.routePath = route.path
       pageState.routeParams = params
@@ -206,8 +195,7 @@ export function createPageFactory(
     route: Route,
     renderer: Renderer
   ): Promise<RenderedPage | null> {
-    const stateModules = state.$ || []
-    delete state.$
+    const stateModules = state.$
 
     const { path } = url
     const request: RenderRequest = {
@@ -336,6 +324,29 @@ export function createPageFactory(
 
   return {
     /**
+     * Get or load state from the cache.
+     */
+    resolveState,
+    /**
+     * Get the hydration state of the given URL.
+     */
+    async getPageState(filename: string): Promise<PageState | undefined> {
+      const url = parseUrl(filename.replace(/(\/index)?\.html$/, '') || '/')
+
+      let params: RouteParams | undefined
+      let route = (routeMap[url.path] ||= routes.find(
+        route => (params = matchRoute(url.path, route))
+      ))
+
+      if (!route && (route = defaultRoute)) {
+        params = matchRoute(url.path, route)!
+      }
+
+      if (route) {
+        return getPageState(url, params!, route)
+      }
+    },
+    /**
      * Use the default route to render HTML for the given `url`.
      */
     renderUnknownPage: async (url: string | ParsedUrl, params?: RouteParams) =>
@@ -391,35 +402,6 @@ export function createPageFactory(
         }
         return null
       }),
-    /**
-     * Get the client state for the given URL.
-     */
-    async getState(url: string | ParsedUrl): Promise<ClientState | undefined> {
-      if (typeof url == 'string') {
-        url = parseUrl(url)
-      }
-
-      // Direct access of a state module.
-      if (url.path.endsWith('.js')) {
-        const stateModule = await resolveState(url.path.slice(1, -3))
-        if (stateModule) {
-          return stateModule
-        }
-      }
-
-      let params: RouteParams | undefined
-      let route = (routeMap[url.path] ||= routes.find(
-        route => (params = matchRoute((url as ParsedUrl).path, route))
-      ))
-
-      if (!route && (route = defaultRoute)) {
-        params = matchRoute(url.path, route)!
-      }
-
-      if (route) {
-        return getPageState(url, params!, route)
-      }
-    },
   }
 }
 

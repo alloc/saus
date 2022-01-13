@@ -7,20 +7,54 @@ import {
   SausContext,
   stateCacheUrl,
 } from '../core'
+import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
-import { defer } from '../utils/defer'
 
-const stateSuffix = /\/state\.json$/
-
-export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
+export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
   // any early page requests until it is.
-  let init = defer<void>()
+  let init: PromiseLike<void>
+  let didInit: () => void
+  init = new Promise(resolve => (didInit = resolve))
+
   let pageFactory: PageFactory
   let context: SausContext
 
-  return {
-    name: 'saus:serve',
+  function isPageStateRequest(url: string) {
+    return url.endsWith('.html.js')
+  }
+  function isStateModuleRequest(url: string) {
+    return url.startsWith('/state/') && url.endsWith('.js')
+  }
+
+  const serveState: Plugin = {
+    name: 'saus:serveState',
+    resolveId(id) {
+      return isPageStateRequest(id) || isStateModuleRequest(id) ? id : null
+    },
+    async load(id) {
+      if (isPageStateRequest(id)) {
+        await init
+        const pageState = await pageFactory.getPageState(id.slice(0, -3))
+        if (pageState) {
+          if (pageState.error) {
+            throw pageState.error
+          }
+          return renderPageState(pageState)
+        }
+      } else if (isStateModuleRequest(id)) {
+        await init
+        const stateModuleId = id.slice(7, -3)
+        const state = await pageFactory.resolveState(stateModuleId)
+        if (state) {
+          return renderStateModule(stateModuleId, state, stateCacheUrl)
+        }
+      }
+    },
+  }
+
+  const servePages: Plugin = {
+    name: 'saus:servePages',
     saus: {
       onContext(c) {
         context = c
@@ -52,11 +86,17 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           extractClientFunctions(context.renderPath)
         )
 
-        init.resolve()
+        didInit()
+        init = {
+          // Defer to the reload promise after the context is initialized.
+          then: (...args) => (c.reloading || Promise.resolve()).then(...args),
+        }
       },
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {
+        await init
+
         let url = req.originalUrl!
         if (!url.startsWith(context.basePath)) {
           return next()
@@ -69,8 +109,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
 
         let { reloadId } = context
         try {
-          await Promise.all([init, context.reloading])
-          await processRequest().then(respond)
+          await renderPage().then(respond)
         } catch (error) {
           respond({ error })
         }
@@ -81,68 +120,28 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           headers?: [string, string | number][]
         }
 
-        async function processRequest(): Promise<Response | undefined> {
-          if (stateSuffix.test(url)) {
-            let pageUrl = url.replace(stateSuffix, '')
-            if (pageUrl[0] !== '/') {
-              pageUrl = '/' + pageUrl
-            }
-            try {
-              const pageState = await pageFactory.getState(pageUrl)
-              if (pageState) {
-                const body = JSON.stringify(pageState)
-                return {
-                  body,
-                  headers: [
-                    ['Content-Type', 'application/json'],
-                    ['Content-Length', Buffer.byteLength(body)],
-                  ],
-                }
-              }
-            } catch (error) {
-              return { error }
-            }
-          } else {
-            if (url.endsWith('.js')) {
-              const state = await pageFactory.getState(url)
-              if (state) {
-                const stateModule = renderStateModule(
-                  url.slice(1, -3),
-                  state,
-                  stateCacheUrl
-                )
-                return {
-                  body: stateModule,
-                  headers: [
-                    ['Content-Type', 'application/javascript'],
-                    ['Content-Length', Buffer.byteLength(stateModule)],
-                  ],
-                }
+        async function renderPage(): Promise<Response | undefined> {
+          try {
+            const page = await pageFactory.render(url)
+            if (page) {
+              const html = await server.transformIndexHtml(url, page.html)
+              return {
+                body: html,
+                headers: [
+                  ['Content-Type', 'text/html; charset=utf-8'],
+                  ['Content-Length', Buffer.byteLength(html)],
+                ],
               }
             }
-
-            try {
-              const page = await pageFactory.render(url)
-              if (page) {
-                const html = await server.transformIndexHtml(url, page.html)
-                return {
-                  body: html,
-                  headers: [
-                    ['Content-Type', 'text/html; charset=utf-8'],
-                    ['Content-Length', Buffer.byteLength(html)],
-                  ],
-                }
-              }
-            } catch (error) {
-              return { error }
-            }
+          } catch (error) {
+            return { error }
           }
         }
 
         function respond({ error, body, headers }: Response = {}): any {
           if (reloadId !== (reloadId = context.reloadId)) {
             return (context.reloading || Promise.resolve())
-              .then(processRequest)
+              .then(renderPage)
               .then(respond)
           }
           if (error) {
@@ -160,4 +159,6 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
         }
       }),
   }
+
+  return [serveState, servePages]
 }

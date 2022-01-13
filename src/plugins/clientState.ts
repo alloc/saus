@@ -10,7 +10,10 @@ export function transformClientState(): Plugin {
   return {
     name: 'saus:transformClientState',
     enforce: 'pre',
-    async transform(code, id) {
+    async transform(code, id, ssr) {
+      if (ssr) {
+        return // SSR needs the loader function
+      }
       if (!includeRE.test(id)) {
         return // Unsupported file type
       }

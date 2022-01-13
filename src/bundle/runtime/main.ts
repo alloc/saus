@@ -1,7 +1,10 @@
 import path from 'path'
+import { renderPageState } from '../../core/renderPageState'
 import { renderStateModule } from '../../core/renderStateModule'
-import { createPageFactory, getPageFilename } from '../../pages'
-import { parseImports } from '../../utils/imports'
+import { createPageFactory } from '../../pages'
+import { getPageFilename } from '../../utils/getPageFilename'
+import { parseImports, serializeImports } from '../../utils/imports'
+import { getPreloadTagsForModules } from '../../utils/modulePreload'
 import { ParsedUrl } from '../../utils/url'
 import { ClientModule, RenderedPage } from '../types'
 import config from './config'
@@ -117,10 +120,16 @@ export default async function renderPage(
     entryModule.imports = Array.from(entryImports)
   }
 
-  const stateModuleUrls: string[] = []
+  const filename = getPageFilename(pageUrl.toString())
+  const pageStateId = filename + '.js'
+  modules.add({
+    id: pageStateId,
+    text: renderPageState(page.state),
+    exports: ['default'],
+  })
+
   for (const stateId of [...page.stateModules].reverse()) {
     const stateModuleId = 'state/' + stateId + '.js'
-    stateModuleUrls.push(config.base + stateModuleId)
     modules.add({
       id: stateModuleId,
       text: renderStateModule(
@@ -132,46 +141,29 @@ export default async function renderPage(
     })
   }
 
+  if (entryModule) {
+    modules.add(entryModule)
+  }
+
   const headTags: HtmlTagDescriptor[] = []
   const bodyTags: HtmlTagDescriptor[] = []
 
-  getPreloadTagsForModules(modules, headTags)
+  getPreloadTagsForModules(
+    Array.from(modules, m => config.base + m.id),
+    headTags
+  )
   getTagsForAssets(assets, headTags)
-
-  // Add "state.json" modules after "modulepreload" tags are
-  // generated from the `modules` array, since the `page.state`
-  // object is injected into the HTML as an inline script.
-  const pageState = JSON.stringify(page.state || {})
-  modules.add({
-    id: joinUrls(pageUrl.toString(), 'state.json'),
-    text: pageState,
-  })
-  bodyTags.push({
-    tag: 'script',
-    attrs: { id: 'initial-state', type: 'application/json' },
-    children: pageState,
-  })
-
-  if (entryModule) {
-    modules.add(entryModule)
-    bodyTags.push({
-      tag: 'script',
-      attrs: {
-        type: 'module',
-        src: config.base + entryModule.id,
-      },
-    })
-  }
 
   // Hydrate the page.
   bodyTags.push({
     tag: 'script',
     attrs: { type: 'module' },
     children: endent`
+      import pageState from "${config.base + pageStateId}"
       import * as routeModule from "${getModuleUrl(routeModule)}"
-      ${stateModuleUrls.map(url => `import "${url}"`).join('\n')}
+      ${serializeImports(entryModule ? [config.base + entryModule.id] : [])}
       ${hydrateModule.text}
-      hydrate(routeModule, "${pageUrl}")
+      hydrate(routeModule, pageState, "${pageUrl}")
     `,
   })
 
@@ -181,41 +173,11 @@ export default async function renderPage(
     { page, config, assets },
     context.htmlProcessors?.post || []
   ).then(html => ({
-    id: getPageFilename(pageUrl.toString()),
+    id: filename,
     html,
     modules,
     assets,
   }))
-}
-
-function joinUrls(url: string, suffix: string) {
-  const hasTrailingSlash = url[url.length - 1] == '/'
-  return (
-    url +
-    (suffix[0] == '/'
-      ? hasTrailingSlash
-        ? suffix.slice(1)
-        : suffix
-      : hasTrailingSlash
-      ? suffix
-      : '/' + suffix)
-  )
-}
-
-function getPreloadTagsForModules(
-  modules: Iterable<ClientModule>,
-  headTags: HtmlTagDescriptor[]
-) {
-  for (const module of modules) {
-    const url = config.base + module.id
-    headTags.push({
-      tag: 'link',
-      attrs: {
-        rel: 'modulepreload',
-        href: url,
-      },
-    })
-  }
 }
 
 function getTagsForAssets(

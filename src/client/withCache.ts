@@ -1,31 +1,31 @@
-export function withCache<State = any>(
-  loadingStateCache: Map<string, Promise<any>>,
-  loadedStateCache: Map<string, any>,
-  getDefaultLoader: (cacheKey: string) => () => Promise<State>
-): (cacheKey: string, loader?: () => Promise<State>) => Promise<State>
+type StateLoader<State = any> = (() => Promise<State>) 
 
 export function withCache<State = any>(
   loadingStateCache: Map<string, Promise<any>>,
   loadedStateCache: Map<string, any>,
-  getDefaultLoader?: (cacheKey: string) => (() => Promise<State>) | undefined
+  getDefaultLoader: (cacheKey: string) => StateLoader<State>
+): (cacheKey: string, loader?: StateLoader<State>) => Promise<State>
+
+export function withCache<State = any>(
+  loadingStateCache: Map<string, Promise<any>>,
+  loadedStateCache: Map<string, any>,
+  getDefaultLoader?: (cacheKey: string) => StateLoader<State> | undefined
 ): {
   (cacheKey: string): Promise<State | undefined>
-  (cacheKey: string, loader: () => Promise<State>): Promise<State>
+  (cacheKey: string, loader: StateLoader<State>): Promise<State>
 }
 
 export function withCache(
   loadingStateCache: Map<string, Promise<any>>,
   loadedStateCache: Map<string, any>,
-  getDefaultLoader: (
-    cacheKey: string
-  ) => (() => Promise<any>) | undefined = () => undefined
+  getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () => undefined
 ) {
-  return (cacheKey: string, loader = getDefaultLoader(cacheKey)) => {
+  return (cacheKey: string, loader?: StateLoader) => {
     if (loadedStateCache.has(cacheKey)) {
       return Promise.resolve(loadedStateCache.get(cacheKey))
     }
     let loadingState = loadingStateCache.get(cacheKey)
-    if (!loadingState && loader) {
+    if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader()

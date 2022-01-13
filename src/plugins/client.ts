@@ -2,8 +2,10 @@ import endent from 'endent'
 import { warn } from 'misty'
 import * as vite from 'vite'
 import { SausContext, Plugin, SausConfig } from '../core'
-import { getPageFilename } from '../pages'
 import { collectCss } from '../preload'
+import { getPageFilename } from '../utils/getPageFilename'
+import { serializeImports } from '../utils/imports'
+import { getPreloadTagsForModules } from '../utils/modulePreload'
 
 const clientPrefix = '/@saus/'
 
@@ -11,8 +13,8 @@ export function isClientUrl(id: string) {
   return id.startsWith(clientPrefix)
 }
 
-export function getClientUrl(id: string) {
-  return clientPrefix + id
+export function getClientUrl(id: string, base: string) {
+  return base + clientPrefix.slice(1) + id
 }
 
 /**
@@ -74,8 +76,23 @@ export function clientPlugin(
 
         const page = context.pages[filename]
         const routeModuleId = page.routeModuleId
-        const cssUrls = new Set<string>()
 
+        const base = context.basePath
+        const pageStateUrl = base + filename + '.js'
+        const routeModuleUrl = base + routeModuleId.slice(1)
+        const sausClientUrl = base + '@id/saus/client'
+
+        // TODO: preload transient dependencies?
+        const modulesToPreload = [
+          pageStateUrl,
+          routeModuleUrl,
+          sausClientUrl,
+          ...page.stateModules.map(
+            stateModuleId => base + 'state/' + stateModuleId + '.js'
+          ),
+        ]
+
+        const cssUrls = new Set<string>()
         if (server) {
           // Cache the main route module.
           await server.transformRequest(routeModuleId)
@@ -87,18 +104,9 @@ export function clientPlugin(
         }
 
         const client = page.client
+        const clientUrl = client ? getClientUrl(client.id, base) : ''
         if (client) {
-          const clientUrl = getClientUrl(client.id)
-
-          // Inject the <script> tag for generated client.
-          tags.push({
-            injectTo: 'body',
-            tag: 'script',
-            attrs: {
-              type: 'module',
-              src: clientUrl,
-            },
-          })
+          modulesToPreload.push(clientUrl)
 
           if (server) {
             // Cache the generated client.
@@ -118,15 +126,8 @@ export function clientPlugin(
         if (!state) {
           warn(`Missing client state for page: "${page.path}"`)
         }
-        tags.push({
-          injectTo: 'body',
-          tag: 'script',
-          attrs: { id: 'initial-state', type: 'application/json' },
-          children: JSON.stringify(state || {}),
-        })
 
-        const sausClientId =
-          (configEnv.mode === 'production' ? '' : '/@id/') + 'saus/client'
+        getPreloadTagsForModules(modulesToPreload, tags)
 
         // Hydrate the page.
         tags.push({
@@ -134,11 +135,11 @@ export function clientPlugin(
           tag: 'script',
           attrs: { type: 'module' },
           children: endent`
-            import * as routeModule from "${
-              context.basePath + routeModuleId.slice(1)
-            }"
-            import { hydrate } from "${sausClientId}"
-            hydrate(routeModule, "${path}")
+            import pageState from "${pageStateUrl}"
+            import * as routeModule from "${routeModuleUrl}"
+            ${serializeImports(clientUrl ? [clientUrl] : [])}
+            import { hydrate } from "${sausClientUrl}"
+            hydrate(routeModule, pageState, "${path}")
           `,
         })
 
@@ -148,8 +149,8 @@ export function clientPlugin(
             injectTo: 'head',
             tag: 'link',
             attrs: {
-              href: context.basePath + href.slice(1),
               rel: 'stylesheet',
+              href: base + href.slice(1),
             },
           })
         )

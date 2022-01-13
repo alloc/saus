@@ -1,6 +1,6 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
-import kleur from 'kleur'
+import { gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
@@ -54,8 +54,12 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       server?.ssrRewriteStacktrace(error, context.config.filterStack)
-      const msg = error instanceof SyntaxError ? error.message : error.stack
-      logger.error(msg, { error })
+      const msg: string =
+        error instanceof SyntaxError
+          ? error.constructor.name + ': ' + error.message
+          : error.stack
+
+      logger.error(red(msg), { error })
     }
   }
 
@@ -99,6 +103,7 @@ async function startServer(
     context.logger.info('')
     server.printUrls()
     server.bindShortcuts()
+    context.logger.info('')
   }
 
   // Ensure the Vite config is watched.
@@ -272,6 +277,8 @@ function handleContextUpdates(
 
       // Merge the latest routes.
       if (routesConfig) {
+        context.loadedStateCache.clear()
+        context.loadingStateCache.clear()
         Object.assign(context, routesConfig)
         isContextUpdated = true
         routesConfig = null
@@ -366,7 +373,7 @@ function waitForChanges(
   watcher.on('change', onChange)
   events.on('close', onClose)
 
-  logger.info(kleur.gray('Waiting for changes...'))
+  logger.info(gray('Waiting for changes...'))
 }
 
 function cloneError(e: any) {
