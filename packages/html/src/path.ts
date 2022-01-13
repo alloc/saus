@@ -51,6 +51,26 @@ export class HtmlTagPath<State = HtmlVisitorState> {
     this.node.rawName = name
   }
 
+  get debugName() {
+    const { class: className, id } = this.attributes
+    return (
+      this.tagName +
+      (id ? '#' + id : '') +
+      (className ? '.' + (className as string).split(' ').join('.') : '')
+    )
+  }
+
+  get debugPath() {
+    let debugPath = this.debugName
+    let { parentPath } = this
+    while (parentPath) {
+      debugPath = parentPath.debugName + ' > ' + debugPath
+      parentPath = parentPath.parentPath
+    }
+    Object.defineProperty(this, 'debugPath', { value: debugPath })
+    return debugPath
+  }
+
   get attributes(): Record<string, true | string | undefined> {
     return new Proxy(this.node.attributeMap, {
       get(target, key: string) {
