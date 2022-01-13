@@ -138,8 +138,11 @@ export function parseHtml(html: string) {
 
             // Assume quote immediately follows "="
             let quote = html[++pos] as "'" | '"'
-            let findQuote = (): number =>
-              html[++pos] == quote ? pos : findQuote()
+            let findQuote = (): number => {
+              // Assume escaped quotes are not used.
+              while (pos < html.length - 1 && html[++pos] != quote) {}
+              return pos
+            }
 
             value = {
               start: pos,
