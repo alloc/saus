@@ -6,7 +6,7 @@ import {
 } from 'saus/core'
 import { kVisitorsArray } from './symbols'
 import { HtmlVisitor } from './types'
-import { bindVisitors, TraverseVisitor } from './visitors'
+import { bindVisitors, TraverseVisitor } from './visitors/bind'
 
 type TraverseHtmlHook = EnforcedHandler<
   [visitor: HtmlVisitor] | [visitors: HtmlVisitor[]]
