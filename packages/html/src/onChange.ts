@@ -13,13 +13,7 @@ export function onChange<T>(target: T, handler: OnChange): T {
   return observe(target, [], handler)
 }
 
-/**
- * Get the target object of the given observer.
- */
-onChange.target = <T>(observer: T): T => targetsByObserver.get(observer)!
-
 const observersByTarget = new WeakMap<any, any>()
-const targetsByObserver = new WeakMap<any, any>()
 
 function observe(target: any, keyPath: string[], handler: OnChange) {
   if (!target || typeof target !== 'object') {
@@ -36,7 +30,6 @@ function observe(target: any, keyPath: string[], handler: OnChange) {
       throw TypeError(`Unsupported object type: "${typeName}"`)
     }
     observersByTarget.set(target, observer)
-    targetsByObserver.set(observer, target)
   }
   return observer
 }

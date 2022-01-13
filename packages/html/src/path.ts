@@ -107,9 +107,8 @@ export class HtmlTagPath<State = HtmlVisitorState> {
 
       const shouldSkip = await mergedVisitor.open(path)
       if (!shouldSkip && path.node.body)
-        for (const childProxy of path.node.body) {
-          if (childProxy.type == 'Tag') {
-            const childNode = onChange.target(childProxy)
+        for (const childNode of path.node.body) {
+          if (childNode.type == 'Tag') {
             const childPath = getTagPath(childNode, path)
             if (!childPath[kRemovedNode]) {
               await traversePath(childPath)
