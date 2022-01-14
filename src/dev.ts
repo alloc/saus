@@ -277,6 +277,7 @@ function handleContextUpdates(
 
       // Merge the latest routes.
       if (routesConfig) {
+        // TODO: selectively clear the state cache?
         context.loadedStateCache.clear()
         context.loadingStateCache.clear()
         Object.assign(context, routesConfig)

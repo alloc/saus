@@ -68,10 +68,7 @@ export function clientPlugin(
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
-          filename = getPageFilename(
-            path.replace(/\?.*$/, ''),
-            context.basePath
-          )
+          filename = getPageFilename(path.replace(/\?.*$/, ''))
         }
 
         const page = context.pages[filename]
@@ -139,7 +136,7 @@ export function clientPlugin(
             import * as routeModule from "${routeModuleUrl}"
             ${serializeImports(clientUrl ? [clientUrl] : [])}
             import { hydrate } from "${sausClientUrl}"
-            hydrate(routeModule, pageState, "${path}")
+            hydrate(routeModule, pageState)
           `,
         })
 

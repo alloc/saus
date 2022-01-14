@@ -1,4 +1,5 @@
-import { generateRoutePaths, RegexParam } from '../../core/routes'
+import { generateRoutePaths } from '../../core/routes'
+import { getPagePath } from '../../utils/getPagePath'
 import { context } from './context'
 
 const { logger } = context
@@ -9,7 +10,7 @@ export async function getKnownPaths() {
 
   await generateRoutePaths(context, {
     path(path, params) {
-      paths.push(params ? RegexParam.inject(path, params) : path)
+      paths.push(getPagePath(path, params))
     },
     error(e) {
       errors.push(e)

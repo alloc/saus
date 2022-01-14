@@ -163,7 +163,7 @@ export default async function renderPage(
       import * as routeModule from "${getModuleUrl(routeModule)}"
       ${serializeImports(entryModule ? [config.base + entryModule.id] : [])}
       ${hydrateModule.text}
-      hydrate(routeModule, pageState, "${pageUrl}")
+      hydrate(routeModule, pageState)
     `,
   })
 

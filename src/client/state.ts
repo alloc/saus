@@ -20,7 +20,9 @@ export const loadClientState: {
   <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
 } = withCache(loadingStateCache, loadedStateCache, pageUrl => {
   if (pageUrl[0] == '/') {
-    const stateUrl = getPageFilename(pageUrl) + '.js'
-    return async () => import(/* @vite-ignore */ stateUrl).then(unwrapDefault)
+    const stateUrl =
+      '/' + getPageFilename(pageUrl, import.meta.env.BASE_URL) + '.js'
+
+    return async () => unwrapDefault(await import(/* @vite-ignore */ stateUrl))
   }
 })

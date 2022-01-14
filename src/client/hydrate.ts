@@ -1,21 +1,25 @@
 import type { ClientState, RenderRequest } from '../core'
+import { loadedStateCache } from './cache'
 import routes from './routes'
-
-const urlPathRegex = /^(.+?)(?:#[^?]*)?(?:\?(.*))?$/
 
 export type HydrateFn = (routeModule: any, request: RenderRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: object, state: ClientState, url: string) {
+export function hydrate(routeModule: object, state: ClientState) {
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }
-  routes[state.routePath] = async () => routeModule
-  const [, path, query] = urlPathRegex.exec(url)!
+  const routePath = import.meta.env.BASE_URL + state.routePath.slice(1)
+  routes[routePath] = {
+    load: async () => routeModule,
+    preload() {},
+  }
+  const path = location.pathname
+  loadedStateCache.set(path, state)
   runHydration(routeModule, {
     path,
-    query,
+    query: location.search.slice(1),
     params: state.routeParams,
     state,
   })

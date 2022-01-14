@@ -1,4 +1,4 @@
-import { loadClientState } from '../client/state'
+import { loadState } from '../core/loadStateModule'
 
 const ssrPrefix = 'saus-ssr:'
 const ssrModules: Record<string, ModuleGetter> = {}
@@ -15,7 +15,7 @@ type ModuleLoader = (
 /** Define a SSR module with async loading capability */
 export const __d = (id: string, loader: ModuleLoader) =>
   (ssrModules[id] ||= () =>
-    loadClientState(ssrPrefix + id, async () => {
+    loadState(ssrPrefix + id, async () => {
       const exports: ModuleExports = {}
       Object.defineProperty(exports, '__esModule', { value: true })
       await loader(exports, ssrRequire)

@@ -189,7 +189,7 @@ export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
 export function getBabelConfig(
   filename: string,
   config: babel.TransformOptions | babel.PluginItem[] = {}
-) {
+): babel.TransformOptions {
   if (Array.isArray(config)) {
     config = { plugins: config }
   }

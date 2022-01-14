@@ -1,5 +1,6 @@
-import { dataToEsm, endent } from '../core'
-import { PageState } from '../pages'
+import endent from 'endent'
+import type { PageState } from '../pages'
+import { dataToEsm } from '../utils/dataToEsm'
 
 export function renderPageState(pageState: PageState) {
   const stateModuleIds = new Set(pageState.$)

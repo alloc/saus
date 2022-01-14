@@ -10,12 +10,12 @@ import {
   BuildOptions,
   generateRoutePaths,
   loadRoutes,
-  RegexParam,
   RouteParams,
   SausContext,
   vite,
 } from './core'
 import { callPlugins } from './utils/callPlugins'
+import { getPagePath } from './utils/getPagePath'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -73,9 +73,9 @@ export async function build(
   const renderPage = async (routePath: string, params?: RouteParams) => {
     pageCount++
     await updateProgress()
-    const pageUrl = params ? RegexParam.inject(routePath, params) : routePath
+    const pagePath = getPagePath(routePath, params)
     try {
-      const page = await worker.run(context.basePath + pageUrl.slice(1))
+      const page = await worker.run(context.basePath + pagePath.slice(1))
       if (page) {
         pages.push(page)
         renderCount++

@@ -13,6 +13,11 @@ export interface RouteModule extends Record<string, any> {}
 
 export type RouteLoader<T extends object = RouteModule> = () => Promise<T>
 
+export interface ClientRoute {
+  preload: () => void
+  load: () => Promise<RouteModule>
+}
+
 export type RouteParams = Record<string, string>
 
 type HasOneKey<T> = [string & keyof T] extends infer Keys
@@ -112,7 +117,7 @@ type RoutePathHandlers = {
  * Using `context.routes` and `context.defaultRoute`, every known path is passed
  * to the `path` handler. The default route generates the `default` path. Routes
  * with dynamic params will be called once per element in their `paths` array,
- * and you still need to call `RegexParam.inject` to get the real path.
+ * and you still need to call `getPagePath` to get the real path.
  */
 export async function generateRoutePaths(
   context: Pick<SausContext, 'routes' | 'defaultRoute' | 'defaultPath'>,

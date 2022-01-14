@@ -1,5 +1,5 @@
-import { transformAsync } from '../babel'
-import { SourceMap } from '../bundle/sourceMap'
+import { warn } from 'misty'
+import { babel, getBabelConfig, NodePath, t } from '../babel'
 import { Plugin } from '../core/vite'
 
 /**
@@ -17,33 +17,40 @@ export function transformClientState(): Plugin {
       if (!includeRE.test(id)) {
         return // Unsupported file type
       }
-      if (id.includes('/saus/src/client/')) {
+      if (id.includes('/saus/src/')) {
         return // Saus core modules
       }
       if (/\bdefineStateModule\b/.test(code)) {
-        const result = await transformAsync(code, id, [
-          {
-            visitor: {
-              CallExpression(path) {
-                const callee = path.get('callee')
-                if (callee.isIdentifier({ name: 'defineStateModule' })) {
-                  // Remove the loader function.
-                  path.get('arguments')[1].remove()
-                }
-              },
-              ImportDeclaration(path) {
-                const source = path.get('source').node.value
-                if (source == 'saus' || source == 'saus/core') {
-                  // Remove imports of "saus" and "saus/core"
-                  path.remove()
-                }
-              },
-            },
+        const parsed = await babel.parseAsync(code, getBabelConfig(id))
+
+        const exports: t.Statement[] = []
+        babel.traverse(parsed, {
+          CallExpression(path) {
+            const callee = path.get('callee')
+            if (callee.isIdentifier({ name: 'defineStateModule' })) {
+              const exportPath = path.findParent(p => p.isExportDeclaration())
+              if (exportPath) {
+                exports.push(exportPath.node as t.ExportDeclaration)
+
+                // Remove the loader function.
+                path.get('arguments')[1].remove()
+              } else {
+                warn(`defineStateModule call in "${id}" must be exported`)
+              }
+            }
           },
-        ])
-        if (result) {
-          return result as { code: string; map?: SourceMap }
+        })
+
+        const transformer: babel.Visitor = {
+          Program(path) {
+            path.node.body.push(...exports)
+          },
         }
+
+        return babel.transformSync(
+          `import { defineStateModule } from "saus/client"`,
+          { plugins: [{ visitor: transformer }] }
+        ) as { code: string }
       }
     },
   }

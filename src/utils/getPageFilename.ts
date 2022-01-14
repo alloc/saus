@@ -5,10 +5,10 @@
  * are not supported.
  */
 export function getPageFilename(path: string, basePath?: string) {
-  if (basePath && path == basePath.slice(0, -1)) {
+  if (basePath && new RegExp('^' + basePath + '?$').test(path)) {
     return basePath.slice(1) + 'index.html'
   }
-  return path.slice(1).replace(/(\/(index)?)?$/, appendHtmlSuffix)
+  return path.replace(/(?:\/(index)?)?$/, appendHtmlSuffix).replace(/^\//, '')
 }
 
 function appendHtmlSuffix(indexSuffix?: string, indexPath?: string) {
