@@ -2,6 +2,7 @@ import createDebug from 'debug'
 import esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
 import escalade from 'escalade/sync'
+import { startTask } from 'misty/task'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import { dirname, isAbsolute, relative, resolve } from 'path'
@@ -205,14 +206,16 @@ export async function bundleRoutes(
     },
   }
 
+  const task = startTask(`Bundling routes...`)
+
+  const routeEntryPoints = dedupe(
+    Array.from(routeImports.values(), resolved => resolved.file)
+  )
+
   const { metafile, outputFiles } = await esbuild.build({
     absWorkingDir: config.root,
     bundle: true,
-    entryPoints: [
-      context.routesPath,
-      context.renderPath,
-      ...dedupe(Array.from(routeImports.values(), resolved => resolved.file)),
-    ],
+    entryPoints: [context.routesPath, context.renderPath, ...routeEntryPoints],
     format: 'esm',
     logLevel: 'error',
     metafile: true,
@@ -226,6 +229,8 @@ export async function bundleRoutes(
   })
 
   await pluginContainer.close()
+
+  task.finish(`${routeEntryPoints.length} routes bundled.`)
 
   const routesUrl = getResolvedUrl(config.root, context.routesPath)
   const renderUrl = getResolvedUrl(config.root, context.renderPath)
