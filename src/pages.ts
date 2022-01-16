@@ -22,6 +22,7 @@ import type {
   StateModule,
 } from './core'
 import { debug } from './core/debug'
+import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { isStateModule } from './core/stateModules'
@@ -154,6 +155,7 @@ export function createPageFactory(
     if (setup) {
       await setup()
     }
+    setRoutesModule(context)
     context.runtimeHooks.forEach(onSetup => {
       try {
         onSetup(config)
@@ -161,6 +163,7 @@ export function createPageFactory(
         context.logger.error(err.stack)
       }
     })
+    setRoutesModule(null)
     if (context.htmlProcessors) {
       processHtml = mergeHtmlProcessors(
         context.htmlProcessors,
