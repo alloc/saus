@@ -87,12 +87,19 @@ export function resolveHtmlImports(
     }
   }
 
+  const skipLinkRel: any[] = ['preconnect', 'dns-prefetch']
+
   visitor = {
     // Avoid resolving the URL of a removed node by
     // waiting for the "close" phase.
     close(path, state) {
       const attrs = assetAttrsConfig[path.tagName]
-      return attrs && resolve(path, state as any, attrs)
+      if (attrs) {
+        return path.tagName !== 'link' ||
+          !skipLinkRel.includes(path.attributes.rel)
+          ? resolve(path, state as any, attrs)
+          : undefined
+      }
     },
   }
 
