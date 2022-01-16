@@ -7,7 +7,7 @@ import {
   HtmlTagPath,
   HtmlVisitor,
 } from './types'
-import { TraverseVisitor } from './visitors'
+import { TraverseVisitor } from './visitors/bind'
 
 const kResolverList = Symbol.for('html.ResolverList')
 
