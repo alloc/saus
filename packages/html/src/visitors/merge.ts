@@ -62,7 +62,7 @@ export function mergeVisitors<State = HtmlVisitorState>(
         }
       }
       // Avoid traversing descendants if no visitors are eligible.
-      return !openVisitors.length && !tagVisitors.length
+      return 1 > openVisitors.length + tagVisitors.length + closeVisitors.length
     },
     async close(path: TagPath) {
       const skippedVisitors = skippedVisitorsByPath.get(path)
