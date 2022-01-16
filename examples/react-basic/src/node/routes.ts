@@ -1,7 +1,7 @@
 import { route } from 'saus'
 import pokemonList from '../../data/pokemon.json'
 import { scrapedText } from '../state'
-import './html'
+import configureHtml from './html'
 
 route('/', () => import('../routes/Home'))
 
@@ -11,3 +11,9 @@ route('/pokemon/:name', () => import('../routes/Pokemon'), {
 })
 
 route(() => import('../routes/NotFound'))
+
+configureHtml({
+  cacheAssets: false,
+  minify: true,
+  prependBase: true,
+})

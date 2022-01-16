@@ -1,20 +1,23 @@
-import fs from 'fs'
 import etag from 'etag'
+import fs from 'fs'
 import http from 'http'
-import path from 'path'
-import * as mime from 'mrmime'
 import { gray } from 'kleur/colors'
+import { success } from 'misty'
+import { startTask } from 'misty/task'
+import * as mime from 'mrmime'
+import path from 'path'
 import renderPage, {
+  ClientModule,
   config,
   getKnownPaths,
   getModuleUrl,
-  ClientModule,
+  moduleMap,
 } from 'saus/bundle'
 import { connect } from './connect'
-import { startTask } from 'misty/task'
-import { success } from 'misty'
 
-const modules = new Map<string, ClientModule>()
+const modules = new Map<string, ClientModule>(
+  Object.values(moduleMap).map(module => [getModuleUrl(module), module])
+)
 const addModule = (module: ClientModule) => {
   const url = getModuleUrl(module)
   if (!modules.has(url)) {

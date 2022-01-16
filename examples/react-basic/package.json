@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "saus dev",
-    "build": "saus build"
+    "build": "saus build",
+    "serve": "cd dist && node $SERVE_OPTIONS node/server.mjs"
   },
   "devDependencies": {
     "@types/node": "^16.10.2",

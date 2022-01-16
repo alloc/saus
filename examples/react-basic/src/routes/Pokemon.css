@@ -1,0 +1,28 @@
+.pokemon .content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  align-self: center;
+  margin-left: -10em;
+}
+
+.pokemon h2 {
+  margin-bottom: 0.6em;
+}
+
+.pokemon .sections {
+  font-family: 'Noto Serif';
+  font-size: 1.8em;
+  max-width: 800px;
+  margin-left: 1em;
+  margin-bottom: 8em;
+}
+
+.pokemon img {
+  width: 18em;
+}
+
+.pokemon p {
+  font-size: 0.8em;
+  line-height: 1.6em;
+}
