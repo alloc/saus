@@ -3,15 +3,16 @@ import { renderPageState } from '../../core/renderPageState'
 import { renderStateModule } from '../../core/renderStateModule'
 import { getPageFilename } from '../../utils/getPageFilename'
 import { parseImports, serializeImports } from '../../utils/imports'
+import { isCSSRequest } from '../../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../../utils/modulePreload'
 import { ParsedUrl } from '../../utils/url'
 import { ClientModule, RenderedPage } from '../types'
 import config from './config'
 import { context } from './context'
 import { applyHtmlProcessors, endent } from './core'
+import { getModuleUrl } from './getModuleUrl'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
-import { getModuleUrl, isCSSRequest } from './utils'
 
 const hydrateImport = `import { hydrate } from "saus/client"`
 

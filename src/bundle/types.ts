@@ -12,6 +12,15 @@ export interface ClientModule {
   exports?: string[]
 }
 
+/**
+ * For entry chunks, keys are import statements.
+ * For vendor chunks, keys are generated file names.
+ * For route chunks, keys are dev URLs.
+ */
+export interface ClientModuleMap {
+  [key: string]: ClientModule
+}
+
 declare function renderPage(pageUrl: string): Promise<RenderedPage | null>
 export default renderPage
 

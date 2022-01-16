@@ -15,6 +15,7 @@ import {
   vite,
 } from './core'
 import { callPlugins } from './utils/callPlugins'
+import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 
 export type FailedPage = { path: string; reason: string }
@@ -145,25 +146,5 @@ function prepareOutDir(
     }
   } else {
     fs.mkdirSync(outDir, { recursive: true })
-  }
-}
-
-/**
- * Delete every file and subdirectory. **The given directory must exist.**
- * Pass an optional `skip` array to preserve files in the root directory.
- */
-function emptyDir(dir: string, skip?: string[]): void {
-  for (const file of fs.readdirSync(dir)) {
-    if (skip?.includes(file)) {
-      continue
-    }
-    const abs = path.resolve(dir, file)
-    // baseline is Node 12 so can't use rmSync :(
-    if (fs.lstatSync(abs).isDirectory()) {
-      emptyDir(abs)
-      fs.rmdirSync(abs)
-    } else {
-      fs.unlinkSync(abs)
-    }
   }
 }

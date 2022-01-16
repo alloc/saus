@@ -6,7 +6,7 @@ import functions from './functions'
 export { renderPage as default } from './pages'
 export { default as moduleMap } from './modules'
 export { getKnownPaths } from './paths'
-export { getModuleUrl } from './utils'
+export { getModuleUrl } from './getModuleUrl'
 export { printFiles, writePages } from '../../build/write'
 
 /** @internal */

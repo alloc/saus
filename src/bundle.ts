@@ -8,15 +8,15 @@ import { fatal, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
-import { runtimeDir } from './bundle/constants'
+import { clientDir, runtimeDir } from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
-import type { ClientModuleMap } from './bundle/runtime/modules'
 import { SourceMap } from './bundle/sourceMap'
 import {
   bundleRoutes,
   resolveRouteImports,
   RouteImports,
 } from './bundle/ssrRoutes'
+import type { ClientModuleMap } from './bundle/types'
 import {
   ClientFunction,
   ClientFunctions,
@@ -101,7 +101,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
 
   Profiling.mark('generate ssr bundle')
   const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
-  const { code, map } = await generateBundle(
+  const { code, map } = await generateSsrBundle(
     context,
     runtimeConfig,
     routeImports,
@@ -319,7 +319,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
   }
 }
 
-async function generateBundle(
+async function generateSsrBundle(
   context: SausContext,
   runtimeConfig: RuntimeConfig,
   routeImports: RouteImports,
@@ -383,7 +383,7 @@ async function generateBundle(
       path.join(runtimeDir, 'global.ts')
     ),
     redirectModule(
-      path.resolve(__dirname, '../src/client/cache.ts'),
+      path.join(clientDir, 'cache.ts'),
       path.join(runtimeDir, 'context.ts')
     ),
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
@@ -512,7 +512,9 @@ function wrapAsyncInit(): vite.Plugin {
       const editor = new MagicString(code)
 
       const lastImport = parseImports(code).pop()
-      editor.appendRight(lastImport?.end || 0, `\n;(async () => {`)
+      const lastImportEnd = lastImport?.end || 0
+      const semiPrefix = code[lastImportEnd - 1] == ';' ? '' : ';'
+      editor.appendRight(lastImportEnd, `\n${semiPrefix}(async () => {`)
       editor.append(`\n})()`)
 
       return {

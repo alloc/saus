@@ -17,10 +17,8 @@ import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
 import { clientDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
-import { ClientModuleMap } from './runtime/modules'
-import { slash } from './runtime/utils'
 import { toInlineSourceMap } from './sourceMap'
-import { ClientModule } from './types'
+import { ClientModule, ClientModuleMap } from './types'
 
 const posixPath = path.posix
 
@@ -394,4 +392,8 @@ function rewriteSources(
     }
     return '/' + sourceId
   })
+}
+
+function slash(p: string): string {
+  return p.replace(/\\/g, '/')
 }
