@@ -13,11 +13,6 @@ export interface RouteModule extends Record<string, any> {}
 
 export type RouteLoader<T extends object = RouteModule> = () => Promise<T>
 
-export interface ClientRoute {
-  preload: () => void
-  load: () => Promise<RouteModule>
-}
-
 export type RouteParams = Record<string, string>
 
 type HasOneKey<T> = [string & keyof T] extends infer Keys

@@ -161,7 +161,7 @@ export async function renderPage(
       import * as routeModule from "${getModuleUrl(routeModule)}"
       ${serializeImports(entryModule ? [config.base + entryModule.id] : [])}
       ${hydrateModule.text}
-      hydrate(routeModule, pageState)
+      hydrate(pageState, routeModule, "${config.base + routeModule.id}")
     `,
   })
 

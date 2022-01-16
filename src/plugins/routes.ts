@@ -2,40 +2,35 @@ import fs from 'fs'
 import path from 'path'
 import { warn } from 'misty'
 import { babel, getBabelConfig, t } from '../babel'
-import { endent, Plugin, SausConfig } from '../core'
+import { Plugin, SausConfig } from '../core'
+import { clientDir } from '../bundle/constants'
 
-const routesPathStub = path.resolve(__dirname, '../src/client/routes.ts')
-
-type ResolvedId = { id: string }
-type LoadResult = { code: string }
-type PluginContext = {
-  resolve: (id: string, importer?: string) => Promise<ResolvedId | null>
-}
+const routeMapStubPath = path.join(clientDir, 'routes.ts')
+const routeMarker = '__sausRoute'
 
 /**
  * This plugin extracts the `route` calls from the routes module,
  * so any Node-specific logic is removed for client-side use.
  */
 export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
-  let load: (this: PluginContext, id: string) => Promise<LoadResult | undefined>
-  return {
+  let plugin: Plugin
+  return (plugin = {
     name: 'saus:routes',
     enforce: 'pre',
-    load(id) {
-      return load && load.call(this, id)
-    },
     saus: {
       onContext(context) {
         const isBuild = context.config.command == 'build'
 
-        load = async function (id) {
-          if (id == routesPathStub) {
+        plugin.load = async function (id) {
+          if (id == routeMapStubPath) {
             const routesModule = babel.parseSync(
               fs.readFileSync(routesPath, 'utf8'),
               getBabelConfig(routesPath)
             )!
 
-            const exports: Record<string, Promise<t.ObjectProperty | null>> = {}
+            let defaultRoute: string | undefined
+            let unresolvedRoutes: [string, string][] = []
+
             babel.traverse(routesModule, {
               CallExpression: path => {
                 const callee = path.get('callee')
@@ -52,75 +47,102 @@ export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
                     routePath = context.basePath + firstArg.value.slice(1)
                   }
 
-                  const routeModuleId = (importFn.body as t.CallExpression)
-                    .arguments[0] as t.StringLiteral
+                  const routeModuleId = (
+                    (importFn.body as t.CallExpression)
+                      .arguments[0] as t.StringLiteral
+                  ).value
 
-                  exports[routePath || 'default'] = this.resolve(
-                    routeModuleId.value,
-                    routesPath
-                  ).then(resolved => {
-                    if (!resolved) {
-                      warn(`Failed to resolve route: "${routeModuleId.value}"`)
-                      return null
-                    }
-
-                    const resolvedId =
-                      (isBuild ? '/' : context.basePath) +
-                      (resolved.id.startsWith(context.root + '/')
-                        ? resolved.id.slice(context.root.length + 1)
-                        : '@fs/' + resolved.id)
-
-                    return t.objectProperty(
-                      routePath
-                        ? t.stringLiteral(routePath)
-                        : t.identifier('default'),
-                      t.objectExpression([
-                        t.objectProperty(
-                          t.identifier('load'),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.callExpression(t.identifier('import'), [
-                              t.stringLiteral(resolvedId),
-                            ])
-                          )
-                        ),
-                        t.objectProperty(
-                          t.identifier('preload'),
-                          t.arrowFunctionExpression(
-                            [],
-                            t.callExpression(t.identifier('preloadModule'), [
-                              t.stringLiteral(resolvedId),
-                            ])
-                          )
-                        ),
-                      ])
-                    )
-                  })
+                  if (routePath) {
+                    unresolvedRoutes.push([routePath, routeModuleId])
+                  } else {
+                    defaultRoute = routeModuleId
+                  }
                 }
               },
             })
 
-            const sausClientUrl = `/@fs/${path.resolve(__dirname, '../client')}`
-            const template = endent`
-              import { preloadModule } from "${sausClientUrl}"
-              export default {}
-            `
+            if (defaultRoute) {
+              unresolvedRoutes.push(['default', defaultRoute])
+            }
 
-            const resolvedExports = await Promise.all(Object.values(exports))
+            const routePaths = new Set<string>()
+            const resolvedRoutes: t.ObjectProperty[] = []
+
+            await Promise.all(
+              unresolvedRoutes
+                .reverse()
+                .map(async ([routePath, routeModuleId]) => {
+                  // Protect against duplicate route paths.
+                  if (routePaths.has(routePath)) return
+                  routePaths.add(routePath)
+
+                  const resolved = await this.resolve(routeModuleId, routesPath)
+                  if (!resolved) {
+                    return warn(`Failed to resolve route: "${routeModuleId}"`)
+                  }
+
+                  resolvedRoutes.push(
+                    t.objectProperty(
+                      t.stringLiteral(routePath),
+                      isBuild
+                        ? t.callExpression(t.identifier(routeMarker), [
+                            t.stringLiteral(resolved.id),
+                          ])
+                        : t.stringLiteral(
+                            context.basePath +
+                              (resolved.id.startsWith(context.root + '/')
+                                ? resolved.id.slice(context.root.length + 1)
+                                : '@fs/' + resolved.id)
+                          )
+                    )
+                  )
+                })
+            )
+
             const transformer: babel.Visitor = {
               ObjectExpression(path) {
-                // @ts-ignore
-                path.node.properties.push(...resolvedExports.filter(Boolean))
-                path.skip()
+                path.node.properties.push(...resolvedRoutes)
               },
             }
 
-            return babel.transformSync(template, {
+            const template = `export default {}`
+            const result = babel.transformSync(template, {
               plugins: [{ visitor: transformer }],
             }) as { code: string }
+
+            return result
+          }
+        }
+
+        type Chunk = {
+          fileName: string
+          code: string
+          modules: Record<string, any>
+        }
+
+        plugin.generateBundle = async function (_, bundle) {
+          const chunks = Object.values(bundle).filter(
+            chunk => chunk.type == 'chunk'
+          ) as Chunk[]
+
+          for (const chunk of chunks) {
+            if (chunk.code.includes(routeMarker)) {
+              chunk.code = chunk.code.replace(
+                new RegExp(routeMarker + '\\("(.+?)"\\)', 'g'),
+                (_, routeModuleId) => {
+                  const routeChunk = chunks.find(
+                    chunk => chunk.modules[routeModuleId]
+                  )
+                  if (!routeChunk) {
+                    throw Error(`Route chunk not found: "${routeModuleId}"`)
+                  }
+                  return `"${context.basePath + routeChunk.fileName}"`
+                }
+              )
+            }
           }
         }
       },
     },
-  }
+  })
 }

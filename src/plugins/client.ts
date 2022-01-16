@@ -136,7 +136,7 @@ export function clientPlugin(
             import * as routeModule from "${routeModuleUrl}"
             ${serializeImports(clientUrl ? [clientUrl] : [])}
             import { hydrate } from "${sausClientUrl}"
-            hydrate(routeModule, pageState)
+            hydrate(pageState, routeModule, "${routeModuleUrl}")
           `,
         })
 

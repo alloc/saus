@@ -6,15 +6,16 @@ export type HydrateFn = (routeModule: any, request: RenderRequest) => void
 
 let runHydration: HydrateFn
 
-export function hydrate(routeModule: object, state: ClientState) {
+export function hydrate(
+  state: ClientState,
+  routeModule: object,
+  routeModuleUrl: string,
+) {
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }
-  const routePath = import.meta.env.BASE_URL + state.routePath.slice(1)
-  routes[routePath] = {
-    load: async () => routeModule,
-    preload() {},
-  }
+  const routePath = state.routePath.replace('/', import.meta.env.BASE_URL)
+  routes[routePath] = routeModuleUrl
   const path = location.pathname
   loadedStateCache.set(path, state)
   runHydration(routeModule, {
