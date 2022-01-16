@@ -422,6 +422,7 @@ async function generateBundle(
       write: false,
       target: bundleConfig.target || 'node14',
       minify: bundleConfig.minify == true,
+      sourcemap: context.userConfig.build?.sourcemap ?? true,
       rollupOptions: {
         input: bundleEntry || entryId,
         output: {
