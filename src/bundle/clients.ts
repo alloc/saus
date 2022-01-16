@@ -15,6 +15,7 @@ import { transformClientState } from '../plugins/clientState'
 import { debugForbiddenImports } from '../plugins/debug'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
+import { clientDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { ClientModuleMap } from './runtime/modules'
 import { slash } from './runtime/utils'
@@ -91,6 +92,9 @@ export async function generateClientModules(
       moduleSideEffects: 'no-treeshake',
     })
   }
+
+  const helpersPath = path.join(clientDir, 'helpers.ts')
+  input.push('/@fs/' + helpersPath)
 
   let { config, userConfig } = context
 
@@ -232,6 +236,10 @@ export async function generateClientModules(
     chunks.map(async chunk => {
       let key = chunk.fileName
       if (chunk.isEntry) {
+        if (chunk.facadeModuleId == helpersPath) {
+          moduleMap.helpers = { id: chunk.fileName, text: chunk.code }
+          return
+        }
         const importStmt = imports[++entryIndex]
         if (!importStmt) {
           return warnOnce(`Unexpected entry module: "${chunk.fileName}"`)

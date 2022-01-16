@@ -28,6 +28,8 @@ export async function renderPage(
     return null
   }
 
+  const filename = getPageFilename(pageUrl.toString())
+
   const seen = new Set<ClientModule>()
   const modules = new Set<ClientModule>()
   const assets = new Set<ClientModule>()
@@ -99,11 +101,28 @@ export async function renderPage(
     entryModule.imports = Array.from(entryImports)
   }
 
-  const filename = getPageFilename(pageUrl.toString())
+  const preloadUrls = new Set([routeModule.id])
+  routeModule.imports?.forEach(function preload(key: string) {
+    const mod = moduleMap[key]
+    if (!preloadUrls.has(mod.id)) {
+      preloadUrls.add(mod.id)
+      mod.imports?.forEach(preload)
+    }
+  })
+
   const pageStateId = filename + '.js'
+  const pageStateImpl = renderPageState(
+    page.state,
+    config.base,
+    moduleMap.helpers.id,
+    Array.from(preloadUrls)
+  )
   modules.add({
     id: pageStateId,
-    text: renderPageState(page.state),
+    text: pageStateImpl,
+    imports: parseImports(pageStateImpl).map(
+      importDecl => importDecl.source.value
+    ),
     exports: ['default'],
   })
 

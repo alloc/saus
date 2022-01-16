@@ -40,7 +40,11 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           if (pageState.error) {
             throw pageState.error
           }
-          return renderPageState(pageState)
+          return renderPageState(
+            pageState,
+            context.basePath,
+            '@id/saus/src/client/helpers.ts'
+          )
         }
       } else if (isStateModuleRequest(id)) {
         await init
