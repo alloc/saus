@@ -38,13 +38,18 @@ export type ParsedImport = {
 
 export function parseImports(code: string) {
   const imports: ParsedImport[] = []
-  const importRE = /\bimport (?:[\n\s\S]+? from )?["']([^"']+)["'];?/g
+  const importRE = /\bimport (?:[\n\s\S]+? from )?["']([\w@$./-]+)["'];?/g
 
   let match: RegExpExecArray | null
   while ((match = importRE.exec(code))) {
     const source = /["']([^"']+)["']/.exec(match[0])!
     const start = match.index + source.index + 1
     const end = start + source[1].length
+
+    // Try to avoid false positives from string literals.
+    if (!/(^|\n|; *)$/.test(code.slice(0, match.index))) {
+      continue
+    }
 
     imports.push({
       text: match[0],
