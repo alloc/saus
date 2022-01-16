@@ -105,5 +105,5 @@ function serializeObject(
       replacer
     )}`
   })
-  return `${output}${indent ? `\n${baseIndent}` : ''}}`
+  return `${output}\n${baseIndent}}`
 }
