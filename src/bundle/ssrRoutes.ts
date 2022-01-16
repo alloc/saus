@@ -1,9 +1,10 @@
 import createDebug from 'debug'
 import esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
+import escalade from 'escalade/sync'
 import fs from 'fs'
 import MagicString from 'magic-string'
-import path from 'path'
+import { dirname, isAbsolute, relative, resolve } from 'path'
 import { getBabelProgram, getImportDeclarations, NodePath, t } from '../babel'
 import { SausContext, vite } from '../core'
 import { dedupe } from '../utils/dedupe'
@@ -44,11 +45,11 @@ function getResolvedUrl(root: string, resolvedId: string) {
   if (resolvedId[0] === '\0' || resolvedId.startsWith('/@fs/')) {
     return resolvedId
   }
-  const relativeId = path.relative(root, resolvedId)
+  const relativeId = relative(root, resolvedId)
   return relativeId.startsWith('..') ? '/@fs/' + resolvedId : '/' + relativeId
 }
 
-const ssrModulesUrl = '/@fs/' + path.resolve(runtimeDir, '../ssrModules.ts')
+const ssrModulesUrl = '/@fs/' + resolve(runtimeDir, '../ssrModules.ts')
 
 export const toBundleChunkId = (id: string) =>
   id.replace(/\.[^.]+$/, '.bundle.js')
@@ -67,7 +68,7 @@ export async function bundleRoutes(
       modules,
       rewriteRouteImports(context.routesPath, routeImports, modules),
       ...config.plugins.filter(p => {
-        // Esbuild has its own CommonJS->ESM transform
+        // CommonJS modules are externalized, so this plugin is just overhead.
         return p.name !== 'commonjs'
       }),
     ],
@@ -77,12 +78,18 @@ export async function bundleRoutes(
       ssr: true,
       target: 'esnext',
     },
+    ssr: {
+      ...config.ssr,
+      noExternal: [],
+      external: [],
+    },
   })
 
   // Some plugins rely on this hook (like vite:css)
   await pluginContainer.buildStart({})
 
-  const externalRE = /\b(saus(?!.*\/(runtime|examples))|node_modules)\b/
+  const sausExternalRE = /\bsaus(?!.*\/(runtime|examples))\b/
+  const nodeModulesRE = /\/node_modules\//
 
   // const NULL_BYTE_PLACEHOLDER = `__x00__`
   const isVirtual = (id: string) => id[0] === '\0'
@@ -93,6 +100,31 @@ export async function bundleRoutes(
     namespace: 'virtual',
   })
 
+  const shouldResolve = (id: string, importer: string) => {
+    if (!/^[\w@]/.test(id)) {
+      return true
+    }
+    const pkgId = 'package.json'
+    // TODO: cache this lookup to reduce I/O (try to use Vite cache)
+    let pkgPath = escalade(dirname(importer), (parent, children) => {
+      if (parent == config.root) {
+        return pkgId
+      }
+      return children.find(name => name == pkgId)
+    })
+    // Be careful not to leave unresolved imports that rely on
+    // package.json files deep within the project root, because
+    // Rollup will try (and fail) to resolve them using the
+    // project root as the base directory.
+    pkgPath = pkgPath && relative(config.root, dirname(pkgPath))
+    if (pkgPath && /[^.]/.test(pkgPath[0])) {
+      return true
+    }
+    // We let Rollup resolve imports by project files, so the
+    // module provider created in `generateSsrBundle` is used.
+    return !importer.startsWith(config.root + '/')
+  }
+
   // This plugin bridges Esbuild and Vite.
   const bridge: esbuild.Plugin = {
     name: 'vite-bridge',
@@ -101,38 +133,53 @@ export async function bundleRoutes(
         if (!importer) {
           return { path }
         }
-        if (externalRE.test(path)) {
-          debug('externalized: %O', path)
+        if (sausExternalRE.test(path)) {
           return { path, external: true }
         }
-        const resolved = await pluginContainer.resolveId(path, importer)
+        if (!shouldResolve(path, importer)) {
+          return { path, external: true }
+        }
+        const resolved = await pluginContainer.resolveId(
+          path,
+          importer,
+          undefined,
+          true
+        )
         if (resolved) {
-          if (
-            resolved.id == '__vite-browser-external' ||
-            externalRE.test(resolved.id)
-          ) {
-            debug('externalized: %O', path)
+          if (resolved.id == '__vite-browser-external') {
+            debug('Externalized %O due to %O', path, resolved.id)
             return { path, external: true }
           }
+
           path = resolved.id
+
           if (isVirtual(path)) {
             return resolveVirtual(path)
           }
-          if (resolved.external) {
-            debug('externalized: %O', path)
+
+          const sideEffects =
+            resolved.moduleSideEffects != null
+              ? !!resolved.moduleSideEffects
+              : undefined
+
+          // TODO: handle "relative" and "absolute" external values
+          const external =
+            !!resolved.external ||
+            !path.startsWith(config.root + '/') ||
+            nodeModulesRE.test(path.slice(config.root.length))
+
+          // Prepend /@fs/ for faster resolution by Rollup.
+          if (external && isAbsolute(path)) {
+            path = '/@fs/' + path
           }
+
           return {
             path,
-            external: !!resolved.external,
-            sideEffects:
-              resolved.moduleSideEffects != null
-                ? !!resolved.moduleSideEffects
-                : undefined,
-            namespace: isVirtual(path) ? 'virtual' : undefined,
+            external,
+            sideEffects,
           }
         }
         if (path.endsWith('.node')) {
-          debug('externalized: %O', path)
           return { path, external: true }
         }
       })
@@ -159,22 +206,23 @@ export async function bundleRoutes(
   }
 
   const { metafile, outputFiles } = await esbuild.build({
-    write: false,
+    absWorkingDir: config.root,
     bundle: true,
-    metafile: true,
-    splitting: true,
-    treeShaking: true,
     entryPoints: [
       context.routesPath,
       context.renderPath,
       ...dedupe(Array.from(routeImports.values(), resolved => resolved.file)),
     ],
-    outdir: config.root,
-    absWorkingDir: config.root,
     format: 'esm',
-    target: 'esnext',
-    sourcemap: 'inline',
+    logLevel: 'error',
+    metafile: true,
+    outdir: config.root,
     plugins: [bridge],
+    target: 'esnext',
+    treeShaking: true,
+    sourcemap: 'inline',
+    splitting: true,
+    write: false,
   })
 
   await pluginContainer.close()
@@ -287,10 +335,14 @@ export async function bundleRoutes(
         esmExportsToCjs(program, editor)
         editor.prepend(`import { __d } from "${ssrModulesUrl}"\n`)
         const url = bundleToEntryMap[id] || id
-        if (url == routesUrl)
-          for (const { file } of routeImports.values()) {
+        if (url == routesUrl) {
+          const routeModulePaths = new Set(
+            Array.from(routeImports.values(), resolved => resolved.file)
+          )
+          for (const file of routeModulePaths) {
             editor.prepend(`import "${file}"\n`)
           }
+        }
         if (!isCommonJS && (url == routesUrl || url == renderUrl)) {
           editor.appendRight(lastImportEnd, `await `)
           editor.append('\n})()')
