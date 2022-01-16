@@ -1,6 +1,6 @@
 import {
+  applyHtmlProcessors,
   extractClientFunctions,
-  mergeHtmlProcessors,
   Plugin,
   renderStateModule,
   RuntimeConfig,
@@ -57,13 +57,14 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     },
   }
 
+  let runtimeConfig: RuntimeConfig
+
   const servePages: Plugin = {
     name: 'saus:servePages',
     saus: {
       onContext(c) {
         context = c
-
-        const config: RuntimeConfig = {
+        runtimeConfig = {
           assetsDir: context.config.build.assetsDir,
           base: context.basePath,
           command: 'dev',
@@ -73,28 +74,16 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           publicDir: context.config.publicDir,
           stateCacheUrl,
         }
-
-        context.runtimeHooks.forEach(onSetup => {
-          onSetup(config)
-        })
-
-        if (context.htmlProcessors) {
-          context.processHtml = mergeHtmlProcessors(
-            context.htmlProcessors,
-            page => ({ page, config })
-          )
-        }
-
         pageFactory = createPageFactory(
           context,
-          extractClientFunctions(context.renderPath)
+          extractClientFunctions(context.renderPath),
+          runtimeConfig
         )
-
-        didInit()
         init = {
           // Defer to the reload promise after the context is initialized.
           then: (...args) => (c.reloading || Promise.resolve()).then(...args),
         }
+        didInit()
       },
     },
     configureServer: server => () =>
@@ -128,7 +117,14 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           try {
             const page = await pageFactory.render(url)
             if (page) {
-              const html = await server.transformIndexHtml(url, page.html)
+              let html = await server.transformIndexHtml(url, page.html)
+              if (context.htmlProcessors?.post.length) {
+                html = await applyHtmlProcessors(
+                  html,
+                  { page, config: runtimeConfig },
+                  context.htmlProcessors.post
+                )
+              }
               return {
                 body: html,
                 headers: [

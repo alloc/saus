@@ -63,7 +63,7 @@ export interface PageState extends ClientState {
 export function createPageFactory(
   context: PageFactoryContext,
   functions: ClientFunctions,
-  config?: RuntimeConfig,
+  config: RuntimeConfig,
   setup?: () => Promise<any>
 ) {
   let {
@@ -148,34 +148,31 @@ export function createPageFactory(
     })
 
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
-  // caused by global state mutation.
-  let renderQueue: Promise<void>
-
-  if (config) {
-    renderQueue = (async () => {
-      if (setup) {
-        await setup()
-      }
-      context.runtimeHooks.forEach(onSetup => {
+  // caused by global state mutation. This will be fixed in the future with
+  // isolated module instances.
+  let renderQueue = (async () => {
+    if (setup) {
+      await setup()
+    }
+    context.runtimeHooks.forEach(onSetup => {
+      try {
         onSetup(config)
-      })
-      if (context.htmlProcessors) {
-        processHtml = mergeHtmlProcessors(
-          context.htmlProcessors,
-          page => ({ page, config }),
-          ['pre', 'default']
-        )
+      } catch (err: any) {
+        context.logger.error(err.stack)
       }
-      routes = [...context.routes].reverse()
-      renderers = [...context.renderers].reverse()
-      defaultRoute = context.defaultRoute
-      defaultRenderer = context.defaultRenderer
-    })()
-  } else {
-    routes = [...routes].reverse()
-    renderers = [...renderers].reverse()
-    renderQueue = Promise.resolve()
-  }
+    })
+    if (context.htmlProcessors) {
+      processHtml = mergeHtmlProcessors(
+        context.htmlProcessors,
+        page => ({ page, config }),
+        ['pre', 'default']
+      )
+    }
+    routes = [...context.routes].reverse()
+    renderers = [...context.renderers].reverse()
+    defaultRoute = context.defaultRoute
+    defaultRenderer = context.defaultRenderer
+  })()
 
   // For mapping a pathname to its route
   const routeMap: Record<string, Route | undefined> = {}
