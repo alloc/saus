@@ -38,7 +38,7 @@ export type ParsedImport = {
 
 export function parseImports(code: string) {
   const imports: ParsedImport[] = []
-  const importRE = /\bimport (?:[\n\s\S]+? from )?["']([\w@$./-]+)["'];?/g
+  const importRE = /\bimport\b *(?:[^.?;]+? *\bfrom *)?["']([\w@$./-]+)["'];?/g
 
   let match: RegExpExecArray | null
   while ((match = importRE.exec(code))) {
@@ -46,9 +46,22 @@ export function parseImports(code: string) {
     const start = match.index + source.index + 1
     const end = start + source[1].length
 
-    // Try to avoid false positives from string literals.
-    if (!/(^|\n|; *)$/.test(code.slice(0, match.index))) {
-      continue
+    // Parse preceding code to detect false positives.
+    const lineStart = code.lastIndexOf('\n', match.index) + 1
+    const linePrecedingCode = code.slice(lineStart, match.index)
+    if (linePrecedingCode) {
+      const previousImport = imports[imports.length - 1]
+      const afterPreviousImport =
+        previousImport &&
+        previousImport.end > lineStart &&
+        /; *$/.test(linePrecedingCode)
+
+      if (!afterPreviousImport) {
+        // Move the regex cursor to the next line, to avoid
+        // false positives on the same line.
+        importRE.lastIndex = code.indexOf('\n', end)
+        continue
+      }
     }
 
     imports.push({
