@@ -46,6 +46,7 @@ export function convertToWebp(options: Options = {}): Plugin {
 
   return {
     name: 'saus:webp',
+    apply: 'build',
     enforce: 'pre',
     configResolved(config) {
       // Leave client builds alone.
