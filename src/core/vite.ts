@@ -35,6 +35,14 @@ export interface SausBundleConfig {
    * @default false
    */
   minify?: boolean
+  /**
+   * Force certain imports to be isolated such that every page rendered
+   * will use a separate instance of the resolved module. This option is
+   * useful when a dependency has global state, but you still want to
+   * use parallel rendering. Your project's local modules are isolated
+   * by default.
+   */
+  isolate?: (string | RegExp)[]
 }
 
 export interface SausConfig {

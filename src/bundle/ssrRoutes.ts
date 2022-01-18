@@ -13,6 +13,7 @@ import { esmExportsToCjs } from '../utils/esmToCjs'
 import { runtimeDir } from './constants'
 import { createModuleProvider, ModuleProvider } from './moduleProvider'
 import { resolveMapSources, SourceMap } from './sourceMap'
+import { createFilter } from '@rollup/pluginutils'
 
 const debug = createDebug('saus:ssr')
 
@@ -92,6 +93,7 @@ export async function bundleRoutes(
 
   const sausExternalRE = /\bsaus(?!.*\/(runtime|examples))\b/
   const nodeModulesRE = /\/node_modules\//
+  const bareImportRE = /^[\w@]/
 
   // const NULL_BYTE_PLACEHOLDER = `__x00__`
   const isVirtual = (id: string) => id[0] === '\0'
@@ -102,10 +104,13 @@ export async function bundleRoutes(
     namespace: 'virtual',
   })
 
+  const shouldForceIsolate = createFilter(
+    config.saus.bundle?.isolate || [],
+    undefined,
+    { resolve: false }
+  )
+
   const shouldResolve = (id: string, importer: string) => {
-    if (!/^[\w@]/.test(id)) {
-      return true
-    }
     const pkgId = 'package.json'
     // TODO: cache this lookup to reduce I/O (try to use Vite cache)
     let pkgPath = escalade(dirname(importer), (parent, children) => {
@@ -138,8 +143,12 @@ export async function bundleRoutes(
         if (sausExternalRE.test(path)) {
           return { path, external: true }
         }
-        if (!shouldResolve(path, importer)) {
-          return { path, external: true }
+        let forceIsolate = false
+        if (bareImportRE.test(path)) {
+          forceIsolate = shouldForceIsolate(path)
+          if (!forceIsolate && !shouldResolve(path, importer)) {
+            return { path, external: true }
+          }
         }
         const resolved = await pluginContainer.resolveId(
           path,
@@ -166,9 +175,10 @@ export async function bundleRoutes(
 
           // TODO: handle "relative" and "absolute" external values
           const external =
-            !!resolved.external ||
-            !path.startsWith(config.root + '/') ||
-            nodeModulesRE.test(path.slice(config.root.length))
+            !forceIsolate &&
+            (!!resolved.external ||
+              !path.startsWith(config.root + '/') ||
+              nodeModulesRE.test(path.slice(config.root.length)))
 
           // Prepend /@fs/ for faster resolution by Rollup.
           if (external && isAbsolute(path)) {
