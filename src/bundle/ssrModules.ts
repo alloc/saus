@@ -10,7 +10,7 @@ type ModuleExports = Record<string, any>
 type ModuleGetter = () => Promise<ModuleExports>
 type ModuleLoader = (
   exports: ModuleExports,
-  require: (id: string) => Promise<ModuleExports>
+  module: { exports: ModuleExports }
 ) => Promise<void>
 
 /** Define a SSR module with async loading capability */
@@ -18,9 +18,9 @@ export const __d = (id: string, loader: ModuleLoader) =>
   (ssrModules[id] ||= () =>
     loadState(ssrPrefix + id, async () => {
       const exports: ModuleExports = {}
-      Object.defineProperty(exports, '__esModule', { value: true })
-      await loader(exports, ssrRequire)
-      return exports
+      const module = { exports }
+      await loader(exports, module)
+      return module.exports
     }))
 
 /** Clear all loaded SSR modules */

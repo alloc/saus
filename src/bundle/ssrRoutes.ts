@@ -2,16 +2,17 @@ import createDebug from 'debug'
 import esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
 import escalade from 'escalade/sync'
+import { bold } from 'kleur/colors'
 import { startTask } from 'misty/task'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import { dirname, isAbsolute, relative, resolve } from 'path'
-import { getBabelProgram, getImportDeclarations, NodePath, t } from '../babel'
+import { babel, getBabelProgram, getImportDeclarations, t } from '../babel'
 import { SausContext, vite } from '../core'
 import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
 import { runtimeDir } from './constants'
-import { createModuleProvider, ModuleProvider } from './moduleProvider'
+import { createModuleProvider } from './moduleProvider'
 import { resolveMapSources, SourceMap } from './sourceMap'
 import { createFilter } from '@rollup/pluginutils'
 
@@ -69,7 +70,7 @@ export async function bundleRoutes(
     ...config,
     plugins: [
       modules,
-      rewriteRouteImports(context.routesPath, routeImports, modules),
+      rewriteRouteImports(context.routesPath, routeImports),
       ...config.plugins.filter(p => {
         // CommonJS modules are externalized, so this plugin is just overhead.
         return p.name !== 'commonjs'
@@ -105,7 +106,7 @@ export async function bundleRoutes(
   })
 
   const shouldForceIsolate = createFilter(
-    config.saus.bundle?.isolate || [],
+    config.saus.bundle?.isolate || /^$/,
     undefined,
     { resolve: false }
   )
@@ -131,6 +132,12 @@ export async function bundleRoutes(
     // module provider created in `generateSsrBundle` is used.
     return !importer.startsWith(config.root + '/')
   }
+
+  // CommonJS modules that are forced to isolate must be bundled
+  // with Rollup to work properly. This object maps a specific
+  // import statement to its resolved module path.
+  const isolatedCjsModules = new Map<string, string>()
+  const cjsNotFoundCache = new Set<string>()
 
   // This plugin bridges Esbuild and Vite.
   const bridge: esbuild.Plugin = {
@@ -160,6 +167,29 @@ export async function bundleRoutes(
           if (resolved.id == '__vite-browser-external') {
             debug('Externalized %O due to %O', path, resolved.id)
             return { path, external: true }
+          }
+
+          const maybeCjsModule =
+            forceIsolate &&
+            resolved.id.endsWith('.js') &&
+            !cjsNotFoundCache.has(resolved.id)
+
+          // We have to avoid bundling CommonJS modules with Esbuild,
+          // because the output is incompatible with our SSR module system.
+          if (maybeCjsModule) {
+            if (isolatedCjsModules.has(resolved.id)) {
+              return { path: resolved.id, external: true }
+            }
+            const code = fs.readFileSync(resolved.id, 'utf8')
+            const hasEsmSyntax = /^(import|export) /m.test(code)
+            if (!hasEsmSyntax && /\b(module|exports|require)\b/.test(code)) {
+              isolatedCjsModules.set(
+                resolved.id,
+                relative(config.root, resolved.id)
+              )
+              return { path: resolved.id, external: true }
+            }
+            cjsNotFoundCache.add(resolved.id)
           }
 
           path = resolved.id
@@ -280,111 +310,195 @@ export async function bundleRoutes(
       bundledRoutes[bundleId] = { code: file.text, map }
       bundleToEntryMap[bundleId] = entryUrl
     } else {
-      const chunkId = file.path.slice(config.root.length)
+      const chunkId = '.saus' + file.path.slice(config.root.length)
       sharedModules[chunkId] = { code: file.text, map }
+    }
+  }
+
+  const isolateSsrModule = (code: string, id: string, bundle: OutputFile) => {
+    const editor = new MagicString(code)
+    const program = getBabelProgram(code, id)
+    const imports = getImportDeclarations(program)
+    const lastImport = hoistImports(imports, editor)
+    const lastImportEnd = lastImport ? lastImport.node.end! + 1 : 0
+
+    const requireCalls: string[] = []
+    for (const { node } of imports) {
+      let source = node.source.value
+      if (relativePathRE.test(source)) {
+        source = source.replace(relativePathRE, '.saus/')
+        rewriteSsrImport(source, source, node, requireCalls, editor)
+      } else {
+        const unresolvedId = isolatedCjsModules.get(source)
+        if (unresolvedId) {
+          rewriteSsrImport(
+            source,
+            unresolvedId,
+            node,
+            requireCalls,
+            editor,
+            true
+          )
+        }
+      }
+    }
+
+    esmExportsToCjs(program, editor)
+    editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
+    const url = bundleToEntryMap[id] || id
+    if (url == routesUrl) {
+      const routeModulePaths = new Set(
+        Array.from(routeImports.values(), resolved => resolved.file)
+      )
+      for (const file of routeModulePaths) {
+        editor.prepend(`import "${file}"\n`)
+      }
+    }
+    if (!isCommonJS && (url == routesUrl || url == renderUrl)) {
+      editor.appendRight(lastImportEnd, `await `)
+      editor.append('\n})()')
+    } else {
+      editor.appendRight(lastImportEnd, `export default `)
+      editor.append('\n})')
+    }
+    editor.appendRight(
+      lastImportEnd,
+      `__d("${url}", async (exports) => {\n` + requireCalls.join('')
+    )
+
+    return {
+      code: editor.toString(),
+      map: editor.generateMap(),
+      moduleSideEffects: 'no-treeshake' as const,
+    }
+  }
+
+  const isolateCjsModule = async (
+    code: string,
+    id: string,
+    ssrId: string,
+    context: vite.RollupPluginContext
+  ) => {
+    const editor = new MagicString(code)
+
+    let resolving: Promise<any>[] = []
+    let esmImports: string[] = []
+    let injectCjsRequire = false
+
+    babel.traverse(babel.parseSync(code), {
+      CallExpression: callPath => {
+        const calleePath = callPath.get('callee')
+        if (!calleePath.isIdentifier({ name: 'require' })) {
+          return
+        }
+
+        const sourceArg = callPath.get('arguments')[0]
+        if (!sourceArg.isStringLiteral() || callPath.getFunctionParent()) {
+          injectCjsRequire = true
+          return void editor.overwrite(
+            calleePath.node.start!,
+            calleePath.node.end!,
+            'cjsRequire'
+          )
+        }
+
+        let source = sourceArg.node.value
+
+        // Avoid isolating dependencies unless forced to.
+        if (bareImportRE.test(source) && !shouldForceIsolate(source)) {
+          const importId = sourceArg.scope.generateUid()
+          esmImports.push(`import * as ${importId} from "${source}"\n`)
+          return void editor.overwrite(
+            callPath.node.start!,
+            callPath.node.end!,
+            importId
+          )
+        }
+
+        // The `require` function is async in SSR.
+        editor.overwrite(
+          calleePath.node.start!,
+          calleePath.node.end!,
+          `await ssrRequire`
+        )
+
+        const importer = id
+        resolving.push(
+          context.resolve(source, importer).then(resolved => {
+            if (!resolved) {
+              context.error(
+                `Failed to resolve import "${source}" from "${relative(
+                  process.cwd(),
+                  importer
+                )}". Does the file exist?`,
+                sourceArg.node.start!
+              )
+            }
+            source = relative(config.root, resolved.id)
+            isolatedCjsModules.set(resolved.id, source)
+            esmImports.push(`import "${resolved.id}"\n`)
+            editor.overwrite(
+              sourceArg.node.start!,
+              sourceArg.node.end!,
+              `"${source}"`
+            )
+          })
+        )
+      },
+    })
+
+    await Promise.all(resolving)
+
+    if (injectCjsRequire) {
+      editor.prepend(`const cjsRequire = id => require(id)\n`)
+    }
+    editor.prepend(esmImports.join(''))
+    editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
+    editor.prependRight(0, `__d("${ssrId}", async (exports, module) => {\n`)
+    editor.append(`\n})`)
+
+    return {
+      code: editor.toString(),
+      map: editor.generateMap(),
+      moduleSideEffects: 'no-treeshake' as const,
     }
   }
 
   return {
     name: 'saus:bundleRoutes',
     enforce: 'pre',
-    resolveId(id) {
+    async resolveId(id, importer) {
       if (sharedModules[id]) {
         return id
       }
-      id = toBundleChunkId(id)
-      if (bundledRoutes[id]) {
-        return id
+      const chunkId = toBundleChunkId(id)
+      if (bundledRoutes[chunkId]) {
+        return chunkId
+      }
+      if (importer && !sharedModules[importer] && !bundledRoutes[importer]) {
+        const resolved = await this.resolve(id, importer, { skipSelf: true })
+        if (resolved) {
+          if (isolatedCjsModules.has(resolved.id))
+            throw Error(
+              `"${importer}" is ${bold('not')} isolated but depends on ` +
+                `an isolated module "${id}", so the import will fail.`
+            )
+
+          return resolved
+        }
       }
     },
     load(id) {
       return bundledRoutes[id] || sharedModules[id]
     },
     transform(code, id) {
-      if (bundledRoutes[id] || sharedModules[id]) {
-        const editor = new MagicString(code)
-        const program = getBabelProgram(code, id)
-        const imports = getImportDeclarations(program)
-        const lastImport = hoistImports(imports, editor)
-        const lastImportEnd = lastImport ? lastImport.node.end! + 1 : 0
-
-        const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
-        const requireCalls: string[] = []
-        for (const { node } of imports) {
-          const source = node.source.value
-          if (!relativePathRE.test(source)) {
-            continue
-          }
-          const validSource = JSON.stringify(
-            source.replace(relativePathRE, '/')
-          )
-          const bindings: string[] = []
-          for (const spec of node.specifiers) {
-            if (t.isImportNamespaceSpecifier(spec)) {
-              requireCalls.push(
-                `const { ...${spec.local.name} } = await require(${validSource}); ` +
-                  `delete ${spec.local.name}.default;\n`
-              )
-            } else {
-              bindings.push(
-                t.isImportDefaultSpecifier(spec)
-                  ? `default: ${spec.local.name}`
-                  : spec.imported.start == spec.local.start
-                  ? spec.local.name
-                  : t.isIdentifier(spec.imported)
-                  ? `${spec.imported.name}: ${spec.local.name}`
-                  : `["${spec.imported.value.replace(/"/g, '\\"')}"]: ` +
-                    spec.local.name
-              )
-            }
-          }
-
-          if (bindings.length) {
-            const list = bindings.join(', ')
-            requireCalls.push(
-              `const { ${list} } = await require(${validSource});\n`
-            )
-          } else if (!node.specifiers.length) {
-            requireCalls.push(`await require(${validSource});\n`)
-          }
-
-          // Rewrite the import source, so `sharedModules` is accessed properly.
-          editor.overwrite(node.source.start!, node.source.end!, validSource)
-
-          // Remove import specifiers, since we only need the side effect
-          // of the `__d` call to enable access via `require` function.
-          editor.remove(node.start! + 'import '.length, node.source.start!)
-        }
-
-        esmExportsToCjs(program, editor)
-        editor.prepend(`import { __d } from "${ssrModulesUrl}"\n`)
-        const url = bundleToEntryMap[id] || id
-        if (url == routesUrl) {
-          const routeModulePaths = new Set(
-            Array.from(routeImports.values(), resolved => resolved.file)
-          )
-          for (const file of routeModulePaths) {
-            editor.prepend(`import "${file}"\n`)
-          }
-        }
-        if (!isCommonJS && (url == routesUrl || url == renderUrl)) {
-          editor.appendRight(lastImportEnd, `await `)
-          editor.append('\n})()')
-        } else {
-          editor.appendRight(lastImportEnd, `export default `)
-          editor.append('\n})')
-        }
-        editor.appendRight(
-          lastImportEnd,
-          `__d("${url}", async (exports, require) => {\n` +
-            requireCalls.join('')
-        )
-
-        return {
-          code: editor.toString(),
-          map: editor.generateMap(),
-          moduleSideEffects: 'no-treeshake',
-        }
+      const bundle = bundledRoutes[id] || sharedModules[id]
+      if (bundle) {
+        return isolateSsrModule(code, id, bundle)
+      }
+      const ssrId = isolatedCjsModules.get(id)
+      if (ssrId) {
+        return isolateCjsModule(code, id, ssrId, this)
       }
     },
   }
@@ -396,7 +510,7 @@ async function getBuildTransform(config: vite.ResolvedConfig) {
 }
 
 function hoistImports(
-  imports: NodePath<t.ImportDeclaration>[],
+  imports: babel.NodePath<t.ImportDeclaration>[],
   editor: MagicString
 ) {
   const importIdx = imports.findIndex(({ node }, i) => {
@@ -412,28 +526,72 @@ function hoistImports(
   return imports[importIdx]
 }
 
+const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
+
+function rewriteSsrImport(
+  importSource: string,
+  requireSource: string,
+  node: t.ImportDeclaration,
+  requireCalls: string[],
+  editor: MagicString,
+  isCommonJS?: boolean
+) {
+  const requireCall = `await ssrRequire("${requireSource}")`
+  const bindings: string[] = []
+  for (const spec of node.specifiers) {
+    if (t.isImportNamespaceSpecifier(spec)) {
+      requireCalls.push(
+        isCommonJS
+          ? `const ${spec.local.name} = ${requireCall};\n`
+          : `const { ...${spec.local.name} } = ${requireCall}; ` +
+              `delete ${spec.local.name}.default;\n`
+      )
+    } else {
+      bindings.push(
+        t.isImportDefaultSpecifier(spec)
+          ? `default: ${spec.local.name}`
+          : spec.imported.start == spec.local.start
+          ? spec.local.name
+          : t.isIdentifier(spec.imported)
+          ? `${spec.imported.name}: ${spec.local.name}`
+          : `["${spec.imported.value.replace(/"/g, '\\"')}"]: ` +
+            spec.local.name
+      )
+    }
+  }
+
+  if (bindings.length) {
+    const list = bindings.join(', ')
+    requireCalls.push(`const { ${list} } = ${requireCall};\n`)
+  } else if (!node.specifiers.length) {
+    requireCalls.push(`${requireCall};\n`)
+  }
+
+  // Rewrite the import source, so `sharedModules` is accessed properly.
+  editor.overwrite(node.source.start!, node.source.end!, `"${importSource}"`)
+
+  // Remove import specifiers, since we only need the side effect
+  // of the `__d` call to enable access via `require` function.
+  editor.remove(node.start! + 'import '.length, node.source.start!)
+}
+
 function rewriteRouteImports(
   routesPath: string,
-  routeImports: RouteImports,
-  modules: ModuleProvider
+  routeImports: RouteImports
 ): vite.Plugin {
   return {
     name: 'saus:rewriteRouteImports',
     enforce: 'pre',
     async transform(code, id) {
       if (id === routesPath) {
-        const s = new MagicString(code, {
-          filename: routesPath,
-          indentExclusionRanges: [],
-        })
-        s.prepend(`import { ssrRequire } from "${ssrModulesUrl}"\n`)
+        const editor = new MagicString(code)
         for (const [imp, resolved] of routeImports.entries()) {
-          s.overwrite(imp.s + 1, imp.e - 1, resolved.url)
-          s.overwrite(imp.d, imp.d + 6, 'ssrRequire')
+          editor.overwrite(imp.s + 1, imp.e - 1, resolved.url)
+          editor.overwrite(imp.d, imp.d + 6, 'ssrRequire')
         }
         return {
-          code: s.toString(),
-          map: s.generateMap({ hires: true }),
+          code: editor.toString(),
+          map: editor.generateMap(),
           moduleSideEffects: 'no-treeshake',
         }
       }
