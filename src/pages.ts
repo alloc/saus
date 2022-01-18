@@ -65,9 +65,12 @@ export interface PageState extends ClientState {
 }
 
 export type RenderPageOptions = {
-  renderStart?: (url: ParsedUrl) => void
-  renderFinish?: (url: ParsedUrl, page: RenderedPage | null) => void
-  renderError?: (url: ParsedUrl, error: Error) => void
+  renderStart?: (url: string) => void
+  renderFinish?: (
+    url: string,
+    error: Error | null,
+    page?: RenderedPage | null
+  ) => void
 }
 
 export function createPageFactory(
@@ -320,12 +323,12 @@ export function createPageFactory(
     (url: ParsedUrl, renderPage: RenderPageFn, options: RenderPageOptions) =>
       setupPromise.then(() => {
         debug(`Page in progress: ${url}`)
-        options.renderStart?.(url)
+        options.renderStart?.(url.path)
         const rendering = renderPage(url)
-        if (options.renderFinish || options.renderError)
+        if (options.renderFinish)
           rendering.then(
-            options.renderFinish?.bind(null, url),
-            options.renderError?.bind(null, url)
+            options.renderFinish.bind(null, url.path, null),
+            options.renderFinish.bind(null, url.path)
           )
         return rendering
       })

@@ -21,7 +21,20 @@ export interface ClientModuleMap {
   [key: string]: ClientModule
 }
 
-declare function renderPage(pageUrl: string): Promise<RenderedPage | null>
+export type RenderPageOptions = {
+  renderStart?: (url: string) => void
+  renderFinish?: (
+    url: string,
+    error: Error | null,
+    page?: RenderedPage | null
+  ) => void
+}
+
+declare function renderPage(
+  pageUrl: string,
+  options?: RenderPageOptions
+): Promise<RenderedPage | null>
+
 export default renderPage
 
 /**

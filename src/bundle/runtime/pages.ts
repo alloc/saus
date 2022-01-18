@@ -5,8 +5,8 @@ import { getPageFilename } from '../../utils/getPageFilename'
 import { parseImports, serializeImports } from '../../utils/imports'
 import { isCSSRequest } from '../../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../../utils/modulePreload'
-import { ParsedUrl } from '../../utils/url'
-import { ClientModule, RenderedPage } from '../types'
+import { ParsedUrl, parseUrl } from '../../utils/url'
+import { ClientModule, RenderedPage, RenderPageOptions } from '../types'
 import config from './config'
 import { context } from './context'
 import { applyHtmlProcessors, endent } from './core'
@@ -17,19 +17,38 @@ import moduleMap from './modules'
 const hydrateImport = `import { hydrate } from "saus/client"`
 
 export async function renderPage(
-  pageUrl: string | ParsedUrl
+  pageUrl: string | ParsedUrl,
+  { renderStart, renderFinish }: RenderPageOptions = {}
 ): Promise<RenderedPage | null> {
   if (!pageUrl.startsWith(config.base)) {
     return null
   }
 
   pageUrl = pageUrl.slice(config.base.length - 1)
-  const page = await config.pageFactory?.render(pageUrl)
+  if (typeof pageUrl == 'string') {
+    pageUrl = parseUrl(pageUrl)
+  }
+
+  const pagePath = pageUrl.path
+
+  let page: import('../../pages').RenderedPage | null = null
+  try {
+    if (config.pageFactory) {
+      page = await config.pageFactory.render(pageUrl, { renderStart })
+    }
+  } catch (error: any) {
+    if (renderFinish) {
+      renderFinish(pagePath, error)
+      return null
+    }
+    throw error
+  }
   if (!page) {
+    renderFinish?.(pagePath, null, null)
     return null
   }
 
-  const filename = getPageFilename(pageUrl.toString())
+  const filename = getPageFilename(pagePath)
 
   const seen = new Set<ClientModule>()
   const modules = new Set<ClientModule>()
@@ -171,12 +190,16 @@ export async function renderPage(
     html,
     { page, config, assets },
     context.htmlProcessors?.post || []
-  ).then(html => ({
-    id: filename,
-    html,
-    modules,
-    assets,
-  }))
+  ).then(html => {
+    const finishedPage = {
+      id: filename,
+      html,
+      modules,
+      assets,
+    }
+    renderFinish?.(pagePath, null, finishedPage)
+    return finishedPage
+  })
 }
 
 function getTagsForAssets(
