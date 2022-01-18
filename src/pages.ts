@@ -62,6 +62,12 @@ export interface PageState extends ClientState {
   $: string[]
 }
 
+export type RenderPageOptions = {
+  renderStart?: (url: ParsedUrl) => void
+  renderFinish?: (url: ParsedUrl, page: RenderedPage | null) => void
+  renderError?: (url: ParsedUrl, error: Error) => void
+}
+
 export function createPageFactory(
   context: PageFactoryContext,
   functions: ClientFunctions,
@@ -297,16 +303,27 @@ export function createPageFactory(
   type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>
 
   const queuePage = limitConcurrency(
-    Math.max(1, context.renderConcurrency),
-    (url: ParsedUrl, renderPage: RenderPageFn) =>
+    config.command === 'dev' ? 1 : Math.max(1, context.renderConcurrency),
+    (url: ParsedUrl, renderPage: RenderPageFn, options: RenderPageOptions) =>
       setupPromise.then(() => {
         debug(`Page in progress: ${url}`)
-        return renderPage(url)
+        options.renderStart?.(url)
+        const rendering = renderPage(url)
+        if (options.renderFinish || options.renderError)
+          rendering.then(
+            options.renderFinish?.bind(null, url),
+            options.renderError?.bind(null, url)
+          )
+        return rendering
       })
   )
 
   const resolvingPages = new Map<string, Promise<RenderedPage | null>>()
-  const resolvePage = (url: string | ParsedUrl, renderPage: RenderPageFn) => {
+  const resolvePage = (
+    url: string | ParsedUrl,
+    options: RenderPageOptions,
+    renderPage: RenderPageFn
+  ) => {
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
@@ -316,7 +333,7 @@ export function createPageFactory(
       debug(`Page queued: ${url}`)
       resolvingPages.set(
         pagePath,
-        (pagePromise = queuePage(url, renderPage).finally(() => {
+        (pagePromise = queuePage(url, renderPage, options).finally(() => {
           resolvingPages.delete(pagePath)
         }))
       )
@@ -352,18 +369,18 @@ export function createPageFactory(
      * Use the default route to render HTML for the given `url`.
      */
     renderUnknownPage: async (url: string | ParsedUrl, params?: RouteParams) =>
-      resolvePage(url, url => renderUnknownPage(url, params)),
+      resolvePage(url, {}, url => renderUnknownPage(url, params)),
     /**
      * Skip route matching and render HTML for the given `url` using
      * the given route and params.
      */
     renderRoute: (url: string | ParsedUrl, params: RouteParams, route: Route) =>
-      resolvePage(url, url => renderRoute(url, params, route)),
+      resolvePage(url, {}, url => renderRoute(url, params, route)),
     /**
      * Find a matching route to render HTML for the given `url`.
      */
-    render: (url: string | ParsedUrl) =>
-      resolvePage(url, async url => {
+    render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
+      resolvePage(url, options, async url => {
         if (typeof url == 'string') {
           url = parseUrl(url)
         }
