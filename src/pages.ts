@@ -28,7 +28,7 @@ import { matchRoute } from './core/routes'
 import { isStateModule } from './core/stateModules'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
-import { noop } from './utils/noop'
+import { limitConcurrency } from './utils/limitConcurrency'
 import { ParsedUrl, parseUrl } from './utils/url'
 
 export type PageFactory = ReturnType<typeof createPageFactory>
@@ -45,9 +45,10 @@ export type RenderedPage = {
 type SausContextKeys =
   | 'basePath'
   | 'defaultPath'
-  | 'pages'
-  | 'loadingStateCache'
   | 'loadedStateCache'
+  | 'loadingStateCache'
+  | 'pages'
+  | 'renderConcurrency'
 
 export interface PageFactoryContext
   extends Pick<SausContext, SausContextKeys>,
@@ -151,7 +152,7 @@ export function createPageFactory(
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
   // caused by global state mutation. This will be fixed in the future with
   // isolated module instances.
-  let renderQueue = (async () => {
+  const setupPromise = (async () => {
     if (setup) {
       await setup()
     }
@@ -293,31 +294,32 @@ export function createPageFactory(
     return renderDefaultPage(url, state, route)
   }
 
-  // For reuse of pending `renderPage` calls
-  const pendingPagePromises = new Map<string, Promise<RenderedPage | null>>()
+  type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>
 
-  const resolvePage = (
-    url: string | ParsedUrl,
-    renderPage: (url: ParsedUrl) => Promise<RenderedPage | null>
-  ) => {
+  const queuePage = limitConcurrency(
+    Math.max(1, context.renderConcurrency),
+    (url: ParsedUrl, renderPage: RenderPageFn) =>
+      setupPromise.then(() => {
+        debug(`Page in progress: ${url}`)
+        return renderPage(url)
+      })
+  )
+
+  const resolvingPages = new Map<string, Promise<RenderedPage | null>>()
+  const resolvePage = (url: string | ParsedUrl, renderPage: RenderPageFn) => {
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
     let pagePath = url.path
-    let pagePromise = pendingPagePromises.get(pagePath)
+    let pagePromise = resolvingPages.get(pagePath)
     if (!pagePromise) {
       debug(`Page queued: ${url}`)
-      pagePromise = renderQueue
-        .then(() => {
-          debug(`Page next up: ${url}`)
-          return renderPage(url as ParsedUrl)
-        })
-        .finally(() => {
-          pendingPagePromises.delete(pagePath)
-        })
-
-      pendingPagePromises.set(pagePath, pagePromise)
-      renderQueue = pagePromise.then(noop, noop)
+      resolvingPages.set(
+        pagePath,
+        (pagePromise = queuePage(url, renderPage).finally(() => {
+          resolvingPages.delete(pagePath)
+        }))
+      )
     }
     return pagePromise
   }

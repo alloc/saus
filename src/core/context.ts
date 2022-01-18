@@ -3,6 +3,7 @@ import arrify from 'arrify'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
+import os from 'os'
 import { resolve } from 'path'
 import type { RenderedPage } from '../pages'
 import { callPlugins } from '../utils/callPlugins'
@@ -47,6 +48,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   loadedStateCache: Map<string, any>
   /** Path to the render module */
   renderPath: string
+  /** How many pages can render at once */
+  renderConcurrency: number
   /** For checking if a page is outdated since rendering began */
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
@@ -90,6 +93,7 @@ export async function loadContext(
         loadingStateCache: new Map(),
         loadedStateCache: new Map(),
         renderPath: config.saus.render,
+        renderConcurrency: config.saus.renderConcurrency ?? os.cpus().length,
         renderers: [],
         beforeRenderHooks: [],
         reloadId: 0,

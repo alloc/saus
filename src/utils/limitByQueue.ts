@@ -3,15 +3,15 @@ import { defer, Deferred } from './defer'
 type AsyncFn = (...args: any[]) => Promise<any>
 type QueuedCall = Deferred<any> & { args: any[] }
 
-export type RateLimited<T extends AsyncFn> = T & {
+export type QueuedFunction<T extends AsyncFn> = T & {
   calls?: Promise<void>
 }
 
-export function rateLimit<T extends AsyncFn>(
-  limit: number,
+export function limitByQueue<T extends AsyncFn>(
+  shouldQueue: (activeCalls: ReadonlySet<any[]>, args: any[]) => boolean,
   fn: T,
   pre?: (...args: Parameters<T>) => void
-): RateLimited<T> {
+): QueuedFunction<T> {
   let deferred: Deferred<void>
   const activeCalls = new Set<any[]>()
   const queuedCalls: QueuedCall[] = []
@@ -33,7 +33,7 @@ export function rateLimit<T extends AsyncFn>(
 
   function wrapper(...args: any[]) {
     pre?.(...(args as Parameters<T>))
-    if (activeCalls.size == limit) {
+    if (shouldQueue(activeCalls, args)) {
       const call = defer() as QueuedCall
       call.args = args
       queuedCalls.push(call)

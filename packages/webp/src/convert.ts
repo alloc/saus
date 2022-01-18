@@ -1,10 +1,9 @@
 import imagemin from 'imagemin'
 import webp, { Options as WebpOptions } from 'imagemin-webp'
 import fs from 'fs/promises'
-import os from 'os'
 import path from 'path'
 import { Plugin } from 'saus'
-import { rateLimit } from 'saus/core'
+import { limitConcurrency } from 'saus/core'
 import { createFilter } from '@rollup/pluginutils'
 import md5Hex from 'md5-hex'
 import { MistyTask, startTask } from 'misty/task'
@@ -29,7 +28,7 @@ export function convertToWebp(options: Options = {}): Plugin {
   let task: MistyTask | undefined
 
   const converter = webp(options)
-  const convert = rateLimit(os.cpus().length, async (data: Buffer) => {
+  const convert = limitConcurrency(null, async (data: Buffer) => {
     if (++numConverting == 1 && !options.silent) {
       task = startTask('Converting images to WebP')
     }

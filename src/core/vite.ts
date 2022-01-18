@@ -39,13 +39,18 @@ export interface SausBundleConfig {
 
 export interface SausConfig {
   /**
+   * Path to the module containing `route` calls.
+   */
+  routes: string
+  /**
    * Path to the module containing `render` calls.
    */
   render: string
   /**
-   * Path to the module containing `route` calls.
+   * How many pages can be rendered at once.
+   * @default os.cpus().length
    */
-  routes: string
+  renderConcurrency?: number
   /**
    * Assume this page path when using the default route in build mode
    * and SSR mode.
