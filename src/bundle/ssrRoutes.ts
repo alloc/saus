@@ -213,6 +213,8 @@ export async function bundleRoutes(
     Array.from(routeImports.values(), resolved => resolved.file)
   )
 
+  debug(`route entries: %O`, routeEntryPoints)
+
   const { metafile, outputFiles } = await esbuild.build({
     absWorkingDir: config.root,
     bundle: true,
