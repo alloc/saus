@@ -1,6 +1,7 @@
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import path from 'path'
+import { ssrClearCache } from './bundle/ssrModules'
 import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
@@ -29,6 +30,7 @@ import { isStateModule } from './core/stateModules'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
+import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
 
 export type PageFactory = ReturnType<typeof createPageFactory>
@@ -195,6 +197,11 @@ export function createPageFactory(
     }
   }
 
+  // Routes must be loaded one at a time, since they share
+  // the same module cache and that cache needs to be reset
+  // before rendering each page.
+  let routeLoadingQueue = Promise.resolve()
+
   // The main logic for rendering a page.
   async function renderPage(
     url: ParsedUrl,
@@ -212,8 +219,14 @@ export function createPageFactory(
       state,
     }
 
-    debug(`Loading route: ${route.moduleId}`)
-    const routeModule = await route.load()
+    const loadingRouteModule = routeLoadingQueue.then(() => {
+      ssrClearCache()
+      debug(`Loading route: ${route.moduleId}`)
+      return route.load()
+    })
+
+    routeLoadingQueue = loadingRouteModule.then(noop, noop)
+    const routeModule = await loadingRouteModule
 
     if (beforeRenderHooks.length) {
       debug(`Running beforeRender hooks`)

@@ -1,3 +1,4 @@
+import { loadedStateCache } from '../client/cache'
 import { loadState } from '../core/loadStateModule'
 
 const ssrPrefix = 'saus-ssr:'
@@ -21,3 +22,12 @@ export const __d = (id: string, loader: ModuleLoader) =>
       await loader(exports, ssrRequire)
       return exports
     }))
+
+/** Clear all loaded SSR modules */
+export function ssrClearCache() {
+  loadedStateCache.forEach((_, key) => {
+    if (key.startsWith(ssrPrefix)) {
+      loadedStateCache.delete(key)
+    }
+  })
+}
