@@ -3,16 +3,20 @@ import path from 'path'
 import { warn } from 'misty'
 import { babel, getBabelConfig, t } from '../babel'
 import { Plugin, SausConfig } from '../core'
-import { clientDir } from '../bundle/constants'
+import { clientDir, runtimeDir } from '../bundle/constants'
 
-const routeMapStubPath = path.join(clientDir, 'routes.ts')
+const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
+const serverRouteMapStubPath = path.join(runtimeDir, 'routes.ts')
 const routeMarker = '__sausRoute'
 
 /**
  * This plugin extracts the `route` calls from the routes module,
  * so any Node-specific logic is removed for client-side use.
  */
-export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
+export function routesPlugin(
+  { routes: routesPath }: SausConfig,
+  clientRouteMap?: Record<string, string>
+): Plugin {
   let plugin: Plugin
   return (plugin = {
     name: 'saus:routes',
@@ -21,8 +25,11 @@ export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
       onContext(context) {
         const isBuild = context.config.command == 'build'
 
-        plugin.load = async function (id) {
-          if (id == routeMapStubPath) {
+        plugin.load = async function (id, ssr) {
+          const isClientMap = id == clientRouteMapStubPath
+          const isServerMap = !isClientMap && id == serverRouteMapStubPath
+
+          if (isClientMap || isServerMap) {
             const routesModule = babel.parseSync(
               fs.readFileSync(routesPath, 'utf8'),
               getBabelConfig(routesPath)
@@ -76,25 +83,53 @@ export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
                   if (routePaths.has(routePath)) return
                   routePaths.add(routePath)
 
-                  const resolved = await this.resolve(routeModuleId, routesPath)
-                  if (!resolved) {
-                    return warn(`Failed to resolve route: "${routeModuleId}"`)
+                  let resolvedId =
+                    clientRouteMap && clientRouteMap[routeModuleId]
+                  if (!resolvedId) {
+                    const resolved = await this.resolve(
+                      routeModuleId,
+                      routesPath
+                    )
+                    if (!resolved) {
+                      return warn(`Failed to resolve route: "${routeModuleId}"`)
+                    }
+                    resolvedId = resolved.id
+                    if (clientRouteMap) {
+                      clientRouteMap[routeModuleId] = resolvedId
+                    }
+                  }
+
+                  let propertyValue: t.Expression
+                  if (isBuild) {
+                    // For the server-side route map, the route is mapped to
+                    // a dev URL, since the SSR module system uses that.
+                    if (isServerMap) {
+                      propertyValue = t.stringLiteral(
+                        '/' + path.relative(context.root, resolvedId)
+                      )
+                    }
+                    // For the client-side route map, the resolved module path
+                    // must be mapped to the production chunk created by Rollup.
+                    // To do this, we use a placeholder `__sausRoute` call which
+                    // is replaced in the `generateBundle` plugin hook.
+                    else {
+                      propertyValue = t.callExpression(
+                        t.identifier(routeMarker),
+                        [t.stringLiteral(resolvedId)]
+                      )
+                    }
+                  } else {
+                    // In dev mode, the route mapping points to a dev URL.
+                    propertyValue = t.stringLiteral(
+                      context.basePath +
+                        (resolvedId.startsWith(context.root + '/')
+                          ? resolvedId.slice(context.root.length + 1)
+                          : '@fs/' + resolvedId)
+                    )
                   }
 
                   resolvedRoutes.push(
-                    t.objectProperty(
-                      t.stringLiteral(routePath),
-                      isBuild
-                        ? t.callExpression(t.identifier(routeMarker), [
-                            t.stringLiteral(resolved.id),
-                          ])
-                        : t.stringLiteral(
-                            context.basePath +
-                              (resolved.id.startsWith(context.root + '/')
-                                ? resolved.id.slice(context.root.length + 1)
-                                : '@fs/' + resolved.id)
-                          )
-                    )
+                    t.objectProperty(t.stringLiteral(routePath), propertyValue)
                   )
                 })
             )
@@ -105,7 +140,15 @@ export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
               },
             }
 
-            const template = `export default {}`
+            let template = `export default {}`
+            if (isServerMap) {
+              template =
+                `import { ssrRequire } from "/@fs/${path.resolve(
+                  runtimeDir,
+                  '../ssrModules.ts'
+                )}"\n` + template
+            }
+
             const result = babel.transformSync(template, {
               plugins: [{ visitor: transformer }],
             }) as { code: string }
@@ -130,13 +173,21 @@ export function routesPlugin({ routes: routesPath }: SausConfig): Plugin {
               chunk.code = chunk.code.replace(
                 new RegExp(routeMarker + '\\("(.+?)"\\)', 'g'),
                 (_, routeModuleId) => {
-                  const routeChunk = chunks.find(
-                    chunk => chunk.modules[routeModuleId]
-                  )
-                  if (!routeChunk) {
-                    throw Error(`Route chunk not found: "${routeModuleId}"`)
+                  let routeChunkUrl =
+                    clientRouteMap && clientRouteMap[routeModuleId]
+                  if (!routeChunkUrl) {
+                    const routeChunk = chunks.find(
+                      chunk => chunk.modules[routeModuleId]
+                    )
+                    if (!routeChunk) {
+                      throw Error(`Route chunk not found: "${routeModuleId}"`)
+                    }
+                    routeChunkUrl = context.basePath + routeChunk.fileName
+                    if (clientRouteMap) {
+                      clientRouteMap[routeModuleId] = routeChunkUrl
+                    }
                   }
-                  return `"${context.basePath + routeChunk.fileName}"`
+                  return `"${routeChunkUrl}"`
                 }
               )
             }

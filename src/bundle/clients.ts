@@ -47,7 +47,7 @@ export async function generateClientModules(
   runtimeConfig: RuntimeConfig,
   context: SausContext,
   options: BundleOptions
-): Promise<ClientModuleMap> {
+) {
   const input: string[] = []
   const modules = createModuleProvider()
 
@@ -122,6 +122,7 @@ export async function generateClientModules(
       : options.minify
 
   const removedImports = new Map<OutputChunk, string[]>()
+  const clientRouteMap: Record<string, string> = {}
 
   config = await context.resolveConfig('build', {
     plugins: [
@@ -130,7 +131,7 @@ export async function generateClientModules(
         './src/core/index.ts',
         './src/core/context.ts',
       ]),
-      routesPlugin(config.saus),
+      routesPlugin(config.saus, clientRouteMap),
       modules,
       fixChunkImports(removedImports),
       transformClientState(),
@@ -294,7 +295,7 @@ export async function generateClientModules(
     }
   })
 
-  return moduleMap
+  return { moduleMap, clientRouteMap }
 }
 
 function quotes(text: string) {

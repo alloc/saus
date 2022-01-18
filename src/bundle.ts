@@ -31,6 +31,7 @@ import { loadContext } from './core/context'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { renderPlugin } from './plugins/render'
+import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
 import { parseImports, serializeImports } from './utils/imports'
@@ -91,7 +92,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     await prepareFunctions(context, options)
 
   Profiling.mark('generate client modules')
-  const moduleMap = await generateClientModules(
+  const { moduleMap, clientRouteMap } = await generateClientModules(
     functions,
     functionImports,
     runtimeConfig,
@@ -107,6 +108,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     routeImports,
     functions,
     moduleMap,
+    clientRouteMap,
     bundleEntry,
     bundleConfig,
     bundleFormat,
@@ -323,6 +325,7 @@ async function generateSsrBundle(
   routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
+  clientRouteMap: Record<string, string>,
   bundleEntry: string | null | undefined,
   bundleConfig: SausBundleConfig,
   bundleFormat: 'esm' | 'cjs',
@@ -384,6 +387,10 @@ async function generateSsrBundle(
       path.join(clientDir, 'cache.ts'),
       path.join(runtimeDir, 'context.ts')
     ),
+    redirectModule(
+      path.join(clientDir, 'loadPageModule.ts'),
+      path.join(runtimeDir, 'loadPageModule.ts')
+    ),
     redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
@@ -402,6 +409,7 @@ async function generateSsrBundle(
   const config = await context.resolveConfig('build', {
     plugins: [
       await bundleRoutes(routeImports, context, bundleFormat == 'cjs'),
+      routesPlugin(context.config.saus, clientRouteMap),
       debugForbiddenImports([
         'vite',
         './src/core/index.ts',
