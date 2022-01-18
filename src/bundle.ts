@@ -435,7 +435,6 @@ async function generateSsrBundle(
         output: {
           dir: bundleDir,
           format: bundleFormat,
-          sourcemapExcludeSources: true,
         },
       },
     },
