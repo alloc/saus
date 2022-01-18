@@ -116,7 +116,7 @@ export function createPageFactory(
 
       // State modules start loading before the root-level state is awaited.
       const pendingStateModules = new Map<string, Promise<any>>()
-      for (const include of defaultState.concat(route.include || [])) {
+      for (const include of defaultState.concat([route.include || []])) {
         loadStateModules(pendingStateModules, include, url, params)
       }
 
