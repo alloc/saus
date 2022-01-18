@@ -41,6 +41,9 @@ export function printFiles(
   outDir: string,
   chunkLimit = 500
 ) {
+  if (!outDir.endsWith('/')) {
+    outDir += '/'
+  }
   const maxLength = Object.keys(files).reduce(
     (maxLength, file) => Math.max(maxLength, file.length),
     0
