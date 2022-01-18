@@ -1,6 +1,6 @@
-import endent from 'endent'
 import type { PageState } from '../pages'
 import { dataToEsm } from '../utils/dataToEsm'
+import { INDENT, RETURN, SPACE } from './tokens'
 
 export function renderPageState(
   pageState: PageState,
@@ -32,42 +32,39 @@ export function renderPageState(
   const helpers: string[] = []
 
   if (inlinedStateUrls.length) {
-    const idents = inlinedStateIdents.join(',')
+    const idents = inlinedStateIdents.join(',' + SPACE)
     const imports = inlinedStateUrls
       .concat(Array.from(stateModuleUrls, toStateUrl))
-      .map(url => `import("${url}"),`)
+      .map(url => INDENT + `import("${url}"),`)
 
     helpers.push('resolveModules')
-    code = endent`
-      const [${idents}] = await resolveModules(
-        ${imports.join('\n')}
-      )
-      ${code}
-    `
+    code =
+      `const [${idents}] = await resolveModules(` +
+      RETURN +
+      imports.join(RETURN) +
+      RETURN +
+      `)\n` +
+      code
   } else if (stateModuleUrls.size) {
-    const imports = Array.from(stateModuleUrls, url => `import("${url}"),`)
-    code = endent`
-      await Promise.all([
-        ${imports.join('\n')}
-      ])
-      ${code}
-    `
+    const imports = Array.from(
+      stateModuleUrls,
+      url => INDENT + `import("${url}"),`
+    )
+    code =
+      `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` + code
   }
 
   if (preloadUrls?.length) {
     preloadUrls = preloadUrls.map(url => base + url)
     helpers.push('preloadModules')
-    code = endent`
-      preloadModules(${dataToEsm(preloadUrls, '')})
-      ${code}
-    `
+    code = `preloadModules(${dataToEsm(preloadUrls, '')})\n` + code
   }
 
   if (helpers.length) {
-    code = endent`
-      import { ${helpers.join(', ')} } from "${base + helpersId}"
-      ${code}
-    `
+    code =
+      `import {${SPACE + helpers.join(',' + SPACE) + SPACE}} from "${
+        base + helpersId
+      }"\n` + code
   }
 
   return code

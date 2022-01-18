@@ -384,6 +384,10 @@ async function generateSsrBundle(
       path.join(runtimeDir, 'global.ts')
     ),
     redirectModule(
+      path.resolve(__dirname, '../src/core/constants.ts'),
+      path.join(runtimeDir, 'constants.ts')
+    ),
+    redirectModule(
       path.join(clientDir, 'cache.ts'),
       path.join(runtimeDir, 'context.ts')
     ),

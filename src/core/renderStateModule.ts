@@ -7,7 +7,7 @@ export function renderStateModule(
 ) {
   return [
     `import { loadedStateCache } from "${stateCacheUrl}"`,
-    dataToEsm(state, `const state`),
+    dataToEsm(state, 'state'),
     `loadedStateCache.set("${stateModuleId}", state)`,
     `export default state`,
   ].join('\n')

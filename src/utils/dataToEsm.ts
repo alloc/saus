@@ -1,6 +1,7 @@
+import { compact } from '../core/constants'
+import { INDENT, RETURN, SPACE } from '../core/tokens'
 import { noop } from './noop'
 
-const indent = '  '
 const varDeclRE = /^(const|let|var) /
 
 type Replacer = (key: string, value: any) => string | void
@@ -21,8 +22,16 @@ export function dataToEsm(
   variable?: string | null,
   replacer: Replacer = noop
 ) {
+  if (variable) {
+    if (!varDeclRE.test(variable)) {
+      variable = (compact ? 'var ' : 'const ') + variable
+    } else if (compact) {
+      variable = variable.replace(varDeclRE, 'var ')
+    }
+  }
+
   const prefix = variable
-    ? (varDeclRE.test(variable) ? '' : 'const ') + variable + ' = '
+    ? variable + ' = '
     : variable !== ''
     ? 'export default '
     : ''
@@ -77,8 +86,8 @@ function serializeArray<T>(
   replacer: Replacer
 ): string {
   let output = '['
-  const baseIndent = indent.repeat(keyPath.length)
-  const separator = `\n${baseIndent}${indent}`
+  const baseIndent = INDENT.repeat(keyPath.length)
+  const separator = RETURN + baseIndent + INDENT
   for (let i = 0; i < arr.length; i++) {
     output += `${i > 0 ? ',' : ''}${separator}${serialize(
       arr[i],
@@ -86,7 +95,7 @@ function serializeArray<T>(
       replacer
     )}`
   }
-  return `${output}\n${baseIndent}]`
+  return output + RETURN + baseIndent + ']'
 }
 
 function serializeObject(
@@ -95,15 +104,17 @@ function serializeObject(
   replacer: Replacer
 ): string {
   let output = '{'
-  const baseIndent = indent.repeat(keyPath.length)
-  const separator = `\n${baseIndent}${indent}`
+  const baseIndent = INDENT.repeat(keyPath.length)
+  const separator = RETURN + baseIndent + INDENT
   Object.entries(obj).forEach(([key, value], i) => {
     const legalName = /^[$_a-z0-9]+$/i.test(key) ? key : stringify(key)
-    output += `${i > 0 ? ',' : ''}${separator}${legalName}: ${serialize(
-      value,
-      keyPath.concat(String(key)),
-      replacer
-    )}`
+    output +=
+      (i > 0 ? ',' : '') +
+      separator +
+      legalName +
+      ':' +
+      SPACE +
+      serialize(value, keyPath.concat(String(key)), replacer)
   })
-  return `${output}\n${baseIndent}}`
+  return output + RETURN + baseIndent + '}'
 }

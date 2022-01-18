@@ -1,4 +1,5 @@
 import type { ClientImports } from '../core'
+import { SPACE } from '../core/tokens'
 
 export function serializeImports(imports: ClientImports | string[]) {
   return (
@@ -14,13 +15,15 @@ export function serializeImports(imports: ClientImports | string[]) {
             : ''
           : spec.length == 0
           ? ''
-          : '{ ' +
+          : '{' +
+            SPACE +
             spec
               .map(spec =>
                 typeof spec === 'string' ? spec : spec[0] + ' as ' + spec[1]
               )
-              .join(', ') +
-            ' } from '
+              .join(',' + SPACE) +
+            SPACE +
+            '} from '
       }"${source}"`
   )
 }
