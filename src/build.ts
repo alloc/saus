@@ -32,6 +32,7 @@ export async function build(
   loading.finish(`${routeCount} routes loaded.`)
 
   const { code, map } = await bundle(context, {
+    isBuild: true,
     write: false,
     entry: null,
     format: 'cjs',

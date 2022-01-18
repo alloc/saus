@@ -39,6 +39,7 @@ import { parseImports, serializeImports } from './utils/imports'
 export interface BundleOptions {
   absoluteSources?: boolean
   entry?: string | null
+  isBuild?: boolean
   format?: 'esm' | 'cjs'
   minify?: boolean
   mode?: string
@@ -104,6 +105,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
   const { code, map } = await generateSsrBundle(
     context,
+    options,
     runtimeConfig,
     routeImports,
     functions,
@@ -321,6 +323,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
 
 async function generateSsrBundle(
   context: SausContext,
+  options: BundleOptions,
   runtimeConfig: RuntimeConfig,
   routeImports: RouteImports,
   functions: ClientFunctions,
@@ -395,7 +398,8 @@ async function generateSsrBundle(
       path.join(clientDir, 'loadPageModule.ts'),
       path.join(runtimeDir, 'loadPageModule.ts')
     ),
-    redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
+    !options.isBuild &&
+      redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
   const bundleType = bundleConfig.type || 'script'
