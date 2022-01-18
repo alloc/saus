@@ -422,6 +422,7 @@ async function generateSsrBundle(
         ? wrapAsyncInit()
         : null,
       ...redirectedModules,
+      rewriteHttpImports(),
       // debugSymlinkResolver(),
     ],
     build: {
@@ -526,6 +527,54 @@ function wrapAsyncInit(): vite.Plugin {
       return {
         code: editor.toString(),
         map: editor.generateMap(),
+      }
+    },
+  }
+}
+
+/**
+ * Allow `import('https://foo.com/bar.js')` calls to work as expected.
+ * Both JSON and JavaScript modules are supported.
+ */
+function rewriteHttpImports(): vite.Plugin {
+  const modulesId = path.join(runtimeDir, 'modules.ts')
+
+  return {
+    name: 'saus:rewriteHttpImports',
+    enforce: 'post',
+    async transform(code, id) {
+      if (id == modulesId || id.includes('/node_modules/')) {
+        return
+      }
+
+      const dynamicImportRE = /\bimport\(\s*["']([^"']+)["']\s*\)/g
+
+      let editor: MagicString | undefined
+      let match: RegExpMatchArray | null
+      while ((match = dynamicImportRE.exec(code))) {
+        const resolved = await this.resolve(match[1], id)
+        if (resolved && /^https?:\/\//.test(resolved.id)) {
+          const index = match.index!
+          editor ||= new MagicString(code)
+          editor.overwrite(
+            index,
+            index + match[0].length,
+            `httpImport("${resolved.id}")`
+          )
+        }
+      }
+
+      if (editor) {
+        editor.prepend(
+          `import { httpImport } from "/@fs/${path.resolve(
+            runtimeDir,
+            'httpImport.ts'
+          )}"\n`
+        )
+        return {
+          code: editor.toString(),
+          map: editor.generateMap({ hires: true }),
+        }
       }
     },
   }
