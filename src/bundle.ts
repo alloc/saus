@@ -10,7 +10,7 @@ import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import { clientDir, runtimeDir } from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
-import { SourceMap } from './bundle/sourceMap'
+import { resolveMapSources, SourceMap } from './bundle/sourceMap'
 import {
   bundleRoutes,
   resolveRouteImports,
@@ -114,9 +114,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   )
 
   if (map && options.absoluteSources) {
-    map.sources = map.sources.map(source => {
-      return path.resolve(bundleDir, source)
-    })
+    resolveMapSources(map, bundleDir)
   }
 
   const bundle = {

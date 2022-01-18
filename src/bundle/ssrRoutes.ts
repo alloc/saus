@@ -12,6 +12,7 @@ import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
 import { runtimeDir } from './constants'
 import { createModuleProvider, ModuleProvider } from './moduleProvider'
+import { resolveMapSources, SourceMap } from './sourceMap'
 
 const debug = createDebug('saus:ssr')
 
@@ -223,7 +224,7 @@ export async function bundleRoutes(
     plugins: [bridge],
     target: 'esnext',
     treeShaking: true,
-    sourcemap: 'inline',
+    sourcemap: true,
     splitting: true,
     write: false,
   })
@@ -245,23 +246,30 @@ export async function bundleRoutes(
     ),
   }
 
+  type OutputFile = { code: string; map: SourceMap }
+
   const bundleToEntryMap: Record<string, string> = {}
-  const bundledRoutes: Record<string, string> = {}
-  const sharedModules: Record<string, string> = {}
+  const bundledRoutes: Record<string, OutputFile> = {}
+  const sharedModules: Record<string, OutputFile> = {}
 
   const outputs = Object.values(metafile!.outputs)
   for (let i = 0; i < outputFiles.length; i++) {
+    if (i % 2 == 0) {
+      continue
+    }
+    const map = JSON.parse(outputFiles[i - 1].text) as SourceMap
     const file = outputFiles[i]
     const { entryPoint } = outputs[i]
+    resolveMapSources(map, dirname(file.path))
     if (entryPoint) {
       const entryUrl = '/' + entryPoint
       const filePath = entryUrlToFileMap[entryUrl]
       const bundleId = toBundleChunkId(filePath)
-      bundledRoutes[bundleId] = file.text
+      bundledRoutes[bundleId] = { code: file.text, map }
       bundleToEntryMap[bundleId] = entryUrl
     } else {
-      const chunkId = file.path.slice(config.root.length + 1)
-      sharedModules['\0' + chunkId] = file.text
+      const chunkId = file.path.slice(config.root.length)
+      sharedModules[chunkId] = { code: file.text, map }
     }
   }
 
@@ -296,9 +304,8 @@ export async function bundleRoutes(
             continue
           }
           const validSource = JSON.stringify(
-            '\0' + source.replace(relativePathRE, '')
+            source.replace(relativePathRE, '/')
           )
-
           const bindings: string[] = []
           for (const spec of node.specifiers) {
             if (t.isImportNamespaceSpecifier(spec)) {
