@@ -9,10 +9,11 @@ export default defineConfig({
       target: 'node16',
       entry: './src/node/server.ts',
       format: 'esm',
+      // minify: true,
     },
   },
   build: {
-    minify: false,
+    // minify: false,
   },
   // Once you put "types": ["@saus/react"] in your tsconfig.json,
   // you can customize Babel like this:

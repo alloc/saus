@@ -3,6 +3,7 @@ import fs from 'fs'
 import http from 'http'
 import { gray } from 'kleur/colors'
 import { success } from 'misty'
+import { MistyTask } from 'misty/task'
 import { startTask } from 'misty/task'
 import * as mime from 'mrmime'
 import path from 'path'
@@ -12,6 +13,7 @@ import renderPage, {
   getKnownPaths,
   getModuleUrl,
   moduleMap,
+  RenderPageOptions,
 } from 'saus/bundle'
 import { connect } from './connect'
 
@@ -25,27 +27,41 @@ const addModule = (module: ClientModule) => {
   }
 }
 
-let pageCount = 0
-
-// Pre-render all known pages.
-for (let knownPath of await getKnownPaths()) {
-  const task = startTask(`Rendering "${knownPath}"`)
-  const page = await renderPage(config.base + knownPath.slice(1))
-  task.finish()
-  if (!page) {
-    console.warn(`[!] Page for "${knownPath}" was null`)
-    continue
+async function preCacheKnownPages() {
+  let pageCount = 0
+  let tasks = new Map<string, MistyTask>()
+  const options: RenderPageOptions = {
+    renderStart(url) {
+      tasks.set(url, startTask(`Rendering "${url}"`))
+    },
+    renderFinish(url, error, page) {
+      tasks.get(url)!.finish()
+      tasks.delete(url)
+      if (error) {
+        console.error(error.stack)
+      } else if (!page) {
+        console.warn(`[!] Page for "${url}" was null`)
+      } else {
+        pageCount++
+        page.modules.forEach(addModule)
+        page.assets.forEach(addModule)
+        addModule({
+          id: page.id,
+          text: page.html,
+        })
+      }
+    },
   }
-  pageCount++
-  page.modules.forEach(addModule)
-  page.assets.forEach(addModule)
-  addModule({
-    id: page.id,
-    text: page.html,
-  })
+  const knownPaths = await getKnownPaths()
+  await Promise.all(
+    knownPaths.map(knownPath => {
+      return renderPage(config.base + knownPath.slice(1), options)
+    })
+  )
+  success(`${pageCount} pages were pre-cached.`)
 }
 
-success(`${pageCount} pages were pre-rendered.`)
+preCacheKnownPages()
 
 const app = connect()
   .use((req, res, next) => {
