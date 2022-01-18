@@ -1,3 +1,4 @@
+import createDebug from 'debug'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import path from 'path'
@@ -22,7 +23,6 @@ import type {
   SausContext,
   StateModule,
 } from './core'
-import { debug } from './core/debug'
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
@@ -32,6 +32,8 @@ import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
 import { noop } from './utils/noop'
 import { ParsedUrl, parseUrl } from './utils/url'
+
+const debug = createDebug('saus:pages')
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
@@ -224,7 +226,7 @@ export function createPageFactory(
 
     const loadingRouteModule = routeLoadingQueue.then(() => {
       ssrClearCache()
-      debug(`Loading route: ${route.moduleId}`)
+      debug(`Loading route: %s`, route.moduleId)
       return route.load()
     })
 
@@ -243,7 +245,7 @@ export function createPageFactory(
       }
     }
 
-    debug(`Rendering page: ${path}`)
+    debug(`Rendering page: %s`, path)
     let html = await renderer.render(routeModule, request, renderer)
     if (html == null) {
       debug(`Nothing was rendered. Trying next renderer.`)
@@ -271,7 +273,7 @@ export function createPageFactory(
       page.html = await processHtml(page.html, page)
     }
 
-    debug(`Page ready: ${path}`)
+    debug(`Page ready: %s`, path)
 
     // Currently, the page cache is only used by the saus:client plugin,
     // since the performance impact of rendering on every request isn't
@@ -322,7 +324,7 @@ export function createPageFactory(
     config.command === 'dev' ? 1 : Math.max(1, context.renderConcurrency),
     (url: ParsedUrl, renderPage: RenderPageFn, options: RenderPageOptions) =>
       setupPromise.then(() => {
-        debug(`Page in progress: ${url}`)
+        debug(`Page in progress: %s`, url)
         options.renderStart?.(url.path)
         const rendering = renderPage(url)
         if (options.renderFinish)
@@ -346,7 +348,7 @@ export function createPageFactory(
     let pagePath = url.path
     let pagePromise = resolvingPages.get(pagePath)
     if (!pagePromise) {
-      debug(`Page queued: ${url}`)
+      debug(`Page queued: %s`, url)
       resolvingPages.set(
         pagePath,
         (pagePromise = queuePage(url, renderPage, options).finally(() => {
