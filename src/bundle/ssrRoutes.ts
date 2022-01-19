@@ -13,7 +13,7 @@ import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
 import { runtimeDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
-import { resolveMapSources, SourceMap } from './sourceMap'
+import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
 import { createFilter } from '@rollup/pluginutils'
 
 const debug = createDebug('saus:ssr')
@@ -78,7 +78,7 @@ export async function bundleRoutes(
     ],
     build: {
       ...config.build,
-      sourcemap: 'inline',
+      sourcemap: true,
       ssr: true,
       target: 'esnext',
     },
@@ -239,7 +239,9 @@ export async function bundleRoutes(
         const transformed = await transform(url)
         if (transformed) {
           return {
-            contents: transformed.code,
+            contents:
+              transformed.code +
+              (transformed.map ? toInlineSourceMap(transformed.map) : ''),
             loader: 'js',
           }
         }
