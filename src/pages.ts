@@ -1,6 +1,7 @@
 import createDebug from 'debug'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
+import os from 'os'
 import path from 'path'
 import { ssrClearCache } from './bundle/ssrModules'
 import { withCache } from './client/withCache'
@@ -52,7 +53,6 @@ type SausContextKeys =
   | 'loadedStateCache'
   | 'loadingStateCache'
   | 'pages'
-  | 'renderConcurrency'
 
 export interface PageFactoryContext
   extends Pick<SausContext, SausContextKeys>,
@@ -321,7 +321,10 @@ export function createPageFactory(
   type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>
 
   const queuePage = limitConcurrency(
-    config.command === 'dev' ? 1 : Math.max(1, context.renderConcurrency),
+    // TODO: allow parallel rendering in dev mode?
+    config.command !== 'dev'
+      ? Math.max(1, config.renderConcurrency ?? os.cpus().length)
+      : 1,
     (url: ParsedUrl, renderPage: RenderPageFn, options: RenderPageOptions) =>
       setupPromise.then(() => {
         debug(`Page in progress: %s`, url)

@@ -41,5 +41,6 @@ export interface RuntimeConfig {
   mode: string
   pageFactory?: PageFactory
   publicDir: string
+  renderConcurrency?: number
   stateCacheUrl: string
 }

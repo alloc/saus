@@ -305,6 +305,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
     minify: options.minify == true,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
+    renderConcurrency: config.saus.renderConcurrency,
     // Replaced by the `generateClientModules` function.
     stateCacheUrl: '',
   }
