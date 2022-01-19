@@ -238,10 +238,15 @@ export async function bundleRoutes(
         const url = getResolvedUrl(config.root, path)
         const transformed = await transform(url)
         if (transformed) {
+          let { code, map } = transformed as { code: string; map: SourceMap }
+          if (map) {
+            map.sources = map.sources.map(source => {
+              return source ? relative(dirname(path), source) : null
+            })
+            code += map ? toInlineSourceMap(map) : ''
+          }
           return {
-            contents:
-              transformed.code +
-              (transformed.map ? toInlineSourceMap(transformed.map) : ''),
+            contents: code,
             loader: 'js',
           }
         }

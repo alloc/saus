@@ -3,7 +3,7 @@ import { resolve } from 'path'
 export interface SourceMap {
   version: number
   file?: string
-  sources: string[]
+  sources: (string | null)[]
   sourcesContent?: string[]
   names: string[]
   mappings: string
@@ -18,5 +18,7 @@ export function toInlineSourceMap(map: SourceMap) {
 }
 
 export function resolveMapSources(map: SourceMap, sourceRoot: string) {
-  map.sources = map.sources.map(source => resolve(sourceRoot, source))
+  map.sources = map.sources.map(source =>
+    source ? resolve(sourceRoot, source) : null
+  )
 }
