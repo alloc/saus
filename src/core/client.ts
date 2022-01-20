@@ -1,6 +1,5 @@
 import fs from 'fs'
 import MagicString from 'magic-string'
-import path from 'path'
 import {
   flattenCallChain,
   getBabelProgram,
@@ -13,9 +12,6 @@ import {
 import { renderIdentRE } from '../plugins/render'
 import type { ImportDescriptorMap } from '../utils/imports'
 import type { RouteParams } from './routes'
-
-export const stateCacheUrl =
-  '/@fs' + path.resolve(__dirname, '../src/client/cache.ts')
 
 /** A generated client module */
 export interface Client {

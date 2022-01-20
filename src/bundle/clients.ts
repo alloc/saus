@@ -16,7 +16,7 @@ import { debugForbiddenImports } from '../plugins/debug'
 import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
-import { clientDir, runtimeDir } from './constants'
+import { clientCachePath, clientDir, runtimeDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { toInlineSourceMap } from './sourceMap'
 import { ClientModule, ClientModuleMap } from './types'
@@ -125,6 +125,8 @@ export async function generateClientModules(
   const removedImports = new Map<OutputChunk, string[]>()
   const clientRouteMap: Record<string, string> = {}
 
+  const splitVendor = vite.splitVendorChunk({})
+
   config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([
@@ -152,6 +154,13 @@ export async function generateClientModules(
         output: {
           dir: outDir,
           minifyInternalExports: false,
+          manualChunks(id, api) {
+            // Ensure a chunk exporting the `loadedStateCache` object exists.
+            if (id == clientCachePath) {
+              return 'cache'
+            }
+            return splitVendor(id, api)
+          },
         },
         preserveEntrySignatures: 'allow-extension',
       },

@@ -1,3 +1,4 @@
+import { clientCachePath } from '../bundle/constants'
 import {
   applyHtmlProcessors,
   extractClientFunctions,
@@ -5,7 +6,6 @@ import {
   renderStateModule,
   RuntimeConfig,
   SausContext,
-  stateCacheUrl,
 } from '../core'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
@@ -51,7 +51,11 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         const stateModuleId = id.slice(7, -3)
         const state = await pageFactory.resolveState(stateModuleId)
         if (state) {
-          return renderStateModule(stateModuleId, state, stateCacheUrl)
+          return renderStateModule(
+            stateModuleId,
+            state,
+            '/@fs/' + clientCachePath
+          )
         }
       }
     },
@@ -72,7 +76,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           minify: false,
           mode: context.config.mode,
           publicDir: context.config.publicDir,
-          stateCacheUrl,
+          stateCacheUrl: '/@fs/' + clientCachePath,
         }
         pageFactory = createPageFactory(
           context,

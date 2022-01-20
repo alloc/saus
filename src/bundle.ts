@@ -8,7 +8,7 @@ import { fatal, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
-import { clientDir, runtimeDir } from './bundle/constants'
+import { clientCachePath, clientDir, runtimeDir } from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
 import { resolveMapSources, SourceMap } from './bundle/sourceMap'
 import {
@@ -394,10 +394,7 @@ async function generateSsrBundle(
       path.resolve(__dirname, '../src/core/constants.ts'),
       path.join(runtimeDir, 'constants.ts')
     ),
-    redirectModule(
-      path.join(clientDir, 'cache.ts'),
-      path.join(runtimeDir, 'context.ts')
-    ),
+    redirectModule(clientCachePath, path.join(runtimeDir, 'context.ts')),
     redirectModule(
       path.join(clientDir, 'loadPageModule.ts'),
       path.join(runtimeDir, 'loadPageModule.ts')
