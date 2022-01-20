@@ -39,7 +39,6 @@ export interface RuntimeConfig {
   defaultPath: string
   minify: boolean
   mode: string
-  pageFactory?: PageFactory
   publicDir: string
   renderConcurrency?: number
   stateCacheUrl: string
