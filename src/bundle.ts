@@ -519,7 +519,7 @@ function wrapAsyncInit(): vite.Plugin {
 
       return {
         code: editor.toString(),
-        map: editor.generateMap(),
+        map: editor.generateMap({ hires: true }),
       }
     },
   }

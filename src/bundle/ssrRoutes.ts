@@ -503,7 +503,7 @@ export async function isolateRoutes(
 
     return {
       code: editor.toString(),
-      map: editor.generateMap(),
+      map: editor.generateMap({ hires: true }),
       moduleSideEffects: 'no-treeshake' as const,
     }
   }
