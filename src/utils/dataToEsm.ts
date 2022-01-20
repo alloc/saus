@@ -107,6 +107,9 @@ function serializeObject(
   const baseIndent = INDENT.repeat(keyPath.length)
   const separator = RETURN + baseIndent + INDENT
   Object.entries(obj).forEach(([key, value], i) => {
+    if (value === undefined) {
+      return // Ignore undefined property values like JSON.stringify
+    }
     const legalName = /^[$_a-z0-9]+$/i.test(key) ? key : stringify(key)
     output +=
       (i > 0 ? ',' : '') +
