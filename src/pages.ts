@@ -311,12 +311,9 @@ export function createPageFactory(
       let routeModule: RouteModule
       let state: ClientState
       let error: any
-
       try {
-        ;[routeModule, state] = await Promise.all([
-          route.load(),
-          loadPageState(url, params || {}, route),
-        ] as const)
+        state = await loadPageState(url, params || {}, route)
+        routeModule = await route.load()
       } catch (e) {
         error = e
       }
