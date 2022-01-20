@@ -449,6 +449,7 @@ async function generateSsrBundle(
           dir: bundleDir,
           format: bundleFormat,
         },
+        context: 'globalThis',
       },
     },
   })
