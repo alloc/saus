@@ -16,4 +16,4 @@ export * from './utils'
 
 export type { ConfigHook, RuntimeConfig } from './config'
 export type { SausContext } from './context'
-export type { RenderedPage } from '../pages'
+export type { RenderedPage } from '../pages/types'
