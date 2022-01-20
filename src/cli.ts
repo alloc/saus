@@ -73,6 +73,7 @@ cli
       require('./bundle') as typeof import('./bundle')
 
     const context = await loadBundleContext({
+      mode: options.mode,
       logLevel: noWrite ? 'silent' : undefined,
       build: { sourcemap: options.sourcemap },
     })
