@@ -9,7 +9,7 @@ const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
 
 export function resolveReferences(
   rootPaths: NodePath | NodePath[],
-  filter = (_path: NodePath) => false
+  filter = (_path: NodePath) => true
 ): NodePath<t.Statement>[] {
   const crawled = new Set<NodePath>()
   const referenced = new Set<NodePath<t.Statement>>()
@@ -18,6 +18,9 @@ export function resolveReferences(
 
   function crawl(basePath: NodePath) {
     crawled.add(basePath)
+    if (basePath.isIdentifier() || basePath.isJSXIdentifier()) {
+      return onIdentifier(basePath)
+    }
     basePath.traverse({
       JSXIdentifier: onIdentifier,
       Identifier: onIdentifier,
