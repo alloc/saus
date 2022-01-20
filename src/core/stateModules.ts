@@ -33,7 +33,7 @@ export function defineStateModule<T, Args extends any[]>(
   return {
     // @ts-ignore
     [kStateModule]: true,
-    id,
+    id: toCacheKey([]),
     get(...args) {
       const cacheKey = toCacheKey(args)
       if (loadedStateCache.has(cacheKey)) {
