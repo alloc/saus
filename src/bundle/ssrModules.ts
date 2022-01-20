@@ -18,13 +18,16 @@ type ModuleLoader = (
 
 /** Define a SSR module with async loading capability */
 export const __d = (id: string, loader: ModuleLoader) =>
-  (ssrModules[id] ||= () =>
-    loadState(ssrPrefix + id, async () => {
+  (ssrModules[id] = loadState.bind(
+    null,
+    ssrPrefix + id,
+    async function ssrLoadModule() {
       const exports: ModuleExports = {}
       const module = { exports }
       await loader(exports, module)
       return module.exports
-    }))
+    }
+  ))
 
 /** Clear all loaded SSR modules */
 export function ssrClearCache() {
