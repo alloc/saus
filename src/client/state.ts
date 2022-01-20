@@ -1,8 +1,8 @@
 import type { ClientState, StateModule } from '../core'
+import { withCache } from '../core/withCache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { unwrapDefault } from '../utils/unwrapDefault'
 import { loadedStateCache, loadingStateCache } from './cache'
-import { withCache } from './withCache'
 
 export type { ClientState, StateModule }
 

@@ -1,6 +1,6 @@
 import { loadedStateCache, loadingStateCache } from '../client/cache'
-import { withCache } from '../client/withCache'
 import { unwrapDefault } from '../utils/unwrapDefault'
+import { withCache } from './withCache'
 
 export const loadState = withCache(loadingStateCache, loadedStateCache)
 
@@ -9,7 +9,7 @@ export const loadStateModule = (
   loadImpl: (...args: any[]) => any,
   ...args: any[]
 ) =>
-  loadState(cacheKey, async () => {
+  loadState(cacheKey, async function loadStateModule() {
     try {
       let result = loadImpl(...args)
       if (result && typeof result == 'object') {

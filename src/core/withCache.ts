@@ -1,4 +1,5 @@
 import createDebug from 'debug'
+import { TimeToLive } from './ttl'
 
 const debug = createDebug('saus:cache')
 
@@ -25,8 +26,8 @@ export function withCache(
   getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () =>
     undefined
 ) {
-  return (cacheKey: string, loader?: StateLoader) => {
-    if (loadedStateCache.has(cacheKey)) {
+  return function getCachedState(cacheKey: string, loader?: StateLoader) {
+    if (loadedStateCache.has(cacheKey) && TimeToLive.isAlive(cacheKey)) {
       return Promise.resolve(loadedStateCache.get(cacheKey))
     }
     let loadingState = loadingStateCache.get(cacheKey)
@@ -34,14 +35,20 @@ export function withCache(
       debug(`Loading "%s"`, cacheKey)
       loadingStateCache.set(
         cacheKey,
-        (loadingState = loader()
-          .then(loadedState => {
-            loadedStateCache.set(cacheKey, loadedState)
-            return loadedState
-          })
-          .finally(() => {
+        (loadingState = loader().then(
+          loadedState => {
+            // TTL may have been set to 0.
+            if (TimeToLive.isAlive(cacheKey)) {
+              loadedStateCache.set(cacheKey, loadedState)
+            }
             loadingStateCache.delete(cacheKey)
-          }))
+            return loadedState
+          },
+          error => {
+            loadingStateCache.delete(cacheKey)
+            throw error
+          }
+        ))
       )
     }
     return loadingState

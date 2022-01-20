@@ -3,7 +3,6 @@ import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import os from 'os'
 import path from 'path'
-import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
   Client,
@@ -22,6 +21,7 @@ import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { isStateModule, stateModulesMap } from './core/stateModules'
+import { withCache } from './core/withCache'
 import {
   ClientFunction,
   ClientFunctions,
