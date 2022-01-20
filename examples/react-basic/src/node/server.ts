@@ -27,42 +27,6 @@ const addModule = (module: ClientModule) => {
   }
 }
 
-async function preCacheKnownPages() {
-  let pageCount = 0
-  let tasks = new Map<string, MistyTask>()
-  const options: RenderPageOptions = {
-    renderStart(url) {
-      tasks.set(url, startTask(`Rendering "${url}"`))
-    },
-    renderFinish(url, error, page) {
-      tasks.get(url)!.finish()
-      tasks.delete(url)
-      if (error) {
-        console.error(error.stack)
-      } else if (!page) {
-        console.warn(`[!] Page for "${url}" was null`)
-      } else {
-        pageCount++
-        page.modules.forEach(addModule)
-        page.assets.forEach(addModule)
-        addModule({
-          id: page.id,
-          text: page.html,
-        })
-      }
-    },
-  }
-  const knownPaths = await getKnownPaths()
-  await Promise.all(
-    knownPaths.map(knownPath => {
-      return renderPage(config.base + knownPath.slice(1), options)
-    })
-  )
-  success(`${pageCount} pages were pre-cached.`)
-}
-
-preCacheKnownPages()
-
 const app = connect()
   .use((req, res, next) => {
     if (!req.url.startsWith(config.base)) {
@@ -156,3 +120,39 @@ const port = Number(process.env.PORT || 8081)
 http.createServer(app).listen(port, () => {
   console.log(`Listening at http://localhost:${port}`)
 })
+
+preCacheKnownPages()
+
+async function preCacheKnownPages() {
+  let pageCount = 0
+  let tasks = new Map<string, MistyTask>()
+  const options: RenderPageOptions = {
+    renderStart(url) {
+      tasks.set(url, startTask(`Rendering "${url}"`))
+    },
+    renderFinish(url, error, page) {
+      tasks.get(url)!.finish()
+      tasks.delete(url)
+      if (error) {
+        console.error(error.stack)
+      } else if (!page) {
+        console.warn(`[!] Page for "${url}" was null`)
+      } else {
+        pageCount++
+        page.modules.forEach(addModule)
+        page.assets.forEach(addModule)
+        addModule({
+          id: page.id,
+          text: page.html,
+        })
+      }
+    },
+  }
+  const knownPaths = await getKnownPaths()
+  await Promise.all(
+    knownPaths.map(knownPath => {
+      return renderPage(config.base + knownPath.slice(1), options)
+    })
+  )
+  success(`${pageCount} pages were pre-cached.`)
+}
