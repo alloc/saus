@@ -311,7 +311,9 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
   }
 
   // The functions are now transpiled to plain JavaScript.
-  functions.filename = functions.filename.replace(/\.[^.]+$/, '.js')
+  functions.filename = path.basename(
+    functions.filename.replace(/\.[^.]+$/, '.js')
+  )
 
   return {
     functions,
