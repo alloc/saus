@@ -12,7 +12,7 @@ import { clientDir, runtimeDir } from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
 import { resolveMapSources, SourceMap } from './bundle/sourceMap'
 import {
-  bundleRoutes,
+  isolateRoutes,
   resolveRouteImports,
   RouteImports,
 } from './bundle/ssrRoutes'
@@ -30,6 +30,7 @@ import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
+import { redirectModule } from './plugins/redirectModule'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
@@ -247,15 +248,18 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
       const [prelude, transformedFn] =
         transformResult.code.split('\nexport default ')
 
-      fn.function = transformedFn.replace(/;\n?$/, '')
-      fn.referenced = []
-
+      const referenced: string[] = []
       for (const node of parseFile(prelude).program.body) {
         const code = prelude.slice(node.start!, node.end!)
-        fn.referenced.push(code)
+        referenced.push(code)
         if (t.isImportDeclaration(node)) {
           await registerImport(code, node)
         }
+      }
+
+      fn.transformResult = {
+        function: transformedFn.replace(/;\n?$/, ''),
+        referenced,
       }
     }
   }
@@ -341,7 +345,7 @@ async function generateSsrBundle(
 
   modules.addModule({
     id: path.join(runtimeDir, 'functions.ts'),
-    code: dataToEsm(functions),
+    code: serializeClientFunctions(functions),
   })
 
   modules.addModule({
@@ -368,12 +372,9 @@ async function generateSsrBundle(
     id: entryId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
-      ${renderAppImports(
-        context,
-        runtimeId,
-        runtimeConfigModule.id,
-        bundleFormat
-      )}
+      import "${context.renderPath}"
+      import "${context.routesPath}"
+
       export * from "${runtimeId}"
       export { default } from "${runtimeId}"
       export { default as config } from "${runtimeConfigModule.id}"
@@ -381,7 +382,7 @@ async function generateSsrBundle(
     moduleSideEffects: 'no-treeshake',
   })
 
-  const redirectedModules = [
+  const redirectedModules: vite.PluginOption[] = [
     redirectModule('saus', path.join(runtimeDir, 'index.ts')),
     redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
     redirectModule('saus/bundle', entryId),
@@ -401,8 +402,6 @@ async function generateSsrBundle(
       path.join(clientDir, 'loadPageModule.ts'),
       path.join(runtimeDir, 'loadPageModule.ts')
     ),
-    !options.isBuild &&
-      redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
   ]
 
   const bundleType = bundleConfig.type || 'script'
@@ -413,13 +412,16 @@ async function generateSsrBundle(
       redirectModule(
         path.resolve(__dirname, '../src/core/http.ts'),
         path.join(runtimeDir, 'http.ts')
-      )
+      ),
+      // Redirect the `debug` package to a stub module.
+      !options.isBuild &&
+        redirectModule('debug', path.join(runtimeDir, 'debug.ts'))
     )
   }
 
   const config = await context.resolveConfig('build', {
     plugins: [
-      await bundleRoutes(routeImports, context, bundleFormat == 'cjs'),
+      await isolateRoutes(routeImports, context),
       routesPlugin(context.config.saus, clientRouteMap),
       debugForbiddenImports([
         'vite',
@@ -432,7 +434,7 @@ async function generateSsrBundle(
       !supportTopLevelAwait(bundleConfig)
         ? wrapAsyncInit()
         : null,
-      ...redirectedModules,
+      redirectedModules,
       rewriteHttpImports(),
       // debugSymlinkResolver(),
     ],
@@ -458,50 +460,30 @@ async function generateSsrBundle(
   return buildResult.output[0].output[0]
 }
 
-function renderAppImports(
-  context: SausContext,
-  runtimeId: string,
-  runtimeConfigId: string,
-  bundleFormat: string
-) {
-  // Top-level await is not supported in CommonJS builds,
-  // so we must inject a setup function into the page factory.
-  if (bundleFormat == 'cjs') {
-    return endent`
-      import cacheRoutes from "${context.routesPath}"
-      import cacheRenderers from "${context.renderPath}"
-      import runtimeConfig from "${runtimeConfigId}"
-      import { getPageFactory } from "${runtimeId}"
-      runtimeConfig.pageFactory = getPageFactory(async () => {
-        await cacheRoutes()
-        await cacheRenderers()
-      })
-    `
-  }
-  // Otherwise, the routes and renderers will cache themselves.
-  return endent`
-    import "${context.routesPath}"
-    import "${context.renderPath}"
-    import runtimeConfig from "${runtimeConfigId}"
-    import { getPageFactory } from "${runtimeId}"
-    runtimeConfig.pageFactory = getPageFactory()
-  `
-}
+/**
+ * The renderers from the `saus.render` module are transformed at build time
+ * for client-side use, so the SSR bundle can serve them from memory as-is.
+ *
+ * This function prepares a manifest for piecing together a hydration script
+ * based on which renderer is used for a given page.
+ */
+const serializeClientFunctions = (functions: ClientFunctions) =>
+  dataToEsm({
+    filename: functions.filename,
+    beforeRender: functions.beforeRender.map(serializeClientFunction),
+    render: functions.render.map(renderFn => ({
+      ...serializeClientFunction(renderFn),
+      didRender: renderFn.didRender
+        ? serializeClientFunction(renderFn.didRender)
+        : undefined,
+    })),
+  })
 
-function redirectModule(targetId: string, replacementId: string): vite.Plugin {
-  return {
-    name: 'redirect-module:' + targetId,
-    enforce: 'pre',
-    async resolveId(id, importer) {
-      if (importer && id[0] === '.' && targetId[0] === '/') {
-        id = (await this.resolve(id, importer, { skipSelf: true }))?.id!
-      }
-      if (id === targetId) {
-        return replacementId
-      }
-    },
-  }
-}
+const serializeClientFunction = (func: ClientFunction) => ({
+  start: func.start,
+  route: func.route,
+  ...func.transformResult,
+})
 
 function relativeToCwd(file: string) {
   file = path.relative(process.cwd(), file)

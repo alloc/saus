@@ -1,4 +1,8 @@
-type StateLoader<State = any> = (() => Promise<State>) 
+import createDebug from 'debug'
+
+const debug = createDebug('saus:cache')
+
+type StateLoader<State = any> = () => Promise<State>
 
 export function withCache<State = any>(
   loadingStateCache: Map<string, Promise<any>>,
@@ -18,7 +22,8 @@ export function withCache<State = any>(
 export function withCache(
   loadingStateCache: Map<string, Promise<any>>,
   loadedStateCache: Map<string, any>,
-  getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () => undefined
+  getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () =>
+    undefined
 ) {
   return (cacheKey: string, loader?: StateLoader) => {
     if (loadedStateCache.has(cacheKey)) {
@@ -26,6 +31,7 @@ export function withCache(
     }
     let loadingState = loadingStateCache.get(cacheKey)
     if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
+      debug(`Loading "%s"`, cacheKey)
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader()

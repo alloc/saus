@@ -1,5 +1,8 @@
+import createDebug from 'debug'
 import { loadedStateCache } from '../client/cache'
 import { loadState } from '../core/loadStateModule'
+
+const debug = createDebug('saus:cache')
 
 const ssrPrefix = 'saus-ssr:'
 const ssrModules: Record<string, ModuleGetter> = {}
@@ -25,6 +28,7 @@ export const __d = (id: string, loader: ModuleLoader) =>
 
 /** Clear all loaded SSR modules */
 export function ssrClearCache() {
+  debug('Clearing the module cache')
   loadedStateCache.forEach((_, key) => {
     if (key.startsWith(ssrPrefix)) {
       loadedStateCache.delete(key)

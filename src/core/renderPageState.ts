@@ -1,15 +1,18 @@
-import type { PageState } from '../pages'
+import type { ClientState } from '../client'
 import { dataToEsm } from '../utils/dataToEsm'
+import { stateModulesMap } from './stateModules'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 export function renderPageState(
-  pageState: PageState,
+  pageState: ClientState,
   base: string,
   helpersId: string,
   preloadUrls?: string[]
 ) {
   const toStateUrl = (id: string) => base + 'state/' + id + '.js'
-  const stateModuleUrls = new Set(pageState.$.map(toStateUrl))
+  const stateModuleUrls = new Set(
+    stateModulesMap.get(pageState)?.map(toStateUrl)
+  )
 
   const inlinedStateUrls: string[] = []
   const inlinedStateIdents: string[] = []

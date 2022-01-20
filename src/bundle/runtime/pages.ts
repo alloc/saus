@@ -1,20 +1,34 @@
 import path from 'path'
 import { renderPageState } from '../../core/renderPageState'
 import { renderStateModule } from '../../core/renderStateModule'
+import { createPageFactory } from '../../pages'
 import { getPageFilename } from '../../utils/getPageFilename'
 import { parseImports, serializeImports } from '../../utils/imports'
 import { isCSSRequest } from '../../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../../utils/modulePreload'
 import { ParsedUrl, parseUrl } from '../../utils/url'
+import { ssrClearCache, ssrRequire } from '../ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from '../types'
 import config from './config'
+import { ssrRoutesId } from './constants'
 import { context } from './context'
 import { applyHtmlProcessors, endent } from './core'
+import functions from './functions'
 import { getModuleUrl } from './getModuleUrl'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import moduleMap from './modules'
+import { loadRenderers } from './render'
 
 const hydrateImport = `import { hydrate } from "saus/client"`
+const pageFactory = createPageFactory(
+  context,
+  functions,
+  config,
+  // Load the routes module.
+  () => ssrRequire(ssrRoutesId)
+)
+
+type InternalPage = import('../../pages/types').RenderedPage
 
 export async function renderPage(
   pageUrl: string | ParsedUrl,
@@ -31,11 +45,20 @@ export async function renderPage(
 
   const pagePath = pageUrl.path
 
-  let page: import('../../pages').RenderedPage | null = null
+  let page: InternalPage | null = null
   try {
-    if (config.pageFactory) {
-      page = await config.pageFactory.render(pageUrl, { renderStart })
-    }
+    page = await pageFactory.render(pageUrl, {
+      renderStart,
+      // Prepare the page context with isolated modules.
+      async setup(pageContext) {
+        ssrClearCache()
+        context.renderers = []
+        context.defaultRenderer = undefined
+        context.beforeRenderHooks = []
+        await loadRenderers(pagePath)
+        Object.assign(pageContext, context)
+      },
+    })
   } catch (error: any) {
     if (renderFinish) {
       renderFinish(pagePath, error)

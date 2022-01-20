@@ -1,4 +1,4 @@
-import type { PageFactoryContext } from '../../pages'
+import type { PageFactoryContext } from '../../pages/types'
 import config from './config'
 
 export const context: PageFactoryContext = {
@@ -8,7 +8,6 @@ export const context: PageFactoryContext = {
   loadingStateCache: new Map(),
   loadedStateCache: new Map(),
   logger: {
-    warn: console.warn,
     error: console.error,
   },
   basePath: config.base,

@@ -13,9 +13,10 @@ import {
 } from '../core'
 import { transformClientState } from '../plugins/clientState'
 import { debugForbiddenImports } from '../plugins/debug'
+import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
-import { clientDir } from './constants'
+import { clientDir, runtimeDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { toInlineSourceMap } from './sourceMap'
 import { ClientModule, ClientModuleMap } from './types'
@@ -132,6 +133,7 @@ export async function generateClientModules(
         './src/core/context.ts',
       ]),
       routesPlugin(config.saus, clientRouteMap),
+      redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
       modules,
       fixChunkImports(removedImports),
       transformClientState(),
@@ -206,15 +208,18 @@ export async function generateClientModules(
 
   const unresolvedImports = Object.keys(importMap)
   mapClientFunctions(functions, fn => {
+    if (!fn.transformResult) return
     const updates: (() => void)[] = []
-    fn.referenced.forEach((stmt, i) => {
+    const { referenced } = fn.transformResult
+    referenced.forEach((stmt, i) => {
+      stmt = stmt.toString()
       if (!stmt.startsWith('import ')) return
       const importStmt = importMap[stmt]
       if (importStmt && !importStmt.isImplicit) {
         const index = unresolvedImports.indexOf(stmt)
         const chunk = entryChunks[index]
         updates.push(() => {
-          fn.referenced[i] = stmt.replace(
+          referenced[i] = (stmt as string).replace(
             quotes(importStmt.id),
             quotes(base + chunk.fileName)
           )

@@ -1,7 +1,10 @@
 import md5Hex from 'md5-hex'
+import type { ClientState } from '../client'
 import { loadedStateCache } from '../client/cache'
 import { loadStateModule } from './loadStateModule'
 import type { ResolvedState } from './state'
+
+export const stateModulesMap = new WeakMap<ClientState, string[]>()
 
 export interface StateModule<T = any, Args extends any[] = any[]> {
   id: string

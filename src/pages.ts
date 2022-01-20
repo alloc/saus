@@ -3,31 +3,34 @@ import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
 import os from 'os'
 import path from 'path'
-import { ssrClearCache } from './bundle/ssrModules'
 import { withCache } from './client/withCache'
 import type {
   BeforeRenderHook,
   Client,
   ClientDescription,
-  ClientFunction,
-  ClientFunctions,
   ClientState,
   Renderer,
-  RenderFunction,
-  RenderModule,
   RenderRequest,
   Route,
   RouteInclude,
+  RouteModule,
   RouteParams,
-  RoutesModule,
   RuntimeConfig,
-  SausContext,
   StateModule,
 } from './core'
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
-import { isStateModule } from './core/stateModules'
+import { isStateModule, stateModulesMap } from './core/stateModules'
+import {
+  ClientFunction,
+  ClientFunctions,
+  PageContext,
+  PageFactoryContext,
+  RenderedPage,
+  RenderFunction,
+  RenderPageOptions,
+} from './pages/types'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -38,43 +41,6 @@ const debug = createDebug('saus:pages')
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
-export type RenderedPage = {
-  path: string
-  html: string
-  state: PageState
-  client?: Client
-  stateModules: string[]
-  routeModuleId: string
-}
-
-type SausContextKeys =
-  | 'basePath'
-  | 'defaultPath'
-  | 'loadedStateCache'
-  | 'loadingStateCache'
-  | 'pages'
-
-export interface PageFactoryContext
-  extends Pick<SausContext, SausContextKeys>,
-    RoutesModule,
-    RenderModule {
-  logger: { warn(msg: string): void; error(msg: string): void }
-}
-
-export interface PageState extends ClientState {
-  /** The IDs of any state modules needed by this page. */
-  $: string[]
-}
-
-export type RenderPageOptions = {
-  renderStart?: (url: string) => void
-  renderFinish?: (
-    url: string,
-    error: Error | null,
-    page?: RenderedPage | null
-  ) => void
-}
-
 export function createPageFactory(
   context: PageFactoryContext,
   functions: ClientFunctions,
@@ -82,85 +48,16 @@ export function createPageFactory(
   setup?: () => Promise<any>
 ) {
   let {
-    pages,
-    loadingStateCache,
-    loadedStateCache,
-    routes,
-    renderers,
-    defaultState,
-    defaultRoute,
-    defaultRenderer,
-    beforeRenderHooks,
-    processHtml,
     basePath,
+    beforeRenderHooks,
+    defaultRoute,
+    defaultState,
     logger,
+    pages,
+    processHtml,
+    renderers,
+    routes,
   } = context
-
-  const resolveState = withCache<PageState>(loadingStateCache, loadedStateCache)
-
-  const loadStateModule = (
-    loaded: Map<string, Promise<any>>,
-    state: StateModule
-  ) => {
-    let loading = loaded.get(state.id)
-    if (!loading) {
-      loading = resolveState(state.id, state.load).catch(error => {
-        logger.error(error.stack)
-        return null
-      })
-      loaded.set(state.id, loading)
-    }
-    return loading
-  }
-
-  const loadStateModules = (
-    loaded: Map<string, Promise<any>>,
-    include: RouteInclude,
-    url: ParsedUrl,
-    params: RouteParams
-  ) => {
-    const included =
-      typeof include == 'function' ? include(url, params) : include
-    return included.map(loadStateModule.bind(null, loaded))
-  }
-
-  const getPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    resolveState(url.path, async () => {
-      let pageState: PageState
-
-      // State modules start loading before the root-level state is awaited.
-      const pendingStateModules = new Map<string, Promise<any>>()
-      for (const include of defaultState.concat([route.include || []])) {
-        loadStateModules(pendingStateModules, include, url, params)
-      }
-
-      if (route.state) {
-        pageState = (await route.state(
-          Object.values(params),
-          url.searchParams
-        )) as any
-
-        // Load any embedded state modules.
-        JSON.stringify(pageState, (key, state) => {
-          if (!isStateModule(state)) {
-            return state
-          }
-          loadStateModule(pendingStateModules, state)
-          pageState[key] = { '@import': state.id }
-        })
-      } else {
-        pageState = {} as any
-      }
-
-      await Promise.all(pendingStateModules.values())
-      Object.defineProperty(pageState, '$', {
-        value: Array.from(pendingStateModules.keys()),
-      })
-
-      pageState.routePath = route.path
-      pageState.routeParams = params
-      return pageState
-    })
 
   // Pages cannot be rendered in parallel, or else we risk inconsistencies
   // caused by global state mutation. This will be fixed in the future with
@@ -173,8 +70,8 @@ export function createPageFactory(
     context.runtimeHooks.forEach(onSetup => {
       try {
         onSetup(config)
-      } catch (err: any) {
-        context.logger.error(err.stack)
+      } catch (error: any) {
+        logger.error(error.stack)
       }
     })
     setRoutesModule(null)
@@ -185,37 +82,24 @@ export function createPageFactory(
         ['pre', 'default']
       )
     }
-    routes = [...context.routes].reverse()
-    renderers = [...context.renderers].reverse()
+
     defaultRoute = context.defaultRoute
-    defaultRenderer = context.defaultRenderer
+    defaultState = context.defaultState
+
+    // Routes and renderers are matched in reverse order.
+    routes = [...context.routes].reverse()
+    renderers.reverse()
   })()
-
-  // For mapping a pathname to its route
-  const routeMap: Record<string, Route | undefined> = {}
-
-  const warnings = new Set<string>()
-  const warn = (msg: string) => {
-    if (!warnings.has(msg)) {
-      warnings.add(msg)
-      logger.warn(msg)
-    }
-  }
-
-  // Routes must be loaded one at a time, since they share
-  // the same module cache and that cache needs to be reset
-  // before rendering each page.
-  let routeLoadingQueue = Promise.resolve()
 
   // The main logic for rendering a page.
   async function renderPage(
     url: ParsedUrl,
-    state: PageState,
+    state: ClientState,
     route: Route,
-    renderer: Renderer
+    routeModule: RouteModule,
+    renderer: Renderer,
+    beforeRenderHooks: BeforeRenderHook[]
   ): Promise<RenderedPage | null> {
-    const stateModules = state.$
-
     const { path } = url
     const request: RenderRequest = {
       path,
@@ -224,24 +108,16 @@ export function createPageFactory(
       state,
     }
 
-    const loadingRouteModule = routeLoadingQueue.then(() => {
-      ssrClearCache()
-      debug(`Loading route: %s`, route.moduleId)
-      return route.load()
-    })
-
-    routeLoadingQueue = loadingRouteModule.then(noop, noop)
-    const routeModule = await loadingRouteModule
-
     if (beforeRenderHooks.length) {
       debug(`Running beforeRender hooks`)
     }
 
     const usedHooks: BeforeRenderHook[] = []
     for (const hook of beforeRenderHooks) {
-      if (!hook.test || hook.test(path)) {
+      const params = hook.match ? hook.match(path) : {}
+      if (params) {
         usedHooks.push(hook)
-        await hook(request)
+        await hook({ ...request, params })
       }
     }
 
@@ -265,7 +141,7 @@ export function createPageFactory(
       html,
       state,
       client,
-      stateModules,
+      stateModules: stateModulesMap.get(state)!,
       routeModuleId: route.moduleId,
     }
 
@@ -279,43 +155,6 @@ export function createPageFactory(
     // since the performance impact of rendering on every request isn't
     // bad enough to justify complicated cache invalidation.
     return (pages[filename] = page)
-  }
-
-  /**
-   * Use the default renderer to render HTML for the given `url`.
-   * If the given `route` is undefined, nothing is rendered.
-   */
-  function renderDefaultPage(url: ParsedUrl, state: PageState, route: Route) {
-    if (defaultRenderer) {
-      return renderPage(url, state, route, defaultRenderer)
-    }
-    warn('Default renderer is not defined')
-    return null
-  }
-
-  async function renderUnknownPage(url: ParsedUrl, params: RouteParams = {}) {
-    if (!defaultRoute) {
-      return null
-    }
-    const state = await getPageState(url, params, defaultRoute)
-    return renderDefaultPage(url, state, defaultRoute)
-  }
-
-  async function renderRoute(
-    url: ParsedUrl,
-    params: RouteParams,
-    route: Route
-  ) {
-    const state = await getPageState(url, params, route)
-    for (const renderer of renderers) {
-      if (renderer.test(url.path)) {
-        const page = await renderPage(url, state, route, renderer)
-        if (page) {
-          return page
-        }
-      }
-    }
-    return renderDefaultPage(url, state, route)
   }
 
   type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>
@@ -339,27 +178,202 @@ export function createPageFactory(
       })
   )
 
-  const resolvingPages = new Map<string, Promise<RenderedPage | null>>()
-  const resolvePage = (
+  // Concurrent requests to the same page will use the same promise.
+  const loadingPages = new Map<string, Promise<RenderedPage | null>>()
+
+  function loadPage(
     url: string | ParsedUrl,
     options: RenderPageOptions,
     renderPage: RenderPageFn
-  ) => {
+  ) {
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
     let pagePath = url.path
-    let pagePromise = resolvingPages.get(pagePath)
-    if (!pagePromise) {
+    let loadingPage = loadingPages.get(pagePath)
+    if (!loadingPage) {
       debug(`Page queued: %s`, url)
-      resolvingPages.set(
+      loadingPages.set(
         pagePath,
-        (pagePromise = queuePage(url, renderPage, options).finally(() => {
-          resolvingPages.delete(pagePath)
+        (loadingPage = queuePage(url, renderPage, options).finally(() => {
+          loadingPages.delete(pagePath)
         }))
       )
     }
-    return pagePromise
+    return loadingPage
+  }
+
+  const resolveState = withCache<ClientState>(
+    context.loadingStateCache,
+    context.loadedStateCache
+  )
+
+  function loadStateModule(
+    loaded: Map<string, Promise<any>>,
+    state: StateModule
+  ) {
+    let loading = loaded.get(state.id)
+    if (!loading) {
+      loading = resolveState(state.id, state.load).catch(error => {
+        logger.error(error.stack)
+        return null
+      })
+      loaded.set(state.id, loading)
+    }
+    return loading
+  }
+
+  function loadStateModules(
+    loaded: Map<string, Promise<any>>,
+    include: RouteInclude,
+    url: ParsedUrl,
+    params: RouteParams
+  ) {
+    const included =
+      typeof include == 'function' ? include(url, params) : include
+
+    return included.map(loadStateModule.bind(null, loaded))
+  }
+
+  const loadPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
+    resolveState(url.path, async () => {
+      const pageState = await loadClientState(url, params, route)
+      pageState.routePath = route.path
+      pageState.routeParams = params
+      return pageState
+    })
+
+  async function loadClientState(
+    url: ParsedUrl,
+    params: RouteParams,
+    route: Route
+  ) {
+    let result: ClientState
+
+    // Start loading state modules before the route state is awaited.
+    const pendingStateModules = new Map<string, Promise<any>>()
+    for (const include of defaultState.concat([route.include || []])) {
+      loadStateModules(pendingStateModules, include, url, params)
+    }
+
+    if (route.state) {
+      result = (await route.state(
+        Object.values(params),
+        url.searchParams
+      )) as any
+
+      // Load any embedded state modules.
+      JSON.stringify(result, (key, state) => {
+        if (!isStateModule(state)) {
+          return state
+        }
+        loadStateModule(pendingStateModules, state)
+        result[key] = { '@import': state.id }
+      })
+    } else {
+      result = {} as any
+    }
+
+    await Promise.all(pendingStateModules.values())
+    stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
+
+    return result
+  }
+
+  let pageContextQueue = Promise.resolve()
+
+  async function getPageContext(
+    url: ParsedUrl,
+    options: RenderPageOptions
+  ): Promise<PageContext> {
+    if (!options.setup) {
+      return { renderers, beforeRenderHooks }
+    }
+    const pageContext: PageContext = {
+      renderers: [],
+      beforeRenderHooks: [],
+    }
+    await options.setup(pageContext)
+    return pageContext
+  }
+
+  async function loadPageContext(url: ParsedUrl, options: RenderPageOptions) {
+    // In SSR mode, multiple pages must not load their modules at the
+    // same time, or else they won't be isolated from each other.
+    const loading = pageContextQueue.then(async () => {
+      const [route, params] = resolveRoute(url)
+      if (!route) {
+        return [] as const
+      }
+
+      const pageContext = await getPageContext(url, options)
+
+      let routeModule: RouteModule
+      let state: ClientState
+      let error: any
+
+      try {
+        ;[routeModule, state] = await Promise.all([
+          route.load(),
+          loadPageState(url, params || {}, route),
+        ] as const)
+      } catch (e) {
+        error = e
+      }
+
+      const { beforeRenderHooks } = pageContext
+      return [
+        pageContext,
+        error,
+        (renderer: Renderer) =>
+          renderPage(
+            url,
+            state,
+            route,
+            routeModule,
+            renderer,
+            beforeRenderHooks
+          ),
+      ] as const
+    })
+
+    pageContextQueue = loading.then(noop, noop)
+    return loading
+  }
+
+  async function loadDefaultRoute(
+    url: ParsedUrl,
+    params: RouteParams,
+    options: RenderPageOptions
+  ) {
+    const loading = pageContextQueue.then(async () => {
+      if (!defaultRoute) {
+        return [null] as const
+      }
+      await getPageContext(url, options)
+      return Promise.all([
+        defaultRoute,
+        defaultRoute.load(),
+        loadClientState(url, params, defaultRoute),
+      ] as const)
+    })
+
+    pageContextQueue = loading.then(noop, noop)
+    return loading
+  }
+
+  function resolveRoute(url: ParsedUrl): [Route?, RouteParams?] {
+    let route: Route | undefined
+    for (route of routes) {
+      const params = matchRoute(url.path, route)
+      if (params) {
+        return [route, params]
+      }
+    }
+    if ((route = defaultRoute)) {
+      return [route]
+    }
+    return []
   }
 
   return {
@@ -370,61 +384,41 @@ export function createPageFactory(
     /**
      * Get the hydration state of the given URL.
      */
-    async getPageState(filename: string): Promise<PageState | undefined> {
+    async getPageState(filename: string) {
+      await setupPromise
       const url = parseUrl(filename.replace(/(\/index)?\.html$/, '') || '/')
-
-      let params: RouteParams | undefined
-      let route = (routeMap[url.path] ||= routes.find(
-        route => (params = matchRoute(url.path, route))
-      ))
-
-      if (!route && (route = defaultRoute)) {
-        params = matchRoute(url.path, route)!
-      }
-
+      const [route, params] = resolveRoute(url)
       if (route) {
-        return getPageState(url, params!, route)
+        return loadPageState(url, params || {}, route)
       }
     },
-    /**
-     * Use the default route to render HTML for the given `url`.
-     */
-    renderUnknownPage: async (url: string | ParsedUrl, params?: RouteParams) =>
-      resolvePage(url, {}, url => renderUnknownPage(url, params)),
-    /**
-     * Skip route matching and render HTML for the given `url` using
-     * the given route and params.
-     */
-    renderRoute: (url: string | ParsedUrl, params: RouteParams, route: Route) =>
-      resolvePage(url, {}, url => renderRoute(url, params, route)),
     /**
      * Find a matching route to render HTML for the given `url`.
      */
     render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
-      resolvePage(url, options, async url => {
-        if (typeof url == 'string') {
-          url = parseUrl(url)
+      loadPage(url, options, async url => {
+        let [context, error, render] = await loadPageContext(url, options)
+        if (!context || !render) {
+          return null
         }
 
-        let route: Route | undefined
-        let error: any
+        let page: RenderedPage | null
+        let renderer: Renderer | undefined
 
-        try {
-          route = routeMap[url.path]
-          if (route) {
-            const params = matchRoute(url.path, route)!
-            return await renderRoute(url, params, route)
-          }
-          for (route of routes) {
-            const params = matchRoute(url.path, route)
-            if (params) {
-              routeMap[url.path] = route
-              return await renderRoute(url, params, route)
+        if (!error)
+          for (renderer of context.renderers) {
+            if (!renderer.test(url.path)) {
+              continue
+            }
+            try {
+              if ((page = await render(renderer))) {
+                return page
+              }
+            } catch (e) {
+              error = e
+              break
             }
           }
-        } catch (e: any) {
-          error = e
-        }
 
         // Skip requests with file extension, unless explicitly
         // handled by a non-default renderer.
@@ -432,15 +426,44 @@ export function createPageFactory(
           return null
         }
 
-        // Render the fallback page.
-        if (defaultRenderer && defaultRoute) {
-          return await renderUnknownPage(url, { error })
+        renderer = context.defaultRenderer
+        if (!error) {
+          if (!renderer) {
+            return null
+          }
+          try {
+            if ((page = await render(renderer))) {
+              return page
+            }
+            return null
+          } catch (e) {
+            error = e
+          }
         }
 
-        if (error) {
+        if (!renderer) {
           throw error
         }
-        return null
+
+        // Use the default route to render an error page.
+        const [route, routeModule, state] = await loadDefaultRoute(
+          url,
+          { error },
+          options
+        )
+
+        if (!route) {
+          throw error
+        }
+
+        return renderPage(
+          url,
+          state,
+          route,
+          routeModule,
+          renderer,
+          context.beforeRenderHooks
+        )
       }),
   }
 }
@@ -488,12 +511,17 @@ function renderClient(
 
   const importedModules = new Set<string>()
   const insertFunction = (fn: ClientFunction, name: string) => {
-    for (const stmt of fn.referenced) {
-      if (importedModules.has(stmt)) continue
-      importedModules.add(stmt)
-      topLevel.append(stmt + '\n')
+    const { function: rawFn, referenced } = fn.transformResult || fn
+
+    for (let stmt of referenced) {
+      stmt = stmt.toString()
+      if (!importedModules.has(stmt)) {
+        importedModules.add(stmt)
+        topLevel.append(stmt + '\n')
+      }
     }
-    topLevel.append(`const ${name} = ${fn.function}`)
+
+    topLevel.append(`const ${name} = ${rawFn}`)
     onHydrate.append(
       name == `$render`
         ? `const content = await $render(routeModule, request)\n`

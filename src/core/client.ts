@@ -11,6 +11,7 @@ import {
   t,
 } from '../babel'
 import { renderIdentRE } from '../plugins/render'
+import type { ImportDescriptorMap } from '../utils/imports'
 import type { RouteParams } from './routes'
 
 export const stateCacheUrl =
@@ -40,20 +41,31 @@ export type ClientState = Record<string, any> & {
   routeParams: RouteParams
   error?: any
 }
+
 /**
  * Client fragments represent a portion of a render module,
  * which are pieced together by the SSR bundle based on
  * which page URL is being rendered.
  */
 export interface ClientFunction {
-  /** Route path for page matching */
-  route?: string
   /** Character offset where the function is found within the source file */
   start: number
+  /** Route path for page matching */
+  route?: string
+  /** Exists for `beforeRender` and `render` calls */
+  callee?: NodePath<t.Identifier>
   /** The function implementation */
   function: string
-  /** Referenced variables outside the function */
-  referenced: string[]
+  /** Referenced statements outside the function */
+  referenced: WrappedNode<t.Statement>[]
+  /**
+   * When bundling for SSR, the function and its referenced statements need
+   * to be compiled at build time.
+   */
+  transformResult?: {
+    function: string
+    referenced: string[]
+  }
 }
 
 export interface RenderFunction extends ClientFunction {
@@ -80,18 +92,18 @@ export function mapClientFunctions<T>(
   return mapped
 }
 
-export function extractClientFunctions(filename: string): ClientFunctions {
-  const rawSource = fs.readFileSync(filename, 'utf8')
-  const source = new MagicString(rawSource, {
-    filename,
-    indentExclusionRanges: [],
-  })
+export function extractClientFunctions(
+  filename: string,
+  code = fs.readFileSync(filename, 'utf8'),
+  ssr?: boolean
+): ClientFunctions {
+  const editor = !ssr && new MagicString(code)
 
   const beforeRenderFns: NodePath<t.ArrowFunctionExpression>[] = []
   const renderFns: NodePath<t.ArrowFunctionExpression>[] = []
   const didRenderFns: Record<number, NodePath<t.ArrowFunctionExpression>> = {}
 
-  const program = getBabelProgram(rawSource, filename)
+  const program = getBabelProgram(code, filename)
   program.traverse({
     CallExpression(callPath) {
       const callee = callPath.get('callee')
@@ -148,14 +160,6 @@ export function extractClientFunctions(filename: string): ClientFunctions {
     },
   })
 
-  const getSource = (path: NodePath) => {
-    const { start, end } = path.node
-    if (start == null || end == null) {
-      throw Error('Missing node start/end')
-    }
-    return source.slice(start, end)
-  }
-
   const defineClientFunction = (
     fn: NodePath<t.ArrowFunctionExpression>
   ): ClientFunction => {
@@ -168,13 +172,17 @@ export function extractClientFunctions(filename: string): ClientFunctions {
     const referenced = resolveReferences(
       fn.get('body'),
       path => !path.isDescendant(fn.parentPath)
-    ).map(getSource)
+    )
 
+    const callee = fn.parentPath.get('callee') as NodePath
     return {
       route: routeArg?.node.value,
+      callee: callee.isIdentifier() ? callee : undefined,
       start: fn.parentPath.node.start!,
-      function: getSource(fn),
-      referenced,
+      function: toWrappedNode(fn, editor || code).toString(),
+      referenced: referenced.map(path => {
+        return toWrappedNode(path, editor || code)
+      }),
     }
   }
 
@@ -185,7 +193,9 @@ export function extractClientFunctions(filename: string): ClientFunctions {
       const fn = defineClientFunction(path) as RenderFunction
       const didRenderFn = didRenderFns[fn.start]
       if (didRenderFn) {
-        didRenderFn.get('body').traverse(removeSSR(source))
+        if (editor) {
+          didRenderFn.get('body').traverse(removeSSR(editor))
+        }
         fn.didRender = defineClientFunction(didRenderFn)
       }
       return fn
@@ -193,8 +203,20 @@ export function extractClientFunctions(filename: string): ClientFunctions {
   }
 }
 
-export type ClientImports = {
-  [source: string]: string | (string | [name: string, alias: string])[]
+export interface WrappedNode<T extends t.Node> {
+  node: T & { start: number; end: number }
+  toString(): string
+}
+
+function toWrappedNode<T extends t.Node>(
+  path: NodePath<T>,
+  source: string | MagicString
+): WrappedNode<T> {
+  const node = path.node as any
+  return {
+    node,
+    toString: () => source.slice(node.start, node.end),
+  }
 }
 
 export function defineClient(description: ClientDescription) {
@@ -209,7 +231,7 @@ export interface ClientDescription {
    * identifier used for the default export or an array of identifiers
    * used for named exports.
    */
-  imports: ClientImports
+  imports: ImportDescriptorMap
   /**
    * Hydration code to run on the client.
    *

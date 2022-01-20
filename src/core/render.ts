@@ -1,7 +1,7 @@
 import type { ClientDescription } from './client'
 import { RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
-import { RegexParam } from './routes'
+import { matchRoute, RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
 type ExcludeVoid<T> = Exclude<T, null | void>
@@ -21,7 +21,7 @@ export type RenderModule = {
 
 export type BeforeRenderHook = {
   (request: RenderRequest<any, any>): Promisable<void>
-  test?: (path: string) => boolean
+  match?: (path: string) => RouteParams | undefined
   start?: number
 }
 
@@ -98,8 +98,8 @@ export function beforeRender(...args: any[]) {
   if (typeof args[0] == 'string') {
     const route = args[0]
     hook = args[1]
-    const regex = RegexParam.parse(route).pattern
-    hook.test = regex.test.bind(regex)
+    const parsedRoute = RegexParam.parse(route)
+    hook.match = path => matchRoute(path, parsedRoute)
   } else {
     hook = args[0]
   }

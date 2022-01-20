@@ -1,5 +1,6 @@
-import { vite } from '../core/vite'
 import createDebug from 'debug'
+import { vite } from '../core/vite'
+import { SourceMap } from './sourceMap'
 
 const debug = createDebug('saus:moduleProvider')
 
@@ -7,6 +8,7 @@ export interface VirtualModule {
   id: string
   code: string | PromiseLike<string>
   moduleSideEffects?: boolean | 'no-treeshake'
+  map?: SourceMap
 }
 
 export interface ModuleProvider {

@@ -57,7 +57,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
 type InlinePlugin = (
   sausConfig: SausConfig,
   configEnv: vite.ConfigEnv
-) => Plugin
+) => Plugin | readonly Plugin[]
 
 export async function loadContext(
   command: 'build' | 'serve',

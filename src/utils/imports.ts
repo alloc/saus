@@ -1,7 +1,10 @@
-import type { ClientImports } from '../core'
 import { SPACE } from '../core/tokens'
 
-export function serializeImports(imports: ClientImports | string[]) {
+export type ImportDescriptorMap = {
+  [source: string]: string | (string | [name: string, alias: string])[]
+}
+
+export function serializeImports(imports: ImportDescriptorMap | string[]) {
   return (
     Array.isArray(imports)
       ? imports.map(source => [source, ''])

@@ -22,7 +22,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     loadContext('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
       clientPlugin,
-      routesPlugin,
+      config => routesPlugin(config),
       renderPlugin,
       transformClientState,
     ])

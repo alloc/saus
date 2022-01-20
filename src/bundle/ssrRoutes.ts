@@ -1,20 +1,34 @@
+import { createFilter } from '@rollup/pluginutils'
 import createDebug from 'debug'
+import endent from 'endent'
 import esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
 import escalade from 'escalade/sync'
-import { bold } from 'kleur/colors'
-import { startTask } from 'misty/task'
 import fs from 'fs'
+import { bold } from 'kleur/colors'
 import MagicString from 'magic-string'
+import md5Hex from 'md5-hex'
+import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
-import { babel, getBabelProgram, getImportDeclarations, t } from '../babel'
-import { SausContext, vite } from '../core'
+import {
+  babel,
+  getBabelProgram,
+  getImportDeclarations,
+  resolveReferences,
+  t,
+} from '../babel'
+import {
+  ClientFunction,
+  extractClientFunctions,
+  SausContext,
+  vite,
+} from '../core'
 import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
 import { runtimeDir } from './constants'
-import { createModuleProvider } from './moduleProvider'
+import { createModuleProvider, ModuleProvider } from './moduleProvider'
+import { ssrRoutesId } from './runtime/constants'
 import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
-import { createFilter } from '@rollup/pluginutils'
 
 const debug = createDebug('saus:ssr')
 
@@ -50,7 +64,10 @@ function getResolvedUrl(root: string, resolvedId: string) {
     return resolvedId
   }
   const relativeId = relative(root, resolvedId)
-  return relativeId.startsWith('..') ? '/@fs/' + resolvedId : '/' + relativeId
+  if (!relativeId.startsWith('..')) {
+    return '/' + relativeId
+  }
+  return '/@fs/' + resolvedId
 }
 
 const ssrModulesUrl = '/@fs/' + resolve(runtimeDir, '../ssrModules.ts')
@@ -58,10 +75,9 @@ const ssrModulesUrl = '/@fs/' + resolve(runtimeDir, '../ssrModules.ts')
 export const toBundleChunkId = (id: string) =>
   id.replace(/\.[^.]+$/, '.bundle.js')
 
-export async function bundleRoutes(
+export async function isolateRoutes(
   routeImports: RouteImports,
-  context: SausContext,
-  isCommonJS: boolean
+  context: SausContext
 ): Promise<vite.Plugin> {
   const { config } = context
   const modules = createModuleProvider()
@@ -91,6 +107,15 @@ export async function bundleRoutes(
 
   // Some plugins rely on this hook (like vite:css)
   await pluginContainer.buildStart({})
+
+  const virtualRenderPath = resolve(config.root, '.saus/render.js')
+  const rendererMap = isolateRenderers(
+    context.renderPath,
+    (await transform(getResolvedUrl(config.root, context.renderPath))) as any,
+    virtualRenderPath,
+    modules,
+    config
+  )
 
   const sausExternalRE = /\bsaus(?!.*\/(runtime|examples))\b/
   const nodeModulesRE = /\/node_modules\//
@@ -211,7 +236,7 @@ export async function bundleRoutes(
               nodeModulesRE.test(path.slice(config.root.length)))
 
           // Prepend /@fs/ for faster resolution by Rollup.
-          if (external && isAbsolute(path)) {
+          if (external && isAbsolute(path) && fs.existsSync(path)) {
             path = '/@fs/' + path
           }
 
@@ -238,10 +263,10 @@ export async function bundleRoutes(
         const url = getResolvedUrl(config.root, path)
         const transformed = await transform(url)
         if (transformed) {
-          let { code, map } = transformed as { code: string; map: SourceMap }
+          let { code, map } = transformed as OutputChunk
           if (map) {
             map.sources = map.sources.map(source => {
-              return source ? relative(dirname(path), source) : null
+              return source ? relative(dirname(path), source) : null!
             })
             code += map ? toInlineSourceMap(map) : ''
           }
@@ -264,8 +289,14 @@ export async function bundleRoutes(
 
   const { metafile, outputFiles } = await esbuild.build({
     absWorkingDir: config.root,
+    allowOverwrite: true,
     bundle: true,
-    entryPoints: [context.routesPath, context.renderPath, ...routeEntryPoints],
+    entryPoints: [
+      virtualRenderPath,
+      context.routesPath,
+      ...Object.keys(rendererMap),
+      ...routeEntryPoints,
+    ],
     format: 'esm',
     logLevel: 'error',
     metafile: true,
@@ -283,10 +314,10 @@ export async function bundleRoutes(
   task.finish(`${routeEntryPoints.length} routes bundled.`)
 
   const routesUrl = getResolvedUrl(config.root, context.routesPath)
-  const renderUrl = getResolvedUrl(config.root, context.renderPath)
+  const rendererUrl = getResolvedUrl(config.root, virtualRenderPath)
+
   const entryUrlToFileMap: Record<string, string> = {
-    [routesUrl]: context.routesPath,
-    [renderUrl]: context.renderPath,
+    [rendererUrl]: context.renderPath,
     ...Object.fromEntries(
       Array.from(routeImports.values(), resolved => [
         resolved.url,
@@ -295,11 +326,9 @@ export async function bundleRoutes(
     ),
   }
 
-  type OutputFile = { code: string; map: SourceMap }
-
   const bundleToEntryMap: Record<string, string> = {}
-  const bundledRoutes: Record<string, OutputFile> = {}
-  const sharedModules: Record<string, OutputFile> = {}
+  const bundledRoutes: Record<string, OutputChunk> = {}
+  const sharedModules: Record<string, OutputChunk> = {}
 
   const outputs = Object.values(metafile!.outputs)
   for (let i = 0; i < outputFiles.length; i++) {
@@ -312,17 +341,23 @@ export async function bundleRoutes(
     resolveMapSources(map, dirname(file.path))
     if (entryPoint) {
       const entryUrl = '/' + entryPoint
-      const filePath = entryUrlToFileMap[entryUrl]
-      const bundleId = toBundleChunkId(filePath)
-      bundledRoutes[bundleId] = { code: file.text, map }
-      bundleToEntryMap[bundleId] = entryUrl
+      if (entryUrl in entryUrlToFileMap) {
+        const filePath = entryUrlToFileMap[entryUrl]
+        const bundleId = toBundleChunkId(filePath)
+        bundledRoutes[bundleId] = { code: file.text, map }
+        bundleToEntryMap[bundleId] = entryUrl
+      } else {
+        const chunkPath = resolve(config.root, entryPoint)
+        sharedModules[chunkPath] = { code: file.text, map }
+        bundleToEntryMap[chunkPath] = entryUrl
+      }
     } else {
       const chunkId = '.saus' + file.path.slice(config.root.length)
       sharedModules[chunkId] = { code: file.text, map }
     }
   }
 
-  const isolateSsrModule = (code: string, id: string, bundle: OutputFile) => {
+  const isolateSsrModule = (code: string, id: string) => {
     const editor = new MagicString(code)
     const program = getBabelProgram(code, id)
     const imports = getImportDeclarations(program)
@@ -350,32 +385,34 @@ export async function bundleRoutes(
       }
     }
 
-    esmExportsToCjs(program, editor)
-    editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
-    const url = bundleToEntryMap[id] || id
-    if (url == routesUrl) {
-      const routeModulePaths = new Set(
-        Array.from(routeImports.values(), resolved => resolved.file)
-      )
-      for (const file of routeModulePaths) {
-        editor.prepend(`import "${file}"\n`)
+    let url = bundleToEntryMap[id] || id
+    if (url == rendererUrl) {
+      for (const chunkPath in rendererMap) {
+        editor.prepend(`import "${chunkPath}"\n`)
       }
-    }
-    if (!isCommonJS && (url == routesUrl || url == renderUrl)) {
-      editor.appendRight(lastImportEnd, `await `)
-      editor.append('\n})()')
     } else {
-      editor.appendRight(lastImportEnd, `export default `)
+      let ssrId = url
+      esmExportsToCjs(program, editor)
+      editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
       editor.append('\n})')
+      if (url == routesUrl) {
+        const routeModulePaths = new Set(
+          Array.from(routeImports.values(), resolved => resolved.file)
+        )
+        for (const file of routeModulePaths) {
+          editor.prepend(`import "${file}"\n`)
+        }
+        ssrId = ssrRoutesId
+      }
+      editor.appendRight(
+        lastImportEnd,
+        `__d("${ssrId}", async (exports) => {\n` + requireCalls.join('')
+      )
     }
-    editor.appendRight(
-      lastImportEnd,
-      `__d("${url}", async (exports) => {\n` + requireCalls.join('')
-    )
 
     return {
       code: editor.toString(),
-      map: editor.generateMap(),
+      map: editor.generateMap({ hires: true }),
       moduleSideEffects: 'no-treeshake' as const,
     }
   }
@@ -472,7 +509,7 @@ export async function bundleRoutes(
   }
 
   return {
-    name: 'saus:bundleRoutes',
+    name: 'saus:isolatedModules',
     enforce: 'pre',
     async resolveId(id, importer) {
       if (sharedModules[id]) {
@@ -499,9 +536,8 @@ export async function bundleRoutes(
       return bundledRoutes[id] || sharedModules[id]
     },
     transform(code, id) {
-      const bundle = bundledRoutes[id] || sharedModules[id]
-      if (bundle) {
-        return isolateSsrModule(code, id, bundle)
+      if (bundledRoutes[id] || sharedModules[id]) {
+        return isolateSsrModule(code, id)
       }
       const ssrId = isolatedCjsModules.get(id)
       if (ssrId) {
@@ -603,5 +639,112 @@ function rewriteRouteImports(
         }
       }
     },
+  }
+}
+
+type OutputChunk = { code: string; map?: SourceMap }
+
+function isolateRenderers(
+  renderPath: string,
+  renderModule: OutputChunk,
+  virtualRenderPath: string,
+  modules: ModuleProvider,
+  config: vite.ResolvedConfig
+) {
+  const rendererMap: Record<string, OutputChunk> = {}
+  const rendererList: string[] = []
+
+  const functions = extractClientFunctions(
+    renderPath.replace(/\.[^.]+$/, '.js'),
+    renderModule.code,
+    true
+  )
+
+  for (const type of ['beforeRender', 'render'] as const) {
+    for (const func of functions[type]) {
+      const editor = new MagicString(renderModule.code)
+      const chunk = createRendererChunk(type, func, editor)
+
+      if (renderModule.map)
+        chunk.map = vite.combineSourcemaps(renderPath, [
+          chunk.map as any,
+          renderModule.map as any,
+        ]) as any
+
+      const hash = md5Hex(chunk.code).slice(0, 8)
+      const chunkPath = renderPath.replace(/\.[^.]+$/, `.${hash}.js`)
+      rendererMap[chunkPath] = chunk
+      modules.addModule({
+        id: getResolvedUrl(config.root, chunkPath),
+        ...chunk,
+      })
+
+      const chunkId = '/' + relative(config.root, chunkPath)
+      rendererList.push(
+        `[${JSON.stringify(func.route)}, () => ssrRequire("${chunkId}")],`
+      )
+    }
+  }
+
+  modules.addModule({
+    id: getResolvedUrl(config.root, virtualRenderPath),
+    code: endent`
+      import { ssrRequire } from "${ssrModulesUrl}"
+      import { addRenderers } from "/@fs/${resolve(runtimeDir, 'render.ts')}"
+
+      addRenderers([
+        ${rendererList.join('\n')}
+      ])
+    `,
+  })
+
+  return rendererMap
+}
+
+/**
+ * Each renderer gets its own chunk so it can be reloaded once
+ * per rendered page.
+ */
+function createRendererChunk(
+  type: 'render' | 'beforeRender',
+  func: ClientFunction,
+  editor: MagicString
+): OutputChunk {
+  const preservedRanges: [number, number][] = []
+  const preserveRange = (p: { node: t.Node }) =>
+    preservedRanges.push([p.node.start!, p.node.end!])
+
+  const callee = func.callee!
+  let callExpr = callee.findParent(p =>
+    p.isCallExpression()
+  )! as babel.NodePath<t.CallExpression>
+
+  // Preserve the render/beforeRender call and any chained calls.
+  const callStmt = callExpr.getStatementParent()!
+  preserveRange(callStmt)
+
+  // Preserve any referenced statements.
+  while ((callExpr = callExpr.findParent(p => p.isCallExpression()) as any)) {
+    resolveReferences(callExpr.get('arguments')).forEach(preserveRange)
+  }
+  resolveReferences(callee).forEach(preserveRange)
+  func.referenced.forEach(preserveRange)
+
+  // Sort the preserved ranges in order of appearance.
+  preservedRanges.sort(([a], [b]) => a - b)
+
+  // Remove the unused ranges.
+  editor.remove(0, preservedRanges[0][0])
+  preservedRanges.forEach(([, removedStart], i) => {
+    const nextRange = preservedRanges[i + 1]
+    const removedEnd = nextRange ? nextRange[0] - 1 : editor.original.length
+    if (removedStart < removedEnd) {
+      editor.remove(removedStart, removedEnd)
+    }
+  })
+
+  return {
+    code: editor.toString(),
+    map: editor.generateMap(),
   }
 }
