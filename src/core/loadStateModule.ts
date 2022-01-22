@@ -1,9 +1,25 @@
 import { loadedStateCache, loadingStateCache } from '../client/cache'
 import { unwrapDefault } from '../utils/unwrapDefault'
 import type { ResolvedState } from './state'
+import { TimeToLive } from './ttl'
 import { withCache } from './withCache'
 
-export const loadState = withCache(loadingStateCache, loadedStateCache)
+export type StateModuleContext = {
+  cacheKey: string
+  /** Set the time-to-live (in seconds) */
+  maxAge: number
+}
+
+const getStateModuleContext = (cacheKey: string): StateModuleContext => ({
+  cacheKey,
+  get maxAge() {
+    return Infinity
+  },
+  set maxAge(value) {
+    TimeToLive.set(cacheKey, value)
+    Object.defineProperty(this, 'maxAge', { value })
+  },
+})
 
 export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
   this: StateModuleContext,
@@ -22,7 +38,7 @@ export const loadStateModule = <T, Args extends any[]>(
 ): Promise<ResolvedState<T>> =>
   loadState(cacheKey, async function loadStateModule() {
     try {
-      let result = loadImpl(...args)
+      let result: any = loadImpl.apply(getStateModuleContext(cacheKey), args)
       if (result && typeof result == 'object') {
         // When an array is returned, await its elements.
         if (Array.isArray(result)) {
