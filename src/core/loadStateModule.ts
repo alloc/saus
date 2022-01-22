@@ -1,14 +1,20 @@
 import { loadedStateCache, loadingStateCache } from '../client/cache'
 import { unwrapDefault } from '../utils/unwrapDefault'
+import type { ResolvedState } from './state'
 import { withCache } from './withCache'
 
 export const loadState = withCache(loadingStateCache, loadedStateCache)
 
-export const loadStateModule = (
+export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
+  this: StateModuleContext,
+  ...args: Args
+) => T
+
+export const loadStateModule = <T, Args extends any[]>(
   cacheKey: string,
-  loadImpl: (...args: any[]) => any,
-  ...args: any[]
-) =>
+  loadImpl: StateModuleLoader<T, Args>,
+  ...args: Args
+): Promise<ResolvedState<T>> =>
   loadState(cacheKey, async function loadStateModule() {
     try {
       let result = loadImpl(...args)

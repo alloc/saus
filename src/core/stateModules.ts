@@ -1,7 +1,7 @@
 import md5Hex from 'md5-hex'
 import type { ClientState } from '../client'
 import { loadedStateCache } from '../client/cache'
-import { loadStateModule } from './loadStateModule'
+import { loadStateModule, StateModuleLoader } from './loadStateModule'
 import type { ResolvedState } from './state'
 
 export const stateModulesMap = new WeakMap<ClientState, string[]>()
@@ -25,7 +25,7 @@ export const isStateModule = (arg: any): arg is StateModule =>
  */
 export function defineStateModule<T, Args extends any[]>(
   id: string,
-  loadImpl: (...args: Args) => T
+  loadImpl: StateModuleLoader<T, Args>
 ): StateModule<ResolvedState<T>, Args> {
   function toCacheKey(args: any[]) {
     return id + '.' + md5Hex(JSON.stringify(args)).slice(0, 8)
