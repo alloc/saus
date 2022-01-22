@@ -2,7 +2,6 @@ import assert from 'assert'
 import callerPath from 'caller-path'
 import path from 'path'
 import type { ConfigEnv, UserConfig } from 'vite'
-import type { PageFactory } from '../pages'
 import { renderModule } from './global'
 
 export type ConfigHook = (
