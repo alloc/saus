@@ -1,6 +1,5 @@
-// Nothing remarkable in here. It just allows Saus-related packages to
-// send a GET request and receive a `Buffer` in a serverless environment
-// where Node.js built-in modules are unavailable.
+// HTTP helpers suitable for browser and web worker environments.
+import { Buffer } from './buffer'
 
 export async function get(
   url: string,

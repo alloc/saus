@@ -1,3 +1,4 @@
+// HTTP helpers suitable for Node environments.
 import http from 'http'
 import https from 'https'
 import md5Hex from 'md5-hex'
