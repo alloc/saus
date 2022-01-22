@@ -4,7 +4,6 @@ import { renderModule } from './global'
 import { matchRoute, RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
-type ExcludeVoid<T> = Exclude<T, null | void>
 
 /**
  * Values configurable from the `saus.render` module defined in
@@ -14,9 +13,9 @@ export type RenderModule = {
   /** Hooks that run before the renderer */
   beforeRenderHooks: BeforeRenderHook[]
   /** The renderers for specific routes */
-  renderers: Renderer<string | null | void>[]
+  renderers: Renderer[]
   /** The renderer used when no route is matched */
-  defaultRenderer?: Renderer<string>
+  defaultRenderer?: Renderer
 }
 
 export type BeforeRenderHook = {
@@ -42,40 +41,16 @@ type ToString<T> = (result: T) => Promisable<string>
  */
 export function render<T>(
   route: string,
-  render: RenderHook<T | null | void>,
-  stringify: ToString<T> | { head: ToString<T>; body: ToString<T> },
+  getBody: RenderHook<T | null | void>,
+  stringify: ToString<T> | { head: ToString<T>; body: ToString<T> } = String,
   clientDescription?: ClientDescription,
   start?: number
-): Renderer<ExcludeVoid<T>> {
-  const stringifyHead =
-    typeof stringify == 'function' ? stringify : stringify.head
-  const stringifyBody =
-    typeof stringify == 'function' ? stringify : stringify.body
+): Renderer<T> {
   const renderer = new Renderer(
     route,
-    async (mod, req, { getHead, didRender }) => {
-      const result = await render(mod, req)
-      if (result == null) return
-      try {
-        let html = await stringifyBody(result)
-        if (!/^\s*<body( |>)/.test(html)) {
-          html = `<body>\n${html}\n</body>`
-        }
-        if (getHead) {
-          let head = await stringifyHead(await getHead(req))
-          if (!/^\s*<head( |>)/.test(head)) {
-            head = `<head>\n${head}\n</head>`
-          }
-          html = head + html
-        }
-        if (!/^\s*<html( |>)/.test(html)) {
-          html = `<html>${html}</html>`
-        }
-        return `<!DOCTYPE html>\n` + html
-      } finally {
-        await didRender(req)
-      }
-    },
+    getBody,
+    typeof stringify == 'function' ? stringify : stringify.body,
+    typeof stringify == 'function' ? stringify : stringify.head,
     clientDescription,
     start
   )

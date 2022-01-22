@@ -106,6 +106,7 @@ export function createPageFactory(
       path,
       query: url.search,
       params: state.routeParams,
+      module: routeModule,
       state,
     }
 
@@ -123,7 +124,7 @@ export function createPageFactory(
     }
 
     debug(`Rendering page: %s`, path)
-    let html = await renderer.render(routeModule, request, renderer)
+    let html = await renderer.renderDocument(request)
     if (html == null) {
       debug(`Nothing was rendered. Trying next renderer.`)
       return null
@@ -522,7 +523,7 @@ function renderClient(
     topLevel.append(`const ${name} = ${rawFn}`)
     onHydrate.append(
       name == `$render`
-        ? `const content = await $render(routeModule, request)\n`
+        ? `const content = await $render(request.module, request)\n`
         : `${name}(request)\n`
     )
   }
@@ -537,10 +538,9 @@ function renderClient(
   }
 
   // Indent the function body, then wrap with $onHydrate call.
-  onHydrate
-    .indent('  ')
-    .prepend(`$onHydrate(async (routeModule, request) => {\n`)
-    .append(`\n})`)
+  onHydrate.indent('  ')
+  onHydrate.prepend(`$onHydrate(async (request) => {\n`)
+  onHydrate.append(`\n})`)
 
   return {
     code: script.toString(),

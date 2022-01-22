@@ -1,3 +1,4 @@
+import type { RouteModule } from '../client'
 import type { ClientDescription, ClientState } from './client'
 import { RegexParam, RouteParams } from './routes'
 
@@ -9,24 +10,25 @@ export type RenderRequest<
 > = {
   path: string
   query?: string
+  module: RouteModule
   state: State
   params: Params
 }
-
-const noop = () => {}
 
 export class Renderer<T = any> {
   api = new RenderCall<T>(this)
   test: (path: string) => boolean
   getHead?: (request: RenderRequest) => Promisable<T>
+  didRender?: (request: RenderRequest) => Promisable<void>
 
   constructor(
     route: string,
-    readonly render: (
-      module: object,
-      request: RenderRequest,
-      renderer: Renderer
-    ) => Promisable<string | null | void>,
+    readonly getBody: (
+      module: RouteModule,
+      request: RenderRequest
+    ) => Promisable<T | null | void>,
+    readonly stringifyBody: (body: T) => Promisable<string>,
+    readonly stringifyHead: (head: T) => Promisable<string>,
     readonly client?: ClientDescription,
     readonly start?: number
   ) {
@@ -38,12 +40,33 @@ export class Renderer<T = any> {
     }
   }
 
-  /**
-   * Trigger the post-render effect (if one exists). This should be
-   * called *immediately* after the HTML string is returned. We
-   * recommend using a try-finally block.
-   */
-  didRender: (request: RenderRequest) => Promisable<void> = noop
+  async renderDocument(request: RenderRequest) {
+    const body = await this.getBody(request.module, request)
+    if (body == null) {
+      return null
+    }
+    try {
+      let html = await this.stringifyBody(body)
+      if (!/^\s*<body( |>)/.test(html)) {
+        html = `<body>\n${html}\n</body>`
+      }
+      if (this.getHead) {
+        let head = await this.stringifyHead(await this.getHead(request))
+        if (!/^\s*<head( |>)/.test(head)) {
+          head = `<head>\n${head}\n</head>`
+        }
+        html = head + html
+      }
+      if (!/^\s*<html( |>)/.test(html)) {
+        html = `<html>${html}</html>`
+      }
+      return `<!DOCTYPE html>\n` + html
+    } finally {
+      if (this.didRender) {
+        await this.didRender(request)
+      }
+    }
+  }
 }
 
 /**
@@ -60,8 +83,8 @@ export class RenderCall<T = string | null | void> {
    * function only runs in an SSR environment, and it's invoked after
    * the `<body>` is pre-rendered.
    */
-  head(renderHead: (request: RenderRequest) => T | Promise<T>) {
-    this._renderer.getHead = renderHead
+  head(getHead: (request: RenderRequest) => T | Promise<T>) {
+    this._renderer.getHead = getHead
     return this
   }
 
