@@ -2,7 +2,7 @@
 // that work in all environments.
 
 export class Buffer {
-  private constructor(readonly buffer: ArrayBuffer) {}
+  protected constructor(readonly buffer: ArrayBuffer) {}
 
   static from(data: ArrayBuffer) {
     return new Buffer(data)

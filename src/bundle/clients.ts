@@ -139,6 +139,10 @@ export async function generateClientModules(
       redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
       rewriteHttpImports(context.logger, true),
       redirectModule(
+        path.join(coreDir, 'buffer.ts'),
+        path.join(clientDir, 'buffer.ts')
+      ),
+      redirectModule(
         path.join(coreDir, 'http.ts'),
         path.join(clientDir, 'http.ts')
       ),

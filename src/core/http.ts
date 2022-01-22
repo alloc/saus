@@ -3,6 +3,7 @@ import http from 'http'
 import https from 'https'
 import md5Hex from 'md5-hex'
 import { loadState } from './loadStateModule'
+import { Response } from './response'
 import { TimeToLive } from './ttl'
 
 type URL = import('url').URL
@@ -30,7 +31,7 @@ function resolvedGet(
   opts: GetOptions,
   cacheKey: string,
   redirectCount: number,
-  resolve: (data: Buffer) => void,
+  resolve: (response: Response) => void,
   reject: (e: any) => void
 ) {
   if (typeof url == 'string') {
@@ -63,11 +64,14 @@ function resolvedGet(
             reject
           )
         }
-        if (resp.statusCode == 200) {
-          if (cacheKey) {
+        const status = resp.statusCode!
+        if (status >= 200 && status < 400) {
+          if (status == 200 && cacheKey) {
             readCacheControl(resp.headers['cache-control'], cacheKey)
           }
-          return resolve(Buffer.concat(chunks))
+          return resolve(
+            new Response(Buffer.concat(chunks), status, resp.headers)
+          )
         }
         trace.message = `Request to ${url} ended with status code ${resp.statusCode}.`
         reject(trace)
@@ -119,6 +123,7 @@ function readCacheControl(cacheControl: string | undefined, cacheKey: string) {
       // TODO: support must-revalidate?
       const maxAgeMs = 1e3 * Number(maxAge.slice(maxAgeDirective.length + 1))
       TimeToLive.set(cacheKey, maxAgeMs)
+      TimeToLive.set(cacheKey, maxAgeSecs)
     }
   }
 }
