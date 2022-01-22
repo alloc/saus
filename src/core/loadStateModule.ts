@@ -10,6 +10,11 @@ export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
   ...args: Args
 ) => T
 
+export const loadState = withCache(loadingStateCache, loadedStateCache) as {
+  <State = any>(cacheKey: string): Promise<State | undefined>
+  <State = any>(cacheKey: string, loader: () => Promise<State>): Promise<State>
+}
+
 export const loadStateModule = <T, Args extends any[]>(
   cacheKey: string,
   loadImpl: StateModuleLoader<T, Args>,
