@@ -3,9 +3,11 @@ export { default as routes } from './routes'
 export * from './hydrate'
 export * from './state'
 export * from '../core/stateModules'
+export * from '../core/ttl'
 
 // Public utility functions
 export * from './head'
+export * from './http'
 export * from './loadPageModule'
 export * from '../utils/getPagePath'
 export * from '../utils/resolveModules'

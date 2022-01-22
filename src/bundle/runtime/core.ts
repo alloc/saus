@@ -15,7 +15,4 @@ export const defineClient = (x: any) => x
 // Ignore config hooks in SSR bundle.
 export const addConfigHook = () => {}
 
-export * from '../../core/render'
-export * from '../../core/html'
-export * from '../../core/http'
-export * from '../../core/utils'
+export * from '../../core/api'
