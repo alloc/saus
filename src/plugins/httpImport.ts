@@ -7,7 +7,10 @@ import { vite } from '../core'
  * Allow `import('https://foo.com/bar.js')` calls to work as expected.
  * Both JSON and JavaScript modules are supported.
  */
-export function rewriteHttpImports(logger: vite.Logger): vite.Plugin {
+export function rewriteHttpImports(
+  logger: vite.Logger,
+  skipJsImport?: boolean
+): vite.Plugin {
   const modulesId = path.join(runtimeDir, 'modules.ts')
 
   return {
@@ -29,15 +32,19 @@ export function rewriteHttpImports(logger: vite.Logger): vite.Plugin {
         const resolved = await this.resolve(match[1], id)
         if (resolved && /^https?:\/\//.test(resolved.id)) {
           let callee: string | undefined
-          switch (path.extname(resolved.id)) {
-            case '.js':
-              callee = 'httpImport'
-              needsHttpImport = true
-              break
-            case '.json':
-              callee = 'jsonImport'
-              needsJsonImport = true
+
+          const ext = path.extname(resolved.id)
+          if (ext == '.js') {
+            if (skipJsImport) {
+              continue
+            }
+            needsHttpImport = true
+            callee = 'httpImport'
+          } else if (ext == '.json') {
+            needsJsonImport = true
+            callee = 'jsonImport'
           }
+
           if (callee) {
             const index = match.index!
             editor ||= new MagicString(code)

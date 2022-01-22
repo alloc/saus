@@ -410,7 +410,8 @@ async function generateSsrBundle(
   const bundleType = bundleConfig.type || 'script'
 
   // Avoid using Node built-ins for `get` function.
-  if (bundleType == 'worker') {
+  const isWorker = bundleType == 'worker'
+  if (isWorker) {
     redirectedModules.push(
       redirectModule(
         path.join(coreDir, 'http.ts'),
@@ -438,7 +439,7 @@ async function generateSsrBundle(
         ? wrapAsyncInit()
         : null,
       redirectedModules,
-      rewriteHttpImports(context.logger),
+      rewriteHttpImports(context.logger, isWorker),
       // debugSymlinkResolver(),
     ],
     build: {

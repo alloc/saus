@@ -137,7 +137,7 @@ export async function generateClientModules(
       ]),
       routesPlugin(config.saus, clientRouteMap),
       redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
-      rewriteHttpImports(context.logger),
+      rewriteHttpImports(context.logger, true),
       redirectModule(
         path.join(coreDir, 'http.ts'),
         path.join(clientDir, 'http.ts')
