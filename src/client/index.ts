@@ -5,6 +5,7 @@ export * from './state'
 export * from '../core/stateModules'
 
 // Public utility functions
+export * from './head'
 export * from './loadPageModule'
 export * from '../utils/getPagePath'
 export * from '../utils/resolveModules'

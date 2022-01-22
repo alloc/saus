@@ -1,3 +1,4 @@
+import type { HeadDescription } from '../client'
 import type {
   Client,
   ClientState,
@@ -10,6 +11,7 @@ import type {
 export type RenderedPage = {
   path: string
   html: string
+  head?: HeadDescription
   state: ClientState
   client?: Client
   stateModules: string[]

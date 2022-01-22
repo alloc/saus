@@ -1,23 +1,20 @@
-import type { ClientState } from '../client'
+import type { RenderedPage } from '../pages/types'
 import { dataToEsm } from '../utils/dataToEsm'
-import { stateModulesMap } from './stateModules'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 export function renderPageState(
-  pageState: ClientState,
+  { path, state, stateModules, head }: RenderedPage,
   base: string,
   helpersId: string,
   preloadUrls?: string[]
 ) {
   const toStateUrl = (id: string) => base + 'state/' + id + '.js'
-  const stateModuleUrls = new Set(
-    stateModulesMap.get(pageState)?.map(toStateUrl)
-  )
+  const stateModuleUrls = new Set(stateModules.map(toStateUrl))
 
   const inlinedStateUrls: string[] = []
   const inlinedStateIdents: string[] = []
 
-  let code = dataToEsm(pageState, null, (_, value) => {
+  let code = dataToEsm(state, null, (_, value) => {
     const inlinedStateId = value && value['@import']
     if (inlinedStateId) {
       let stateUrl = toStateUrl(inlinedStateId)
@@ -55,6 +52,11 @@ export function renderPageState(
     )
     code =
       `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` + code
+  }
+
+  if (head) {
+    helpers.push('describeHead')
+    code = `describeHead("${path}",${SPACE}${dataToEsm(head, '')})\n` + code
   }
 
   if (preloadUrls?.length) {

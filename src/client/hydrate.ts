@@ -2,14 +2,14 @@ import type { ClientState, RenderRequest } from '../core'
 import { loadedStateCache } from './cache'
 import routes from './routes'
 
-export type HydrateFn = (routeModule: any, request: RenderRequest) => void
+export type HydrateFn = (request: RenderRequest) => void
 
 let runHydration: HydrateFn
 
 export function hydrate(
   state: ClientState,
   routeModule: object,
-  routeModuleUrl: string,
+  routeModuleUrl: string
 ) {
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
@@ -18,10 +18,11 @@ export function hydrate(
   routes[routePath] = routeModuleUrl
   const path = location.pathname
   loadedStateCache.set(path, state)
-  runHydration(routeModule, {
+  runHydration({
     path,
     query: location.search.slice(1),
     params: state.routeParams,
+    module: routeModule,
     state,
   })
 }

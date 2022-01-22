@@ -1,16 +1,9 @@
-declare const document: any
+import { describeHead, injectLinkTag } from './head'
 
 export function preloadModules(urls: string[]) {
-  for (const url of urls) {
-    const isCss = url.endsWith('.css')
-    const cssRel = isCss ? '[rel="stylesheet"]' : ''
-    if (!document.querySelector(`link[href="${url}"]${cssRel}`)) {
-      const link = document.createElement('link')
-      link.rel = isCss ? 'stylesheet' : 'modulepreload'
-      link.href = url
-      document.head.appendChild(link)
-    }
-  }
+  for (const url of urls)
+    injectLinkTag(url, url.endsWith('.css') ? 'stylesheet' : undefined)
 }
 
+export { describeHead }
 export { resolveModules } from '../utils/resolveModules'

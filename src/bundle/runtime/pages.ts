@@ -129,7 +129,7 @@ export async function renderPage(
     modules.add({
       id: pageStateId,
       text: renderPageState(
-        page.state,
+        page,
         config.base,
         addModule('helpers')!.id,
         // Anything imported by either the route module or the entry module is

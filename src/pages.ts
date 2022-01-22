@@ -35,6 +35,7 @@ import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
 import { noop } from './utils/noop'
+import { parseHead } from './utils/parseHead'
 import { ParsedUrl, parseUrl } from './utils/url'
 
 const debug = createDebug('saus:pages')
@@ -139,21 +140,16 @@ export function createPageFactory(
     const page: RenderedPage = {
       path,
       html,
+      head: undefined,
       state,
       client,
       stateModules: stateModulesMap.get(state)!,
       routeModuleId: route.moduleId,
     }
-
     if (processHtml) {
       page.html = await processHtml(page.html, page)
     }
-
-    debug(`Page ready: %s`, path)
-
-    // Currently, the page cache is only used by the saus:client plugin,
-    // since the performance impact of rendering on every request isn't
-    // bad enough to justify complicated cache invalidation.
+    page.head = parseHead(html)
     return (pages[filename] = page)
   }
 
