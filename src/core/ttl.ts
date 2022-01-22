@@ -10,9 +10,13 @@ export const TimeToLive = {
   get: Reflect.get.bind(Reflect, ttlCache) as (
     key: string
   ) => TimeToLive | undefined,
-  set(key: string, refreshDuration: number) {
+  /**
+   * Set the time (in seconds) until the next access of the given `key` results
+   * in a cache miss and clears the cached state.
+   */
+  set(key: string, maxAge: number) {
     const ttl: TimeToLive = (ttlCache[key] = {
-      expiresAt: Date.now() + refreshDuration,
+      expiresAt: Date.now() + maxAge / 1e3,
       get isAlive() {
         if (key in ttlCache && ttl.expiresAt <= Date.now()) {
           delete ttlCache[key]
@@ -21,7 +25,7 @@ export const TimeToLive = {
         return true
       },
       keepAlive() {
-        ttl.expiresAt = Date.now() + refreshDuration
+        ttl.expiresAt = Date.now() + maxAge / 1e3
       },
     })
   },

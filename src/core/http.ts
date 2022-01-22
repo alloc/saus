@@ -121,8 +121,7 @@ function readCacheControl(cacheControl: string | undefined, cacheKey: string) {
     const maxAge = directives.find(d => d.startsWith(maxAgeDirective))
     if (maxAge) {
       // TODO: support must-revalidate?
-      const maxAgeMs = 1e3 * Number(maxAge.slice(maxAgeDirective.length + 1))
-      TimeToLive.set(cacheKey, maxAgeMs)
+      const maxAgeSecs = Number(maxAge.slice(maxAgeDirective.length + 1))
       TimeToLive.set(cacheKey, maxAgeSecs)
     }
   }
