@@ -203,18 +203,13 @@ export function createPageFactory(
     return loadingPage
   }
 
-  const resolveState = withCache<ClientState>(
-    context.loadingStateCache,
-    context.loadedStateCache
-  )
-
   function loadStateModule(
     loaded: Map<string, Promise<any>>,
     state: StateModule
   ) {
     let loading = loaded.get(state.id)
     if (!loading) {
-      loading = resolveState(state.id, state.load).catch(error => {
+      loading = state.load().catch(error => {
         logger.error(error.stack)
         return null
       })
@@ -234,6 +229,11 @@ export function createPageFactory(
 
     return included.map(loadStateModule.bind(null, loaded))
   }
+
+  const resolveState = withCache<ClientState>(
+    context.loadingStateCache,
+    context.loadedStateCache
+  )
 
   const loadPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     resolveState(url.path, async () => {
