@@ -8,7 +8,12 @@ import { fatal, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
-import { clientCachePath, clientDir, runtimeDir } from './bundle/constants'
+import {
+  clientCachePath,
+  clientDir,
+  coreDir,
+  runtimeDir,
+} from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
 import { resolveMapSources, SourceMap } from './bundle/sourceMap'
 import {
@@ -30,6 +35,7 @@ import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
+import { rewriteHttpImports } from './plugins/httpImport'
 import { redirectModule } from './plugins/redirectModule'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
@@ -387,11 +393,11 @@ async function generateSsrBundle(
     redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
     redirectModule('saus/bundle', entryId),
     redirectModule(
-      path.resolve(__dirname, '../src/core/global.ts'),
+      path.join(coreDir, 'global.ts'),
       path.join(runtimeDir, 'global.ts')
     ),
     redirectModule(
-      path.resolve(__dirname, '../src/core/constants.ts'),
+      path.join(coreDir, 'constants.ts'),
       path.join(runtimeDir, 'constants.ts')
     ),
     redirectModule(clientCachePath, path.join(runtimeDir, 'context.ts')),
@@ -407,8 +413,8 @@ async function generateSsrBundle(
   if (bundleType == 'worker') {
     redirectedModules.push(
       redirectModule(
-        path.resolve(__dirname, '../src/core/http.ts'),
-        path.join(runtimeDir, 'http.ts')
+        path.join(coreDir, 'http.ts'),
+        path.join(clientDir, 'http.ts')
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&
@@ -432,7 +438,7 @@ async function generateSsrBundle(
         ? wrapAsyncInit()
         : null,
       redirectedModules,
-      rewriteHttpImports(),
+      rewriteHttpImports(context.logger),
       // debugSymlinkResolver(),
     ],
     build: {
@@ -517,54 +523,6 @@ function wrapAsyncInit(): vite.Plugin {
       return {
         code: editor.toString(),
         map: editor.generateMap({ hires: true }),
-      }
-    },
-  }
-}
-
-/**
- * Allow `import('https://foo.com/bar.js')` calls to work as expected.
- * Both JSON and JavaScript modules are supported.
- */
-function rewriteHttpImports(): vite.Plugin {
-  const modulesId = path.join(runtimeDir, 'modules.ts')
-
-  return {
-    name: 'saus:rewriteHttpImports',
-    enforce: 'post',
-    async transform(code, id) {
-      if (id == modulesId || id.includes('/node_modules/')) {
-        return
-      }
-
-      const dynamicImportRE = /\bimport\(\s*["']([^"']+)["']\s*\)/g
-
-      let editor: MagicString | undefined
-      let match: RegExpMatchArray | null
-      while ((match = dynamicImportRE.exec(code))) {
-        const resolved = await this.resolve(match[1], id)
-        if (resolved && /^https?:\/\//.test(resolved.id)) {
-          const index = match.index!
-          editor ||= new MagicString(code)
-          editor.overwrite(
-            index,
-            index + match[0].length,
-            `httpImport("${resolved.id}")`
-          )
-        }
-      }
-
-      if (editor) {
-        editor.prepend(
-          `import { httpImport } from "/@fs/${path.resolve(
-            runtimeDir,
-            'httpImport.ts'
-          )}"\n`
-        )
-        return {
-          code: editor.toString(),
-          map: editor.generateMap({ hires: true }),
-        }
       }
     },
   }

@@ -13,10 +13,11 @@ import {
 } from '../core'
 import { transformClientState } from '../plugins/clientState'
 import { debugForbiddenImports } from '../plugins/debug'
+import { rewriteHttpImports } from '../plugins/httpImport'
 import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
-import { clientCachePath, clientDir, runtimeDir } from './constants'
+import { clientCachePath, clientDir, coreDir, runtimeDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { toInlineSourceMap } from './sourceMap'
 import { ClientModule, ClientModuleMap } from './types'
@@ -136,6 +137,11 @@ export async function generateClientModules(
       ]),
       routesPlugin(config.saus, clientRouteMap),
       redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
+      rewriteHttpImports(context.logger),
+      redirectModule(
+        path.join(coreDir, 'http.ts'),
+        path.join(clientDir, 'http.ts')
+      ),
       modules,
       fixChunkImports(removedImports),
       transformClientState(),

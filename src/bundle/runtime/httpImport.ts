@@ -6,18 +6,10 @@ import { get } from '../../core/http'
 import { emptyDir } from '../../utils/emptyDir'
 
 export async function httpImport(url: string) {
-  const code: any = await get(url)
-  const ext = url.slice(url.lastIndexOf('.') + 1)
-  if (ext == 'json') {
-    return JSON.parse(code)
-  }
-  if (ext == 'js') {
-    const file = toFilePath(url)
-    fs.writeFileSync(file, code)
-    setExitHandler()
-    return import(file)
-  }
-  throw TypeError(`Unknown file extension "${ext}"`)
+  const file = toFilePath(url)
+  fs.writeFileSync(file, await get(url))
+  setExitHandler()
+  return import(file)
 }
 
 const root = join(os.tmpdir(), 'saus-ssr')
