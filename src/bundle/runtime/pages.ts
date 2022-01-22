@@ -112,36 +112,10 @@ export async function renderPage(
 
   if (entryModule) {
     const entryImports = new Set<string>()
-    const updates: (() => void)[] = []
-    for (const importStmt of parseImports(entryModule.text)) {
-      const module = addModule(importStmt.text)
-      if (module) {
-        if (module.exports) {
-          entryImports.add(module.id)
-        } else if (module.imports) {
-          module.imports.forEach(id => entryImports.add(id))
-        }
-        updates.push(() => {
-          if (module.exports) {
-            const { source } = importStmt
-            entryModule.text =
-              entryModule.text.slice(0, source.start) +
-              getModuleUrl(module) +
-              entryModule.text.slice(source.end)
-          } else {
-            // Inline the module since it has no exports.
-            entryModule.text =
-              entryModule.text.slice(0, importStmt.start) +
-              module.text +
-              entryModule.text.slice(importStmt.end)
-          }
-        })
-      }
-    }
-    for (const update of updates.reverse()) {
-      update()
-    }
+    entryModule.text = rewriteImports(entryModule, entryImports)
     entryModule.imports = Array.from(entryImports)
+    entryModule.imports.forEach(addModule)
+    modules.add(entryModule)
   }
 
   const preloadUrls = new Set([routeModule.id])
@@ -182,10 +156,6 @@ export async function renderPage(
     })
   }
 
-  if (entryModule) {
-    modules.add(entryModule)
-  }
-
   const headTags: HtmlTagDescriptor[] = []
   const bodyTags: HtmlTagDescriptor[] = []
 
@@ -223,6 +193,53 @@ export async function renderPage(
     renderFinish?.(pagePath, null, finishedPage)
     return finishedPage
   })
+}
+
+type Splice = [start: number, end: number, replacement: string]
+
+function rewriteImports(importer: ClientModule, imported: Set<string>): string {
+  const splices: Splice[] = []
+  for (const importStmt of parseImports(importer.text)) {
+    const source = importStmt.source.value
+    const isResolved = source.startsWith('/')
+    const module =
+      (isResolved && moduleMap[source.slice(1)]) || moduleMap[importStmt.text]
+    if (!module) {
+      continue
+    }
+    if (module.exports) {
+      imported.add(module.id)
+      if (!isResolved) {
+        const resolvedUrl = getModuleUrl(module)
+        moduleMap[resolvedUrl.slice(1)] = module
+        // Modules with exports cannot be inlined, so we only
+        // rewrite the import source string instead.
+        splices.push([
+          importStmt.source.start,
+          importStmt.source.end,
+          resolvedUrl,
+        ])
+      }
+    } else {
+      // Otherwise, the module is inlined.
+      const text = module.imports
+        ? rewriteImports(module, imported)
+        : module.text
+
+      splices.push([importStmt.start, importStmt.end, text])
+    }
+  }
+  return applySplices(importer.text, splices)
+}
+
+function applySplices(text: string, splices: Splice[]) {
+  let cursor = text.length
+  splices.reverse().forEach((splice, i) => {
+    const end = Math.min(splice[1], cursor)
+    cursor = splice[0]
+    text = text.slice(0, cursor) + splice[2] + text.slice(end)
+  })
+  return text
 }
 
 function getTagsForAssets(
