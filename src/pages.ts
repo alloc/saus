@@ -236,12 +236,7 @@ export function createPageFactory(
   )
 
   const loadPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    resolveState(url.path, async () => {
-      const pageState = await loadClientState(url, params, route)
-      pageState.routePath = route.path
-      pageState.routeParams = params
-      return pageState
-    })
+    resolveState(url.path, () => loadClientState(url, params, route))
 
   async function loadClientState(
     url: ParsedUrl,
@@ -277,6 +272,8 @@ export function createPageFactory(
     await Promise.all(pendingStateModules.values())
     stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
 
+    result.routePath = route.path
+    result.routeParams = params
     return result
   }
 
@@ -297,30 +294,35 @@ export function createPageFactory(
     return pageContext
   }
 
-  async function loadPageContext(url: ParsedUrl, options: RenderPageOptions) {
+  async function loadPageContext(
+    url: ParsedUrl,
+    params: RouteParams,
+    route: Route,
+    options: RenderPageOptions
+  ) {
+    // State modules can be loaded in parallel, since the global state
+    // cache is reused by all pages.
+    const statePromise = loadPageState(url, params, route)
+
     // In SSR mode, multiple pages must not load their modules at the
     // same time, or else they won't be isolated from each other.
-    const loading = pageContextQueue.then(async () => {
-      const [route, params] = resolveRoute(url)
-      if (!route) {
-        return [] as const
-      }
-
-      const pageContext = await getPageContext(url, options)
+    const contextPromise = pageContextQueue.then(async () => {
+      const { renderers, defaultRenderer, beforeRenderHooks } =
+        await getPageContext(url, options)
 
       let routeModule: RouteModule
       let state: ClientState
       let error: any
       try {
-        state = await loadPageState(url, params || {}, route)
+        state = await statePromise
         routeModule = await route.load()
       } catch (e) {
         error = e
       }
 
-      const { beforeRenderHooks } = pageContext
       return [
-        pageContext,
+        defaultRenderer,
+        renderers,
         error,
         (renderer: Renderer) =>
           renderPage(
@@ -334,29 +336,46 @@ export function createPageFactory(
       ] as const
     })
 
-    pageContextQueue = loading.then(noop, noop)
-    return loading
+    pageContextQueue = contextPromise.then(noop, noop)
+    return contextPromise
   }
 
-  async function loadDefaultRoute(
+  async function renderErrorPage(
     url: ParsedUrl,
-    params: RouteParams,
+    error: any,
     options: RenderPageOptions
   ) {
-    const loading = pageContextQueue.then(async () => {
-      if (!defaultRoute) {
-        return [null] as const
+    const route = defaultRoute
+    if (!route) {
+      throw error
+    }
+
+    const statePromise = loadClientState(url, { error }, route)
+    const contextPromise = pageContextQueue.then(async () => {
+      const { defaultRenderer, beforeRenderHooks } = await getPageContext(
+        url,
+        options
+      )
+      if (!defaultRenderer) {
+        throw error
       }
-      await getPageContext(url, options)
-      return Promise.all([
-        defaultRoute,
-        defaultRoute.load(),
-        loadClientState(url, params, defaultRoute),
-      ] as const)
+      const state = await statePromise
+      const routeModule = await route.load()
+      return [state, routeModule, defaultRenderer, beforeRenderHooks] as const
     })
 
-    pageContextQueue = loading.then(noop, noop)
-    return loading
+    pageContextQueue = contextPromise.then(noop, noop)
+    const [state, routeModule, renderer, beforeRenderHooks] =
+      await contextPromise
+
+    return renderPage(
+      url,
+      state,
+      route,
+      routeModule,
+      renderer,
+      beforeRenderHooks
+    )
   }
 
   function resolveRoute(url: ParsedUrl): [Route?, RouteParams?] {
@@ -394,8 +413,18 @@ export function createPageFactory(
      */
     render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
       loadPage(url, options, async url => {
-        let [context, error, render] = await loadPageContext(url, options)
-        if (!context || !render) {
+        const [route, params] = resolveRoute(url)
+        if (!route) {
+          return null
+        }
+
+        let [defaultRenderer, renderers, error, render] = await loadPageContext(
+          url,
+          params || {},
+          route,
+          options
+        )
+        if (!render || !renderers) {
           return null
         }
 
@@ -403,7 +432,7 @@ export function createPageFactory(
         let renderer: Renderer | undefined
 
         if (!error)
-          for (renderer of context.renderers) {
+          for (renderer of renderers) {
             if (!renderer.test(url.path)) {
               continue
             }
@@ -417,15 +446,13 @@ export function createPageFactory(
             }
           }
 
-        // Skip requests with file extension, unless explicitly
-        // handled by a non-default renderer.
-        if (!error && /\.[^/]+$/.test(url.path)) {
-          return null
-        }
-
-        renderer = context.defaultRenderer
         if (!error) {
-          if (!renderer) {
+          // Skip requests with file extension, unless explicitly
+          // handled by a non-default renderer.
+          if (/\.[^/]+$/.test(url.path)) {
+            return null
+          }
+          if (!(renderer = defaultRenderer)) {
             return null
           }
           try {
@@ -438,29 +465,7 @@ export function createPageFactory(
           }
         }
 
-        if (!renderer) {
-          throw error
-        }
-
-        // Use the default route to render an error page.
-        const [route, routeModule, state] = await loadDefaultRoute(
-          url,
-          { error },
-          options
-        )
-
-        if (!route) {
-          throw error
-        }
-
-        return renderPage(
-          url,
-          state,
-          route,
-          routeModule,
-          renderer,
-          context.beforeRenderHooks
-        )
+        return renderErrorPage(url, error, options)
       }),
   }
 }
