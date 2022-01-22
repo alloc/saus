@@ -7,6 +7,7 @@ import {
   RuntimeConfig,
   SausContext,
 } from '../core'
+import { loadState } from '../core/loadStateModule'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
 
@@ -35,13 +36,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     async load(id) {
       if (isPageStateRequest(id)) {
         await init
-        const pageState = await pageFactory.getPageState(id.slice(0, -3))
-        if (pageState) {
-          if (pageState.error) {
-            throw pageState.error
-          }
+        const url = id.replace(/(\/index)?\.html\.js$/, '') || '/'
+        const page = await pageFactory.render(url, {
+          preferCache: true,
+        })
+        if (page) {
           return renderPageState(
-            pageState,
+            page,
             context.basePath,
             '@id/saus/src/client/helpers.ts'
           )
@@ -49,7 +50,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       } else if (isStateModuleRequest(id)) {
         await init
         const stateModuleId = id.slice(7, -3)
-        const state = await pageFactory.resolveState(stateModuleId)
+        const state = await loadState(stateModuleId)
         if (state) {
           return renderStateModule(
             stateModuleId,

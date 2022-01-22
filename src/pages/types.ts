@@ -36,6 +36,7 @@ export interface PageFactoryContext
 export interface PageContext extends RenderModule {}
 
 export type RenderPageOptions = {
+  preferCache?: boolean
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,

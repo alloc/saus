@@ -390,26 +390,16 @@ export function createPageFactory(
   }
 
   return {
-    /**
-     * Get or load state from the cache.
-     */
-    resolveState,
-    /**
-     * Get the hydration state of the given URL.
-     */
-    async getPageState(filename: string) {
-      await setupPromise
-      const url = parseUrl(filename.replace(/(\/index)?\.html$/, '') || '/')
-      const [route, params] = resolveRoute(url)
-      if (route) {
-        return loadPageState(url, params || {}, route)
-      }
-    },
-    /**
-     * Find a matching route to render HTML for the given `url`.
-     */
     render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
       loadPage(url, options, async url => {
+        if (options.preferCache) {
+          const filename = getPageFilename(url.path, basePath)
+          const cachedPage = pages[filename]
+          if (cachedPage) {
+            return cachedPage
+          }
+        }
+
         const [route, params] = resolveRoute(url)
         if (!route) {
           return null
