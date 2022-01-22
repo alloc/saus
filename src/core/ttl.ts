@@ -26,7 +26,7 @@ export const TimeToLive = {
     })
   },
   isAlive(key: string) {
-    return ttlCache[key]?.isAlive == true
+    return ttlCache[key]?.isAlive !== false
   },
   keepAlive(key: string) {
     ttlCache[key]?.keepAlive()
