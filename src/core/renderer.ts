@@ -1,5 +1,7 @@
 import type { RouteModule } from '../client'
+import type { Buffer } from './buffer'
 import type { ClientDescription, ClientState } from './client'
+import type { RuntimeConfig } from './config'
 import { RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
@@ -9,10 +11,26 @@ export type RenderRequest<
   Params extends RouteParams = RouteParams
 > = {
   path: string
+  file: string
   query?: string
   module: RouteModule
   state: State
   params: Params
+}
+
+export type DocumentHook = (
+  this: RenderApi,
+  html: string,
+  request: RenderRequest,
+  config: RuntimeConfig
+) => Promisable<void>
+
+export type RenderApi = {
+  emitFile(id: string, data: string | Buffer): void
+}
+
+const emitPage: DocumentHook = function (html, { file }) {
+  this.emitFile(file, html)
 }
 
 export class Renderer<T = any> {
@@ -29,6 +47,7 @@ export class Renderer<T = any> {
     ) => Promisable<T | null | void>,
     readonly stringifyBody: (body: T) => Promisable<string>,
     readonly stringifyHead: (head: T) => Promisable<string>,
+    readonly onDocument: DocumentHook = emitPage,
     readonly client?: ClientDescription,
     readonly start?: number
   ) {

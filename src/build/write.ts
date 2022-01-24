@@ -17,7 +17,7 @@ export function writePages(
     }
   }
   for (const page of pages) {
-    if (!page) continue
+    if (!page || !page.html) continue
     writeFile(path.join(outDir, page.id), page.html)
     for (const module of [...page.modules, ...page.assets]) {
       writeFile(path.join(outDir, module.id), module.text)

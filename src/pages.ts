@@ -8,6 +8,7 @@ import type {
   Client,
   ClientDescription,
   ClientState,
+  RenderApi,
   Renderer,
   RenderRequest,
   Route,
@@ -17,6 +18,7 @@ import type {
   RuntimeConfig,
   StateModule,
 } from './core'
+import { Buffer } from './core/buffer'
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
@@ -27,6 +29,7 @@ import {
   ClientFunctions,
   PageContext,
   PageFactoryContext,
+  RenderedFile,
   RenderedPage,
   RenderFunction,
   RenderPageOptions,
@@ -104,6 +107,7 @@ export function createPageFactory(
     const { path } = url
     const request: RenderRequest = {
       path,
+      file: getPageFilename(path, basePath),
       query: url.search,
       params: state.routeParams,
       module: routeModule,
@@ -130,29 +134,49 @@ export function createPageFactory(
       return null
     }
 
-    const filename = getPageFilename(path, basePath)
-
-    let client = pages[filename]?.client
-    if (!client) {
-      debug(`Generating client module`)
-      client = await getClient(functions, renderer, usedHooks)
-    }
-
     const page: RenderedPage = {
       path,
-      html,
+      html: '',
       head: undefined,
       state,
-      client,
       files: [],
       stateModules: stateModulesMap.get(state)!,
       routeModuleId: route.moduleId,
+      client: undefined,
     }
+
     if (processHtml) {
-      page.html = await processHtml(page.html, page)
+      html = await processHtml(html, page)
     }
-    page.head = parseHead(html)
-    return (pages[filename] = page)
+
+    let files: RenderedFile[] = []
+    await renderer.onDocument.call(
+      {
+        emitFile(id, data) {
+          if (id !== request.file) {
+            files.push({ id, data })
+          } else {
+            page.html = data.toString()
+          }
+        },
+      },
+      html,
+      request,
+      config
+    )
+
+    if (page.html) {
+      let client = pages[request.file]?.client
+      if (!client) {
+        debug(`Generating client module`)
+        client = await getClient(functions, renderer, usedHooks)
+      }
+      page.client = client
+      page.head = parseHead(page.html)
+      pages[request.file] = page
+    }
+
+    return page
   }
 
   type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>

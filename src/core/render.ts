@@ -1,5 +1,5 @@
 import type { ClientDescription } from './client'
-import { RenderRequest, Renderer } from './renderer'
+import { DocumentHook, RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
 import { matchRoute, RegexParam, RouteParams } from './routes'
 
@@ -43,6 +43,7 @@ export function render<T>(
   route: string,
   getBody: RenderHook<T | null | void>,
   stringify: ToString<T> | { head: ToString<T>; body: ToString<T> } = String,
+  onDocument: DocumentHook | undefined,
   clientDescription?: ClientDescription,
   start?: number
 ): Renderer<T> {
@@ -51,6 +52,7 @@ export function render<T>(
     getBody,
     typeof stringify == 'function' ? stringify : stringify.body,
     typeof stringify == 'function' ? stringify : stringify.head,
+    onDocument,
     clientDescription,
     start
   )

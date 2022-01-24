@@ -20,10 +20,10 @@ export type RenderedPage = {
   html: string
   head?: HeadDescription
   state: ClientState
-  client?: Client
   files: RenderedFile[]
   stateModules: string[]
   routeModuleId: string
+  client?: Client
 }
 
 type SausContextKeys =
