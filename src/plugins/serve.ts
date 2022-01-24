@@ -10,6 +10,7 @@ import {
 import { loadState } from '../core/loadStateModule'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
+import { RenderedFile } from '../pages/types'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
@@ -63,6 +64,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   }
 
   let runtimeConfig: RuntimeConfig
+  let fileCache: Record<string, RenderedFile> = {}
 
   const servePages: Plugin = {
     name: 'saus:servePages',
@@ -105,6 +107,14 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         // Remove base path
         url = url.slice(context.basePath.length - 1) || '/'
 
+        if (url in fileCache) {
+          const { data, mime } = fileCache[url]
+          return respond({
+            body: typeof data == 'string' ? data : Buffer.from(data.buffer),
+            headers: [['Content-Type', mime]],
+          })
+        }
+
         let { reloadId } = context
         try {
           await renderPage().then(respond)
@@ -122,6 +132,9 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           try {
             const page = await pageFactory.render(url)
             if (page) {
+              for (const file of page.files) {
+                fileCache[file.id] = file
+              }
               let html = await server.transformIndexHtml(url, page.html)
               if (context.htmlProcessors?.post.length) {
                 html = await applyHtmlProcessors(

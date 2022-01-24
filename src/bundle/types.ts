@@ -1,8 +1,11 @@
+import type { RenderedFile } from '../pages/types'
+
 export interface RenderedPage {
   id: string
   html: string
   modules: Set<ClientModule>
   assets: Set<ClientModule>
+  files: RenderedFile[]
 }
 
 export interface ClientModule {

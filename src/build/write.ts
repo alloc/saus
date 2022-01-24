@@ -8,7 +8,7 @@ export function writePages(
   outDir: string
 ) {
   const files: Record<string, number> = {}
-  const writeFile = (file: string, content: string) => {
+  const writeFile = (file: string, content: string | Buffer) => {
     const name = path.relative(outDir, file)
     if (files[name] == null) {
       files[name] = content.length / 1024
@@ -21,6 +21,12 @@ export function writePages(
     writeFile(path.join(outDir, page.id), page.html)
     for (const module of [...page.modules, ...page.assets]) {
       writeFile(path.join(outDir, module.id), module.text)
+    }
+    for (const { id, data } of page.files) {
+      writeFile(
+        path.join(outDir, id),
+        typeof data == 'string' ? data : Buffer.from(data.buffer)
+      )
     }
   }
   return files

@@ -1,5 +1,6 @@
 import type { HeadDescription } from '../client'
 import type {
+  Buffer,
   Client,
   ClientState,
   RenderModule,
@@ -8,12 +9,19 @@ import type {
   WrappedNode,
 } from '../core'
 
+export type RenderedFile = {
+  id: string
+  data: string | Buffer
+  mime: string
+}
+
 export type RenderedPage = {
   path: string
   html: string
   head?: HeadDescription
   state: ClientState
   client?: Client
+  files: RenderedFile[]
   stateModules: string[]
   routeModuleId: string
 }

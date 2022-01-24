@@ -195,11 +195,12 @@ export async function renderPage(
     { page, config, assets },
     context.htmlProcessors?.post || []
   ).then(html => {
-    const finishedPage = {
+    const finishedPage: RenderedPage = {
       id: filename,
       html,
       modules,
       assets,
+      files: page!.files,
     }
     renderFinish?.(pagePath, null, finishedPage)
     return finishedPage

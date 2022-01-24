@@ -144,6 +144,7 @@ export function createPageFactory(
       head: undefined,
       state,
       client,
+      files: [],
       stateModules: stateModulesMap.get(state)!,
       routeModuleId: route.moduleId,
     }
