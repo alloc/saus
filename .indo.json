@@ -1,5 +1,9 @@
 {
   "repos": {
+    "packages/repng": {
+      "url": "https://github.com/alloc/saus-repng.git",
+      "optional": true
+    },
     "vendor/regexparam": {
       "url": "https://github.com/aleclarson/regexparam.git"
     }
