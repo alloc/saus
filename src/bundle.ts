@@ -86,7 +86,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
 
   const outDir = context.userConfig.build?.outDir || 'dist'
   if (entry) {
-    bundlePath = path.resolve(
+    bundlePath ??= path.resolve(
       context.root,
       entry
         .replace(/^(\.\/)?src\//, outDir + '/')
