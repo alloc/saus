@@ -14,8 +14,9 @@ export interface SausBundleConfig {
    * Path to the module bundled by the `saus bundle` command.
    * It should import `saus/bundle` (and optionally `saus/paths`)
    * to render pages on-demand and/or ahead-of-time.
+   * @default null
    */
-  entry?: string
+  entry?: string | null
   /**
    * For serverless functions, you'll want to set this to `"worker"`.
    * @default "script"

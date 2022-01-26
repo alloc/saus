@@ -65,24 +65,34 @@ export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
   }
 }
 
+/** @internal */
+type BundleConfig = SausBundleConfig &
+  Required<Pick<SausBundleConfig, 'format' | 'type'>>
+
 export async function bundle(context: SausContext, options: BundleOptions) {
-  const bundleConfig = { ...context.config.saus.bundle }
-  const bundleFormat = options.format || bundleConfig.format || 'cjs'
-  bundleConfig.format = bundleFormat
+  const bundleConfig: BundleConfig = {
+    type: 'script',
+    format: options.format || 'cjs',
+    ...context.config.saus.bundle,
+  }
+
+  if (options.entry !== undefined) {
+    bundleConfig.entry = options.entry
+  }
+
+  let { entry } = bundleConfig
 
   let bundlePath = options.outFile ? path.resolve(options.outFile) : null!
-  let bundleEntry =
-    options.entry !== undefined ? options.entry : bundleConfig.entry
 
   const outDir = context.userConfig.build?.outDir || 'dist'
-  if (bundleEntry) {
+  if (entry) {
     bundlePath = path.resolve(
       context.root,
-      bundleEntry
+      entry
         .replace(/^(\.\/)?src\//, outDir + '/')
-        .replace(/\.ts$/, bundleFormat == 'cjs' ? '.js' : '.mjs')
+        .replace(/\.ts$/, bundleConfig.format == 'cjs' ? '.js' : '.mjs')
     )
-    bundleEntry = path.resolve(context.root, bundleEntry)
+    entry = path.resolve(context.root, entry)
   }
 
   const shouldWrite =
@@ -97,7 +107,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   }
 
   const { functions, functionImports, routeImports, runtimeConfig } =
-    await prepareFunctions(context, options)
+    await prepareFunctions(context, bundleConfig, options)
 
   Profiling.mark('generate client modules')
   const { moduleMap, clientRouteMap } = await generateClientModules(
@@ -111,6 +121,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   Profiling.mark('generate ssr bundle')
   const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
   const { code, map } = await generateSsrBundle(
+    entry,
     context,
     options,
     runtimeConfig,
@@ -118,9 +129,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     functions,
     moduleMap,
     clientRouteMap,
-    bundleEntry,
     bundleConfig,
-    bundleFormat,
     bundleDir
   )
 
@@ -150,7 +159,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     }
     fs.writeFileSync(bundle.path, bundle.code)
 
-    if (!bundleConfig.entry) {
+    if (!entry) {
       fs.copyFileSync(
         path.resolve(__dirname, '../src/bundle/types.ts'),
         bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
@@ -166,7 +175,11 @@ async function getBuildTransform(config: vite.ResolvedConfig) {
   return [vite.createTransformer(context), context] as const
 }
 
-async function prepareFunctions(context: SausContext, options: BundleOptions) {
+async function prepareFunctions(
+  context: SausContext,
+  bundleConfig: BundleConfig,
+  options: BundleOptions
+) {
   const { root, renderPath, config } = context
 
   Profiling.mark('parse render functions')
@@ -303,13 +316,11 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
 
   await pluginContainer.close()
 
-  const bundleConfig = config.saus.bundle || {}
   const outDir = path.resolve(config.root, config.build.outDir)
-
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
     base: config.base,
-    bundleType: bundleConfig.type || 'script',
+    bundleType: bundleConfig.type,
     command: 'bundle',
     defaultPath: context.defaultPath,
     minify: options.minify == true,
@@ -335,6 +346,7 @@ async function prepareFunctions(context: SausContext, options: BundleOptions) {
 }
 
 async function generateSsrBundle(
+  entry: string | null | undefined,
   context: SausContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
@@ -342,9 +354,7 @@ async function generateSsrBundle(
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
   clientRouteMap: Record<string, string>,
-  bundleEntry: string | null | undefined,
-  bundleConfig: SausBundleConfig,
-  bundleFormat: 'esm' | 'cjs',
+  bundleConfig: BundleConfig,
   bundleDir: string
 ) {
   const modules = createModuleProvider()
@@ -372,10 +382,10 @@ async function generateSsrBundle(
     }
   }
 
-  const entryId = '\0saus/main.js'
+  const bundleId = '\0saus/main.js'
   const runtimeId = `/@fs/${path.join(runtimeDir, 'main.ts')}`
   modules.addModule({
-    id: entryId,
+    id: bundleId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
       import "${context.renderPath}"
@@ -391,7 +401,7 @@ async function generateSsrBundle(
   const redirectedModules: vite.PluginOption[] = [
     redirectModule('saus', path.join(runtimeDir, 'index.ts')),
     redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
-    redirectModule('saus/bundle', entryId),
+    redirectModule('saus/bundle', bundleId),
     redirectModule(
       path.join(coreDir, 'global.ts'),
       path.join(runtimeDir, 'global.ts')
@@ -407,10 +417,8 @@ async function generateSsrBundle(
     ),
   ]
 
-  const bundleType = bundleConfig.type || 'script'
-
   // Avoid using Node built-ins for `get` function.
-  const isWorker = bundleType == 'worker'
+  const isWorker = bundleConfig.type == 'worker'
   if (isWorker) {
     redirectedModules.push(
       redirectModule(
@@ -433,8 +441,8 @@ async function generateSsrBundle(
         './src/core/context.ts',
       ]),
       modules,
-      bundleEntry &&
-      bundleType == 'script' &&
+      entry &&
+      bundleConfig.type == 'script' &&
       !supportTopLevelAwait(bundleConfig)
         ? wrapAsyncInit()
         : null,
@@ -448,10 +456,10 @@ async function generateSsrBundle(
       minify: bundleConfig.minify == true,
       sourcemap: context.userConfig.build?.sourcemap ?? true,
       rollupOptions: {
-        input: bundleEntry || entryId,
+        input: entry || bundleId,
         output: {
           dir: bundleDir,
-          format: bundleFormat,
+          format: bundleConfig.format,
         },
         context: 'globalThis',
       },
