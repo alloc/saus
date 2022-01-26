@@ -193,10 +193,18 @@ export async function generateClientModules(
       if (restoredImports) {
         chunk.imports.push(...restoredImports)
       }
-      if (sourceMaps == 'inline' && chunk.map?.sources.length) {
-        const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
-        chunk.map.sources = rewriteSources(chunk.map.sources, chunkDir, context)
-        chunk.code += toInlineSourceMap(chunk.map)
+      if (sourceMaps && chunk.map) {
+        if (chunk.map.sources.length) {
+          const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
+          chunk.map.sources = rewriteSources(
+            chunk.map.sources,
+            chunkDir,
+            context
+          )
+        }
+        if (!minify) {
+          chunk.code += toInlineSourceMap(chunk.map)
+        }
       }
       chunks.push(chunk)
       if (chunk.isEntry) {
@@ -293,8 +301,16 @@ export async function generateClientModules(
           toplevel: chunk.exports.length > 0,
           keep_fnames: true,
           keep_classnames: true,
+          sourceMap: !!sourceMaps,
         })
-        chunk.code = minified.code!
+        if (minified.map) {
+          chunk.map = vite.combineSourcemaps(chunk.fileName, [
+            minified.map as any,
+            chunk.map as any,
+          ]) as any
+        }
+        chunk.code =
+          minified.code! + (chunk.map ? toInlineSourceMap(chunk.map) : '')
       }
 
       const mod: ClientModule = (moduleMap[key] = {
