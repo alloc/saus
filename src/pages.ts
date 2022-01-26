@@ -152,9 +152,9 @@ export function createPageFactory(
     let files: RenderedFile[] = []
     await renderer.onDocument.call(
       {
-        emitFile(id, data) {
+        emitFile(id, mime, data) {
           if (id !== request.file) {
-            files.push({ id, data })
+            files.push({ id, mime, data })
           } else {
             page.html = data.toString()
           }

@@ -26,11 +26,11 @@ export type DocumentHook = (
 ) => Promisable<void>
 
 export type RenderApi = {
-  emitFile(id: string, data: string | Buffer): void
+  emitFile(id: string, mime: string, data: string | Buffer): void
 }
 
 const emitPage: DocumentHook = function (html, { file }) {
-  this.emitFile(file, html)
+  this.emitFile(file, 'text/html', html)
 }
 
 export class Renderer<T = any> {
