@@ -538,7 +538,7 @@ function renderClient(
     topLevel.append(`const ${name} = ${rawFn}`)
     onHydrate.append(
       name == `$render`
-        ? `const content = await $render(request.module, request)\n`
+        ? `let content = await $render(request.module, request)\n`
         : `${name}(request)\n`
     )
   }
