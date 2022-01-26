@@ -183,9 +183,11 @@ export function getFirstAncestor(
   return parentPath
 }
 
+const babelTypeScriptSyntax = require.resolve('@babel/plugin-syntax-typescript')
+
 export function inferSyntaxPlugins(filename: string): babel.PluginItem[] {
   return /\.tsx?$/.test(filename)
-    ? [['@babel/syntax-typescript', { isTSX: filename.endsWith('x') }]]
+    ? [[babelTypeScriptSyntax, { isTSX: filename.endsWith('x') }]]
     : []
 }
 
