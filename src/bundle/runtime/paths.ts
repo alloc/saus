@@ -1,6 +1,7 @@
 import { generateRoutePaths } from '../../core/routes'
 import { getPagePath } from '../../utils/getPagePath'
 import { ssrRequire } from '../ssrModules'
+import config from './config'
 import { ssrRoutesId } from './constants'
 import { context } from './context'
 
@@ -13,7 +14,7 @@ export async function getKnownPaths() {
   await ssrRequire(ssrRoutesId)
   await generateRoutePaths(context, {
     path(path, params) {
-      paths.push(getPagePath(path, params))
+      paths.push(config.base + getPagePath(path, params).slice(1))
     },
     error(e) {
       errors.push(e)
