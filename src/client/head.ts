@@ -31,7 +31,7 @@ export function injectLinkTag(url: string, rel?: string) {
   if (rel) {
     selector += `[rel="${rel}"]`
   }
-  if (!document.querySelector(selector)) {
+  if (!document.head.querySelector(selector)) {
     const link = document.createElement('link')
     // TODO: do feature detection for modulepreload?
     link.rel = rel || 'modulepreload'
