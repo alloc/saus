@@ -1,5 +1,6 @@
 import type { ClientState, RenderRequest } from '../core'
 import { loadedStateCache } from '../core/cache'
+import { getPageFilename } from '../utils/getPageFilename'
 import routes from './routes'
 
 export type HydrateFn = (request: RenderRequest) => void
@@ -20,6 +21,7 @@ export function hydrate(
   loadedStateCache.set(path, state)
   runHydration({
     path,
+    file: getPageFilename(path, import.meta.env.BASE_URL),
     query: location.search.slice(1),
     params: state.routeParams,
     module: routeModule,
