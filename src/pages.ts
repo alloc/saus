@@ -415,6 +415,8 @@ export function createPageFactory(
   }
 
   return {
+    isLoading: (url: string | ParsedUrl) =>
+      loadingPages.has((typeof url == 'string' ? parseUrl(url) : url).path),
     render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
       loadPage(url, options, async url => {
         if (options.preferCache) {

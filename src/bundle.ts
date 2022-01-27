@@ -4,12 +4,12 @@ import builtins from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
-import { fatal, warnOnce } from 'misty'
+import { fatal, warn, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import {
-  clientCachePath,
+  stateCachePath,
   clientDir,
   coreDir,
   runtimeDir,
@@ -45,6 +45,7 @@ import { parseImports, serializeImports } from './utils/imports'
 
 export interface BundleOptions {
   absoluteSources?: boolean
+  debugBase?: string
   entry?: string | null
   isBuild?: boolean
   format?: 'esm' | 'cjs'
@@ -73,6 +74,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
   const bundleConfig: BundleConfig = {
     type: 'script',
     format: options.format || 'cjs',
+    debugBase: options.debugBase,
     ...context.config.saus.bundle,
   }
 
@@ -80,7 +82,15 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     bundleConfig.entry = options.entry
   }
 
-  let { entry } = bundleConfig
+  let { entry, debugBase } = bundleConfig
+
+  if (debugBase) {
+    const failure = validateDebugBase(debugBase, context.basePath)
+    if (failure) {
+      warn(`"debugBase" ${failure}`)
+      debugBase = undefined
+    }
+  }
 
   let bundlePath = options.outFile ? path.resolve(options.outFile) : null!
 
@@ -114,6 +124,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     functions,
     functionImports,
     runtimeConfig,
+    debugBase,
     context,
     options
   )
@@ -322,13 +333,14 @@ async function prepareFunctions(
     base: config.base,
     bundleType: bundleConfig.type,
     command: 'bundle',
+    debugBase: bundleConfig.debugBase,
     defaultPath: context.defaultPath,
     minify: options.minify == true,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
     // Replaced by the `generateClientModules` function.
-    stateCacheUrl: '',
+    stateCacheId: '',
   }
 
   // The functions are now transpiled to plain JavaScript.
@@ -368,6 +380,12 @@ async function generateSsrBundle(
     id: path.join(runtimeDir, 'modules.ts'),
     code: dataToEsm(moduleMap),
   })
+
+  if (!bundleConfig.debugBase)
+    modules.addModule({
+      id: path.join(runtimeDir, 'debugBase.ts'),
+      code: `export function injectDebugBase() {}`,
+    })
 
   const runtimeConfigModule = modules.addModule({
     id: path.join(runtimeDir, 'config.ts'),
@@ -410,7 +428,7 @@ async function generateSsrBundle(
       path.join(coreDir, 'constants.ts'),
       path.join(runtimeDir, 'constants.ts')
     ),
-    redirectModule(clientCachePath, path.join(runtimeDir, 'context.ts')),
+    redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
     redirectModule(
       path.join(clientDir, 'loadPageModule.ts'),
       path.join(runtimeDir, 'loadPageModule.ts')
@@ -535,4 +553,14 @@ function wrapAsyncInit(): vite.Plugin {
       }
     },
   }
+}
+
+function validateDebugBase(debugBase: string, base: string) {
+  return !debugBase.startsWith('/')
+    ? `must start with /`
+    : !debugBase.endsWith('/')
+    ? `must end with /`
+    : base !== '/' && debugBase.startsWith(base)
+    ? `must not include "base"`
+    : null
 }

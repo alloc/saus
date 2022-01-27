@@ -1,6 +1,6 @@
 import md5Hex from 'md5-hex'
 import type { ClientState } from '../client'
-import { loadedStateCache } from '../client/cache'
+import { loadedStateCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 import type { ResolvedState } from './state'
 

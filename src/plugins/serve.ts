@@ -1,4 +1,4 @@
-import { clientCachePath } from '../bundle/constants'
+import { stateCachePath } from '../bundle/constants'
 import {
   applyHtmlProcessors,
   extractClientFunctions,
@@ -56,7 +56,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           return renderStateModule(
             stateModuleId,
             state,
-            '/@fs/' + clientCachePath
+            '/@fs/' + stateCachePath
           )
         }
       }
@@ -79,7 +79,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           minify: false,
           mode: context.config.mode,
           publicDir: context.config.publicDir,
-          stateCacheUrl: '/@fs/' + clientCachePath,
+          stateCacheId: '/@fs/' + stateCachePath,
         }
         pageFactory = createPageFactory(
           context,

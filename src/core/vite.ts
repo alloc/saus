@@ -33,6 +33,10 @@ export interface SausBundleConfig {
    */
   format?: 'esm' | 'cjs'
   /**
+   * When defined, client modules
+   */
+  debugBase?: string
+  /**
    * Minify the SSR bundle.
    * @default false
    */

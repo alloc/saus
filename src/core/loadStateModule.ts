@@ -1,5 +1,5 @@
-import { loadedStateCache, loadingStateCache } from '../client/cache'
 import { unwrapDefault } from '../utils/unwrapDefault'
+import { loadedStateCache, loadingStateCache } from './cache'
 import type { ResolvedState } from './state'
 import { TimeToLive } from './ttl'
 import { withCache } from './withCache'

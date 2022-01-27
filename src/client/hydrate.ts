@@ -1,5 +1,5 @@
 import type { ClientState, RenderRequest } from '../core'
-import { loadedStateCache } from './cache'
+import { loadedStateCache } from '../core/cache'
 import routes from './routes'
 
 export type HydrateFn = (request: RenderRequest) => void

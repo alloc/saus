@@ -35,10 +35,11 @@ export interface RuntimeConfig {
   base: string
   bundleType?: 'script' | 'worker'
   command: 'dev' | 'bundle'
+  debugBase?: string
   defaultPath: string
   minify: boolean
   mode: string
   publicDir: string
   renderConcurrency?: number
-  stateCacheUrl: string
+  stateCacheId: string
 }

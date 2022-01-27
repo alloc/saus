@@ -1,3 +1,4 @@
+import { relative } from '@cush/relative'
 import escalade from 'escalade/sync'
 import { warnOnce } from 'misty'
 import path from 'path'
@@ -17,7 +18,8 @@ import { rewriteHttpImports } from '../plugins/httpImport'
 import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
-import { clientCachePath, clientDir, coreDir, runtimeDir } from './constants'
+import { mapSerial } from '../utils/mapSerial'
+import { stateCachePath, clientDir, coreDir, runtimeDir } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { toInlineSourceMap } from './sourceMap'
 import { ClientModule, ClientModuleMap } from './types'
@@ -40,13 +42,17 @@ export type ClientImport = {
 }
 
 type OutputArray = vite.RollupOutput['output']
-type OutputChunk = OutputArray[0] & { lines?: string[] }
+type OutputChunk = OutputArray[0] & { lines?: string[]; isDebug?: boolean }
 type OutputAsset = Exclude<OutputArray[number], OutputChunk>
+
+const baseUrlPath = path.join(clientDir, 'baseUrl.ts')
+const staticRoutesPath = path.join(clientDir, 'routes.ts')
 
 export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
   runtimeConfig: RuntimeConfig,
+  debugBase = '',
   context: SausContext,
   options: BundleOptions
 ) {
@@ -158,7 +164,7 @@ export async function generateClientModules(
       ssr: false,
       write: false,
       minify: false,
-      sourcemap: sourceMaps,
+      sourcemap: debugBase ? 'inline' : sourceMaps,
       rollupOptions: {
         input,
         output: {
@@ -166,7 +172,7 @@ export async function generateClientModules(
           minifyInternalExports: false,
           manualChunks(id, api) {
             // Ensure a chunk exporting the `loadedStateCache` object exists.
-            if (id == clientCachePath) {
+            if (id == stateCachePath) {
               return 'cache'
             }
             return splitVendor(id, api)
@@ -180,6 +186,13 @@ export async function generateClientModules(
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const { output } = buildResult.output[0]
 
+  const { base } = runtimeConfig
+  debugBase = debugBase.replace('/', base)
+
+  // The state cache is imported by state modules created on-demand,
+  // so its URL needs to be known at runtime.
+  let stateCache: OutputChunk
+
   const entryChunks: OutputChunk[] = []
   const chunks: OutputChunk[] = []
   const assets: OutputAsset[] = []
@@ -192,19 +205,6 @@ export async function generateClientModules(
       const restoredImports = removedImports.get(chunk)
       if (restoredImports) {
         chunk.imports.push(...restoredImports)
-      }
-      if (sourceMaps && chunk.map) {
-        if (chunk.map.sources.length) {
-          const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
-          chunk.map.sources = rewriteSources(
-            chunk.map.sources,
-            chunkDir,
-            context
-          )
-        }
-        if (!minify) {
-          chunk.code += toInlineSourceMap(chunk.map)
-        }
       }
       chunks.push(chunk)
       if (chunk.isEntry) {
@@ -221,17 +221,33 @@ export async function generateClientModules(
 
         entryChunks.push(chunk)
       }
+      if (stateCachePath in chunk.modules) {
+        stateCache = chunk
+        runtimeConfig.stateCacheId = stateCache.fileName
+      }
+      let debugChunk: OutputChunk | undefined
+      if (debugBase) {
+        // Skip debug chunk for the `stateCache` because it needs
+        // to be reused between normal view and debug view.
+        if (chunk !== stateCache) {
+          chunks.push((debugChunk = { ...chunk, isDebug: true }))
+        }
+        // Hide sourcemaps from end users.
+        chunk.map = undefined
+      }
+      const mappedChunk = debugChunk || chunk
+      const map = mappedChunk.map
+      if (map) {
+        if (map.sources.length) {
+          const chunkDir = path.join(outDir, path.dirname(chunk.fileName))
+          map.sources = rewriteSources(map.sources, chunkDir, context)
+        }
+        if (!minify) {
+          mappedChunk.code += toInlineSourceMap(map)
+        }
+      }
     }
   })
-
-  const isStateCache = (chunk: OutputChunk) =>
-    chunk.exports.includes('loadedStateCache')
-
-  const { assetsDir, base } = runtimeConfig
-
-  // The state cache is imported by state modules created on-demand,
-  // so its URL needs to be known at runtime.
-  runtimeConfig.stateCacheUrl = chunks.find(isStateCache)!.fileName
 
   const unresolvedImports = Object.keys(importMap)
   mapClientFunctions(functions, fn => {
@@ -263,69 +279,103 @@ export async function generateClientModules(
   const moduleMap: ClientModuleMap = {}
 
   let entryIndex = -1
-  await Promise.all(
-    chunks.map(async chunk => {
-      let key = chunk.fileName
-      if (chunk.isEntry) {
-        if (chunk.facadeModuleId == helpersPath) {
-          moduleMap.helpers = { id: chunk.fileName, text: chunk.code }
-          return
-        }
-        const importStmt = imports[++entryIndex]
-        if (!importStmt) {
-          return warnOnce(`Unexpected entry module: "${chunk.fileName}"`)
-        }
-        if (importStmt.code.includes('* as routeModule ')) {
-          key = importStmt.source
-        } else if (importStmt.isImplicit) {
-          key = unresolvedImports[entryIndex]
-        } else {
-          key = importStmt.code.replace(
-            /["'][^"']+["']/,
-            quotes(base + chunk.fileName)
-          )
+  await mapSerial(chunks, async chunk => {
+    // Convert relative imports to absolute imports, because we'll want
+    // to inline the chunk if it only consists of import statements.
+    for (const { source } of parseImports(chunk.code).reverse()) {
+      if (source.value[0] !== '.') {
+        continue
+      }
+
+      const importedChunkId = relative(chunk.fileName, source.value)
+      if (!importedChunkId) {
+        continue
+      }
+
+      let resolvedBase = base
+      if (chunk.isDebug) {
+        const importedChunk = chunks.find(
+          chunk => chunk.isDebug && chunk.fileName == importedChunkId
+        )
+        if (importedChunk?.isDebug) {
+          resolvedBase = debugBase
         }
       }
 
-      // Convert relative imports to absolute imports, because we'll want
-      // to inline the chunk if it only consists of import statements.
-      for (const { source } of parseImports(chunk.code).reverse()) {
-        chunk.code =
-          chunk.code.slice(0, source.start) +
-          (base + path.join(assetsDir, source.value)) +
-          chunk.code.slice(source.end)
-      }
+      const resolvedUrl = resolvedBase + importedChunkId
+      chunk.code =
+        chunk.code.slice(0, source.start) +
+        resolvedUrl +
+        chunk.code.slice(source.end)
+    }
 
-      if (minify) {
-        const minified = await terser.minify(chunk.code, {
-          toplevel: chunk.exports.length > 0,
-          keep_fnames: true,
-          keep_classnames: true,
-          sourceMap: !!sourceMaps,
-        })
-        if (minified.map) {
-          chunk.map = vite.combineSourcemaps(chunk.fileName, [
-            minified.map as any,
-            chunk.map as any,
-          ]) as any
-        }
-        chunk.code =
-          minified.code! + (chunk.map ? toInlineSourceMap(chunk.map) : '')
+    let key: string
+    if (chunk.facadeModuleId == helpersPath) {
+      key = 'helpers'
+    } else if (chunk.isEntry) {
+      const importStmt = imports[chunk.isDebug ? entryIndex : ++entryIndex]
+      if (!importStmt) {
+        return warnOnce(`Unexpected entry module: "${chunk.fileName}"`)
       }
+      if (importStmt.code.includes('* as routeModule ')) {
+        key = importStmt.source
+      } else if (importStmt.isImplicit) {
+        key = unresolvedImports[entryIndex]
+      } else {
+        key = importStmt.code.replace(
+          /["'][^"']+["']/,
+          quotes(base + chunk.fileName)
+        )
+      }
+    } else {
+      key = chunk.fileName
+    }
 
-      const mod: ClientModule = (moduleMap[key] = {
-        id: chunk.fileName,
-        text: chunk.code,
+    if (minify && !chunk.isDebug) {
+      const minified = await terser.minify(chunk.code, {
+        toplevel: chunk.exports.length > 0,
+        keep_fnames: true,
+        keep_classnames: true,
+        sourceMap: !!sourceMaps,
       })
+      if (chunk.map && minified.map) {
+        chunk.map = vite.combineSourcemaps(chunk.fileName, [
+          minified.map as any,
+          chunk.map as any,
+        ]) as any
+      }
+      chunk.code = minified.code!
+    }
 
-      if (chunk.imports.length) {
-        mod.imports = chunk.imports
+    if (chunk.map) {
+      chunk.code += toInlineSourceMap(chunk.map)
+    }
+
+    if (chunk.isDebug) {
+      if (baseUrlPath in chunk.modules) {
+        chunk.code = chunk.code.replace(
+          /\b(BASE_URL = )"[^"]+"/,
+          (_, assign) => assign + JSON.stringify(debugBase)
+        )
+      } else if (staticRoutesPath in chunk.modules) {
+        chunk.code = useDebugRoutes(chunk.code, base, debugBase)
       }
-      if (chunk.exports.length) {
-        mod.exports = chunk.exports
-      }
+      moduleMap[key].debugText = chunk.code
+      return
+    }
+
+    const mod: ClientModule = (moduleMap[key] = {
+      id: chunk.fileName,
+      text: chunk.code,
     })
-  )
+
+    if (chunk.imports.length) {
+      mod.imports = chunk.imports
+    }
+    if (chunk.exports.length) {
+      mod.exports = chunk.exports
+    }
+  })
 
   // TODO: encode image/video/audio files with base64?
   assets.forEach(asset => {
@@ -437,4 +487,28 @@ function rewriteSources(
 
 function slash(p: string): string {
   return p.replace(/\\/g, '/')
+}
+
+/**
+ * Rewrite the static `routes` object to use the debug view.
+ */
+function useDebugRoutes(code: string, base: string, debugBase: string) {
+  return code.replace(
+    /\b(routes = )(\{[\s\S]+?\})/,
+    (_, assign, routesJson) => {
+      const routes: Record<string, string> = JSON.parse(routesJson)
+      const newRoutes: Record<string, string> = {}
+      for (let routePath in routes) {
+        let routeModuleId = routes[routePath]
+        if (routeModuleId.startsWith(base)) {
+          routeModuleId = routeModuleId.replace(base, debugBase)
+        }
+        if (routePath.startsWith(base)) {
+          routePath = routePath.replace(base, debugBase)
+        }
+        newRoutes[routePath] = routeModuleId
+      }
+      return assign + JSON.stringify(newRoutes, null, 2)
+    }
+  )
 }

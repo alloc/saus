@@ -11,6 +11,7 @@ export interface RenderedPage {
 export interface ClientModule {
   id: string
   text: string
+  debugText?: string
   imports?: string[]
   exports?: string[]
 }

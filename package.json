@@ -27,6 +27,8 @@
   "dependencies": {
     "@babel/core": "^7.16.7",
     "@babel/plugin-syntax-typescript": "^7.14.5",
+    "@cush/relative": "^1.0.0",
+    "@saus/html": "*",
     "cac": "^6.7.3",
     "endent": "^2.1.0",
     "es-module-lexer": "^0.9.3",
