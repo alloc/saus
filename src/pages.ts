@@ -8,7 +8,6 @@ import type {
   Client,
   ClientDescription,
   ClientState,
-  RenderApi,
   Renderer,
   RenderRequest,
   Route,
@@ -18,7 +17,6 @@ import type {
   RuntimeConfig,
   StateModule,
 } from './core'
-import { Buffer } from './core/buffer'
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
