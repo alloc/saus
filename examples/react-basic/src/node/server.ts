@@ -4,8 +4,7 @@ import hasFlag from 'has-flag'
 import http from 'http'
 import { gray } from 'kleur/colors'
 import { success } from 'misty'
-import { MistyTask } from 'misty/task'
-import { startTask } from 'misty/task'
+import { MistyTask, startTask } from 'misty/task'
 import * as mime from 'mrmime'
 import path from 'path'
 import renderPage, {
@@ -40,7 +39,9 @@ const app = connect()
     if (!req.url.startsWith(config.base)) {
       throw 404
     }
-    const module = modules.get(req.url)
+    const module =
+      modules.get(req.url) ||
+      modules.get(req.url.endsWith('/') ? req.url.slice(0, -1) : req.url + '/')
     if (!module) {
       return next()
     }
@@ -159,7 +160,7 @@ async function preCacheKnownPages() {
   const knownPaths = await getKnownPaths()
   await Promise.all(
     knownPaths.map(knownPath => {
-      return renderPage(config.base + knownPath.slice(1), options)
+      return renderPage(knownPath, options)
     })
   )
   success(`${pageCount} pages were pre-cached.`)

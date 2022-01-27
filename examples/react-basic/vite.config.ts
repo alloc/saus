@@ -9,6 +9,7 @@ export default defineConfig({
       target: 'node16',
       entry: './src/node/server.ts',
       format: 'esm',
+      debugBase: '/debug/',
       // minify: true,
     },
   },
