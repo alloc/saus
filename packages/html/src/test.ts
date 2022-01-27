@@ -7,8 +7,10 @@ export function traverse(html: string, visitors: HtmlVisitor | HtmlVisitor[]) {
     page: {
       path: '/',
       html,
-      routeModuleId: '/main.js',
+      files: [],
+      state: { routePath: '/', routeParams: {} },
       stateModules: [],
+      routeModuleId: '/main.js',
     },
     config: {
       assetsDir: 'assets',
