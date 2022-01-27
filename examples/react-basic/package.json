@@ -15,6 +15,7 @@
     "@saus/html": "*",
     "@saus/react": "*",
     "@types/etag": "^1.8.1",
+    "has-flag": "^5.0.1",
     "kleur": "^4.1.4",
     "misty": "^1.4.5",
     "mrmime": "^1.0.0",

@@ -1,5 +1,6 @@
 import etag from 'etag'
 import fs from 'fs'
+import hasFlag from 'has-flag'
 import http from 'http'
 import { gray } from 'kleur/colors'
 import { success } from 'misty'
@@ -17,12 +18,19 @@ import renderPage, {
 } from 'saus/bundle'
 import { connect } from './connect'
 
+const debug = !!process.env.DEBUG || hasFlag('debug') ? console.log : () => {}
+
 const modules = new Map<string, ClientModule>(
-  Object.values(moduleMap).map(module => [getModuleUrl(module), module])
+  Object.values(moduleMap).map(module => {
+    const url = getModuleUrl(module)
+    debug(gray('loaded'), url)
+    return [url, module]
+  })
 )
 const addModule = (module: ClientModule) => {
   const url = getModuleUrl(module)
   if (!modules.has(url)) {
+    debug(gray('loaded'), url)
     modules.set(url, module)
   }
 }
@@ -36,7 +44,7 @@ const app = connect()
     if (!module) {
       return next()
     }
-    console.log(gray('cached'), req.url)
+    debug(gray('cached'), req.url)
     res.writeHead(200, {
       ETag: etag(module.text, { weak: true }),
       'Content-Type': mime.lookup(module.id)!,
@@ -54,7 +62,7 @@ const app = connect()
       res.end()
     }
     if (e == 404) {
-      console.log(gray('unknown'), req.url)
+      debug(gray('unknown'), req.url)
       req.url = config.base + e
       servePage(req, res, next).catch(close)
     } else {
@@ -72,7 +80,7 @@ async function servePage(
     if (!page) {
       return next()
     }
-    console.log(gray('rendered'), req.url)
+    debug(gray('rendered'), req.url)
     page.modules.forEach(addModule)
     page.assets.forEach(addModule)
     res.writeHead(200, {
@@ -100,7 +108,7 @@ function servePublicDir(publicDir: string, ignore = /^$/) {
     }
     try {
       const content = fs.readFileSync(path.join(publicDir, fileName))
-      console.log(gray('read'), req.url)
+      debug(gray('read'), req.url)
       res.writeHead(200, {
         ETag: etag(content, { weak: true }),
         'Content-Type': mime.lookup(req.url) || 'application/octet-stream',
