@@ -423,10 +423,7 @@ function fixChunkImports(cache: Map<OutputChunk, string[]>): vite.Plugin {
         for (const id in bundle) {
           const chunk = bundle[id]
           if (chunk.type == 'chunk') {
-            const imports = [
-              ...(config.chunkToEmittedCssFileMap.get(chunk) || []),
-              ...(config.chunkToEmittedAssetsMap.get(chunk) || []),
-            ]
+            const imports = [...chunk.importedCss, ...chunk.importedAssets]
             if (imports.length) {
               cache.set(chunk, imports)
             }
