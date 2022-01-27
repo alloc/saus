@@ -6,12 +6,14 @@ import {
   HtmlResolverState,
   HtmlTagPath,
   HtmlVisitor,
+  HtmlVisitorState,
 } from './types'
 import { TraverseVisitor } from './visitors/bind'
 
 const kResolverList = Symbol.for('html.ResolverList')
 
-const assetAttrsConfig: Record<string, string[]> = {
+const defaultAttrsMap: Record<string, string[]> = {
+  a: ['href'],
   link: ['href'],
   video: ['src', 'poster'],
   source: ['src', 'srcset'],
@@ -57,6 +59,22 @@ export function resolveHtmlImports(
     }
   }
 
+  visitor = createHtmlResolver(resolver)
+  traverseHtml(enforce, visitor)
+}
+
+function assertType<T>(value: unknown): asserts value is T {}
+
+/**
+ * Create a HTML visitor that rewrites URLs.
+ *
+ * This function is exposed for SSR runtimes, so the visitor
+ * **must be manually registered** via the `processHtml` function.
+ */
+export function createHtmlResolver<State = HtmlVisitorState>(
+  resolver: HtmlResolver,
+  attrsMap = defaultAttrsMap
+): HtmlVisitor<State> {
   const resolvers = [resolver]
   const resolve = async (
     path: HtmlTagPath,
@@ -89,11 +107,11 @@ export function resolveHtmlImports(
 
   const skipLinkRel: any[] = ['preconnect', 'dns-prefetch']
 
-  visitor = {
+  const visitor: HtmlVisitor = {
     // Avoid resolving the URL of a removed node by
     // waiting for the "close" phase.
     close(path, state) {
-      const attrs = assetAttrsConfig[path.tagName]
+      const attrs = attrsMap[path.tagName]
       if (attrs) {
         return path.tagName !== 'link' ||
           !skipLinkRel.includes(path.attributes.rel)
@@ -107,7 +125,5 @@ export function resolveHtmlImports(
     value: resolvers,
   })
 
-  traverseHtml(enforce, visitor)
+  return visitor
 }
-
-function assertType<T>(value: unknown): asserts value is T {}
