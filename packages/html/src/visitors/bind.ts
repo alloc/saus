@@ -3,13 +3,19 @@ import { onChange } from '../onChange'
 import { parseHtml } from '../parser'
 import { HtmlTagPath } from '../path'
 import { kVisitorsArray } from '../symbols'
-import { HtmlDocument, HtmlTag, HtmlTextLike, HtmlVisitor } from '../types'
+import {
+  HtmlDocument,
+  HtmlTag,
+  HtmlTextLike,
+  HtmlVisitor,
+  HtmlVisitorState,
+} from '../types'
 
 export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
   [kVisitorsArray]: HtmlVisitor[]
 }
 
-export function bindVisitors<State>(
+export function bindVisitors<State = HtmlVisitorState>(
   arg: HtmlVisitor<State> | HtmlVisitor<State>[]
 ) {
   const visitors = Array.isArray(arg) ? arg : [arg]
