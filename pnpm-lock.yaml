@@ -9,7 +9,9 @@ importers:
       '@babel/core': ^7.16.7
       '@babel/helper-annotate-as-pure': ^7.15.4
       '@babel/plugin-syntax-typescript': ^7.14.5
+      '@cush/relative': ^1.0.0
       '@rollup/pluginutils': ^4.1.2
+      '@saus/html': '*'
       '@types/debug': ^4.1.7
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
@@ -51,6 +53,8 @@ importers:
     dependencies:
       '@babel/core': 7.16.7
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.16.7
+      '@cush/relative': 1.0.0
+      '@saus/html': link:packages/html
       cac: 6.7.3
       endent: 2.1.0
       es-module-lexer: 0.9.3
@@ -93,7 +97,7 @@ importers:
       ts-debounce: 3.0.0
       tsup: 5.11.6_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -103,6 +107,7 @@ importers:
       '@types/node': ^16.10.2
       '@types/serve-static': ^1.13.10
       etag: ^1.8.1
+      has-flag: ^5.0.1
       kleur: ^4.1.4
       misty: ^1.4.5
       mrmime: ^1.0.0
@@ -112,6 +117,7 @@ importers:
       '@saus/html': link:../../packages/html
       '@saus/react': link:../../packages/react
       '@types/etag': 1.8.1
+      has-flag: 5.0.1
       kleur: 4.1.4
       misty: 1.4.5
       mrmime: 1.0.0
@@ -2213,6 +2219,11 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
+  /has-flag/5.0.1:
+    resolution: {integrity: sha512-CsNUt5x9LUdx6hnk/E2SZLsDyvfqANZSUq4+D3D8RzDJ2M+HDTIkF60ibS1vHaK55vzgiZw1bEPFG9yH7l33wA==}
+    engines: {node: '>=12'}
+    dev: false
+
   /has-symbol-support-x/1.4.2:
     resolution: {integrity: sha512-3ToOva++HaW+eCpgqZrCfN51IPB+7bJNVT6CUATzueB5Heb8o6Nam0V3HG5dlDvZU1Gn5QLcbahiKw/XVk5JJw==}
     dev: false
@@ -3631,7 +3642,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: false
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -3654,7 +3665,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/1.3.1:
