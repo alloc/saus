@@ -12,5 +12,9 @@ export function getPageFilename(path: string, basePath?: string) {
 }
 
 function appendHtmlSuffix(indexSuffix?: string, indexPath?: string) {
-  return (indexPath ? 'index/' : '') + (indexSuffix ? 'index' : '') + '.html'
+  return (
+    (indexPath ? 'index/' : '') +
+    (indexSuffix ? (indexPath ? '' : '/') + 'index' : '') +
+    '.html'
+  )
 }
