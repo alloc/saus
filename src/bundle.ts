@@ -4,15 +4,15 @@ import builtins from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
-import { fatal, warn, warnOnce } from 'misty'
+import { warn, warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
 import { ClientImport, generateClientModules } from './bundle/clients'
 import {
-  stateCachePath,
   clientDir,
   coreDir,
   runtimeDir,
+  stateCachePath,
 } from './bundle/constants'
 import { createModuleProvider } from './bundle/moduleProvider'
 import { resolveMapSources, SourceMap } from './bundle/sourceMap'
@@ -45,44 +45,51 @@ import { parseImports, serializeImports } from './utils/imports'
 
 export interface BundleOptions {
   absoluteSources?: boolean
-  debugBase?: string
-  entry?: string | null
   isBuild?: boolean
-  format?: 'esm' | 'cjs'
   minify?: boolean
-  mode?: string
+}
+
+export interface InlineBundleConfig
+  extends Pick<SausBundleConfig, 'debugBase' | 'entry' | 'format' | 'target'> {
   outFile?: string
   write?: boolean
 }
 
-export async function loadBundleContext(inlineConfig?: vite.UserConfig) {
-  try {
-    return await loadContext('build', inlineConfig, [renderPlugin])
-  } catch (e: any) {
-    if (e.message.startsWith('[saus]')) {
-      fatal(e.message)
-    }
-    throw e
-  }
-}
+type RequiredKeys<T, P extends keyof T> = {} & Omit<T, P> & Required<Pick<T, P>>
 
 /** @internal */
-type BundleConfig = SausBundleConfig &
-  Required<Pick<SausBundleConfig, 'format' | 'type'>>
+interface BundleConfig
+  extends RequiredKeys<SausBundleConfig, 'format' | 'type' | 'target'> {
+  outFile?: string
+}
 
-export async function bundle(context: SausContext, options: BundleOptions) {
-  const bundleConfig: BundleConfig = {
-    type: 'script',
-    format: options.format || 'cjs',
-    debugBase: options.debugBase,
-    ...context.config.saus.bundle,
+export interface BundleContext extends SausContext {
+  bundle: BundleConfig
+}
+
+export async function loadBundleContext(
+  options: InlineBundleConfig = {},
+  inlineConfig?: vite.UserConfig
+) {
+  const context: BundleContext = (await loadContext('build', inlineConfig, [
+    renderPlugin,
+  ])) as any
+
+  const bundleConfig = context.config.saus.bundle || {}
+  const buildConfig = context.userConfig.build || {}
+
+  let {
+    debugBase = bundleConfig.debugBase,
+    entry,
+    format = bundleConfig.format || 'cjs',
+    outFile,
+    target = bundleConfig.target || 'node14',
+    write = buildConfig.write,
+  } = options
+
+  if (outFile) {
+    outFile = path.resolve(outFile)
   }
-
-  if (options.entry !== undefined) {
-    bundleConfig.entry = options.entry
-  }
-
-  let { entry, debugBase } = bundleConfig
 
   if (debugBase) {
     const failure = validateDebugBase(debugBase, context.basePath)
@@ -92,23 +99,20 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     }
   }
 
-  let bundlePath = options.outFile ? path.resolve(options.outFile) : null!
-
-  const outDir = context.userConfig.build?.outDir || 'dist'
+  if (entry === undefined) {
+    entry = bundleConfig.entry
+  }
   if (entry) {
-    bundlePath ??= path.resolve(
+    outFile ??= path.resolve(
       context.root,
       entry
-        .replace(/^(\.\/)?src\//, outDir + '/')
-        .replace(/\.ts$/, bundleConfig.format == 'cjs' ? '.js' : '.mjs')
+        .replace(/^(\.\/)?src\//, (buildConfig.outDir || 'dist') + '/')
+        .replace(/\.ts$/, format == 'cjs' ? '.js' : '.mjs')
     )
     entry = path.resolve(context.root, entry)
   }
 
-  const shouldWrite =
-    options.write !== false && context.config.build.write !== false
-
-  if (!bundlePath && shouldWrite) {
+  if (!outFile && write !== false) {
     throw Error(
       `[saus] The "outFile" option must be provided when ` +
         `"saus.bundle.entry" is not defined in your Vite config ` +
@@ -116,46 +120,51 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     )
   }
 
+  context.bundle = {
+    ...bundleConfig,
+    type: bundleConfig.type || 'script',
+    entry,
+    target,
+    format,
+    outFile,
+    debugBase,
+  }
+
+  return context
+}
+
+export async function bundle(options: BundleOptions, context: BundleContext) {
   const { functions, functionImports, routeImports, runtimeConfig } =
-    await prepareFunctions(context, bundleConfig, options)
+    await prepareFunctions(context, options)
 
   Profiling.mark('generate client modules')
   const { moduleMap, clientRouteMap } = await generateClientModules(
     functions,
     functionImports,
     runtimeConfig,
-    debugBase,
     context,
-    options
+    options.minify
   )
 
   Profiling.mark('generate ssr bundle')
-  const bundleDir = bundlePath ? path.dirname(bundlePath) : context.root
   const { code, map } = await generateSsrBundle(
-    entry,
     context,
     options,
     runtimeConfig,
     routeImports,
     functions,
     moduleMap,
-    clientRouteMap,
-    bundleConfig,
-    bundleDir
+    clientRouteMap
   )
 
-  if (map && options.absoluteSources) {
-    resolveMapSources(map, bundleDir)
-  }
-
   const bundle = {
-    path: bundlePath,
+    path: context.bundle.outFile,
     code,
     map: map as SourceMap | undefined,
   }
 
-  if (shouldWrite) {
-    await callPlugins(context.plugins, 'onWriteBundle', bundle)
+  if (bundle.path) {
+    await callPlugins(context.plugins, 'onWriteBundle', bundle as any)
 
     context.logger.info(
       kleur.bold('[saus]') +
@@ -170,7 +179,7 @@ export async function bundle(context: SausContext, options: BundleOptions) {
     }
     fs.writeFileSync(bundle.path, bundle.code)
 
-    if (!entry) {
+    if (!context.bundle.entry) {
       fs.copyFileSync(
         path.resolve(__dirname, '../src/bundle/types.ts'),
         bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
@@ -187,8 +196,7 @@ async function getBuildTransform(config: vite.ResolvedConfig) {
 }
 
 async function prepareFunctions(
-  context: SausContext,
-  bundleConfig: BundleConfig,
+  context: BundleContext,
   options: BundleOptions
 ) {
   const { root, renderPath, config } = context
@@ -331,15 +339,15 @@ async function prepareFunctions(
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
     base: config.base,
-    bundleType: bundleConfig.type,
+    bundleType: context.bundle.type,
     command: 'bundle',
-    debugBase: bundleConfig.debugBase,
+    debugBase: context.bundle.debugBase,
     defaultPath: context.defaultPath,
-    minify: options.minify == true,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
-    // Replaced by the `generateClientModules` function.
+    // These are set by the `generateClientModules` function.
+    minify: false,
     stateCacheId: '',
   }
 
@@ -358,17 +366,15 @@ async function prepareFunctions(
 }
 
 async function generateSsrBundle(
-  entry: string | null | undefined,
-  context: SausContext,
+  context: BundleContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
   routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
-  clientRouteMap: Record<string, string>,
-  bundleConfig: BundleConfig,
-  bundleDir: string
+  clientRouteMap: Record<string, string>
 ) {
+  const bundleConfig = context.bundle
   const modules = createModuleProvider()
 
   modules.addModule({
@@ -453,6 +459,10 @@ async function generateSsrBundle(
     )
   }
 
+  const bundleDir = bundleConfig.outFile
+    ? path.dirname(bundleConfig.outFile)
+    : context.root
+
   const config = await context.resolveConfig('build', {
     plugins: [
       await isolateRoutes(routeImports, context),
@@ -463,7 +473,7 @@ async function generateSsrBundle(
         './src/core/context.ts',
       ]),
       modules,
-      entry &&
+      bundleConfig.entry &&
       bundleConfig.type == 'script' &&
       !supportTopLevelAwait(bundleConfig)
         ? wrapAsyncInit()
@@ -478,7 +488,7 @@ async function generateSsrBundle(
       minify: bundleConfig.minify == true,
       sourcemap: context.userConfig.build?.sourcemap ?? true,
       rollupOptions: {
-        input: entry || bundleId,
+        input: bundleConfig.entry || bundleId,
         output: {
           dir: bundleDir,
           format: bundleConfig.format,
@@ -492,7 +502,13 @@ async function generateSsrBundle(
   config.ssr!.external = builtins as string[]
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
-  return buildResult.output[0].output[0]
+  const bundle = buildResult.output[0].output[0]
+
+  if (bundle.map && options.absoluteSources) {
+    resolveMapSources(bundle.map, bundleDir)
+  }
+
+  return bundle
 }
 
 /**
@@ -527,10 +543,12 @@ function relativeToCwd(file: string) {
 
 // Technically, top-level await is available since Node 14.8 but Esbuild
 // complains when this feature is used with a "node14" target environment.
-function supportTopLevelAwait(bundleConfig: SausBundleConfig = {}) {
-  const target = bundleConfig.target || 'node14'
-  return arrify(target).some(
-    target => target.startsWith('node') && Number(target.slice(4)) >= 15
+function supportTopLevelAwait(bundleConfig: BundleConfig) {
+  return (
+    !bundleConfig.target ||
+    arrify(bundleConfig.target).some(
+      target => target.startsWith('node') && Number(target.slice(4)) >= 15
+    )
   )
 }
 

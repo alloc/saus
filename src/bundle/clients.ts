@@ -4,7 +4,7 @@ import { warnOnce } from 'misty'
 import path from 'path'
 import stripComments from 'strip-comments'
 import terser from 'terser'
-import { BundleOptions } from '../bundle'
+import { BundleContext } from '../bundle'
 import {
   ClientFunctions,
   mapClientFunctions,
@@ -19,7 +19,7 @@ import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
 import { parseImports } from '../utils/imports'
 import { mapSerial } from '../utils/mapSerial'
-import { stateCachePath, clientDir, coreDir, runtimeDir } from './constants'
+import { clientDir, coreDir, runtimeDir, stateCachePath } from './constants'
 import { createModuleProvider } from './moduleProvider'
 import { toInlineSourceMap } from './sourceMap'
 import { ClientModule, ClientModuleMap } from './types'
@@ -52,9 +52,8 @@ export async function generateClientModules(
   functions: ClientFunctions,
   importMap: Record<string, ClientImport>,
   runtimeConfig: RuntimeConfig,
-  debugBase = '',
-  context: SausContext,
-  options: BundleOptions
+  context: BundleContext,
+  minify?: boolean
 ) {
   const input: string[] = []
   const modules = createModuleProvider()
@@ -102,10 +101,13 @@ export async function generateClientModules(
   const helpersPath = path.join(clientDir, 'helpers.ts')
   input.push('/@fs/' + helpersPath)
 
-  let { config, userConfig } = context
+  let {
+    bundle: { debugBase = '' },
+    config,
+    userConfig,
+  } = context
 
-  const mode = options.mode || config.mode
-  const isProduction = mode == 'production'
+  const isProduction = config.mode == 'production'
 
   // Vite replaces `process.env.NODE_ENV` in client modules with the value
   // at compile time (strangely), so we need to reset it here.
@@ -124,10 +126,11 @@ export async function generateClientModules(
   }
 
   const outDir = config.build.outDir
-  const minify =
-    options.minify == null
-      ? (userConfig.build?.minify ?? isProduction) !== false
-      : options.minify
+  if (minify == null) {
+    minify = (userConfig.build?.minify ?? isProduction) !== false
+  }
+
+  runtimeConfig.minify = minify
 
   const removedImports = new Map<OutputChunk, string[]>()
   const clientRouteMap: Record<string, string> = {}
@@ -156,7 +159,6 @@ export async function generateClientModules(
       fixChunkImports(removedImports),
       transformClientState(),
     ],
-    mode,
     css: {
       minify,
     },

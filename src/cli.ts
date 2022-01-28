@@ -34,7 +34,7 @@ cli
   .action(async (options: BuildOptions) => {
     const { build } = require('./build') as typeof import('./build')
     try {
-      const { pages, errors } = await build({ build: options })
+      const { pages, errors } = await build(options)
       if (errors.length) {
         log('')
         for (const error of errors) {
@@ -72,14 +72,13 @@ cli
     const { bundle, loadBundleContext } =
       require('./bundle') as typeof import('./bundle')
 
-    const context = await loadBundleContext({
-      mode: options.mode,
-      logLevel: noWrite ? 'silent' : undefined,
-      build: { sourcemap: options.sourcemap },
-    })
-
     try {
-      let { code, map } = await bundle(context, options)
+      const context = await loadBundleContext(options, {
+        mode: options.mode,
+        logLevel: noWrite ? 'silent' : undefined,
+        build: { sourcemap: options.sourcemap },
+      })
+      let { code, map } = await bundle(options, context)
       if (noWrite) {
         if (map) {
           const { toInlineSourceMap } =

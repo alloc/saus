@@ -20,10 +20,12 @@ import { getPagePath } from './utils/getPagePath'
 
 export type FailedPage = { path: string; reason: string }
 
-export async function build(
-  inlineConfig?: vite.UserConfig & { build?: BuildOptions }
-) {
-  const context = await loadBundleContext(inlineConfig)
+export async function build(options: BuildOptions) {
+  const context = await loadBundleContext({
+    write: false,
+    entry: null,
+    format: 'cjs',
+  })
 
   const loading = startTask('Loading routes...')
   await loadRoutes(context)
@@ -31,13 +33,10 @@ export async function build(
   const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
   loading.finish(`${routeCount} routes loaded.`)
 
-  const { code, map } = await bundle(context, {
-    isBuild: true,
-    write: false,
-    entry: null,
-    format: 'cjs',
-    absoluteSources: true,
-  })
+  const { code, map } = await bundle(
+    { isBuild: true, absoluteSources: true },
+    context
+  )
 
   let pageCount = 0
   let renderCount = 0
@@ -64,7 +63,7 @@ export async function build(
   const worker = new WorkerPool({
     filename: path.resolve(__dirname, 'build/worker.js'),
     workerData: { code, map },
-    maxThreads: inlineConfig?.build?.maxWorkers,
+    maxThreads: options.maxWorkers,
     idleTimeout: 2000,
   }) as BuildWorker
 
