@@ -1,6 +1,7 @@
 import type { ClientState, RenderRequest } from '../core'
 import { loadedStateCache } from '../core/cache'
 import { getPageFilename } from '../utils/getPageFilename'
+import { BASE_URL } from './baseUrl'
 import routes from './routes'
 
 export type HydrateFn = (request: RenderRequest) => void
@@ -15,7 +16,7 @@ export function hydrate(
   if (import.meta.env.DEV && !runHydration) {
     throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
   }
-  const routePath = state.routePath.replace('/', import.meta.env.BASE_URL)
+  const routePath = state.routePath.replace('/', BASE_URL)
   routes[routePath] = routeModuleUrl
   const path = location.pathname
   loadedStateCache.set(path, state)
