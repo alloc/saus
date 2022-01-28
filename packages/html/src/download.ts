@@ -2,7 +2,14 @@ import { relative } from '@cush/relative'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
-import { EnforcementPhase, get, md5Hex, setup } from 'saus/core'
+import {
+  EnforcementPhase,
+  get,
+  md5Hex,
+  Response,
+  setup,
+  unwrapBuffer,
+} from 'saus/core'
 import { debug } from './debug'
 import { isExternalUrl } from './isExternalUrl'
 import { HtmlTagPath } from './path'
@@ -25,7 +32,7 @@ export type DownloadOptions = {
   enforce?: EnforcementPhase
   skip?: (url: string) => boolean
   onRequest?: (url: string) => void
-  onResponse?: (url: string, content: string | Buffer) => void
+  onResponse?: (url: string, response: Response) => void
   onWriteFile?: (fileName: string) => void
   /**
    * Override the default behavior of writing to the `outDir`.
@@ -169,9 +176,9 @@ function installHtmlHook({
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:93.0) Gecko/20100101 Firefox/93.0',
         },
       }).then(
-        content => {
-          onResponse?.(url, content)
-          return content
+        resp => {
+          onResponse?.(url, resp)
+          return unwrapBuffer(resp.data)
         },
         err => {
           // Connection may reset when debugging.
