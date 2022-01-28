@@ -2,6 +2,7 @@ import fs from 'fs'
 import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
 import type { RenderedPage } from '../bundle/types'
+import runtimeConfig from '../core/runtimeConfig'
 
 export function writePages(
   pages: ReadonlyArray<RenderedPage | null>,
@@ -45,16 +46,26 @@ export function printFiles(
   logger: { info(arg: string): void },
   files: Record<string, number>,
   outDir: string,
-  chunkLimit = 500
+  chunkLimit = 500,
+  debugBase = runtimeConfig.debugBase
 ) {
   if (!outDir.endsWith('/')) {
     outDir += '/'
   }
-  const maxLength = Object.keys(files).reduce(
+
+  let printedFiles = Object.keys(files)
+  if (debugBase)
+    printedFiles = printedFiles.filter(
+      file => !file.startsWith(debugBase.slice(1))
+    )
+
+  const maxLength = printedFiles.reduce(
     (maxLength, file) => Math.max(maxLength, file.length),
     0
   )
-  for (const [file, kibs] of Object.entries(files)) {
+
+  for (const file of printedFiles) {
+    const kibs = files[file]
     const color = writeColors[path.extname(file)] || green
     const fileName = gray(outDir) + color(file.padEnd(maxLength + 2))
     const fileSize = (kibs > chunkLimit ? yellow : dim)(

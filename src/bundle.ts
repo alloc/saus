@@ -428,6 +428,10 @@ async function generateSsrBundle(
       path.join(coreDir, 'constants.ts'),
       path.join(runtimeDir, 'constants.ts')
     ),
+    redirectModule(
+      path.join(coreDir, 'runtimeConfig.ts'),
+      path.join(runtimeDir, 'config.ts')
+    ),
     redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
     redirectModule(
       path.join(clientDir, 'loadPageModule.ts'),

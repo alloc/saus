@@ -118,7 +118,8 @@ export async function build(
       context.logger,
       files,
       vite.normalizePath(path.relative(context.root, outDir)) + '/',
-      buildOptions.chunkSizeWarningLimit
+      buildOptions.chunkSizeWarningLimit,
+      context.bundle.debugBase
     )
   }
 
