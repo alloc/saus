@@ -166,6 +166,7 @@ function installHtmlHook({
 
     const download = (): Promise<Buffer> =>
       get(url, {
+        timeout: 15e3,
         headers: {
           // An explicit user agent ensures the most modern asset is cached.
           // In the future, we may want to send a duplicate request with an
