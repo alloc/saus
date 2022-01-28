@@ -1,4 +1,5 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
+import * as esModuleLexer from 'es-module-lexer'
 import { EventEmitter } from 'events'
 import { gray, red } from 'kleur/colors'
 import path from 'path'
@@ -26,6 +27,9 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       config => routesPlugin(config),
       renderPlugin,
       transformClientState,
+      // The routes module needs to be able to use modules that
+      // expect a Node environment, so externalize them.
+      config => externalizeStaticImports(config.routes),
     ])
 
   let context = await createContext()
@@ -196,6 +200,33 @@ async function startServer(
   })
 
   return server
+}
+
+/**
+ * Externalize static import statements but leave dynamic imports alone.
+ */
+function externalizeStaticImports(importer: string): vite.Plugin {
+  let staticImports: Set<string>
+  return {
+    name: 'saus:' + externalizeStaticImports.name,
+    enforce: 'pre',
+    transform(code, id) {
+      if (id == importer) {
+        staticImports = new Set(
+          esModuleLexer
+            .parse(code)[0]
+            .filter(i => !i.d && i.n)
+            .map(i => i.n!)
+        )
+        return null
+      }
+    },
+    resolveId(id, parent) {
+      if (parent == importer && staticImports.has(id)) {
+        return { id, external: true }
+      }
+    },
+  }
 }
 
 /**
