@@ -9,7 +9,10 @@ import { TimeToLive } from './ttl'
 type URL = import('url').URL
 declare const URL: typeof import('url').URL
 
-type GetOptions = { headers?: Record<string, string> }
+export type GetOptions = {
+  headers?: Record<string, string>
+  timeout?: number
+}
 
 /**
  * Do one thing, do it well.
@@ -40,6 +43,7 @@ function resolvedGet(
 
   const request = urlToHttpOptions(url)
   request.headers = opts.headers
+  request.timeout = opts.timeout
 
   const trace = Error()
 
