@@ -217,14 +217,16 @@ function getConfigResolver(
         ? hookModule.default
         : hookModule
 
-      if (typeof configHook !== 'function') {
-        throw Error(`[saus] Config hook must export a function: ${hookPath}`)
-      }
+      if (typeof configHook !== 'function')
+        throw Error(
+          `[saus] Config hook must export a function: ${hookRef.path}`
+        )
+
       const result = await configHook(userConfig, configEnv)
       if (result) {
         userConfig = vite.mergeConfig(userConfig, result)
       }
-      debug(`Applied config hook: ${hookPath}`)
+      debug(`Applied config hook: ${hookRef.path}`)
     }
 
     const config = (await vite.resolveConfig(
