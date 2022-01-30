@@ -1,5 +1,6 @@
 import Worker from 'tinypool'
 import vm from 'vm'
+import { workerData } from 'worker_threads'
 import { SourceMap, toInlineSourceMap } from '../bundle/sourceMap'
 import type { RenderedPage } from '../bundle/types'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
@@ -9,7 +10,7 @@ export interface BuildWorker extends Worker {
   run(pageUrl: string): Promise<RenderedPage | null>
 }
 
-const { code, map } = Worker.workerData as { code: string; map: SourceMap }
+const { code, map } = workerData as { code: string; map: SourceMap }
 
 const onError = (error: any) => {
   error.stack = resolveStackTrace(error.stack, code, map)
