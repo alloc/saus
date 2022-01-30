@@ -1,6 +1,6 @@
 import * as babel from '@babel/core'
 import arrify from 'arrify'
-import builtins from 'builtin-modules'
+import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
@@ -494,12 +494,11 @@ async function generateSsrBundle(
           format: bundleConfig.format,
         },
         context: 'globalThis',
+        external: getExternalsFilter(!!options.isBuild, context),
+        makeAbsoluteExternalsRelative: false,
       },
     },
   })
-
-  // Externalize Node built-ins only.
-  config.ssr!.external = builtins as string[]
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const bundle = buildResult.output[0].output[0]
@@ -509,6 +508,50 @@ async function generateSsrBundle(
   }
 
   return bundle
+}
+
+// There is a bug in Rollup where import statements in
+// template literals are mistaken for real imports.
+const templateSubstitution = /\$\{/
+
+function getExternalsFilter(isBuild: boolean, context: SausContext) {
+  const jsTypesRE = /\.[cm]?js$/
+  const bundledCache = new Map<string, boolean>()
+  const shouldBundle = (id: string) => {
+    if (!jsTypesRE.test(id)) {
+      return true
+    }
+    if (!id.includes('/node_modules/') && id.startsWith(context.root + '/')) {
+      return true
+    }
+    if (!fs.existsSync(id)) {
+      return true
+    }
+    return false
+  }
+  return (id: string, _importer = '', isResolved: boolean) => {
+    if (!isBuild) {
+      return !isResolved && builtinModules.includes(id)
+    }
+    if (!isResolved) {
+      return builtinModules.includes(id)
+    }
+    if (templateSubstitution.test(id)) {
+      return false
+    }
+    let bundled = bundledCache.get(id)
+    if (bundled !== undefined) {
+      return !bundled
+    }
+    bundled = shouldBundle(id)
+    bundledCache.set(id, bundled)
+    if (bundled) {
+      console.log('bundled: %O', id)
+      return false
+    }
+    console.log('external: %O', id)
+    return true
+  }
 }
 
 /**

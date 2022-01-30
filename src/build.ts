@@ -1,3 +1,4 @@
+import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
@@ -17,6 +18,7 @@ import {
 import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
+import { plural } from './utils/plural'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -27,11 +29,7 @@ export async function build(options: BuildOptions) {
     format: 'cjs',
   })
 
-  const loading = startTask('Loading routes...')
-  await loadRoutes(context)
-
-  const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
-  loading.finish(`${routeCount} routes loaded.`)
+  await loadBuildRoutes(context)
 
   const { code, map } = await bundle(
     { isBuild: true, absoluteSources: true },
@@ -126,6 +124,29 @@ export async function build(options: BuildOptions) {
     pages,
     errors,
   }
+}
+
+async function loadBuildRoutes(context: SausContext) {
+  const { pluginContainer } = await vite.createTransformContext(context.config)
+
+  const loading = startTask('Loading routes...')
+  await loadRoutes(context, async (id, importer) => {
+    if (builtinModules.includes(id)) {
+      return
+    }
+    const resolved = await pluginContainer.resolveId(
+      id,
+      importer,
+      undefined,
+      true
+    )
+    return resolved ? resolved.id : undefined
+  })
+
+  const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
+  loading.finish(`${plural(routeCount, 'route')} loaded.`)
+
+  await pluginContainer.close()
 }
 
 function prepareOutDir(

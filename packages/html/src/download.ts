@@ -98,10 +98,12 @@ function installHtmlHook({
       html: {
         async close(tag, state) {
           const { config } = state
+          const files = getFiles(tag)
+          debug(`${files.size} remote assets are loading`)
           // Don't await file promises until the entire document is processed.
           // This allows other HTML manipulation to occur while downloading.
           await Promise.all(
-            Array.from(getFiles(tag), async ([file, [loading, listeners]]) => {
+            Array.from(files, async ([file, [loading, listeners]]) => {
               const ext = path.extname(file)
               try {
                 const content = await loading
@@ -121,6 +123,7 @@ function installHtmlHook({
               }
             })
           )
+          debug(`${files.size} remote assets were saved`)
         },
       },
     },
