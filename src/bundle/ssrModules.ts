@@ -30,8 +30,8 @@ export const __d = (id: string, loader: ModuleLoader) =>
   ))
 
 /** Runtime `import *` for compiled ESM. */
-export function __importStar(exports: ModuleExports) {
-  if (exports.__esModule && 'default' in exports) {
+export function __importStar(exports: any) {
+  if (exports && exports.__esModule && 'default' in exports) {
     exports = Object.assign({}, exports)
     delete exports.default
     return exports
@@ -40,8 +40,8 @@ export function __importStar(exports: ModuleExports) {
 }
 
 /** Runtime `default` export unwrapping. */
-export function __importDefault(exports: ModuleExports) {
-  return exports.__esModule ? exports.default : exports
+export function __importDefault(exports: any) {
+  return exports && exports.__esModule ? exports.default : exports
 }
 
 /** Clear all loaded SSR modules */

@@ -27,6 +27,7 @@ import {
 } from '../core'
 import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
+import { plural } from '../utils/plural'
 import { runtimeDir } from './constants'
 import { createModuleProvider, ModuleProvider } from './moduleProvider'
 import { ssrRoutesId } from './runtime/constants'
@@ -313,7 +314,7 @@ export async function isolateRoutes(
 
   await pluginContainer.close()
 
-  task.finish(`${routeEntryPoints.length} routes bundled.`)
+  task.finish(`${plural(routeEntryPoints.length, 'route')} bundled.`)
 
   const routesUrl = getResolvedUrl(config.root, context.routesPath)
   const rendererUrl = getResolvedUrl(config.root, virtualRenderPath)

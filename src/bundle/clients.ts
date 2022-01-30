@@ -185,7 +185,7 @@ export async function generateClientModules(
     },
   })
 
-  const buildResult = (await vite.build(config)) as vite.ViteBuild
+  const buildResult = (await vite.build(config)) as vite.bundledCache
   const { output } = buildResult.output[0]
 
   const { base } = runtimeConfig
