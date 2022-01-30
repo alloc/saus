@@ -10,7 +10,7 @@ const ssrModules: Record<string, ModuleGetter> = {}
 export const ssrRequire = (id: string) => ssrModules[id]()
 
 type ModuleExports = Record<string, any>
-type ModuleGetter = () => Promise<ModuleExports>
+type ModuleGetter = () => Promise<any>
 type ModuleLoader = (
   exports: ModuleExports,
   module: { exports: ModuleExports }
@@ -28,6 +28,21 @@ export const __d = (id: string, loader: ModuleLoader) =>
       return module.exports
     }
   ))
+
+/** Runtime `import *` for compiled ESM. */
+export function __importStar(exports: ModuleExports) {
+  if (exports.__esModule && 'default' in exports) {
+    exports = Object.assign({}, exports)
+    delete exports.default
+    return exports
+  }
+  return exports
+}
+
+/** Runtime `default` export unwrapping. */
+export function __importDefault(exports: ModuleExports) {
+  return exports.__esModule ? exports.default : exports
+}
 
 /** Clear all loaded SSR modules */
 export function ssrClearCache() {

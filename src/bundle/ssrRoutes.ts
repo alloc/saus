@@ -17,6 +17,8 @@ import {
   resolveReferences,
   t,
 } from '../babel'
+import { generateRequireCalls } from '../babel/generateRequireCalls'
+import { hoistImports } from '../babel/hoistImports'
 import {
   ClientFunction,
   extractClientFunctions,
@@ -392,7 +394,7 @@ export async function isolateRoutes(
       }
     } else {
       let ssrId = url
-      esmExportsToCjs(program, editor)
+      esmExportsToCjs(program, editor, `await ssrRequire`)
       editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
       editor.append('\n})')
       if (url == routesUrl) {
@@ -552,23 +554,6 @@ async function getBuildTransform(config: vite.ResolvedConfig) {
   return [vite.createTransformer(context), context] as const
 }
 
-function hoistImports(
-  imports: babel.NodePath<t.ImportDeclaration>[],
-  editor: MagicString
-) {
-  const importIdx = imports.findIndex(({ node }, i) => {
-    const nextImport = imports[i + 1]
-    return !nextImport || nextImport.node.start! - node.end! > 2
-  })
-  const hoistEndIdx = importIdx < 0 ? 0 : 1 + imports[importIdx].node.end!
-  for (let i = importIdx + 1; i < imports.length; i++) {
-    const { start, end } = imports[i].node
-    // Assume import statements always end in a line break.
-    editor.move(start!, 1 + end!, hoistEndIdx)
-  }
-  return imports[importIdx]
-}
-
 const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
 
 function rewriteSsrImport(
@@ -579,36 +564,13 @@ function rewriteSsrImport(
   editor: MagicString,
   isCommonJS?: boolean
 ) {
-  const requireCall = `await ssrRequire("${requireSource}")`
-  const bindings: string[] = []
-  for (const spec of node.specifiers) {
-    if (t.isImportNamespaceSpecifier(spec)) {
-      requireCalls.push(
-        isCommonJS
-          ? `const ${spec.local.name} = ${requireCall};\n`
-          : `const { ...${spec.local.name} } = ${requireCall}; ` +
-              `delete ${spec.local.name}.default;\n`
-      )
-    } else {
-      bindings.push(
-        t.isImportDefaultSpecifier(spec)
-          ? `default: ${spec.local.name}`
-          : spec.imported.start == spec.local.start
-          ? spec.local.name
-          : t.isIdentifier(spec.imported)
-          ? `${spec.imported.name}: ${spec.local.name}`
-          : `["${spec.imported.value.replace(/"/g, '\\"')}"]: ` +
-            spec.local.name
-      )
-    }
-  }
-
-  if (bindings.length) {
-    const list = bindings.join(', ')
-    requireCalls.push(`const { ${list} } = ${requireCall};\n`)
-  } else if (!node.specifiers.length) {
-    requireCalls.push(`${requireCall};\n`)
-  }
+  generateRequireCalls(
+    node,
+    'ssrRequire',
+    requireCalls,
+    requireSource,
+    isCommonJS ? 'cjs' : 'esm'
+  )
 
   // Rewrite the import source, so `sharedModules` is accessed properly.
   editor.overwrite(node.source.start!, node.source.end!, `"${importSource}"`)

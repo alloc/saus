@@ -32,16 +32,20 @@ export function withCache(
     }
     let loadingState = loadingStateCache.get(cacheKey)
     if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
-      debug(`Loading "%s"`, cacheKey)
+      debug(`Loading "%s" state`, cacheKey)
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader().then(
           loadedState => {
+            // If the promise is deleted before it resolves,
+            // assume the user does not want the state cached.
+            if (!loadingStateCache.delete(cacheKey)) {
+              return loadedState
+            }
             // TTL may have been set to 0.
             if (TimeToLive.isAlive(cacheKey)) {
               loadedStateCache.set(cacheKey, loadedState)
             }
-            loadingStateCache.delete(cacheKey)
             return loadedState
           },
           error => {

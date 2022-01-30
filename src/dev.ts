@@ -1,12 +1,11 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
-import * as esModuleLexer from 'es-module-lexer'
 import { EventEmitter } from 'events'
 import { gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
 import { stateCachePath } from './bundle/constants'
-import { RenderModule, RoutesModule, SausContext } from './core'
+import { loadRoutes, RenderModule, SausContext } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
 import { setRenderModule, setRoutesModule } from './core/global'
@@ -17,6 +16,7 @@ import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
+import { plural } from './utils/plural'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const events = new EventEmitter()
@@ -27,9 +27,6 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       config => routesPlugin(config),
       renderPlugin,
       transformClientState,
-      // The routes module needs to be able to use modules that
-      // expect a Node environment, so externalize them.
-      config => externalizeStaticImports(config.routes),
     ])
 
   let context = await createContext()
@@ -117,20 +114,9 @@ async function startServer(
   }
 
   const moduleCache = vite.ssrCreateContext(server, [injectDevCache(context)])
-  const loadSausModules = () =>
-    server.ssrLoadModule(
-      [context.routesPath, context.renderPath].map(file =>
-        file.replace(context.root, '')
-      ),
-      moduleCache
-    )
-
-  // When starting the server, the context is fresh, so we don't bother
-  // using intermediate objects when loading routes and renderers.
-  setRoutesModule(context)
-  setRenderModule(context)
   try {
-    await loadSausModules()
+    await loadServerRoutes(context, server, moduleCache)
+    await loadRenderers(context, events, server, moduleCache)
   } catch (error: any) {
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
@@ -143,17 +129,10 @@ async function startServer(
       return null
     }
     throw error
-  } finally {
-    setRoutesModule(null)
-    setRenderModule(null)
   }
 
   // Tell plugins to update local state derived from Saus context.
   await callPlugins(context.plugins, 'onContext', context)
-
-  // This plugin handles updated modules, so it's not needed until
-  // the server has been initialized.
-  moduleCache.plugins.push(handleContextUpdates(context, events))
 
   const changedFiles = new Set<string>()
   const scheduleReload = debounce(async () => {
@@ -168,30 +147,78 @@ async function startServer(
       await context.reloading
     }
 
-    if (!changedFiles.size) return
-    const files = Array.from(changedFiles)
-    changedFiles.clear()
-
     context.reloadId++
     context.reloading = defer()
 
-    const purged = await moduleCache.purge(files).catch(error => {
-      // Clone the error so unfixed Babel errors never go unnoticed.
-      events.emit('error', cloneError(error))
-    })
+    let routesChanged = false
+    let renderersChanged = false
 
-    // Reload the "render.ts" and "routes.ts" modules immediately,
-    // so the dev server is up-to-date when new HTTP requests come in.
-    const needsReload = !!purged?.some(
-      mod => mod.file == context.renderPath || mod.file == context.routesPath
-    )
-
-    if (needsReload) {
-      await loadSausModules()
-    } else {
-      context.reloading?.resolve()
-      context.reloading = undefined
+    if (changedFiles.has(context.routesPath)) {
+      try {
+        await loadServerRoutes(context, server, moduleCache)
+        routesChanged = true
+      } catch (error: any) {
+        events.emit('error', error)
+      } finally {
+        changedFiles.delete(context.routesPath)
+      }
     }
+
+    if (changedFiles.size) {
+      const files = Array.from(changedFiles)
+      changedFiles.clear()
+
+      for (const file of files) {
+        const stateModuleIds = context.stateModulesByFile[file]
+        if (stateModuleIds) {
+          // Remove cached state defined by the changed file.
+          const partialPurge = (_: any, key: string, cache: Map<string, any>) =>
+            stateModuleIds.some(id => key.startsWith(id + '.')) &&
+            cache.delete(key)
+
+          context.loadedStateCache.forEach(partialPurge)
+          context.loadingStateCache.forEach(partialPurge)
+        }
+      }
+
+      const purged = await moduleCache.purge(files).catch(error => {
+        // Clone the error so unfixed Babel errors never go unnoticed.
+        events.emit('error', cloneError(error))
+      })
+
+      // Reload the renderers immediately, so the dev server is up-to-date
+      // when new HTTP requests come in.
+      if (purged?.some(mod => mod.file == context.renderPath)) {
+        try {
+          await loadRenderers(context, events, server, moduleCache)
+          renderersChanged = true
+
+          const newConfigHooks = await loadConfigHooks(context.renderPath)
+          const oldConfigHooks = context.configHooks
+
+          // Were the imports of any config providers added or removed?
+          const needsRestart =
+            oldConfigHooks.some(
+              file => file && !newConfigHooks.includes(file)
+            ) ||
+            newConfigHooks.some(file => file && !oldConfigHooks.includes(file))
+
+          if (needsRestart) {
+            return events.emit('restart')
+          }
+        } catch (error: any) {
+          events.emit('error', error)
+        }
+      }
+    }
+
+    if (routesChanged || renderersChanged) {
+      context.pages = {}
+      await callPlugins(context.plugins, 'onContext', context)
+    }
+
+    context.reloading.resolve()
+    context.reloading = undefined
   }, 50)
 
   watcher.on('change', file => {
@@ -200,33 +227,6 @@ async function startServer(
   })
 
   return server
-}
-
-/**
- * Externalize static import statements but leave dynamic imports alone.
- */
-function externalizeStaticImports(importer: string): vite.Plugin {
-  let staticImports: Set<string>
-  return {
-    name: 'saus:' + externalizeStaticImports.name,
-    enforce: 'pre',
-    transform(code, id) {
-      if (id == importer) {
-        staticImports = new Set(
-          esModuleLexer
-            .parse(code)[0]
-            .filter(i => !i.d && i.n)
-            .map(i => i.n!)
-        )
-        return null
-      }
-    },
-    resolveId(id, parent) {
-      if (parent == importer && staticImports.has(id)) {
-        return { id, external: true }
-      }
-    },
-  }
 }
 
 /**
@@ -249,90 +249,52 @@ function injectDevCache(context: SausContext): vite.SSRPlugin {
   }
 }
 
-function handleContextUpdates(
+function loadServerRoutes(
   context: SausContext,
-  events: EventEmitter
-): vite.SSRPlugin {
-  let renderConfig: RenderModule | null
-  let routesConfig: RoutesModule | null
-  return {
-    executeModule(module) {
-      if (module.file === context.renderPath) {
-        renderConfig = setRenderModule({
-          renderers: [],
-          beforeRenderHooks: [],
-        })
-      } else if (module.file === context.routesPath) {
-        routesConfig = setRoutesModule({
-          routes: [],
-          runtimeHooks: [],
-          defaultState: [],
-        })
-      } else {
-        return // Not a module we care about.
-      }
-      return error => {
-        if (module.file === context.renderPath) {
-          setRenderModule(null)
-          if (error) {
-            renderConfig = null
-          }
-        } else if (module.file === context.routesPath) {
-          setRoutesModule(null)
-          if (error) {
-            routesConfig = null
-          }
-        }
-      }
+  server: vite.ViteDevServer,
+  moduleCache?: vite.SSRContext
+) {
+  return loadRoutes(
+    context,
+    async (id, importer) => {
+      const resolved = await server.pluginContainer.resolveId(
+        id,
+        importer,
+        undefined,
+        true
+      )
+      return resolved?.id
     },
-    async loadedEntries(entries) {
-      let isContextUpdated = false
+    id => {
+      return server.ssrLoadModule(id, moduleCache)
+    }
+  )
+}
 
-      const renderModule = entries.find(mod => mod.file == context.renderPath)
-      if (renderModule && renderConfig) {
-        const newConfigHooks = await loadConfigHooks(context.renderPath)
-        const oldConfigHooks = context.configHooks
-
-        // Were the imports of any config providers added or removed?
-        const needsRestart =
-          oldConfigHooks.some(file => file && !newConfigHooks.includes(file)) ||
-          newConfigHooks.some(file => file && !oldConfigHooks.includes(file))
-
-        if (needsRestart) {
-          return events.emit('restart')
-        }
-
-        // Merge the latest renderers.
-        Object.assign(context, renderConfig)
-        isContextUpdated = true
-        renderConfig = null
-      }
-
-      // Merge the latest routes.
-      if (routesConfig) {
-        // TODO: selectively clear the state cache?
-        context.loadedStateCache.clear()
-        context.loadingStateCache.clear()
-        Object.assign(context, routesConfig)
-        isContextUpdated = true
-        routesConfig = null
-      }
-
-      if (isContextUpdated) {
-        // Delete all keys, so the `pages` property can be
-        // destructured into a local variable somewhere.
-        Object.keys(context.pages).forEach(key => {
-          delete context.pages[key]
-        })
-
-        // Update plugins that rely on Saus context.
-        await callPlugins(context.plugins, 'onContext', context)
-      }
-
-      // Allow another reload to commence.
-      context.reloading?.resolve()
-      context.reloading = undefined
-    },
+async function loadRenderers(
+  context: SausContext,
+  events: EventEmitter,
+  server: vite.ViteDevServer,
+  moduleCache?: vite.SSRContext
+) {
+  const time = Date.now()
+  const renderConfig = setRenderModule({
+    renderers: [],
+    beforeRenderHooks: [],
+  })
+  try {
+    await server.ssrLoadModule(
+      context.renderPath.replace(context.root, ''),
+      moduleCache
+    )
+    Object.assign(context, renderConfig)
+    const rendererCount =
+      context.renderers.length + (context.defaultRenderer ? 1 : 0)
+    debug(
+      `Loaded ${plural(rendererCount, 'renderer')} in ${Date.now() - time}ms`
+    )
+  } finally {
+    setRenderModule(null)
   }
 }
 

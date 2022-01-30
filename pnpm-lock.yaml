@@ -97,7 +97,7 @@ importers:
       ts-debounce: 3.0.0
       tsup: 5.11.6_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -3644,7 +3644,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: false
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -3667,7 +3667,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/1.3.1:

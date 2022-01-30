@@ -224,6 +224,7 @@ export function getBabelProgram(source: string, filename: string) {
   transformSync(source, filename, {
     plugins: [{ visitor }],
     sourceMaps: false,
+    sourceType: 'module',
     code: false,
   })
 

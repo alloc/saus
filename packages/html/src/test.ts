@@ -21,7 +21,7 @@ export function traverse(html: string, visitors: HtmlVisitor | HtmlVisitor[]) {
       minify: false,
       mode: 'development',
       publicDir: 'public',
-      stateCacheUrl: '',
+      stateCacheId: '',
     },
   })
 }

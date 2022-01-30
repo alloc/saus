@@ -37,6 +37,7 @@ import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
 import { noop } from './utils/noop'
 import { parseHead } from './utils/parseHead'
+import { plural } from './utils/plural'
 import { ParsedUrl, parseUrl } from './utils/url'
 
 const debug = createDebug('saus:pages')
@@ -52,6 +53,7 @@ export function createPageFactory(
   let {
     basePath,
     beforeRenderHooks,
+    defaultRenderer,
     defaultRoute,
     defaultState,
     logger,
@@ -91,6 +93,15 @@ export function createPageFactory(
     // Routes and renderers are matched in reverse order.
     routes = [...context.routes].reverse()
     renderers.reverse()
+
+    const routeCount = routes.length + (defaultRoute ? 1 : 0)
+    const rendererCount = renderers.length + (defaultRenderer ? 1 : 0)
+    debug(
+      `Page factory has ${plural(routeCount, 'route')} and ${plural(
+        rendererCount,
+        'renderer'
+      )}`
+    )
   })()
 
   // The main logic for rendering a page.
@@ -112,10 +123,6 @@ export function createPageFactory(
       state,
     }
 
-    if (beforeRenderHooks.length) {
-      debug(`Running beforeRender hooks`)
-    }
-
     const usedHooks: BeforeRenderHook[] = []
     for (const hook of beforeRenderHooks) {
       const params = hook.match ? hook.match(path) : {}
@@ -125,10 +132,8 @@ export function createPageFactory(
       }
     }
 
-    debug(`Rendering page: %s`, path)
     let html = await renderer.renderDocument(request)
     if (html == null) {
-      debug(`Nothing was rendered. Trying next renderer.`)
       return null
     }
 
@@ -166,7 +171,6 @@ export function createPageFactory(
     if (page.html) {
       let client = pages[request.file]?.client
       if (!client) {
-        debug(`Generating client module`)
         client = await getClient(functions, renderer, usedHooks)
       }
       page.client = client
@@ -304,7 +308,11 @@ export function createPageFactory(
     options: RenderPageOptions
   ): Promise<PageContext> {
     if (!options.setup) {
-      return { renderers, beforeRenderHooks }
+      return {
+        renderers,
+        defaultRenderer,
+        beforeRenderHooks,
+      }
     }
     const pageContext: PageContext = {
       renderers: [],
@@ -436,9 +444,6 @@ export function createPageFactory(
           route,
           options
         )
-        if (!render || !renderers) {
-          return null
-        }
 
         let page: RenderedPage | null
         let renderer: Renderer | undefined
@@ -465,6 +470,7 @@ export function createPageFactory(
             return null
           }
           if (!(renderer = defaultRenderer)) {
+            debug(`No matching renderer: %s`, url.path)
             return null
           }
           try {

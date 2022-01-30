@@ -6,6 +6,7 @@ import Module from 'module'
 import { resolve } from 'path'
 import type { RenderedPage } from '../pages/types'
 import { callPlugins } from '../utils/callPlugins'
+import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { ConfigHook, setConfigHooks } from './config'
 import { HtmlContext } from './html'
@@ -33,6 +34,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
     command: 'build' | 'serve',
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
+  /** The cache for compiled SSR modules */
+  compileCache: CompileCache
   /** The URL prefix for all pages */
   basePath: string
   /** The `saus.defaultPath` option from Vite config */
@@ -41,6 +44,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   routesPath: string
   /** Rendered page cache */
   pages: Record<string, RenderedPage>
+  /** Track which files are responsible for state modules */
+  stateModulesByFile: Record<string, string[]>
   /** Page states currently being loaded */
   loadingStateCache: Map<string, Promise<any>>
   /** Page states which have been loaded */
@@ -80,6 +85,7 @@ export async function loadContext(
         configHooks,
         userConfig: config.inlineConfig,
         resolveConfig,
+        compileCache: new CompileCache('node_modules/.ssr', config.root),
         basePath: config.base,
         defaultPath: config.saus.defaultPath || '/404',
         routesPath: config.saus.routes,
@@ -87,6 +93,7 @@ export async function loadContext(
         runtimeHooks: [],
         pages: {},
         defaultState: [],
+        stateModulesByFile: {},
         loadingStateCache: new Map(),
         loadedStateCache: new Map(),
         renderPath: config.saus.render,

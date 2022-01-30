@@ -1,15 +1,23 @@
 import { warn } from 'misty'
-import { babel, getBabelConfig, NodePath, t } from '../babel'
+import { babel, getBabelConfig, t } from '../babel'
 import { Plugin } from '../core/vite'
+
+const includeRE = /\.m?[tj]sx?$/
 
 /**
  * Transform `defineStateModule` calls for client-side use.
  */
 export function transformClientState(): Plugin {
-  const includeRE = /\.m?[tj]sx?$/
+  let stateModulesByFile: Record<string, string[]>
+
   return {
     name: 'saus:transformClientState',
     enforce: 'pre',
+    saus: {
+      onContext(context) {
+        stateModulesByFile = context.stateModulesByFile
+      },
+    },
     async transform(code, id, ssr) {
       if (ssr) {
         return // SSR needs the loader function
@@ -23,7 +31,9 @@ export function transformClientState(): Plugin {
       if (/\bdefineStateModule\b/.test(code)) {
         const parsed = await babel.parseAsync(code, getBabelConfig(id))
 
+        const stateModuleIds: string[] = (stateModulesByFile[id] = [])
         const exports: t.Statement[] = []
+
         babel.traverse(parsed, {
           CallExpression(path) {
             const callee = path.get('callee')
@@ -32,8 +42,11 @@ export function transformClientState(): Plugin {
               if (exportPath) {
                 exports.push(exportPath.node as t.ExportDeclaration)
 
+                const args = path.get('arguments')
+                stateModuleIds.push((args[0].node as t.StringLiteral).value)
+
                 // Remove the loader function.
-                path.get('arguments')[1].remove()
+                args[1].remove()
               } else {
                 warn(`defineStateModule call in "${id}" must be exported`)
               }
