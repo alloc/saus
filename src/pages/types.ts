@@ -9,9 +9,11 @@ import type {
   WrappedNode,
 } from '../core'
 
+export type BufferLike = string | Buffer | globalThis.Buffer
+
 export type RenderedFile = {
   id: string
-  data: string | Buffer
+  data: BufferLike
   mime: string
 }
 

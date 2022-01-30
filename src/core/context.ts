@@ -8,6 +8,7 @@ import type { RenderedPage } from '../pages/types'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
+import { plural } from '../utils/plural'
 import { ConfigHook, ConfigHookRef, setConfigHooks } from './config'
 import { debug } from './debug'
 import { HtmlContext } from './html'
@@ -62,7 +63,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
 type InlinePlugin = (
   sausConfig: SausConfig,
   configEnv: vite.ConfigEnv
-) => Plugin | readonly Plugin[]
+) => Plugin | Plugin[]
 
 export async function loadContext(
   command: 'build' | 'serve',
@@ -208,6 +209,8 @@ function getConfigResolver(
     }
 
     const configHooks = await getConfigHooks(sausConfig.render)
+    debug(`Found ${plural(configHooks.length, 'config hook')}`)
+
     for (const hookRef of configHooks) {
       const hookModule = require(hookRef.path)
       const configHook: ConfigHook = hookModule.__esModule
@@ -342,19 +345,4 @@ function resetHookSources(module: NodeModule, configHooks: ConfigHookRef[]) {
     delete require.cache[module.filename]
   }
   return needsReset
-}
-
-export function createLoader(
-  context: SausContext,
-  inlineConfig?: vite.UserConfig
-): Promise<ModuleLoader> {
-  return vite.createServer({
-    ...context.config,
-    ...inlineConfig,
-    logLevel: 'error',
-    server: {
-      ...inlineConfig?.server,
-      middlewareMode: 'ssr',
-    },
-  })
 }

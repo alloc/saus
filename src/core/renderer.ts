@@ -1,5 +1,5 @@
 import type { RouteModule } from '../client'
-import type { Buffer } from './buffer'
+import { BufferLike } from '../pages/types'
 import type { ClientDescription, ClientState } from './client'
 import type { RuntimeConfig } from './config'
 import { RegexParam, RouteParams } from './routes'
@@ -26,7 +26,7 @@ export type DocumentHook = (
 ) => Promisable<void>
 
 export type RenderApi = {
-  emitFile(id: string, mime: string, data: string | Buffer): void
+  emitFile(id: string, mime: string, data: BufferLike): void
 }
 
 const emitPage: DocumentHook = function (html, { file }) {
