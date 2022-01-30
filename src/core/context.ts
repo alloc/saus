@@ -8,7 +8,8 @@ import type { RenderedPage } from '../pages/types'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
-import { ConfigHook, setConfigHooks } from './config'
+import { ConfigHook, ConfigHookRef, setConfigHooks } from './config'
+import { debug } from './debug'
 import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
@@ -24,7 +25,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   logger: vite.Logger
   config: ResolvedConfig
   configPath: string | undefined
-  configHooks: string[]
+  configHooks: ConfigHookRef[]
   userConfig: vite.UserConfig
   /**
    * Use this instead of `this.config` when an extra Vite build is needed,
@@ -69,12 +70,13 @@ export async function loadContext(
   inlinePlugins?: InlinePlugin[]
 ): Promise<SausContext> {
   let context: SausContext | undefined
-  let configHooks: string[]
+  let configHooks: ConfigHookRef[]
 
   const resolveConfig = getConfigResolver(
     inlineConfig || {},
     inlinePlugins,
-    async renderPath => (configHooks ||= await loadConfigHooks(renderPath)),
+    async renderPath =>
+      context?.configHooks || (configHooks = await loadConfigHooks(renderPath)),
     config =>
       (context ||= {
         root: config.root,
@@ -135,7 +137,7 @@ function flattenPlugins<T extends vite.Plugin>(
 function getConfigResolver(
   defaultConfig: vite.InlineConfig,
   inlinePlugins: InlinePlugin[] | undefined,
-  getConfigHooks: (renderPath: string) => Promise<string[]>,
+  getConfigHooks: (renderPath: string) => Promise<ConfigHookRef[]>,
   getContext: (config: ResolvedConfig) => SausContext
 ) {
   return async (
@@ -205,19 +207,23 @@ function getConfigResolver(
       )
     }
 
-    for (const hookPath of await getConfigHooks(sausConfig.render)) {
-      const hookModule = require(hookPath)
+    const configHooks = await getConfigHooks(sausConfig.render)
+    for (const hookRef of configHooks) {
+      const hookModule = require(hookRef.path)
       const configHook: ConfigHook = hookModule.__esModule
         ? hookModule.default
         : hookModule
 
-      if (typeof configHook !== 'function') {
-        throw Error(`[saus] Config hook must export a function: ${hookPath}`)
-      }
+      if (typeof configHook !== 'function')
+        throw Error(
+          `[saus] Config hook must export a function: ${hookRef.path}`
+        )
+
       const result = await configHook(userConfig, configEnv)
       if (result) {
         userConfig = vite.mergeConfig(userConfig, result)
       }
+      debug(`Applied config hook: ${hookRef.path}`)
     }
 
     const config = (await vite.resolveConfig(
@@ -270,7 +276,10 @@ function assertSausConfig(
 
 export interface ModuleLoader extends vite.ViteDevServer {}
 
-export async function loadConfigHooks(importer: string) {
+export async function loadConfigHooks(
+  importer: string,
+  oldConfigHooks?: ConfigHookRef[]
+) {
   const require = Module.createRequire(importer)
   const code = fs
     .readFileSync(importer, 'utf8')
@@ -281,7 +290,7 @@ export async function loadConfigHooks(importer: string) {
   await esModuleLexer.init
   const [imports] = esModuleLexer.parse(code, importer)
 
-  const configHooks: string[] = []
+  const configHooks: ConfigHookRef[] = []
   setConfigHooks(configHooks)
 
   for (const imp of imports) {
@@ -298,8 +307,10 @@ export async function loadConfigHooks(importer: string) {
       if (!modulePath.endsWith('.js')) {
         continue
       }
-
-      delete require.cache[modulePath]
+      if (oldConfigHooks) {
+        const module = require.cache[modulePath]
+        module && resetHookSources(module, oldConfigHooks)
+      }
       try {
         require(modulePath)
       } catch (e: any) {
@@ -308,11 +319,29 @@ export async function loadConfigHooks(importer: string) {
           console.error(e)
         }
       }
-    } catch {}
+    } catch (e: any) {
+      debug(`Failed to resolve "${moduleId}" imported by "${importer}".`)
+    }
   }
 
   setConfigHooks(null)
   return configHooks
+}
+
+function resetHookSources(module: NodeModule, configHooks: ConfigHookRef[]) {
+  let needsReset = false
+  if (configHooks.some(hook => hook.source == module.filename)) {
+    needsReset = true
+  }
+  for (const child of module.children) {
+    if (resetHookSources(child, configHooks)) {
+      needsReset = true
+    }
+  }
+  if (needsReset) {
+    delete require.cache[module.filename]
+  }
+  return needsReset
 }
 
 export function createLoader(
