@@ -193,8 +193,11 @@ async function startServer(
           await loadRenderers(context, events, server, moduleCache)
           renderersChanged = true
 
-          const newConfigHooks = await loadConfigHooks(context.renderPath)
           const oldConfigHooks = context.configHooks
+          const newConfigHooks = await loadConfigHooks(
+            context.renderPath,
+            oldConfigHooks
+          )
 
           // Were the imports of any config providers added or removed?
           const needsRestart =

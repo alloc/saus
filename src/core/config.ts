@@ -9,24 +9,31 @@ export type ConfigHook = (
   env: ConfigEnv
 ) => UserConfig | Promise<UserConfig> | null
 
+export type ConfigHookRef = {
+  path: string
+  source: string
+}
+
 /** Paths to modules that inject Vite config */
-let configHooks: string[] | null = null
+let configHooks: ConfigHookRef[] | null = null
 
 /**
  * Register a module that exports Vite config, which will be merged
  * into the user's Vite config.
  */
-export function addConfigHook(hookPath: string, importer = callerPath()) {
+export function addConfigHook(hookPath: string, source = callerPath()) {
   if (configHooks) {
-    assert(importer, 'Failed to infer where `addConfigHook` was called from')
-    hookPath = path.resolve(path.dirname(importer), hookPath)
-    configHooks.push(hookPath)
+    assert(source, 'Failed to infer where `addConfigHook` was called from')
+    configHooks.push({
+      path: path.resolve(path.dirname(source), hookPath),
+      source,
+    })
   } else if (!renderModule) {
     throw Error('Cannot call `addConfigHook` at this time')
   }
 }
 
-export function setConfigHooks(hooks: string[] | null) {
+export function setConfigHooks(hooks: ConfigHookRef[] | null) {
   configHooks = hooks
 }
 
