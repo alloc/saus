@@ -334,10 +334,7 @@ export async function isolateRoutes(
   const sharedModules: Record<string, OutputChunk> = {}
 
   const outputs = Object.values(metafile!.outputs)
-  for (let i = 0; i < outputFiles.length; i++) {
-    if (i % 2 == 0) {
-      continue
-    }
+  for (let i = 1; i < outputFiles.length; i += 2) {
     const map = JSON.parse(outputFiles[i - 1].text) as SourceMap
     const file = outputFiles[i]
     const { entryPoint } = outputs[i]

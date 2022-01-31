@@ -20,7 +20,7 @@ export class CompileCache {
       if (error || this.locked || !this.used.size) {
         return
       }
-      const cacheDir = path.join(this.root, this.name)
+      const cacheDir = this.path
       const cacheList = fs.readdirSync(cacheDir)
       const numPurged = cacheList.reduce((count, key) => {
         if (!this.used.has(key)) {
@@ -36,6 +36,10 @@ export class CompileCache {
   /** When true, the cache won't delete unused files on process exit. */
   locked = false
 
+  get path() {
+    return path.join(this.root, this.name)
+  }
+
   key(code: string) {
     return md5Hex(code).slice(0, 16) + '.js'
   }
@@ -43,14 +47,14 @@ export class CompileCache {
   get(key: string) {
     let content: string | null = null
     try {
-      content = fs.readFileSync(path.join(this.root, this.name, key), 'utf8')
+      content = fs.readFileSync(path.join(this.path, key), 'utf8')
       this.used.add(key)
     } catch {}
     return content
   }
 
   set(key: string, code: string) {
-    const filename = path.join(this.root, this.name, key)
+    const filename = path.join(this.path, key)
     fs.mkdirSync(path.dirname(filename), { recursive: true })
     fs.writeFileSync(filename, code)
     this.used.add(key)

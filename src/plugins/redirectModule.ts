@@ -12,7 +12,7 @@ export function redirectModule(
         id = (await this.resolve(id, importer, { skipSelf: true }))?.id!
       }
       if (id === targetId) {
-        return replacementId
+        return this.resolve(replacementId, importer, { skipSelf: true })
       }
     },
   }
