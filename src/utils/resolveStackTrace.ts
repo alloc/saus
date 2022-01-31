@@ -5,7 +5,7 @@ const stackFrameRE = /^ {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?)\)?/
 
 export function resolveStackTrace(stack: string, code: string, map: SourceMap) {
   const newStack: string[] = []
-  const consumer = new SourceMapConsumer(map)
+  const consumer = new SourceMapConsumer(map as any)
 
   for (const line of stack.split('\n')) {
     const match = stackFrameRE.exec(line)

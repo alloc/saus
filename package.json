@@ -37,7 +37,7 @@
     "md5-hex": "^3.0.0",
     "shared-log": "^1.2.4",
     "terser": "^5.10.0",
-    "tinypool": "^0.1.0",
+    "tinypool": "^0.1.1",
     "vite": "npm:@alloc/vite@2.6.3-3"
   },
   "devDependencies": {

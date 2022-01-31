@@ -36,6 +36,8 @@ export async function build(options: BuildOptions) {
     context
   )
 
+  context.compileCache.set('bundle.js', code)
+
   let pageCount = 0
   let renderCount = 0
 

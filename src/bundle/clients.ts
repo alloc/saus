@@ -17,6 +17,7 @@ import { debugForbiddenImports } from '../plugins/debug'
 import { rewriteHttpImports } from '../plugins/httpImport'
 import { redirectModule } from '../plugins/redirectModule'
 import { routesPlugin } from '../plugins/routes'
+import { findPackage } from '../utils/findPackage'
 import { parseImports } from '../utils/imports'
 import { mapSerial } from '../utils/mapSerial'
 import { clientDir, coreDir, runtimeDir, stateCachePath } from './constants'
@@ -462,12 +463,7 @@ function rewriteSources(
     sourcePath = path.resolve(chunkDir, sourcePath)
     let sourceId = vite.normalizePath(path.relative(context.root, sourcePath))
     if (sourceId[0] == '.' || sourceId.includes('/node_modules/')) {
-      const pkgPath = escalade(
-        path.dirname(sourcePath),
-        (_parent, children) => {
-          return children.find(name => name == 'package.json')
-        }
-      )
+      const pkgPath = findPackage(path.dirname(sourcePath))
       if (pkgPath) {
         const pkg = require(pkgPath)
         sourceId = posixPath.join(

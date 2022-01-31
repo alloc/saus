@@ -13,7 +13,9 @@ export interface BuildWorker extends Worker {
 const { code, map } = workerData as { code: string; map: SourceMap }
 
 const onError = (error: any) => {
-  error.stack = resolveStackTrace(error.stack, code, map)
+  if (error && error.stack) {
+    error.stack = resolveStackTrace(error.stack, code, map)
+  }
   throw error
 }
 

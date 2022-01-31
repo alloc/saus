@@ -16,3 +16,4 @@ export const defineClient = (x: any) => x
 export const addConfigHook = () => {}
 
 export * from '../../core/api'
+export const Buffer = globalThis.Buffer

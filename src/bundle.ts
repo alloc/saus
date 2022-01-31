@@ -31,6 +31,7 @@ import {
   SausBundleConfig,
   SausContext,
 } from './core'
+import { preBundleSsrRuntime } from './core/preBundleSsrRuntime'
 import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
 import { vite } from './core/vite'
@@ -41,6 +42,7 @@ import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
+import { findPackage } from './utils/findPackage'
 import { parseImports, serializeImports } from './utils/imports'
 
 export interface BundleOptions {
@@ -322,7 +324,7 @@ async function prepareFunctions(
     implicitImports.add(`import * as routeModule from "${url}"`)
   }
 
-  await Promise.all([
+  await Promise.all<any>([
     ...Array.from(implicitImports, stmt => registerImport(stmt)),
     ...functions.beforeRender.map(transformFunction),
     ...functions.render.map(renderFn =>
@@ -422,10 +424,8 @@ async function generateSsrBundle(
     moduleSideEffects: 'no-treeshake',
   })
 
-  const redirectedModules: vite.PluginOption[] = [
-    redirectModule('saus', path.join(runtimeDir, 'index.ts')),
-    redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
-    redirectModule('saus/bundle', bundleId),
+  const internalRedirects = [
+    redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
     redirectModule(
       path.join(coreDir, 'global.ts'),
       path.join(runtimeDir, 'global.ts')
@@ -438,17 +438,22 @@ async function generateSsrBundle(
       path.join(coreDir, 'runtimeConfig.ts'),
       path.join(runtimeDir, 'config.ts')
     ),
-    redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
     redirectModule(
       path.join(clientDir, 'loadPageModule.ts'),
       path.join(runtimeDir, 'loadPageModule.ts')
     ),
   ]
 
+  const bareRedirects: vite.PluginOption[] = [
+    redirectModule('saus', path.join(runtimeDir, 'index.ts')),
+    redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
+    redirectModule('saus/bundle', bundleId),
+  ]
+
   // Avoid using Node built-ins for `get` function.
   const isWorker = bundleConfig.type == 'worker'
   if (isWorker) {
-    redirectedModules.push(
+    bareRedirects.push(
       redirectModule(
         path.join(coreDir, 'http.ts'),
         path.join(clientDir, 'http.ts')
@@ -465,6 +470,7 @@ async function generateSsrBundle(
 
   const config = await context.resolveConfig('build', {
     plugins: [
+      await preBundleSsrRuntime(context, internalRedirects),
       await isolateRoutes(routeImports, context),
       routesPlugin(context.config.saus, clientRouteMap),
       debugForbiddenImports([
@@ -473,13 +479,16 @@ async function generateSsrBundle(
         './src/core/context.ts',
       ]),
       modules,
+      bareRedirects,
+      internalRedirects,
+      options.isBuild && preferExternal(context),
+      defineNodeConstants(),
+      rewriteHttpImports(context.logger, isWorker),
       bundleConfig.entry &&
       bundleConfig.type == 'script' &&
       !supportTopLevelAwait(bundleConfig)
         ? wrapAsyncInit()
         : null,
-      redirectedModules,
-      rewriteHttpImports(context.logger, isWorker),
       // debugSymlinkResolver(),
     ],
     build: {
@@ -494,11 +503,12 @@ async function generateSsrBundle(
           format: bundleConfig.format,
         },
         context: 'globalThis',
-        external: getExternalsFilter(!!options.isBuild, context),
         makeAbsoluteExternalsRelative: false,
       },
     },
   })
+
+  config.ssr!.external = []
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const bundle = buildResult.output[0].output[0]
@@ -510,47 +520,95 @@ async function generateSsrBundle(
   return bundle
 }
 
-// There is a bug in Rollup where import statements in
-// template literals are mistaken for real imports.
-const templateSubstitution = /\$\{/
-
-function getExternalsFilter(isBuild: boolean, context: SausContext) {
-  const jsTypesRE = /\.[cm]?js$/
-  const bundledCache = new Map<string, boolean>()
-  const shouldBundle = (id: string) => {
-    if (!jsTypesRE.test(id)) {
-      return true
-    }
-    if (!id.includes('/node_modules/') && id.startsWith(context.root + '/')) {
-      return true
-    }
-    if (!fs.existsSync(id)) {
-      return true
-    }
-    return false
+function defineNodeConstants(): vite.Plugin {
+  return {
+    name: 'saus:defineNodeConstants',
+    transform(code, id) {
+      if (id.includes('/node_modules/')) {
+        return
+      }
+      const constants: any = {
+        __filename: JSON.stringify(id),
+        __dirname: JSON.stringify(path.dirname(id)),
+      }
+      let matched = false
+      let matches = new RegExp(
+        `\\b(${Object.keys(constants).join('|')})\\b`,
+        'g'
+      )
+      code = code.replace(matches, name => {
+        matched = true
+        return constants[name]
+      })
+      if (matched) {
+        return { code, map: { mappings: '' } }
+      }
+    },
   }
-  return (id: string, _importer = '', isResolved: boolean) => {
-    if (!isBuild) {
-      return !isResolved && builtinModules.includes(id)
-    }
-    if (!isResolved) {
-      return builtinModules.includes(id)
-    }
-    if (templateSubstitution.test(id)) {
-      return false
-    }
-    let bundled = bundledCache.get(id)
-    if (bundled !== undefined) {
-      return !bundled
-    }
-    bundled = shouldBundle(id)
-    bundledCache.set(id, bundled)
-    if (bundled) {
-      console.log('bundled: %O', id)
-      return false
-    }
-    console.log('external: %O', id)
-    return true
+}
+
+function preferExternal(context: SausContext): vite.Plugin {
+  const externalCache = new Map<string, boolean>()
+  const cjsResolve = context.config.createResolver({
+    isRequire: true,
+    mainFields: ['main'],
+    extensions: ['cjs', 'js'],
+  })
+
+  return {
+    name: 'saus:preferExternal',
+    enforce: 'pre',
+    async resolveId(id, importer) {
+      if (importer && /^[\w@]/.test(id)) {
+        if (builtinModules.includes(id)) {
+          return { id, external: true }
+        }
+        let resolved: string | undefined
+        try {
+          resolved = await cjsResolve(id, importer)
+        } catch (e) {
+          debugger
+          return null
+        }
+        if (!resolved) {
+          debugger
+          return null
+        }
+        const isNodeModule = resolved.includes('/node_modules/')
+        if (!isNodeModule && resolved.startsWith(context.root + '/')) {
+          // Project files are resolved normally.
+          return null
+        }
+        // Ensure the resolved path is a CommonJS module,
+        // since the package might be ESM only.
+        if (/\.c?js$/.test(resolved)) {
+          let external = externalCache.get(resolved)
+          if (external !== undefined) {
+            return external ? { id: resolved, external: true } : null
+          }
+
+          // Modules using ESM syntax must be bundled.
+          const code = fs.readFileSync(resolved, 'utf8')
+          if (!/^(im|ex)port /m.test(code)) {
+            const pkgPath = findPackage(path.dirname(resolved))
+            if (pkgPath) {
+              const pkg = require(pkgPath)
+
+              // Modules that depend on Saus must be bundled.
+              external = !(
+                'saus' in (pkg.dependencies || {}) ||
+                'saus' in (pkg.peerDependencies || {})
+              )
+            }
+          }
+          // if (external) {
+          //   console.log('external: %O', resolved)
+          // }
+          externalCache.set(resolved, !!external)
+          return external ? { id: resolved, external } : null
+        }
+      }
+    },
   }
 }
 
