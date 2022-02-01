@@ -1,8 +1,9 @@
 import endent from 'endent'
-import { warn } from 'misty'
 import * as vite from 'vite'
-import { SausContext, Plugin, SausConfig } from '../core'
+import { SausContext, Plugin, SausConfig, RenderedPage } from '../core'
+import { debug } from '../core/debug'
 import { collectCss } from '../preload'
+import { loadedStateCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { serializeImports } from '../utils/imports'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
@@ -51,14 +52,9 @@ export function clientPlugin(
     },
     load(id) {
       if (isClientUrl(id)) {
-        id = id.replace(clientPrefix, '')
-
-        // Find a page that uses this client.
-        const page = Object.values(context.pages).find(
-          page => id === page.client?.id
-        )
-        if (page) {
-          return page.client!.code
+        const client = loadedStateCache.get(id.replace(clientPrefix, ''))
+        if (client) {
+          return client.code
         }
       }
     },
@@ -71,11 +67,15 @@ export function clientPlugin(
           filename = getPageFilename(path.replace(/\?.*$/, ''))
         }
 
-        const page = context.pages[filename]
-        const routeModuleId = page.routeModuleId
+        const pagePath = '/' + filename.replace(/(index)?\.html$/, '')
+        const page = await context.getCachedPage<RenderedPage>(pagePath)
+        if (!page) {
+          return debug('Page %s not found, skipping transform', pagePath)
+        }
 
         const base = context.basePath
         const pageStateUrl = base + filename + '.js?t=' + page.state._ts
+        const routeModuleId = page.routeModuleId
         const routeModuleUrl = base + routeModuleId.slice(1)
         const sausClientUrl = base + '@id/saus/client'
 
@@ -114,14 +114,6 @@ export function clientPlugin(
               .getModuleByUrl(clientUrl)
               .then(mod => mod && collectCss(mod, cssUrls))
           }
-        }
-
-        // Even though we could embed this JSON string into the hydration
-        // script, making the HTML parser aware of its JSON format allows
-        // it to be parsed earlier than it otherwise would be.
-        const state = context.loadedStateCache.get(page.path)
-        if (!state) {
-          warn(`Missing client state for page: "${page.path}"`)
         }
 
         getPreloadTagsForModules(modulesToPreload, tags)

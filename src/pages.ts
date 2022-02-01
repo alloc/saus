@@ -8,8 +8,6 @@ import type {
   Client,
   ClientDescription,
   ClientState,
-  matchRoute,
-  mergeHtmlProcessors,
   Renderer,
   RenderRequest,
   Route,
@@ -17,9 +15,10 @@ import type {
   RouteModule,
   RouteParams,
   RuntimeConfig,
-  StateModule,
 } from './core'
 import { setRoutesModule } from './core/global'
+import { mergeHtmlProcessors } from './core/html'
+import { matchRoute } from './core/routes'
 import {
   ClientFunction,
   ClientFunctions,
@@ -29,7 +28,8 @@ import {
   RenderFunction,
   RenderPageOptions,
 } from './pages/types'
-import { isStateModule } from './runtime/stateModules'
+import { loadedStateCache } from './runtime/cache'
+import { isStateModule, StateModule } from './runtime/stateModules'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -169,6 +169,9 @@ export function createPageFactory(
 
     if (page.html) {
       page.client = await getClient(functions, renderer, usedHooks)
+      if (page.client) {
+        loadedStateCache.set(page.client.id, page.client)
+      }
       page.head = parseHead(page.html)
     }
 
