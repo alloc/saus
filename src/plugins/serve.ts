@@ -1,4 +1,3 @@
-import { stateCachePath } from '../bundle/constants'
 import {
   applyHtmlProcessors,
   extractClientFunctions,
@@ -7,10 +6,11 @@ import {
   RuntimeConfig,
   SausContext,
 } from '../core'
-import { loadState } from '../core/loadStateModule'
+import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
 import { RenderedFile } from '../pages/types'
+import { getCachedState } from '../runtime/getCachedState'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
@@ -38,9 +38,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       if (isPageStateRequest(id)) {
         await init
         const url = id.replace(/(\/index)?\.html\.js$/, '') || '/'
-        const page = await pageFactory.render(url, {
-          preferCache: true,
-        })
+        const page = await pageFactory.render(url)
         if (page) {
           return renderPageState(
             page,
@@ -51,12 +49,12 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       } else if (isStateModuleRequest(id)) {
         await init
         const stateModuleId = id.slice(7, -3)
-        const state = await loadState(stateModuleId)
-        if (state) {
+        const state = await getCachedState(stateModuleId)
+        if (state !== undefined) {
           return renderStateModule(
             stateModuleId,
             state,
-            '/@fs/' + stateCachePath
+            '/@fs/' + globalCachePath
           )
         }
       }
@@ -79,7 +77,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           minify: false,
           mode: context.config.mode,
           publicDir: context.config.publicDir,
-          stateCacheId: '/@fs/' + stateCachePath,
+          stateCacheId: '/@fs/' + globalCachePath,
         }
         pageFactory = createPageFactory(
           context,

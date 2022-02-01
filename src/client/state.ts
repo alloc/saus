@@ -1,9 +1,10 @@
 import type { ClientState, StateModule } from '../core'
-import { loadedStateCache, loadingStateCache } from '../core/cache'
 import { withCache } from '../core/withCache'
+import * as globalCache from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { unwrapDefault } from '../utils/unwrapDefault'
 
+export { clearState as clearClientState } from '../runtime/clearState'
 export type { ClientState, StateModule }
 
 /**
@@ -12,17 +13,14 @@ export type { ClientState, StateModule }
  * The `pageUrl` argument must not contain either a hash fragment (eg: `#foo`)
  * or a search query (eg: `?foo`).
  */
-export const loadClientState: {
-  (pageUrl: string): Promise<ClientState>
-  /**
-   * Use the same cache that Saus keeps page-specific state in.
-   */
-  <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
-} = withCache(loadingStateCache, loadedStateCache, pageUrl => {
+export const loadClientState = withCache(globalCache, pageUrl => {
   if (pageUrl[0] == '/') {
     const stateUrl =
       '/' + getPageFilename(pageUrl, import.meta.env.BASE_URL) + '.js'
 
     return async () => unwrapDefault(await import(/* @vite-ignore */ stateUrl))
   }
-})
+}) as {
+  (pageUrl: string): Promise<ClientState>
+  <T>(cacheKey: string, loader: () => Promise<T>): Promise<T>
+}

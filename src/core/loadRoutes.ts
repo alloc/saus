@@ -35,11 +35,17 @@ type ResolveIdHook = (
 export async function loadRoutes(
   context: SausContext,
   resolveId: ResolveIdHook = () => undefined,
-  loadRoute: (id: string) => Promise<RouteModule> = id => import(id)
+  loadRoute: (id: string) => Promise<RouteModule> = id => import(id),
+  compiledFiles?: Set<string>
 ) {
   context.compileCache.locked = true
   const time = Date.now()
-  const evaluate = await compileRoutesModule(context, loadRoute, resolveId)
+  const evaluate = await compileRoutesModule(
+    context,
+    loadRoute,
+    resolveId,
+    compiledFiles
+  )
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],
@@ -60,7 +66,8 @@ type ModuleLoader = () => Promise<any>
 async function compileRoutesModule(
   { routesPath, root, compileCache, config }: SausContext,
   loadRoute: (id: string) => Promise<RouteModule>,
-  resolveId: ResolveIdHook
+  resolveId: ResolveIdHook,
+  compiledFiles?: Set<string>
 ) {
   let code = fs.readFileSync(routesPath, 'utf8')
   const editor = new MagicString(code)
@@ -91,6 +98,7 @@ async function compileRoutesModule(
       let isCached = false
 
       if (resolvedId && isCompiledModule(resolvedId, root)) {
+        compiledFiles?.add(resolvedId)
         useNodeRequire = false
         isCached = resolvedId in exportsMap
       } else {

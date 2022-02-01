@@ -19,4 +19,4 @@ export const addConfigHook = () => {}
 export { __d, ssrRequire } from './ssrModules'
 export { addRenderers } from './render'
 
-export * from '../../core/api'
+export * from '../core/api'

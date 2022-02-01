@@ -8,6 +8,8 @@ import type {
   Client,
   ClientDescription,
   ClientState,
+  matchRoute,
+  mergeHtmlProcessors,
   Renderer,
   RenderRequest,
   Route,
@@ -18,20 +20,16 @@ import type {
   StateModule,
 } from './core'
 import { setRoutesModule } from './core/global'
-import { mergeHtmlProcessors } from './core/html'
-import { matchRoute } from './core/routes'
-import { isStateModule, stateModulesMap } from './core/stateModules'
-import { withCache } from './core/withCache'
 import {
   ClientFunction,
   ClientFunctions,
   PageContext,
   PageFactoryContext,
-  RenderedFile,
   RenderedPage,
   RenderFunction,
   RenderPageOptions,
 } from './pages/types'
+import { isStateModule } from './runtime/stateModules'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -41,6 +39,8 @@ import { plural } from './utils/plural'
 import { ParsedUrl, parseUrl } from './utils/url'
 
 const debug = createDebug('saus:pages')
+
+const stateModulesMap = new WeakMap<ClientState, string[]>()
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
@@ -56,8 +56,8 @@ export function createPageFactory(
     defaultRenderer,
     defaultRoute,
     defaultState,
+    getCachedPage,
     logger,
-    pages,
     processHtml,
     renderers,
     routes,
@@ -168,13 +168,8 @@ export function createPageFactory(
     )
 
     if (page.html) {
-      let client = pages[request.file]?.client
-      if (!client) {
-        client = await getClient(functions, renderer, usedHooks)
-      }
-      page.client = client
+      page.client = await getClient(functions, renderer, usedHooks)
       page.head = parseHead(page.html)
-      pages[request.file] = page
     }
 
     return page
@@ -201,9 +196,6 @@ export function createPageFactory(
       })
   )
 
-  // Concurrent requests to the same page will use the same promise.
-  const loadingPages = new Map<string, Promise<RenderedPage | null>>()
-
   function loadPage(
     url: string | ParsedUrl,
     options: RenderPageOptions,
@@ -212,18 +204,10 @@ export function createPageFactory(
     if (typeof url == 'string') {
       url = parseUrl(url)
     }
-    let pagePath = url.path
-    let loadingPage = loadingPages.get(pagePath)
-    if (!loadingPage) {
-      debug(`Page queued: %s`, url)
-      loadingPages.set(
-        pagePath,
-        (loadingPage = queuePage(url, renderPage, options).finally(() => {
-          loadingPages.delete(pagePath)
-        }))
-      )
-    }
-    return loadingPage
+    return getCachedPage<RenderedPage>(
+      url.path,
+      queuePage.bind(null, url, renderPage, options)
+    )
   }
 
   function loadStateModule(
@@ -252,14 +236,6 @@ export function createPageFactory(
 
     return included.map(loadStateModule.bind(null, loaded))
   }
-
-  const resolveState = withCache<ClientState>(
-    context.loadingStateCache,
-    context.loadedStateCache
-  )
-
-  const loadPageState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    resolveState(url.path, () => loadClientState(url, params, route))
 
   async function loadClientState(
     url: ParsedUrl,
@@ -295,6 +271,11 @@ export function createPageFactory(
     await Promise.all(pendingStateModules.values())
     stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
 
+    if (config.command == 'dev')
+      Object.defineProperty(result, '_ts', {
+        value: Date.now(),
+      })
+
     result.routePath = route.path
     result.routeParams = params
     return result
@@ -329,7 +310,7 @@ export function createPageFactory(
   ) {
     // State modules can be loaded in parallel, since the global state
     // cache is reused by all pages.
-    const statePromise = loadPageState(url, params, route)
+    const statePromise = loadClientState(url, params, route)
 
     // In SSR mode, multiple pages must not load their modules at the
     // same time, or else they won't be isolated from each other.
@@ -420,18 +401,8 @@ export function createPageFactory(
   }
 
   return {
-    isLoading: (url: string | ParsedUrl) =>
-      loadingPages.has((typeof url == 'string' ? parseUrl(url) : url).path),
     render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
       loadPage(url, options, async url => {
-        if (options.preferCache) {
-          const filename = getPageFilename(url.path, basePath)
-          const cachedPage = pages[filename]
-          if (cachedPage) {
-            return cachedPage
-          }
-        }
-
         const [route, params] = resolveRoute(url)
         if (!route) {
           return null

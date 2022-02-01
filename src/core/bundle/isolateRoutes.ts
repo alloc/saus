@@ -14,24 +14,29 @@ import {
   getImportDeclarations,
   resolveReferences,
   t,
-} from '../babel'
-import { generateRequireCalls } from '../babel/generateRequireCalls'
-import { hoistImports } from '../babel/hoistImports'
+} from '../../babel'
+import { generateRequireCalls } from '../../babel/generateRequireCalls'
+import { hoistImports } from '../../babel/hoistImports'
+import { ssrRoutesId } from '../../bundle/constants'
+import {
+  createModuleProvider,
+  ModuleProvider,
+} from '../../plugins/moduleProvider'
+import { dedupe } from '../../utils/dedupe'
+import { esmExportsToCjs } from '../../utils/esmToCjs'
+import { getResolvedUrl } from '../../utils/getResolvedUrl'
+import { plural } from '../../utils/plural'
+import { debug } from '../debug'
 import {
   ClientFunction,
   extractClientFunctions,
+  resolveMapSources,
   SausContext,
+  SourceMap,
+  toInlineSourceMap,
   vite,
-} from '../core'
-import { debug } from '../core/debug'
-import { dedupe } from '../utils/dedupe'
-import { esmExportsToCjs } from '../utils/esmToCjs'
-import { getResolvedUrl } from '../utils/getResolvedUrl'
-import { plural } from '../utils/plural'
-import { createModuleProvider, ModuleProvider } from './moduleProvider'
+} from '../index'
 import { RouteImports } from './routeModules'
-import { ssrRoutesId } from './runtime/constants'
-import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
 
 export const toBundleChunkId = (id: string) =>
   id.replace(/\.[^.]+$/, '.bundle.js')

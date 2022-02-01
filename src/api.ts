@@ -3,6 +3,5 @@
 export { render } from './render'
 export { route } from './routes'
 export { beforeRender } from './core/render'
-export { includeState } from './core/state'
-export { resolveModules } from './utils/resolveModules'
-export { escape } from './utils/escape'
+export { includeState } from './core/includeState'
+export { escape, resolveModules } from './core/utils'

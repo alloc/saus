@@ -3,11 +3,11 @@ import path from 'path'
 import { warn } from 'misty'
 import { babel, getBabelConfig, t } from '../babel'
 import { Plugin, SausConfig } from '../core'
-import { clientDir, runtimeDir } from '../bundle/constants'
+import { clientDir, bundleDir } from '../core/paths'
 
 const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
-const serverRouteMapStubPath = path.join(runtimeDir, 'routes.ts')
-const coreRuntimePath = path.join(runtimeDir, 'core.ts')
+const serverRouteMapStubPath = path.join(bundleDir, 'routes.ts')
+const coreRuntimePath = path.join(bundleDir, 'core.ts')
 const routeMarker = '__sausRoute'
 
 /**

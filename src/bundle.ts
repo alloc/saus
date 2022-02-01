@@ -4,21 +4,9 @@ import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
-import { warn, warnOnce } from 'misty'
+import { warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
-import { ClientImport, generateClientModules } from './bundle/clients'
-import {
-  clientDir,
-  coreDir,
-  runtimeDir,
-  stateCachePath,
-} from './bundle/constants'
-import { isolateRoutes } from './bundle/isolateRoutes'
-import { createModuleProvider } from './bundle/moduleProvider'
-import { resolveRouteImports } from './bundle/routeModules'
-import { preBundleSsrRuntime } from './bundle/runtimeBundle'
-import { resolveMapSources, SourceMap } from './bundle/sourceMap'
 import type { ClientModuleMap } from './bundle/types'
 import {
   ClientFunction,
@@ -26,116 +14,41 @@ import {
   dataToEsm,
   endent,
   extractClientFunctions,
-  SausBundleConfig,
   SausContext,
 } from './core'
+import {
+  BundleConfig,
+  BundleContext,
+  ClientImport,
+  generateClientModules,
+  isolateRoutes,
+  preBundleSsrRuntime,
+  resolveRouteImports,
+} from './core/bundle'
 import type { RuntimeConfig } from './core/config'
-import { loadContext } from './core/context'
 import { debug } from './core/debug'
+import { bundleDir, clientDir, coreDir } from './core/paths'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
+import { createModuleProvider } from './plugins/moduleProvider'
 import {
   moduleRedirection,
   overrideBareImport,
   redirectModule,
 } from './plugins/moduleRedirection'
-import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
 import { findPackage } from './utils/findPackage'
 import { parseImports, serializeImports } from './utils/imports'
+import { resolveMapSources, SourceMap } from './utils/sourceMap'
 
 export interface BundleOptions {
   absoluteSources?: boolean
   isBuild?: boolean
   minify?: boolean
   preferExternal?: boolean
-}
-
-export interface InlineBundleConfig
-  extends Pick<SausBundleConfig, 'debugBase' | 'entry' | 'format' | 'target'> {
-  outFile?: string
-  write?: boolean
-}
-
-type RequiredKeys<T, P extends keyof T> = {} & Omit<T, P> & Required<Pick<T, P>>
-
-/** @internal */
-interface BundleConfig
-  extends RequiredKeys<SausBundleConfig, 'format' | 'type' | 'target'> {
-  outFile?: string
-}
-
-export interface BundleContext extends SausContext {
-  bundle: BundleConfig
-}
-
-export async function loadBundleContext(
-  options: InlineBundleConfig = {},
-  inlineConfig?: vite.UserConfig
-) {
-  const context: BundleContext = (await loadContext('build', inlineConfig, [
-    renderPlugin,
-  ])) as any
-
-  const bundleConfig = context.config.saus.bundle || {}
-  const buildConfig = context.userConfig.build || {}
-
-  let {
-    debugBase = bundleConfig.debugBase,
-    entry,
-    format = bundleConfig.format || 'cjs',
-    outFile,
-    target = bundleConfig.target || 'node14',
-    write = buildConfig.write,
-  } = options
-
-  if (outFile) {
-    outFile = path.resolve(outFile)
-  }
-
-  if (debugBase) {
-    const failure = validateDebugBase(debugBase, context.basePath)
-    if (failure) {
-      warn(`"debugBase" ${failure}`)
-      debugBase = undefined
-    }
-  }
-
-  if (entry === undefined) {
-    entry = bundleConfig.entry
-  }
-  if (entry) {
-    outFile ??= path.resolve(
-      context.root,
-      entry
-        .replace(/^(\.\/)?src\//, (buildConfig.outDir || 'dist') + '/')
-        .replace(/\.ts$/, format == 'cjs' ? '.js' : '.mjs')
-    )
-    entry = path.resolve(context.root, entry)
-  }
-
-  if (!outFile && write !== false) {
-    throw Error(
-      `[saus] The "outFile" option must be provided when ` +
-        `"saus.bundle.entry" is not defined in your Vite config ` +
-        `(and the "write" option is not false).`
-    )
-  }
-
-  context.bundle = {
-    ...bundleConfig,
-    type: bundleConfig.type || 'script',
-    entry,
-    target,
-    format,
-    outFile,
-    debugBase,
-  }
-
-  return context
 }
 
 export async function bundle(options: BundleOptions, context: BundleContext) {
@@ -379,22 +292,21 @@ async function prepareFunctions(
 }
 
 const internalRedirects = [
-  redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
   redirectModule(
     path.join(coreDir, 'global.ts'),
-    path.join(runtimeDir, 'global.ts')
+    path.join(bundleDir, 'global.ts')
   ),
   redirectModule(
     path.join(coreDir, 'constants.ts'),
-    path.join(runtimeDir, 'constants.ts')
+    path.join(bundleDir, 'constants.ts')
   ),
   redirectModule(
     path.join(coreDir, 'runtimeConfig.ts'),
-    path.join(runtimeDir, 'config.ts')
+    path.join(bundleDir, 'config.ts')
   ),
   redirectModule(
     path.join(clientDir, 'loadPageModule.ts'),
-    path.join(runtimeDir, 'loadPageModule.ts')
+    path.join(bundleDir, 'loadPageModule.ts')
   ),
 ]
 
@@ -411,23 +323,23 @@ async function generateSsrBundle(
   const modules = createModuleProvider()
 
   modules.addModule({
-    id: path.join(runtimeDir, 'functions.ts'),
+    id: path.join(bundleDir, 'functions.ts'),
     code: serializeClientFunctions(functions),
   })
 
   modules.addModule({
-    id: path.join(runtimeDir, 'clientModules.ts'),
+    id: path.join(bundleDir, 'clientModules.ts'),
     code: dataToEsm(moduleMap),
   })
 
   if (!bundleConfig.debugBase)
     modules.addModule({
-      id: path.join(runtimeDir, 'debugBase.ts'),
+      id: path.join(bundleDir, 'debugBase.ts'),
       code: `export function injectDebugBase() {}`,
     })
 
   const runtimeConfigModule = modules.addModule({
-    id: path.join(runtimeDir, 'config.ts'),
+    id: path.join(bundleDir, 'config.ts'),
     code: dataToEsm(runtimeConfig),
   })
 
@@ -440,7 +352,7 @@ async function generateSsrBundle(
   }
 
   const bundleId = '\0saus/main.js'
-  const runtimeId = `/@fs/${path.join(runtimeDir, 'main.ts')}`
+  const runtimeId = `/@fs/${path.join(bundleDir, 'main.ts')}`
   modules.addModule({
     id: bundleId,
     code: endent`
@@ -456,8 +368,8 @@ async function generateSsrBundle(
   })
 
   const moduleResolution: vite.PluginOption[] = [
-    overrideBareImport('saus', path.join(runtimeDir, 'index.ts')),
-    overrideBareImport('saus/core', path.join(runtimeDir, 'core.ts')),
+    overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
+    overrideBareImport('saus/core', path.join(bundleDir, 'core.ts')),
     overrideBareImport('saus/bundle', bundleId),
   ]
 
@@ -471,11 +383,11 @@ async function generateSsrBundle(
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&
-        overrideBareImport('debug', path.join(runtimeDir, 'debug.ts'))
+        overrideBareImport('debug', path.join(bundleDir, 'debug.ts'))
     )
   }
 
-  const bundleDir = bundleConfig.outFile
+  const bundleOutDir = bundleConfig.outFile
     ? path.dirname(bundleConfig.outFile)
     : context.root
 
@@ -512,7 +424,7 @@ async function generateSsrBundle(
       rollupOptions: {
         input: bundleConfig.entry || bundleId,
         output: {
-          dir: bundleDir,
+          dir: bundleOutDir,
           format: bundleConfig.format,
         },
         context: 'globalThis',
@@ -545,7 +457,7 @@ async function generateSsrBundle(
   const bundle = buildResult.output[0].output[0]
 
   if (bundle.map && options.absoluteSources) {
-    resolveMapSources(bundle.map, bundleDir)
+    resolveMapSources(bundle.map, bundleOutDir)
   }
 
   return bundle
@@ -737,14 +649,4 @@ function wrapAsyncInit(): vite.Plugin {
       }
     },
   }
-}
-
-function validateDebugBase(debugBase: string, base: string) {
-  return !debugBase.startsWith('/')
-    ? `must start with /`
-    : !debugBase.endsWith('/')
-    ? `must end with /`
-    : base !== '/' && debugBase.startsWith(base)
-    ? `must not include "base"`
-    : null
 }

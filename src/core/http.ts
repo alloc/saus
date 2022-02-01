@@ -2,9 +2,9 @@
 import http from 'http'
 import https from 'https'
 import md5Hex from 'md5-hex'
-import { loadState } from './loadStateModule'
+import { getCachedState } from '../runtime/getCachedState'
+import { TimeToLive } from '../runtime/ttl'
 import { Response } from './response'
-import { TimeToLive } from './ttl'
 
 type URL = import('url').URL
 declare const URL: typeof import('url').URL
@@ -24,7 +24,7 @@ export function get(url: string | URL, opts?: GetOptions) {
     typeof url == 'string' ? url : url.href,
     opts?.headers
   )
-  return loadState(cacheKey, () => {
+  return getCachedState(cacheKey, () => {
     return new Promise(resolvedGet.bind(null, url, opts || {}, cacheKey, 0))
   })
 }

@@ -1,8 +1,11 @@
+// Public utils exposed by "saus/core" for third-party packages
 export * from '../utils/dataToEsm'
+export * from '../utils/escape'
 export * from '../utils/getPagePath'
 export * from '../utils/getPageFilename'
 export * from '../utils/limitConcurrency'
 export * from '../utils/limitByQueue'
 export * from '../utils/reduceSerial'
+export * from '../utils/resolveModules'
 export { default as endent } from 'endent'
 export { default as md5Hex } from 'md5-hex'

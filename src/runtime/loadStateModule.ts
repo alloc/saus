@@ -1,8 +1,7 @@
 import { unwrapDefault } from '../utils/unwrapDefault'
-import { loadedStateCache, loadingStateCache } from './cache'
-import type { ResolvedState } from './state'
+import { getCachedState } from './getCachedState'
+import type { ResolvedState } from './stateModules'
 import { TimeToLive } from './ttl'
-import { withCache } from './withCache'
 
 export type StateModuleContext = {
   cacheKey: string
@@ -26,17 +25,13 @@ export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
   ...args: Args
 ) => T
 
-export const loadState = withCache(loadingStateCache, loadedStateCache) as {
-  <State = any>(cacheKey: string): Promise<State | undefined>
-  <State = any>(cacheKey: string, loader: () => Promise<State>): Promise<State>
-}
-
+/** @internal */
 export const loadStateModule = <T, Args extends any[]>(
   cacheKey: string,
   loadImpl: StateModuleLoader<T, Args>,
   ...args: Args
 ): Promise<ResolvedState<T>> =>
-  loadState(cacheKey, async function loadStateModule() {
+  getCachedState(cacheKey, async function loadStateModule() {
     try {
       let result: any = loadImpl.apply(getStateModuleContext(cacheKey), args)
       if (result && typeof result == 'object') {

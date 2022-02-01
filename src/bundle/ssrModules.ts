@@ -1,6 +1,6 @@
 import createDebug from 'debug'
-import { loadedStateCache } from '../../core/cache'
-import { loadState } from '../../core/loadStateModule'
+import { clearState } from '../runtime/clearState'
+import { loadState } from './loadState'
 
 const debug = createDebug('saus:cache')
 
@@ -47,9 +47,5 @@ export function __importDefault(exports: any) {
 /** Clear all loaded SSR modules */
 export function ssrClearCache() {
   debug('Clearing the module cache')
-  loadedStateCache.forEach((_, key) => {
-    if (key.startsWith(ssrPrefix)) {
-      loadedStateCache.delete(key)
-    }
-  })
+  clearState(key => key.startsWith(ssrPrefix))
 }

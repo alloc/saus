@@ -1,13 +1,13 @@
 import path from 'path'
-import { renderPageState } from '../../core/renderPageState'
-import { renderStateModule } from '../../core/renderStateModule'
-import { createPageFactory } from '../../pages'
-import { getPageFilename } from '../../utils/getPageFilename'
-import { parseImports } from '../../utils/imports'
-import { isCSSRequest } from '../../utils/isCSSRequest'
-import { getPreloadTagsForModules } from '../../utils/modulePreload'
-import { ParsedUrl, parseUrl } from '../../utils/url'
-import { ClientModule, RenderedPage, RenderPageOptions } from '../types'
+import { renderPageState } from '../core/renderPageState'
+import { renderStateModule } from '../core/renderStateModule'
+import { createPageFactory } from '../pages'
+import { loadedStateCache, loadingStateCache } from '../runtime/cache'
+import { getPageFilename } from '../utils/getPageFilename'
+import { parseImports } from '../utils/imports'
+import { isCSSRequest } from '../utils/isCSSRequest'
+import { getPreloadTagsForModules } from '../utils/modulePreload'
+import { ParsedUrl, parseUrl } from '../utils/url'
 import moduleMap from './clientModules'
 import config from './config'
 import { ssrRoutesId } from './constants'
@@ -19,6 +19,7 @@ import { getModuleUrl } from './getModuleUrl'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import { loadRenderers } from './render'
 import { ssrClearCache, ssrRequire } from './ssrModules'
+import { ClientModule, RenderedPage, RenderPageOptions } from './types'
 
 const getModule = (id: string) =>
   moduleMap[id] || Object.values(moduleMap).find(module => module.id == id)
@@ -40,7 +41,7 @@ const debugBase = config.debugBase
 // Prepended to module IDs in debug view.
 const debugDir = (config.debugBase || '').slice(1)
 
-type InternalPage = import('../../pages/types').RenderedPage
+type InternalPage = import('../pages/types').RenderedPage
 
 export async function renderPage(
   pageUrl: string | ParsedUrl,
@@ -68,7 +69,7 @@ export async function renderPage(
 
   let page: InternalPage | null = null
   try {
-    if (renderStart && pageFactory.isLoading(pageUrl)) {
+    if (renderStart && loadingStateCache.has(pageUrl)) {
       renderStart(pagePublicPath)
     }
     page = await pageFactory.render(pageUrl, {
@@ -197,7 +198,7 @@ export async function renderPage(
         id: stateModuleId,
         text: renderStateModule(
           stateId,
-          context.loadedStateCache.get(stateId),
+          loadedStateCache.get(stateId),
           config.base + config.stateCacheId
         ),
         exports: ['default'],

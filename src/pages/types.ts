@@ -1,6 +1,5 @@
-import type { HeadDescription } from '../client'
+import type { Buffer, HeadDescription } from '../client'
 import type {
-  Buffer,
   Client,
   ClientState,
   RenderModule,
@@ -28,12 +27,7 @@ export type RenderedPage = {
   client?: Client
 }
 
-type SausContextKeys =
-  | 'basePath'
-  | 'defaultPath'
-  | 'loadedStateCache'
-  | 'loadingStateCache'
-  | 'pages'
+type SausContextKeys = 'basePath' | 'defaultPath' | 'getCachedPage'
 
 export interface PageFactoryContext
   extends Pick<SausContext, SausContextKeys>,
@@ -46,7 +40,6 @@ export interface PageFactoryContext
 export interface PageContext extends RenderModule {}
 
 export type RenderPageOptions = {
-  preferCache?: boolean
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,

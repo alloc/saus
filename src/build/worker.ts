@@ -1,9 +1,9 @@
 import Worker from 'tinypool'
 import vm from 'vm'
 import { workerData } from 'worker_threads'
-import { SourceMap, toInlineSourceMap } from '../bundle/sourceMap'
 import type { RenderedPage } from '../bundle/types'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
+import { SourceMap, toInlineSourceMap } from '../utils/sourceMap'
 
 export interface BuildWorker extends Worker {
   /** Render a page by its URL. */

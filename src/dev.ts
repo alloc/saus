@@ -4,16 +4,17 @@ import { gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import { stateCachePath } from './bundle/constants'
 import { loadRoutes, SausContext } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
 import { setRenderModule } from './core/global'
+import { runtimeDir } from './core/paths'
 import { clientPlugin } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
+import { clearState } from './runtime/clearState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { plural } from './utils/plural'
@@ -113,10 +114,18 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const moduleCache = vite.ssrCreateContext(server, [injectDevCache(context)])
+  // The module cache prevents SSR modules from being re-executed
+  // between calls to ssrLoadModule unless they (or a dependency
+  // of theirs) have changed.
+  const moduleCache = vite.ssrCreateContext(server, [overrideStateModules()])
+
+  // Track which files are compiled to know if we should reload
+  // the routes module when a file is changed.
+  const compiledFiles = new Set<string>()
+
   try {
-    await loadServerRoutes(context, server, moduleCache)
-    await loadRenderers(context, events, server, moduleCache)
+    await loadServerRoutes(context, server, moduleCache, compiledFiles)
+    await loadRenderers(context, server, moduleCache)
   } catch (error: any) {
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
@@ -154,8 +163,9 @@ async function startServer(
     let renderersChanged = false
 
     if (changedFiles.has(context.routesPath)) {
+      compiledFiles.clear()
       try {
-        await loadServerRoutes(context, server, moduleCache)
+        await loadServerRoutes(context, server, moduleCache, compiledFiles)
         routesChanged = true
       } catch (error: any) {
         events.emit('error', error)
@@ -168,16 +178,14 @@ async function startServer(
       const files = Array.from(changedFiles)
       changedFiles.clear()
 
+      // Remove cached state defined by the changed files.
       for (const file of files) {
         const stateModuleIds = context.stateModulesByFile[file]
         if (stateModuleIds) {
-          // Remove cached state defined by the changed file.
-          const partialPurge = (_: any, key: string, cache: Map<string, any>) =>
-            stateModuleIds.some(id => key.startsWith(id + '.')) &&
-            cache.delete(key)
-
-          context.loadedStateCache.forEach(partialPurge)
-          context.loadingStateCache.forEach(partialPurge)
+          // State modules use the global cache.
+          clearState(key => {
+            return stateModuleIds.some(id => key.startsWith(id + '.'))
+          })
         }
       }
 
@@ -190,7 +198,7 @@ async function startServer(
       // when new HTTP requests come in.
       if (purged?.some(mod => mod.file == context.renderPath)) {
         try {
-          await loadRenderers(context, events, server, moduleCache)
+          await loadRenderers(context, server, moduleCache)
           renderersChanged = true
 
           const oldConfigHooks = context.configHooks
@@ -217,7 +225,7 @@ async function startServer(
     }
 
     if (routesChanged || renderersChanged) {
-      context.pages = {}
+      context.clearCachedPages()
       await callPlugins(context.plugins, 'onContext', context)
     }
 
@@ -225,7 +233,13 @@ async function startServer(
     context.reloading = undefined
   }, 50)
 
-  watcher.on('change', file => {
+  watcher.prependListener('change', file => {
+    if (compiledFiles.has(file)) {
+      // Ensure the routes module is reloaded on the server.
+      changedFiles.add(context.routesPath)
+      // Ensure an HMR update is sent.
+      server.moduleGraph.createFileOnlyEntry(file)
+    }
     changedFiles.add(file)
     scheduleReload()
   })
@@ -234,20 +248,15 @@ async function startServer(
 }
 
 /**
- * We want `loadClientState` to "just work" in SSR environments,
- * so we need to inject the state cache by overriding the import
- * made within the `src/client/state.ts` module.
+ * Ensure modules compiled by `loadRoutes` and modules loaded by Vite SSR
+ * both use the same instance of the `defineStateModule` function.
  */
-function injectDevCache(context: SausContext): vite.SSRPlugin {
-  const stateCacheUrl = '/@fs/' + stateCachePath
+function overrideStateModules(): vite.SSRPlugin {
+  const stateModulesPath = path.join(runtimeDir, 'stateModules.ts')
   return {
     setExports(id) {
-      if (id == stateCacheUrl) {
-        const cache: typeof import('./core/cache') = {
-          loadedStateCache: context.loadedStateCache,
-          loadingStateCache: context.loadingStateCache,
-        }
-        return cache
+      if (id == stateModulesPath) {
+        return import('./runtime/stateModules')
       }
     },
   }
@@ -256,7 +265,8 @@ function injectDevCache(context: SausContext): vite.SSRPlugin {
 function loadServerRoutes(
   context: SausContext,
   server: vite.ViteDevServer,
-  moduleCache?: vite.SSRContext
+  moduleCache: vite.SSRContext,
+  compiledFiles: Set<string>
 ) {
   return loadRoutes(
     context,
@@ -271,13 +281,13 @@ function loadServerRoutes(
     },
     id => {
       return server.ssrLoadModule(id, moduleCache)
-    }
+    },
+    compiledFiles
   )
 }
 
 async function loadRenderers(
   context: SausContext,
-  events: EventEmitter,
   server: vite.ViteDevServer,
   moduleCache?: vite.SSRContext
 ) {
