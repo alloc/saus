@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import path from 'path'
-import { coreDir, runtimeDir } from '../bundle/constants'
 import { vite } from '../core'
+import { bundleDir, runtimeDir } from '../core/paths'
 
 /**
  * Allow `import('https://foo.com/bar.js')` calls to work as expected.
@@ -11,7 +11,7 @@ export function rewriteHttpImports(
   logger: vite.Logger,
   skipJsImport?: boolean
 ): vite.Plugin {
-  const modulesId = path.join(runtimeDir, 'clientModules.ts')
+  const modulesId = path.join(bundleDir, 'clientModules.ts')
 
   return {
     name: 'saus:rewriteHttpImports',
@@ -64,11 +64,11 @@ export function rewriteHttpImports(
       if (editor) {
         const imports: string[] = []
         if (needsHttpImport) {
-          const source = `/@fs/${path.join(runtimeDir, 'httpImport.ts')}`
+          const source = `/@fs/${path.join(bundleDir, 'httpImport.ts')}`
           imports.push(`import { httpImport } from "${source}"\n`)
         }
         if (needsJsonImport) {
-          const source = `/@fs/${path.join(coreDir, 'jsonImport.ts')}`
+          const source = `/@fs/${path.join(runtimeDir, 'jsonImport.ts')}`
           imports.push(`import { jsonImport } from "${source}"\n`)
         }
         editor.prepend(imports.join(''))

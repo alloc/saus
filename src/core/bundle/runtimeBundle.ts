@@ -1,12 +1,15 @@
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
-import kleur from 'kleur'
 import path from 'path'
-import { SausContext } from '../core/context'
-import { vite } from '../core/vite'
-import { CompileCache } from '../utils/CompileCache'
-import { runtimeDir } from './constants'
-import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
+import { CompileCache } from '../../utils/CompileCache'
+import {
+  resolveMapSources,
+  SourceMap,
+  toInlineSourceMap,
+} from '../../utils/sourceMap'
+import { SausContext } from '../context'
+import { bundleDir } from '../paths'
+import { vite } from '../vite'
 
 const sausRoot = path.resolve(__dirname, '../src') + '/'
 
@@ -33,9 +36,9 @@ export async function preBundleSsrRuntime(
   plugins: vite.PluginOption[]
 ): Promise<vite.Plugin> {
   const entries = [
-    path.join(runtimeDir, 'index.ts'),
-    path.join(runtimeDir, 'core.ts'),
-    path.join(runtimeDir, 'main.ts'),
+    path.join(bundleDir, 'index.ts'),
+    path.join(bundleDir, 'core.ts'),
+    path.join(bundleDir, 'main.ts'),
   ]
 
   const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))

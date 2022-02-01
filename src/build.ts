@@ -5,8 +5,7 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
-import { bundle, loadBundleContext } from './bundle'
-import { toInlineSourceMap } from './bundle/sourceMap'
+import { bundle } from './bundle'
 import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
@@ -16,10 +15,12 @@ import {
   SausContext,
   vite,
 } from './core'
+import { loadBundleContext } from './core/bundle'
 import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { plural } from './utils/plural'
+import { toInlineSourceMap } from './utils/sourceMap'
 
 export type FailedPage = { path: string; reason: string }
 

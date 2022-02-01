@@ -4,7 +4,8 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
 import { resolve } from 'path'
-import type { RenderedPage } from '../pages/types'
+import { clearState } from '../runtime/clearState'
+import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
@@ -15,6 +16,7 @@ import { HtmlContext } from './html'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { Plugin, SausConfig, SausPlugin, vite } from './vite'
+import { withCache } from './withCache'
 
 type ResolvedConfig = vite.ResolvedConfig & {
   readonly saus: Readonly<SausConfig>
@@ -44,14 +46,12 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   defaultPath: string
   /** Path to the routes module */
   routesPath: string
-  /** Rendered page cache */
-  pages: Record<string, RenderedPage>
   /** Track which files are responsible for state modules */
   stateModulesByFile: Record<string, string[]>
-  /** Page states currently being loaded */
-  loadingStateCache: Map<string, Promise<any>>
-  /** Page states which have been loaded */
-  loadedStateCache: Map<string, any>
+  /** Load a page if not cached */
+  getCachedPage: typeof getCachedState
+  /** Clear any matching pages (loading or loaded) */
+  clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */
   renderPath: string
   /** For checking if a page is outdated since rendering began */
@@ -64,6 +64,43 @@ type InlinePlugin = (
   sausConfig: SausConfig,
   configEnv: vite.ConfigEnv
 ) => Plugin | Plugin[]
+
+function createContext(
+  config: ResolvedConfig,
+  configHooks: ConfigHookRef[],
+  resolveConfig: SausContext['resolveConfig']
+): SausContext {
+  // This cache is only for rendered pages. State modules use the global cache.
+  const localCache: typeof import('../runtime/cache') = {
+    loadingStateCache: new Map(),
+    loadedStateCache: new Map(),
+  }
+
+  return {
+    root: config.root,
+    plugins: getSausPlugins(config),
+    logger: config.logger,
+    config,
+    configPath: config.configFile,
+    configHooks,
+    userConfig: config.inlineConfig,
+    resolveConfig,
+    compileCache: new CompileCache('node_modules/.ssr', config.root),
+    basePath: config.base,
+    defaultPath: config.saus.defaultPath || '/404',
+    routesPath: config.saus.routes,
+    routes: [],
+    runtimeHooks: [],
+    defaultState: [],
+    stateModulesByFile: {},
+    getCachedPage: withCache(localCache),
+    clearCachedPages: filter => clearState(filter, localCache),
+    renderPath: config.saus.render,
+    renderers: [],
+    beforeRenderHooks: [],
+    reloadId: 0,
+  }
+}
 
 export async function loadContext(
   command: 'build' | 'serve',
@@ -78,32 +115,7 @@ export async function loadContext(
     inlinePlugins,
     async renderPath =>
       context?.configHooks || (configHooks = await loadConfigHooks(renderPath)),
-    config =>
-      (context ||= {
-        root: config.root,
-        plugins: null!,
-        logger: config.logger,
-        config,
-        configPath: config.configFile,
-        configHooks,
-        userConfig: config.inlineConfig,
-        resolveConfig,
-        compileCache: new CompileCache('node_modules/.ssr', config.root),
-        basePath: config.base,
-        defaultPath: config.saus.defaultPath || '/404',
-        routesPath: config.saus.routes,
-        routes: [],
-        runtimeHooks: [],
-        pages: {},
-        defaultState: [],
-        stateModulesByFile: {},
-        loadingStateCache: new Map(),
-        loadedStateCache: new Map(),
-        renderPath: config.saus.render,
-        renderers: [],
-        beforeRenderHooks: [],
-        reloadId: 0,
-      })
+    config => (context ||= createContext(config, configHooks, resolveConfig))
   )
 
   await resolveConfig(command)

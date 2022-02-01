@@ -75,7 +75,7 @@ export function clientPlugin(
         const routeModuleId = page.routeModuleId
 
         const base = context.basePath
-        const pageStateUrl = base + filename + '.js'
+        const pageStateUrl = base + filename + '.js?t=' + page.state._ts
         const routeModuleUrl = base + routeModuleId.slice(1)
         const sausClientUrl = base + '@id/saus/client'
 

@@ -1,6 +1,6 @@
 import createDebug from 'debug'
+import { SourceMap } from '../utils/sourceMap'
 import { vite } from '../core/vite'
-import { SourceMap } from './sourceMap'
 
 const debug = createDebug('saus:moduleProvider')
 

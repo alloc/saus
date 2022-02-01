@@ -1,10 +1,6 @@
 import md5Hex from 'md5-hex'
-import type { ClientState } from '../client'
 import { loadedStateCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
-import type { ResolvedState } from './state'
-
-export const stateModulesMap = new WeakMap<ClientState, string[]>()
 
 export interface StateModule<T = any, Args extends any[] = any[]> {
   id: string
@@ -61,3 +57,21 @@ export function defineStateModule<T, Args extends any[]>(
     },
   }
 }
+
+export type ResolvedState<T> = T extends Promise<any>
+  ? Resolved<T>
+  : T extends ReadonlyArray<infer Element>
+  ? Element[] extends T
+    ? readonly Resolved<Element>[]
+    : { [P in keyof T]: Resolved<T[P]> }
+  : T extends object
+  ? { [P in keyof T]: Resolved<T[P]> }
+  : ResolvedModule<T>
+
+type Resolved<T> = ResolvedModule<T extends Promise<infer U> ? U : T>
+
+type ResolvedModule<T> = T extends { default: infer DefaultExport }
+  ? { default: DefaultExport } extends T
+    ? DefaultExport
+    : T
+  : T

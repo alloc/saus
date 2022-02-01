@@ -1,33 +1,32 @@
 import { relative } from '@cush/relative'
-import escalade from 'escalade/sync'
 import { warnOnce } from 'misty'
 import path from 'path'
 import stripComments from 'strip-comments'
 import terser from 'terser'
-import { BundleContext } from '../bundle'
+import { ClientModule, ClientModuleMap } from '../../bundle/types'
+import { transformClientState } from '../../plugins/clientState'
+import { debugForbiddenImports } from '../../plugins/debug'
+import { rewriteHttpImports } from '../../plugins/httpImport'
+import { createModuleProvider } from '../../plugins/moduleProvider'
+import {
+  moduleRedirection,
+  overrideBareImport,
+  redirectModule,
+} from '../../plugins/moduleRedirection'
+import { routesPlugin } from '../../plugins/routes'
+import { findPackage } from '../../utils/findPackage'
+import { parseImports } from '../../utils/imports'
+import { mapSerial } from '../../utils/mapSerial'
+import { toInlineSourceMap } from '../../utils/sourceMap'
 import {
   ClientFunctions,
   mapClientFunctions,
   RuntimeConfig,
   SausContext,
   vite,
-} from '../core'
-import { transformClientState } from '../plugins/clientState'
-import { debugForbiddenImports } from '../plugins/debug'
-import { rewriteHttpImports } from '../plugins/httpImport'
-import {
-  moduleRedirection,
-  overrideBareImport,
-  redirectModule,
-} from '../plugins/moduleRedirection'
-import { routesPlugin } from '../plugins/routes'
-import { findPackage } from '../utils/findPackage'
-import { parseImports } from '../utils/imports'
-import { mapSerial } from '../utils/mapSerial'
-import { clientDir, coreDir, runtimeDir, stateCachePath } from './constants'
-import { createModuleProvider } from './moduleProvider'
-import { toInlineSourceMap } from './sourceMap'
-import { ClientModule, ClientModuleMap } from './types'
+} from '../index'
+import { bundleDir, clientDir, coreDir, globalCachePath } from '../paths'
+import { BundleContext } from './context'
 
 const posixPath = path.posix
 
@@ -151,7 +150,7 @@ export async function generateClientModules(
       ]),
       modules,
       moduleRedirection([
-        overrideBareImport('debug', path.join(runtimeDir, 'debug.ts')),
+        overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
         redirectModule(
           path.join(coreDir, 'buffer.ts'),
           path.join(clientDir, 'buffer.ts')
@@ -181,7 +180,7 @@ export async function generateClientModules(
           minifyInternalExports: false,
           manualChunks(id, api) {
             // Ensure a chunk exporting the `loadedStateCache` object exists.
-            if (id == stateCachePath) {
+            if (id == globalCachePath) {
               return 'cache'
             }
             return splitVendor(id, api)
@@ -230,7 +229,7 @@ export async function generateClientModules(
 
         entryChunks.push(chunk)
       }
-      if (stateCachePath in chunk.modules) {
+      if (globalCachePath in chunk.modules) {
         stateCache = chunk
         runtimeConfig.stateCacheId = stateCache.fileName
       }

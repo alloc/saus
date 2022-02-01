@@ -1,13 +1,13 @@
 import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
-import * as RegexParam from 'regexparam'
-import { ParsedUrl, URLSearchParams } from '../utils/url'
+import type { StateModule } from '../runtime/stateModules'
+import type { ParsedUrl, URLSearchParams } from '../utils/url'
 import type { SausContext } from './context'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
-import type { StateModule } from './stateModules'
 
-export { RegexParam, InferRouteParams }
+export * as RegexParam from 'regexparam'
+export type { InferRouteParams }
 
 export interface RouteModule extends Record<string, any> {}
 

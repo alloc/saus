@@ -1,19 +1,18 @@
 import createDebug from 'debug'
-import { TimeToLive } from './ttl'
+import { TimeToLive } from '../runtime/ttl'
 
 const debug = createDebug('saus:cache')
 
+type Caches = typeof import('../runtime/cache')
 type StateLoader<State = any> = () => Promise<State>
 
 export function withCache<State = any>(
-  loadingStateCache: Map<string, Promise<any>>,
-  loadedStateCache: Map<string, any>,
+  caches: Caches,
   getDefaultLoader: (cacheKey: string) => StateLoader<State>
 ): (cacheKey: string, loader?: StateLoader<State>) => Promise<State>
 
 export function withCache<State = any>(
-  loadingStateCache: Map<string, Promise<any>>,
-  loadedStateCache: Map<string, any>,
+  caches: Caches,
   getDefaultLoader?: (cacheKey: string) => StateLoader<State> | undefined
 ): {
   (cacheKey: string): Promise<State | undefined>
@@ -21,8 +20,7 @@ export function withCache<State = any>(
 }
 
 export function withCache(
-  loadingStateCache: Map<string, Promise<any>>,
-  loadedStateCache: Map<string, any>,
+  { loadedStateCache, loadingStateCache }: Caches,
   getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () =>
     undefined
 ) {
