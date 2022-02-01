@@ -1,6 +1,6 @@
 import createDebug from 'debug'
-import { loadedStateCache } from '../core/cache'
-import { loadState } from '../core/loadStateModule'
+import { loadedStateCache } from '../../core/cache'
+import { loadState } from '../../core/loadStateModule'
 
 const debug = createDebug('saus:cache')
 

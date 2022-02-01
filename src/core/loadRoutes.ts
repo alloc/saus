@@ -12,8 +12,8 @@ import {
   SourceMap,
   toInlineSourceMap,
 } from '../bundle/sourceMap'
-import { __importDefault, __importStar } from '../bundle/ssrModules'
 import { CompileCache } from '../utils/CompileCache'
+import { __importDefault, __importStar } from '../utils/esmInterop'
 import { esmExportsToCjs } from '../utils/esmToCjs'
 import { SausContext } from './context'
 import { debug } from './debug'

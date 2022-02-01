@@ -40,8 +40,9 @@ export class CompileCache {
     return path.join(this.root, this.name)
   }
 
-  key(code: string) {
-    return md5Hex(code).slice(0, 16) + '.js'
+  key(code: string, name = '') {
+    const hash = code && md5Hex(code).slice(0, name ? 8 : 16)
+    return name + (code ? (name ? '.' : '') + hash : '') + '.js'
   }
 
   get(key: string) {
@@ -58,5 +59,6 @@ export class CompileCache {
     fs.mkdirSync(path.dirname(filename), { recursive: true })
     fs.writeFileSync(filename, code)
     this.used.add(key)
+    return filename
   }
 }

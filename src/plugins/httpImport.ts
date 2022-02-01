@@ -11,7 +11,7 @@ export function rewriteHttpImports(
   logger: vite.Logger,
   skipJsImport?: boolean
 ): vite.Plugin {
-  const modulesId = path.join(runtimeDir, 'modules.ts')
+  const modulesId = path.join(runtimeDir, 'clientModules.ts')
 
   return {
     name: 'saus:rewriteHttpImports',

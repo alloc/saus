@@ -7,6 +7,7 @@ import { clientDir, runtimeDir } from '../bundle/constants'
 
 const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
 const serverRouteMapStubPath = path.join(runtimeDir, 'routes.ts')
+const coreRuntimePath = path.join(runtimeDir, 'core.ts')
 const routeMarker = '__sausRoute'
 
 /**
@@ -143,10 +144,8 @@ export function routesPlugin(
             let template = `export default {}`
             if (isServerMap) {
               template =
-                `import { ssrRequire } from "/@fs/${path.resolve(
-                  runtimeDir,
-                  '../ssrModules.ts'
-                )}"\n` + template
+                `import { ssrRequire } from "/@fs/${coreRuntimePath}"\n` +
+                template
             }
 
             const result = babel.transformSync(template, {

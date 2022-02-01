@@ -21,7 +21,5 @@ type Promisable<T> = T | Promise<T>
 
 // Ensure the "saus" property is required.
 export const defineConfig = vite.defineConfig as (
-  config:
-    | Promisable<UserConfig>
-    | ((env: vite.ConfigEnv) => Promisable<UserConfig>)
+  config: UserConfig | ((env: vite.ConfigEnv) => Promisable<UserConfig>)
 ) => vite.UserConfigExport

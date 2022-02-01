@@ -1,21 +1,28 @@
 import builtinModules from 'builtin-modules'
-import * as esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
+import kleur from 'kleur'
 import path from 'path'
-import { runtimeDir } from '../bundle/constants'
+import { SausContext } from '../core/context'
+import { vite } from '../core/vite'
 import { CompileCache } from '../utils/CompileCache'
-import { SausContext } from './context'
-import { vite } from './vite'
+import { runtimeDir } from './constants'
+import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
 
 const sausRoot = path.resolve(__dirname, '../src') + '/'
+
+const sausVersion = sausRoot.includes('/node_modules/')
+  ? require(path.resolve(sausRoot, '../package.json')).version
+  : require('child_process').execSync('git rev-list --no-merges -n 1 HEAD', {
+      cwd: path.dirname(sausRoot),
+    })
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
   'core/http.ts',
+  'bundle/runtime/clientModules.ts',
   'bundle/runtime/config.ts',
-  'bundle/runtime/functions.ts',
-  'bundle/runtime/modules.ts',
   'bundle/runtime/debugBase.ts',
+  'bundle/runtime/functions.ts',
 ]
 
 // These imports are handled by Rollup.
@@ -32,10 +39,11 @@ export async function preBundleSsrRuntime(
   ]
 
   const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
-  const cacheKeys = entries.map(cache.key)
+  const cacheKeys = entries.map(entry =>
+    cache.key(sausVersion, path.basename(entry, '.ts'))
+  )
 
   const loaded = cacheKeys.map(key => cache.get(key))
-  // const loaded = cacheKeys.map(key => null as string | null)
   if (!loaded.every(Boolean)) {
     const config = await context.resolveConfig('build', { plugins })
     const { pluginContainer } = await vite.createTransformContext(config)
@@ -53,7 +61,13 @@ export async function preBundleSsrRuntime(
           }
           const moduleId = path.relative(sausRoot, resolved.id)
           if (sausExternals.includes(moduleId)) {
-            return { path: `saus/src/${moduleId}`, external: true }
+            return {
+              path: path.relative(cache.path, resolved.id),
+              external: true,
+            }
+          }
+          return {
+            path: resolved.id,
           }
         })
       },
@@ -73,25 +87,26 @@ export async function preBundleSsrRuntime(
 
     await pluginContainer.close()
 
-    const external = new Set<string>()
     for (let i = 1; i < outputFiles.length; i += 2) {
+      const map = JSON.parse(outputFiles[i - 1].text) as SourceMap
+      resolveMapSources(map, cache.path)
+      delete map.sourcesContent
+
       const file = outputFiles[i]
-      for (const imp of esModuleLexer.parse(file.text)[0]) {
-        if (imp.n && imp.n[0] !== '.') {
-          external.add(imp.n)
-        }
-      }
+      const code = file.text + toInlineSourceMap(map)
+
       const entryIndex = Math.floor(i / 2)
       if (entryIndex < entries.length) {
         const cacheKey = cacheKeys[entryIndex]
-        cache.set(cacheKey, (loaded[entryIndex] = file.text))
+        cache.set(cacheKey, (loaded[entryIndex] = code))
       } else {
         const cacheKey = path.relative(cache.path, file.path)
-        cache.set(cacheKey, file.text)
+        cache.set(cacheKey, code)
       }
     }
   }
 
+  const cacheDir = cache.path + '/'
   return {
     name: 'saus:bundleSaus',
     enforce: 'pre',
@@ -100,7 +115,7 @@ export async function preBundleSsrRuntime(
         return
       }
       if (id[0] == '.') {
-        return path.resolve(cache.path, id)
+        return path.resolve(cacheDir, id)
       }
     },
     load(id) {
@@ -108,7 +123,7 @@ export async function preBundleSsrRuntime(
       if (entryIndex >= 0) {
         return loaded[entryIndex]
       }
-      const cacheKey = id.replace(cache.path + '/', '')
+      const cacheKey = id.replace(cacheDir, '')
       if (id !== cacheKey) {
         return cache.get(cacheKey)
       }

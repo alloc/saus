@@ -14,13 +14,11 @@ import {
   runtimeDir,
   stateCachePath,
 } from './bundle/constants'
+import { isolateRoutes } from './bundle/isolateRoutes'
 import { createModuleProvider } from './bundle/moduleProvider'
+import { resolveRouteImports } from './bundle/routeModules'
+import { preBundleSsrRuntime } from './bundle/runtimeBundle'
 import { resolveMapSources, SourceMap } from './bundle/sourceMap'
-import {
-  isolateRoutes,
-  resolveRouteImports,
-  RouteImports,
-} from './bundle/ssrRoutes'
 import type { ClientModuleMap } from './bundle/types'
 import {
   ClientFunction,
@@ -31,13 +29,17 @@ import {
   SausBundleConfig,
   SausContext,
 } from './core'
-import { preBundleSsrRuntime } from './core/preBundleSsrRuntime'
 import type { RuntimeConfig } from './core/config'
 import { loadContext } from './core/context'
+import { debug } from './core/debug'
 import { vite } from './core/vite'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
-import { redirectModule } from './plugins/redirectModule'
+import {
+  moduleRedirection,
+  overrideBareImport,
+  redirectModule,
+} from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
@@ -49,6 +51,7 @@ export interface BundleOptions {
   absoluteSources?: boolean
   isBuild?: boolean
   minify?: boolean
+  preferExternal?: boolean
 }
 
 export interface InlineBundleConfig
@@ -139,6 +142,14 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
   const { functions, functionImports, routeImports, runtimeConfig } =
     await prepareFunctions(context, options)
 
+  // Prepare these plugins in parallel with the client build.
+  const bundlePlugins = preBundleSsrRuntime(context, [
+    moduleRedirection(internalRedirects),
+  ]).then(async runtimeBundle => [
+    await isolateRoutes(context, routeImports, [runtimeBundle]),
+    runtimeBundle,
+  ])
+
   Profiling.mark('generate client modules')
   const { moduleMap, clientRouteMap } = await generateClientModules(
     functions,
@@ -153,10 +164,10 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
     context,
     options,
     runtimeConfig,
-    routeImports,
     functions,
     moduleMap,
-    clientRouteMap
+    clientRouteMap,
+    await bundlePlugins
   )
 
   const bundle = {
@@ -367,14 +378,34 @@ async function prepareFunctions(
   }
 }
 
+const internalRedirects = [
+  redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
+  redirectModule(
+    path.join(coreDir, 'global.ts'),
+    path.join(runtimeDir, 'global.ts')
+  ),
+  redirectModule(
+    path.join(coreDir, 'constants.ts'),
+    path.join(runtimeDir, 'constants.ts')
+  ),
+  redirectModule(
+    path.join(coreDir, 'runtimeConfig.ts'),
+    path.join(runtimeDir, 'config.ts')
+  ),
+  redirectModule(
+    path.join(clientDir, 'loadPageModule.ts'),
+    path.join(runtimeDir, 'loadPageModule.ts')
+  ),
+]
+
 async function generateSsrBundle(
   context: BundleContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
-  routeImports: RouteImports,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
-  clientRouteMap: Record<string, string>
+  clientRouteMap: Record<string, string>,
+  inlinePlugins: vite.PluginOption[]
 ) {
   const bundleConfig = context.bundle
   const modules = createModuleProvider()
@@ -385,7 +416,7 @@ async function generateSsrBundle(
   })
 
   modules.addModule({
-    id: path.join(runtimeDir, 'modules.ts'),
+    id: path.join(runtimeDir, 'clientModules.ts'),
     code: dataToEsm(moduleMap),
   })
 
@@ -424,43 +455,23 @@ async function generateSsrBundle(
     moduleSideEffects: 'no-treeshake',
   })
 
-  const internalRedirects = [
-    redirectModule(stateCachePath, path.join(runtimeDir, 'context.ts')),
-    redirectModule(
-      path.join(coreDir, 'global.ts'),
-      path.join(runtimeDir, 'global.ts')
-    ),
-    redirectModule(
-      path.join(coreDir, 'constants.ts'),
-      path.join(runtimeDir, 'constants.ts')
-    ),
-    redirectModule(
-      path.join(coreDir, 'runtimeConfig.ts'),
-      path.join(runtimeDir, 'config.ts')
-    ),
-    redirectModule(
-      path.join(clientDir, 'loadPageModule.ts'),
-      path.join(runtimeDir, 'loadPageModule.ts')
-    ),
-  ]
-
-  const bareRedirects: vite.PluginOption[] = [
-    redirectModule('saus', path.join(runtimeDir, 'index.ts')),
-    redirectModule('saus/core', path.join(runtimeDir, 'core.ts')),
-    redirectModule('saus/bundle', bundleId),
+  const moduleResolution: vite.PluginOption[] = [
+    overrideBareImport('saus', path.join(runtimeDir, 'index.ts')),
+    overrideBareImport('saus/core', path.join(runtimeDir, 'core.ts')),
+    overrideBareImport('saus/bundle', bundleId),
   ]
 
   // Avoid using Node built-ins for `get` function.
   const isWorker = bundleConfig.type == 'worker'
   if (isWorker) {
-    bareRedirects.push(
+    moduleResolution.push(
       redirectModule(
         path.join(coreDir, 'http.ts'),
         path.join(clientDir, 'http.ts')
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&
-        redirectModule('debug', path.join(runtimeDir, 'debug.ts'))
+        overrideBareImport('debug', path.join(runtimeDir, 'debug.ts'))
     )
   }
 
@@ -468,10 +479,12 @@ async function generateSsrBundle(
     ? path.dirname(bundleConfig.outFile)
     : context.root
 
+  const preferExternalPlugin =
+    (options.preferExternal || undefined) && preferExternal(context)
+
   const config = await context.resolveConfig('build', {
     plugins: [
-      await preBundleSsrRuntime(context, internalRedirects),
-      await isolateRoutes(routeImports, context),
+      ...inlinePlugins,
       routesPlugin(context.config.saus, clientRouteMap),
       debugForbiddenImports([
         'vite',
@@ -479,9 +492,9 @@ async function generateSsrBundle(
         './src/core/context.ts',
       ]),
       modules,
-      bareRedirects,
-      internalRedirects,
-      options.isBuild && preferExternal(context),
+      moduleResolution,
+      moduleRedirection(internalRedirects),
+      preferExternalPlugin,
       defineNodeConstants(),
       rewriteHttpImports(context.logger, isWorker),
       bundleConfig.entry &&
@@ -504,6 +517,24 @@ async function generateSsrBundle(
         },
         context: 'globalThis',
         makeAbsoluteExternalsRelative: false,
+        external:
+          preferExternalPlugin &&
+          ((id, _importer, isResolved) => {
+            if (!isResolved) return
+            if (!path.isAbsolute(id)) return
+            if (!fs.existsSync(id)) return
+            const { external, msg } = preferExternalPlugin.isExternal(id)
+            if (msg && !!process.env.DEBUG) {
+              const relativeId = path
+                .relative(context.root, id)
+                .replace(/^([^.])/, './$1')
+              debug(relativeId)
+              debug((external ? kleur.green : kleur.yellow)(`  ${msg}`))
+            }
+            if (external) {
+              return true
+            }
+          }),
       },
     },
   })
@@ -547,66 +578,96 @@ function defineNodeConstants(): vite.Plugin {
   }
 }
 
-function preferExternal(context: SausContext): vite.Plugin {
+type ExternalDictation = { external: boolean; msg?: string }
+type PreferExternal = vite.Plugin & {
+  isExternal(id: string): ExternalDictation
+}
+
+function preferExternal(context: SausContext): PreferExternal {
   const externalCache = new Map<string, boolean>()
   const cjsResolve = context.config.createResolver({
+    asSrc: false,
     isRequire: true,
     mainFields: ['main'],
-    extensions: ['cjs', 'js'],
+    extensions: ['.js', '.cjs'],
   })
+
+  function isExternal(id: string): ExternalDictation {
+    const isNodeModule = id.includes('/node_modules/')
+    if (!isNodeModule && id.startsWith(context.root + '/')) {
+      // Project files are resolved normally.
+      return { external: false }
+    }
+
+    // Ensure the resolved path is a CommonJS module,
+    // since the package might be ESM only.
+    if (!/\.c?js$/.test(id)) {
+      return { external: false }
+    }
+
+    let external = externalCache.get(id)
+    if (external !== undefined) {
+      return { external }
+    }
+
+    let result: ExternalDictation
+
+    // Modules using ESM syntax must be bundled.
+    const code = fs.readFileSync(id, 'utf8')
+    if (/^(im|ex)port /m.test(code)) {
+      result = { external: false, msg: 'is not commonjs' }
+    } else {
+      const pkgPath = findPackage(path.dirname(id))
+      if (!pkgPath) {
+        result = { external: false }
+      } else {
+        // Packages that depend on Saus must be bundled.
+        const pkg = require(pkgPath)
+        external = !(
+          'saus' in (pkg.dependencies || {}) ||
+          'saus' in (pkg.peerDependencies || {})
+        )
+        if (external) {
+          result = { external: true, msg: 'is external' }
+        } else {
+          result = { external: false, msg: 'depends on saus' }
+        }
+      }
+    }
+
+    externalCache.set(id, result.external)
+    return result
+  }
 
   return {
     name: 'saus:preferExternal',
     enforce: 'pre',
+    isExternal,
     async resolveId(id, importer) {
       if (importer && /^[\w@]/.test(id)) {
         if (builtinModules.includes(id)) {
           return { id, external: true }
         }
+        const log = (color: typeof kleur.blue, resultMsg: string) => {
+          debug(id + kleur.gray(` from ${importer}`))
+          debug(`  ${color(resultMsg)}`)
+        }
         let resolved: string | undefined
         try {
-          resolved = await cjsResolve(id, importer)
+          resolved = await cjsResolve(id, importer, undefined, true)
         } catch (e) {
-          debugger
+          log(kleur.red, (e as any).message)
           return null
         }
         if (!resolved) {
-          debugger
+          log(kleur.red, 'not found')
           return null
         }
-        const isNodeModule = resolved.includes('/node_modules/')
-        if (!isNodeModule && resolved.startsWith(context.root + '/')) {
-          // Project files are resolved normally.
-          return null
+        const { external, msg } = isExternal(resolved)
+        if (msg) {
+          log(external ? kleur.green : kleur.yellow, msg)
         }
-        // Ensure the resolved path is a CommonJS module,
-        // since the package might be ESM only.
-        if (/\.c?js$/.test(resolved)) {
-          let external = externalCache.get(resolved)
-          if (external !== undefined) {
-            return external ? { id: resolved, external: true } : null
-          }
-
-          // Modules using ESM syntax must be bundled.
-          const code = fs.readFileSync(resolved, 'utf8')
-          if (!/^(im|ex)port /m.test(code)) {
-            const pkgPath = findPackage(path.dirname(resolved))
-            if (pkgPath) {
-              const pkg = require(pkgPath)
-
-              // Modules that depend on Saus must be bundled.
-              external = !(
-                'saus' in (pkg.dependencies || {}) ||
-                'saus' in (pkg.peerDependencies || {})
-              )
-            }
-          }
-          // if (external) {
-          //   console.log('external: %O', resolved)
-          // }
-          externalCache.set(resolved, !!external)
-          return external ? { id: resolved, external } : null
-        }
+        return external ? { id: resolved, external: true } : null
       }
     },
   }
