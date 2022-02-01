@@ -1,7 +1,7 @@
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
-import { SausContext, vite } from '../core'
-import { getResolvedUrl } from '../utils/getResolvedUrl'
+import { getResolvedUrl } from '../../utils/getResolvedUrl'
+import { SausContext, vite } from '../index'
 
 export type RouteImports = Map<
   esModuleLexer.ImportSpecifier,

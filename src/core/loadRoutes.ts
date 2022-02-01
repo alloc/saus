@@ -7,14 +7,14 @@ import path from 'path'
 import vm from 'vm'
 import { getBabelProgram, getImportDeclarations } from '../babel'
 import { generateRequireCalls } from '../babel/generateRequireCalls'
+import { CompileCache } from '../utils/CompileCache'
+import { __importDefault, __importStar } from '../utils/esmInterop'
+import { esmExportsToCjs } from '../utils/esmToCjs'
 import {
   resolveMapSources,
   SourceMap,
   toInlineSourceMap,
-} from '../bundle/sourceMap'
-import { CompileCache } from '../utils/CompileCache'
-import { __importDefault, __importStar } from '../utils/esmInterop'
-import { esmExportsToCjs } from '../utils/esmToCjs'
+} from '../utils/sourceMap'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'

@@ -6,6 +6,6 @@ export const loadStateModule = (
   ...args: any[]
 ) =>
   loadClientState(cacheKey, async () => {
-    const imported = await import(`/${cacheKey}.js`)
+    const imported = await import(/* @vite-ignore */ `/${cacheKey}.js`)
     return imported.default
   })

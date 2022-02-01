@@ -26,14 +26,16 @@ import { dedupe } from '../../utils/dedupe'
 import { esmExportsToCjs } from '../../utils/esmToCjs'
 import { getResolvedUrl } from '../../utils/getResolvedUrl'
 import { plural } from '../../utils/plural'
+import {
+  resolveMapSources,
+  SourceMap,
+  toInlineSourceMap,
+} from '../../utils/sourceMap'
 import { debug } from '../debug'
 import {
   ClientFunction,
   extractClientFunctions,
-  resolveMapSources,
   SausContext,
-  SourceMap,
-  toInlineSourceMap,
   vite,
 } from '../index'
 import { RouteImports } from './routeModules'
