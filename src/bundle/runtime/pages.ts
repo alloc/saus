@@ -7,8 +7,8 @@ import { parseImports } from '../../utils/imports'
 import { isCSSRequest } from '../../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../../utils/modulePreload'
 import { ParsedUrl, parseUrl } from '../../utils/url'
-import { ssrClearCache, ssrRequire } from '../ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from '../types'
+import moduleMap from './clientModules'
 import config from './config'
 import { ssrRoutesId } from './constants'
 import { context } from './context'
@@ -17,8 +17,8 @@ import { injectDebugBase } from './debugBase'
 import functions from './functions'
 import { getModuleUrl } from './getModuleUrl'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
-import moduleMap from './modules'
 import { loadRenderers } from './render'
+import { ssrClearCache, ssrRequire } from './ssrModules'
 
 const getModule = (id: string) =>
   moduleMap[id] || Object.values(moduleMap).find(module => module.id == id)
@@ -98,6 +98,18 @@ export async function renderPage(
   // Preserve the debug base, but not the base base. Ha!
   const pagePath = pagePublicPath.replace(config.base, '/')
   const filename = getPageFilename(pagePath)
+
+  if (!page.html) {
+    const finishedPage: RenderedPage = {
+      id: filename,
+      html: '',
+      modules: new Set(),
+      assets: new Set(),
+      files: page.files,
+    }
+    renderFinish?.(pagePublicPath, null, finishedPage)
+    return finishedPage
+  }
 
   const seen = new Set<ClientModule>()
   const modules = new Set<ClientModule>()

@@ -331,13 +331,19 @@ export async function loadConfigHooks(
   return configHooks
 }
 
-function resetHookSources(module: NodeModule, configHooks: ConfigHookRef[]) {
-  let needsReset = false
-  if (configHooks.some(hook => hook.source == module.filename)) {
-    needsReset = true
+function resetHookSources(
+  module: NodeModule,
+  configHooks: ConfigHookRef[],
+  resetCache = new Map<NodeModule, boolean>()
+) {
+  let needsReset = resetCache.get(module)
+  if (needsReset !== undefined) {
+    return needsReset
   }
+  needsReset = configHooks.some(hook => hook.source == module.filename)
+  resetCache.set(module, needsReset)
   for (const child of module.children) {
-    if (resetHookSources(child, configHooks)) {
+    if (resetHookSources(child, configHooks, resetCache)) {
       needsReset = true
     }
   }

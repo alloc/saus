@@ -5,10 +5,10 @@ import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
 import { stateCachePath } from './bundle/constants'
-import { loadRoutes, RenderModule, SausContext } from './core'
+import { loadRoutes, SausContext } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
-import { setRenderModule, setRoutesModule } from './core/global'
+import { setRenderModule } from './core/global'
 import { clientPlugin } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
 import { renderPlugin } from './plugins/render'
@@ -199,12 +199,13 @@ async function startServer(
             oldConfigHooks
           )
 
+          const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
+          const newConfigPaths = newConfigHooks.map(ref => ref.path)
+
           // Were the imports of any config providers added or removed?
           const needsRestart =
-            oldConfigHooks.some(
-              file => file && !newConfigHooks.includes(file)
-            ) ||
-            newConfigHooks.some(file => file && !oldConfigHooks.includes(file))
+            oldConfigPaths.some(file => !newConfigPaths.includes(file)) ||
+            newConfigPaths.some(file => !oldConfigPaths.includes(file))
 
           if (needsRestart) {
             return events.emit('restart')

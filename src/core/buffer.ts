@@ -1,7 +1,7 @@
-import type { Buffer as IBuffer } from '../client/Buffer'
+import type { Buffer } from '../client/Buffer'
 
-declare class Buffer extends IBuffer {}
-export { Buffer }
+export const NodeBuffer = globalThis.Buffer
+export { NodeBuffer as Buffer }
 
 export type UnwrapBuffer<T> = T extends ArrayBuffer | Buffer
   ? globalThis.Buffer

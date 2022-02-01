@@ -6,6 +6,7 @@ import path from 'path'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle, loadBundleContext } from './bundle'
+import { toInlineSourceMap } from './bundle/sourceMap'
 import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
@@ -32,11 +33,14 @@ export async function build(options: BuildOptions) {
   await loadBuildRoutes(context)
 
   const { code, map } = await bundle(
-    { isBuild: true, absoluteSources: true },
+    { isBuild: true, absoluteSources: true, preferExternal: true },
     context
   )
 
-  context.compileCache.set('bundle.js', code)
+  const filename = context.compileCache.set(
+    'bundle.js',
+    code + (map ? toInlineSourceMap(map) : '')
+  )
 
   let pageCount = 0
   let renderCount = 0
@@ -62,7 +66,7 @@ export async function build(options: BuildOptions) {
 
   const worker = new WorkerPool({
     filename: path.resolve(__dirname, 'build/worker.js'),
-    workerData: { code, map },
+    workerData: { code, map, filename },
     maxThreads: options.maxWorkers,
     idleTimeout: 2000,
   }) as BuildWorker

@@ -1,5 +1,5 @@
 export { default as config } from '../src/bundle/runtime/config'
-export { default as moduleMap } from '../src/bundle/runtime/modules'
+export { default as moduleMap } from '../src/bundle/runtime/clientModules'
 export { default, getModuleUrl } from '../src/bundle/types'
 export { getKnownPaths } from '../src/bundle/runtime/paths'
 export * from '../src/bundle/types'

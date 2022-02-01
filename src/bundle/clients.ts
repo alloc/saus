@@ -15,7 +15,11 @@ import {
 import { transformClientState } from '../plugins/clientState'
 import { debugForbiddenImports } from '../plugins/debug'
 import { rewriteHttpImports } from '../plugins/httpImport'
-import { redirectModule } from '../plugins/redirectModule'
+import {
+  moduleRedirection,
+  overrideBareImport,
+  redirectModule,
+} from '../plugins/moduleRedirection'
 import { routesPlugin } from '../plugins/routes'
 import { findPackage } from '../utils/findPackage'
 import { parseImports } from '../utils/imports'
@@ -145,19 +149,21 @@ export async function generateClientModules(
         './src/core/index.ts',
         './src/core/context.ts',
       ]),
-      routesPlugin(config.saus, clientRouteMap),
-      redirectModule('debug', path.join(runtimeDir, 'debug.ts')),
-      rewriteHttpImports(context.logger, true),
-      redirectModule(
-        path.join(coreDir, 'buffer.ts'),
-        path.join(clientDir, 'buffer.ts')
-      ),
-      redirectModule(
-        path.join(coreDir, 'http.ts'),
-        path.join(clientDir, 'http.ts')
-      ),
       modules,
+      moduleRedirection([
+        overrideBareImport('debug', path.join(runtimeDir, 'debug.ts')),
+        redirectModule(
+          path.join(coreDir, 'buffer.ts'),
+          path.join(clientDir, 'buffer.ts')
+        ),
+        redirectModule(
+          path.join(coreDir, 'http.ts'),
+          path.join(clientDir, 'http.ts')
+        ),
+      ]),
+      routesPlugin(config.saus, clientRouteMap),
       fixChunkImports(removedImports),
+      rewriteHttpImports(context.logger, true),
       transformClientState(),
     ],
     css: {

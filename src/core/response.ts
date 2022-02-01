@@ -1,4 +1,4 @@
-import type { Buffer } from './buffer'
+import type { Buffer } from '../client/buffer'
 
 export type Headers = Record<string, string | string[] | undefined>
 

@@ -10,7 +10,11 @@ export interface BuildWorker extends Worker {
   run(pageUrl: string): Promise<RenderedPage | null>
 }
 
-const { code, map } = workerData as { code: string; map: SourceMap }
+const { code, map, filename } = (workerData || (global as any).workerData) as {
+  code: string
+  map: SourceMap
+  filename: string
+}
 
 const onError = (error: any) => {
   if (error && error.stack) {
@@ -37,7 +41,7 @@ try {
         code +
         '\n})' +
         toInlineSourceMap(map),
-      { filename: 'bundle.js' }
+      { filename }
     )
 
   initialize(bundle, require)

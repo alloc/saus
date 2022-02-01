@@ -1,5 +1,5 @@
 export { printFiles, writePages } from '../../build/write'
 export { getModuleUrl } from './getModuleUrl'
-export { default as moduleMap } from './modules'
+export { default as moduleMap } from './clientModules'
 export { renderPage as default } from './pages'
 export { getKnownPaths } from './paths'

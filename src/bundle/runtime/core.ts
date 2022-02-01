@@ -15,5 +15,8 @@ export const defineClient = (x: any) => x
 // Ignore config hooks in SSR bundle.
 export const addConfigHook = () => {}
 
+// These are needed for isolated routes.
+export { __d, ssrRequire } from './ssrModules'
+export { addRenderers } from './render'
+
 export * from '../../core/api'
-export const Buffer = globalThis.Buffer

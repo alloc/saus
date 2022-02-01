@@ -1,9 +1,9 @@
 import { generateRoutePaths } from '../../core/routes'
 import { getPagePath } from '../../utils/getPagePath'
-import { ssrRequire } from '../ssrModules'
 import config from './config'
 import { ssrRoutesId } from './constants'
 import { context } from './context'
+import { ssrRequire } from './ssrModules'
 
 const { logger } = context
 const debugBase =

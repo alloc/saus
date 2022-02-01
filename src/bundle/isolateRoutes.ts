@@ -1,7 +1,5 @@
 import { createFilter } from '@rollup/pluginutils'
-import createDebug from 'debug'
 import endent from 'endent'
-import esModuleLexer from 'es-module-lexer'
 import * as esbuild from 'esbuild'
 import escalade from 'escalade/sync'
 import fs from 'fs'
@@ -25,62 +23,29 @@ import {
   SausContext,
   vite,
 } from '../core'
+import { debug } from '../core/debug'
 import { dedupe } from '../utils/dedupe'
 import { esmExportsToCjs } from '../utils/esmToCjs'
+import { getResolvedUrl } from '../utils/getResolvedUrl'
 import { plural } from '../utils/plural'
-import { runtimeDir } from './constants'
 import { createModuleProvider, ModuleProvider } from './moduleProvider'
+import { RouteImports } from './routeModules'
 import { ssrRoutesId } from './runtime/constants'
 import { resolveMapSources, SourceMap, toInlineSourceMap } from './sourceMap'
-
-const debug = createDebug('saus:ssr')
-
-export type RouteImports = Map<
-  esModuleLexer.ImportSpecifier,
-  { file: string; url: string }
->
-
-export async function resolveRouteImports(
-  { root, routesPath }: SausContext,
-  pluginContainer: vite.PluginContainer
-): Promise<RouteImports> {
-  const routeImports: RouteImports = new Map()
-
-  const code = fs.readFileSync(routesPath, 'utf8')
-  for (const imp of esModuleLexer.parse(code, routesPath)[0]) {
-    if (imp.d >= 0) {
-      const resolved = await pluginContainer.resolveId(imp.n!, routesPath)
-      if (resolved && !resolved.external) {
-        routeImports.set(imp, {
-          file: resolved.id,
-          url: getResolvedUrl(root, resolved.id),
-        })
-      }
-    }
-  }
-
-  return routeImports
-}
-
-function getResolvedUrl(root: string, resolvedId: string) {
-  if (resolvedId[0] === '\0' || resolvedId.startsWith('/@fs/')) {
-    return resolvedId
-  }
-  const relativeId = relative(root, resolvedId)
-  if (!relativeId.startsWith('..')) {
-    return '/' + relativeId
-  }
-  return '/@fs/' + resolvedId
-}
-
-const ssrModulesUrl = '/@fs/' + resolve(runtimeDir, '../ssrModules.ts')
 
 export const toBundleChunkId = (id: string) =>
   id.replace(/\.[^.]+$/, '.bundle.js')
 
+/**
+ * Wrap modules with a runtime module system, so separate instances of each
+ * module can be created for each rendered page. This removes the need for
+ * manual SSR cleanup of global state. In the future, it will also be used
+ * for route-specific bundles.
+ */
 export async function isolateRoutes(
+  context: SausContext,
   routeImports: RouteImports,
-  context: SausContext
+  inlinePlugins: vite.Plugin[]
 ): Promise<vite.Plugin> {
   const { config } = context
   const modules = createModuleProvider()
@@ -90,6 +55,7 @@ export async function isolateRoutes(
     plugins: [
       modules,
       rewriteRouteImports(context.routesPath, routeImports),
+      ...inlinePlugins,
       ...config.plugins.filter(p => {
         // CommonJS modules are externalized, so this plugin is just overhead.
         return p.name !== 'commonjs'
@@ -120,7 +86,7 @@ export async function isolateRoutes(
     config
   )
 
-  const sausExternalRE = /\bsaus(?!.*\/(runtime|examples))\b/
+  const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
   const bareImportRE = /^[\w@]/
 
@@ -193,7 +159,6 @@ export async function isolateRoutes(
         )
         if (resolved) {
           if (resolved.id == '__vite-browser-external') {
-            debug('Externalized %O due to %O', path, resolved.id)
             return { path, external: true }
           }
 
@@ -393,7 +358,7 @@ export async function isolateRoutes(
     } else {
       let ssrId = url
       esmExportsToCjs(program, editor, `await ssrRequire`)
-      editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
+      editor.prepend(`import { __d, ssrRequire } from "saus/core"\n`)
       editor.append('\n})')
       if (url == routesUrl) {
         const routeModulePaths = new Set(
@@ -497,7 +462,7 @@ export async function isolateRoutes(
       editor.prepend(`const cjsRequire = id => require(id)\n`)
     }
     editor.prepend(esmImports.join(''))
-    editor.prepend(`import { __d, ssrRequire } from "${ssrModulesUrl}"\n`)
+    editor.prepend(`import { __d, ssrRequire } from "saus/core"\n`)
     editor.prependRight(0, `__d("${ssrId}", async (exports, module) => {\n`)
     editor.append(`\n})`)
 
@@ -649,8 +614,7 @@ function isolateRenderers(
   modules.addModule({
     id: getResolvedUrl(config.root, virtualRenderPath),
     code: endent`
-      import { ssrRequire } from "${ssrModulesUrl}"
-      import { addRenderers } from "/@fs/${resolve(runtimeDir, 'render.ts')}"
+      import { addRenderers, ssrRequire } from "saus/core"
 
       addRenderers([
         ${rendererList.join('\n')}
