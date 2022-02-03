@@ -1,6 +1,6 @@
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
-import { getResolvedUrl } from '../../utils/getResolvedUrl'
+import { toDevPath } from '../../utils/toDevPath'
 import { SausContext, vite } from '../index'
 
 export type RouteImports = Map<
@@ -24,7 +24,7 @@ export async function resolveRouteImports(
       if (resolved && !resolved.external) {
         routeImports.set(imp, {
           file: resolved.id,
-          url: getResolvedUrl(root, resolved.id),
+          url: toDevPath(resolved.id, root),
         })
       }
     }

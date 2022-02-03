@@ -6,12 +6,15 @@ importers:
     specifiers:
       '@alloc/fast-rimraf': ^1.0.8
       '@alloc/prettier-config': ^1.0.0
+      '@babel/code-frame': ^7.16.7
       '@babel/core': ^7.16.7
       '@babel/helper-annotate-as-pure': ^7.15.4
       '@babel/plugin-syntax-typescript': ^7.14.5
       '@cush/relative': ^1.0.0
       '@rollup/pluginutils': ^4.1.2
       '@saus/html': '*'
+      '@types/babel__code-frame': ^7.0.3
+      '@types/convert-source-map': ^1.5.2
       '@types/debug': ^4.1.7
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
@@ -21,8 +24,10 @@ importers:
       builtin-modules: ^3.2.0
       cac: ^6.7.3
       caller-path: ^3.0.1
+      callsites: ^3.0.0
       catch-exit: ^1.2.2
       chokidar: ^3.5.2
+      convert-source-map: ^1.8.0
       debug: ^4.3.2
       elaps: ^2.4.0
       endent: ^2.1.0
@@ -50,11 +55,14 @@ importers:
       vite: npm:@alloc/vite@2.6.3-3
       vitest: '*'
     dependencies:
+      '@babel/code-frame': 7.16.7
       '@babel/core': 7.16.7
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.16.7
       '@cush/relative': 1.0.0
       '@saus/html': link:packages/html
       cac: 6.7.3
+      callsites: 3.1.0
+      convert-source-map: 1.8.0
       endent: 2.1.0
       es-module-lexer: 0.9.3
       esbuild: 0.14.15
@@ -69,6 +77,8 @@ importers:
       '@alloc/prettier-config': 1.0.0
       '@babel/helper-annotate-as-pure': 7.15.4
       '@rollup/pluginutils': 4.1.2
+      '@types/babel__code-frame': 7.0.3
+      '@types/convert-source-map': 1.5.2
       '@types/debug': 4.1.7
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
@@ -747,6 +757,10 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
+  /@types/babel__code-frame/7.0.3:
+    resolution: {integrity: sha512-2TN6oiwtNjOezilFVl77zwdNPwQWaDBBCCWWxyo1ctiO3vAtd7H/aB/CBJdw9+kqq3+latD0SXoedIuHySSZWw==}
+    dev: true
+
   /@types/babel__core/7.1.16:
     resolution: {integrity: sha512-EAEHtisTMM+KaKwfWdC3oyllIqswlznXCIVCt7/oRNrh+DhgT4UEBNC/jlADNjvw7UnfbcdkGQcPVZ1xYiLcrQ==}
     dependencies:
@@ -784,6 +798,10 @@ packages:
 
   /@types/chai/4.3.0:
     resolution: {integrity: sha512-/ceqdqeRraGolFTcfoXNiqjyQhZzbINDngeoAq9GoHa8PPK1yNzTaxWjA6BFWp5Ua9JpXEMSS4s5i9tS0hOJtw==}
+    dev: true
+
+  /@types/convert-source-map/1.5.2:
+    resolution: {integrity: sha512-tHs++ZeXer40kCF2JpE51Hg7t4HPa18B1b1Dzy96S0eCw8QKECNMYMfwa1edK/x8yCN0r4e6ewvLcc5CsVGkdg==}
     dev: true
 
   /@types/debug/4.1.7:
@@ -2958,8 +2976,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /pirates/4.0.4:
-    resolution: {integrity: sha512-ZIrVPH+A52Dw84R0L3/VS9Op04PuQ2SEoJL6bkshmiTic/HldyW9Tf7oH5mhJZBK7NmDx27vSMrYEXPXclpDKw==}
+  /pirates/4.0.5:
+    resolution: {integrity: sha512-8V9+HQPupnaXMA23c5hvl69zXvTwTzyAYasnkb0Tts4XvO4CliqONMOnvlq26rkhLC3nWDFBJf73LU1e1VZLaQ==}
     engines: {node: '>= 6'}
     dev: true
 
@@ -3421,7 +3439,7 @@ packages:
       glob: 7.1.6
       lines-and-columns: 1.2.4
       mz: 2.7.0
-      pirates: 4.0.4
+      pirates: 4.0.5
       ts-interface-checker: 0.1.13
     dev: true
 

@@ -8,29 +8,21 @@ import MagicString from 'magic-string'
 import md5Hex from 'md5-hex'
 import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
-import {
-  babel,
-  getBabelProgram,
-  getImportDeclarations,
-  resolveReferences,
-  t,
-} from '../../babel'
-import { generateRequireCalls } from '../../babel/generateRequireCalls'
-import { hoistImports } from '../../babel/hoistImports'
+import { babel, resolveReferences, t } from '../../babel'
 import { ssrRoutesId } from '../../bundle/constants'
 import {
   createModuleProvider,
   ModuleProvider,
 } from '../../plugins/moduleProvider'
 import { dedupe } from '../../utils/dedupe'
-import { esmExportsToCjs } from '../../utils/esmToCjs'
-import { getResolvedUrl } from '../../utils/getResolvedUrl'
 import { plural } from '../../utils/plural'
 import {
   resolveMapSources,
   SourceMap,
   toInlineSourceMap,
 } from '../../utils/sourceMap'
+import { toDevPath } from '../../utils/toDevPath'
+import { compileEsm, requireAsyncId } from '../../vm/compileEsm'
 import { debug } from '../debug'
 import {
   ClientFunction,
@@ -38,6 +30,7 @@ import {
   SausContext,
   vite,
 } from '../index'
+import { getViteTransform } from '../viteTransform'
 import { RouteImports } from './routeModules'
 
 export const toBundleChunkId = (id: string) =>
@@ -57,7 +50,7 @@ export async function isolateRoutes(
   const { config } = context
   const modules = createModuleProvider()
 
-  const [transform, { pluginContainer }] = await getBuildTransform({
+  const { transform, pluginContainer } = await getViteTransform({
     ...config,
     plugins: [
       modules,
@@ -85,9 +78,12 @@ export async function isolateRoutes(
   await pluginContainer.buildStart({})
 
   const virtualRenderPath = resolve(config.root, '.saus/render.js')
+  const rendererModule = await transform(
+    toDevPath(context.renderPath, config.root, true)
+  )
   const rendererMap = isolateRenderers(
     context.renderPath,
-    (await transform(getResolvedUrl(config.root, context.renderPath))) as any,
+    rendererModule as any,
     virtualRenderPath,
     modules,
     config
@@ -232,11 +228,8 @@ export async function isolateRoutes(
         return loadModule(args)
       })
 
-      async function loadModule({
-        path,
-      }: esbuild.OnLoadArgs): Promise<esbuild.OnLoadResult | null | undefined> {
-        const url = getResolvedUrl(config.root, path)
-        const transformed = await transform(url)
+      async function loadModule({ path }: esbuild.OnLoadArgs) {
+        const transformed = await transform(toDevPath(path, config.root, true))
         if (transformed) {
           let { code, map } = transformed as OutputChunk
           if (map) {
@@ -247,7 +240,7 @@ export async function isolateRoutes(
           }
           return {
             contents: code,
-            loader: 'js',
+            loader: 'js' as const,
           }
         }
       }
@@ -288,8 +281,8 @@ export async function isolateRoutes(
 
   task.finish(`${plural(routeEntryPoints.length, 'route')} bundled.`)
 
-  const routesUrl = getResolvedUrl(config.root, context.routesPath)
-  const rendererUrl = getResolvedUrl(config.root, virtualRenderPath)
+  const routesUrl = toDevPath(context.routesPath, config.root)
+  const rendererUrl = toDevPath(virtualRenderPath, config.root)
 
   const entryUrlToFileMap: Record<string, string> = {
     [rendererUrl]: context.renderPath,
@@ -329,33 +322,33 @@ export async function isolateRoutes(
     }
   }
 
-  const isolateSsrModule = (code: string, id: string) => {
-    const editor = new MagicString(code)
-    const program = getBabelProgram(code, id)
-    const imports = getImportDeclarations(program)
-    const lastImport = hoistImports(imports, editor)
-    const lastImportEnd = lastImport ? lastImport.node.end! + 1 : 0
+  const isolateSsrModule = async (code: string, id: string) => {
+    const hoistedImports = new Set<string>()
+    const esmHelpers = new Set<Function>()
 
-    const requireCalls: string[] = []
-    for (const { node } of imports) {
-      let source = node.source.value
-      if (relativePathRE.test(source)) {
-        source = source.replace(relativePathRE, '.saus/')
-        rewriteSsrImport(source, source, node, requireCalls, editor)
-      } else {
-        const unresolvedId = isolatedCjsModules.get(source)
-        if (unresolvedId) {
-          rewriteSsrImport(
-            source,
-            unresolvedId,
-            node,
-            requireCalls,
-            editor,
-            true
-          )
+    const editor = await compileEsm({
+      code,
+      filename: id,
+      keepImportMeta: true,
+      esmHelpers,
+      resolveId(id) {
+        if (relativePathRE.test(id)) {
+          id = id.replace(relativePathRE, '.saus/')
+          hoistedImports.add(id)
+          return id
         }
-      }
+        const unresolvedId = isolatedCjsModules.get(id)
+        if (unresolvedId) {
+          hoistedImports.add(unresolvedId)
+        }
+      },
+    })
+
+    for (const id of hoistedImports) {
+      editor.prepend(`import "${id}"\n`)
     }
+
+    const esmHelperIds = Array.from(esmHelpers, f => f.name)
 
     let url = bundleToEntryMap[id] || id
     if (url == rendererUrl) {
@@ -364,9 +357,6 @@ export async function isolateRoutes(
       }
     } else {
       let ssrId = url
-      esmExportsToCjs(program, editor, `await ssrRequire`)
-      editor.prepend(`import { __d, ssrRequire } from "saus/core"\n`)
-      editor.append('\n})')
       if (url == routesUrl) {
         const routeModulePaths = new Set(
           Array.from(routeImports.values(), resolved => resolved.file)
@@ -376,10 +366,13 @@ export async function isolateRoutes(
         }
         ssrId = ssrRoutesId
       }
-      editor.appendRight(
-        lastImportEnd,
-        `__d("${ssrId}", async (exports) => {\n` + requireCalls.join('')
-      )
+      esmHelperIds.unshift(`__d`)
+      editor.appendRight(0, `__d("${ssrId}", async (exports) => {\n`)
+      editor.append('\n})')
+    }
+
+    if (esmHelperIds.length) {
+      editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
     }
 
     return {
@@ -435,7 +428,7 @@ export async function isolateRoutes(
         editor.overwrite(
           calleePath.node.start!,
           calleePath.node.end!,
-          `await ssrRequire`
+          `await __requireAsync`
         )
 
         const importer = id
@@ -469,7 +462,7 @@ export async function isolateRoutes(
       editor.prepend(`const cjsRequire = id => require(id)\n`)
     }
     editor.prepend(esmImports.join(''))
-    editor.prepend(`import { __d, ssrRequire } from "saus/core"\n`)
+    editor.prepend(`import { __d, __requireAsync } from "saus/core"\n`)
     editor.prependRight(0, `__d("${ssrId}", async (exports, module) => {\n`)
     editor.append(`\n})`)
 
@@ -519,36 +512,7 @@ export async function isolateRoutes(
   }
 }
 
-async function getBuildTransform(config: vite.ResolvedConfig) {
-  const context = await vite.createTransformContext(config, false)
-  return [vite.createTransformer(context), context] as const
-}
-
 const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
-
-function rewriteSsrImport(
-  importSource: string,
-  requireSource: string,
-  node: t.ImportDeclaration,
-  requireCalls: string[],
-  editor: MagicString,
-  isCommonJS?: boolean
-) {
-  generateRequireCalls(
-    node,
-    'ssrRequire',
-    requireCalls,
-    requireSource,
-    isCommonJS ? 'cjs' : 'esm'
-  )
-
-  // Rewrite the import source, so `sharedModules` is accessed properly.
-  editor.overwrite(node.source.start!, node.source.end!, `"${importSource}"`)
-
-  // Remove import specifiers, since we only need the side effect
-  // of the `__d` call to enable access via `require` function.
-  editor.remove(node.start! + 'import '.length, node.source.start!)
-}
 
 function rewriteRouteImports(
   routesPath: string,
@@ -562,7 +526,7 @@ function rewriteRouteImports(
         const editor = new MagicString(code)
         for (const [imp, resolved] of routeImports.entries()) {
           editor.overwrite(imp.s + 1, imp.e - 1, resolved.url)
-          editor.overwrite(imp.d, imp.d + 6, 'ssrRequire')
+          editor.overwrite(imp.d, imp.d + 6, requireAsyncId)
         }
         return {
           code: editor.toString(),
@@ -607,7 +571,7 @@ function isolateRenderers(
       const chunkPath = renderPath.replace(/\.[^.]+$/, `.${hash}.js`)
       rendererMap[chunkPath] = chunk
       modules.addModule({
-        id: getResolvedUrl(config.root, chunkPath),
+        id: toDevPath(chunkPath, config.root, true),
         ...chunk,
       })
 
@@ -619,7 +583,7 @@ function isolateRenderers(
   }
 
   modules.addModule({
-    id: getResolvedUrl(config.root, virtualRenderPath),
+    id: toDevPath(virtualRenderPath, config.root),
     code: endent`
       import { addRenderers, ssrRequire } from "saus/core"
 

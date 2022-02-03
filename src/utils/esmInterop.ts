@@ -1,14 +1,45 @@
-/** Runtime `import *` for compiled ESM. */
+/** Runtime `import *` emulation. */
 export function __importStar(exports: any) {
-  if (exports && exports.__esModule && 'default' in exports) {
-    exports = Object.assign({}, exports)
-    delete exports.default
-    return exports
+  if (exports && exports.__esModule) {
+    return new Proxy(exports, {
+      get(_, key: string) {
+        if (key !== 'default') {
+          return exports[key]
+        }
+      },
+    })
   }
   return exports
 }
 
-/** Runtime `default` export unwrapping. */
+/** Runtime `default` export boxing. */
 export function __importDefault(exports: any) {
-  return exports && exports.__esModule ? exports.default : exports
+  if (exports && exports.__esModule) {
+    return exports
+  }
+  return { default: exports }
+}
+
+/** Runtime `export *` emulation. */
+export function __exportAll(exports: any, imported: Record<string, any>) {
+  for (const key in imported) {
+    if (key !== 'default') {
+      Object.defineProperty(exports, key, {
+        enumerable: true,
+        configurable: true,
+        get() {
+          return imported[key]
+        },
+      })
+    }
+  }
+}
+
+/** Runtime `export let` emulation. */
+export function __exportLet(exports: any, key: string, get: () => any) {
+  Object.defineProperty(exports, key, {
+    get,
+    enumerable: true,
+    configurable: true,
+  })
 }

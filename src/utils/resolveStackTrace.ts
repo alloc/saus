@@ -1,35 +1,106 @@
-import { SourceMap } from '../bundle/sourceMap'
+import callsites from 'callsites'
 import { SourceMapConsumer } from 'source-map'
+import { SourceMap } from './sourceMap'
 
 const stackFrameRE = /^ {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?)\)?/
 
-export function resolveStackTrace(stack: string, code: string, map: SourceMap) {
-  const newStack: string[] = []
-  const consumer = new SourceMapConsumer(map as any)
+export type StackTrace = {
+  header: string
+  frames: StackFrame[]
+}
 
-  for (const line of stack.split('\n')) {
-    const match = stackFrameRE.exec(line)
-    if (!match) {
-      newStack.push(line)
-      continue
-    }
+export type StackFrame = {
+  text: string
+  file: string
+  line: number
+  column: number
+}
 
-    const traced = consumer.originalPositionFor({
-      line: Number(match[3]),
-      column: match[4] ? Number(match[4]) - 1 : 0,
-    })
+export function getStackFrame(depth: number): StackFrame | undefined {
+  const callStack = callsites().filter(callsite => {
+    const fileName = callsite.getFileName()
+    return !!fileName && !fileName.startsWith('node:')
+  })
+  const callsite = callStack[depth]
+  if (!callsite) {
+    return
+  }
+  const file = callsite.getFileName()
+  if (!file) {
+    return
+  }
+  const func = callsite.getFunctionName()
+  const line = callsite.getLineNumber() || 1
+  const column = callsite.getColumnNumber() || 1
 
-    if (!traced.source) {
-      newStack.push(line)
-      continue
-    }
-
-    newStack.push(
-      line
-        .replace(match[2], traced.source)
-        .replace(/:\d+(:\d+)?/, ':' + traced.line + ':' + (traced.column + 1))
-    )
+  let source = file + (line ? ':' + line : '') + (column ? ':' + column : '')
+  if (func) {
+    source = `${func} (${source})`
   }
 
-  return newStack.join('\n')
+  return {
+    text: `    at ${source}`,
+    file,
+    line,
+    column,
+  }
+}
+
+export function parseStackTrace(stack: string): StackTrace {
+  const header: string[] = []
+  const frames: StackFrame[] = []
+  for (const text of stack.split('\n')) {
+    const match = stackFrameRE.exec(text)
+    if (match) {
+      frames.push({
+        text,
+        file: match[2],
+        line: Number(match[3]),
+        column: match[4] ? Number(match[4]) - 1 : 0,
+      })
+    } else if (!frames.length) {
+      header.push(text)
+    }
+  }
+  return {
+    header: header.join('\n'),
+    frames,
+  }
+}
+
+const consumers = new WeakMap<SourceMap, SourceMapConsumer>()
+
+export function traceStackFrame(frame: StackFrame, map: SourceMap) {
+  let consumer = consumers.get(map)
+  if (!consumer) {
+    consumer = new SourceMapConsumer(map as any)
+    consumers.set(map, consumer)
+  }
+  let traced = consumer.originalPositionFor(frame)
+  if (!traced.source) {
+    traced = {
+      source: (consumer as any).sources[0],
+      line: frame.line,
+      column: 0,
+    }
+  }
+  if (traced.source) {
+    frame.line = traced.line
+    frame.column = traced.column + 1
+    frame.text = frame.text
+      .replace(frame.file, (frame.file = traced.source))
+      .replace(/:\d+(:\d+)?/, ':' + frame.line + ':' + frame.column)
+  }
+  return frame
+}
+
+export function resolveStackTrace(stack: string, code: string, map: SourceMap) {
+  const parsed = parseStackTrace(stack)
+  const lines = [parsed.header]
+  for (const frame of parsed.frames) {
+    traceStackFrame(frame, map)
+    lines.push(frame.text)
+  }
+
+  return lines.join('\n')
 }

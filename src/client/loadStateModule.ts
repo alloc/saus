@@ -1,3 +1,4 @@
+// Overrides "src/core/loadStateModule.ts" module in client builds
 import { loadClientState } from './state'
 
 export const loadStateModule = (

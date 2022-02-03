@@ -1,6 +1,8 @@
 import type { Buffer } from '../client/Buffer'
 
-export const NodeBuffer = globalThis.Buffer
+// In a Node environment, use the built-in Buffer class.
+declare const globalThis: any
+const NodeBuffer = globalThis.Buffer
 export { NodeBuffer as Buffer }
 
 export type UnwrapBuffer<T> = T extends ArrayBuffer | Buffer

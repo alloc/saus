@@ -1,9 +1,9 @@
 import Module from 'module'
 import * as vite from 'vite'
-import { PublicFile } from '../plugins/publicDir'
-import { ModuleProvider } from '../bundle/moduleProvider'
-import { SourceMap } from '../bundle/sourceMap'
 import { RenderedPage } from '../bundle/types'
+import { ModuleProvider } from '../plugins/moduleProvider'
+import { PublicFile } from '../plugins/publicDir'
+import { SourceMap } from '../utils/sourceMap'
 import { ClientDescription } from './client'
 import { SausContext } from './context'
 

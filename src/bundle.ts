@@ -29,6 +29,7 @@ import type { RuntimeConfig } from './core/config'
 import { debug } from './core/debug'
 import { bundleDir, clientDir, coreDir } from './core/paths'
 import { vite } from './core/vite'
+import { getViteTransform } from './core/viteTransform'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
 import { createModuleProvider } from './plugins/moduleProvider'
@@ -42,6 +43,7 @@ import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
 import { findPackage } from './utils/findPackage'
 import { parseImports, serializeImports } from './utils/imports'
+import { relativeToCwd } from './utils/relativeToCwd'
 import { resolveMapSources, SourceMap } from './utils/sourceMap'
 
 export interface BundleOptions {
@@ -53,7 +55,7 @@ export interface BundleOptions {
 
 export async function bundle(options: BundleOptions, context: BundleContext) {
   const { functions, functionImports, routeImports, runtimeConfig } =
-    await prepareFunctions(context, options)
+    await prepareFunctions(context)
 
   // Prepare these plugins in parallel with the client build.
   const bundlePlugins = preBundleSsrRuntime(context, [
@@ -116,15 +118,7 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
   return bundle
 }
 
-async function getBuildTransform(config: vite.ResolvedConfig) {
-  const context = await vite.createTransformContext(config, false)
-  return [vite.createTransformer(context), context] as const
-}
-
-async function prepareFunctions(
-  context: BundleContext,
-  options: BundleOptions
-) {
+async function prepareFunctions(context: BundleContext) {
   const { root, renderPath, config } = context
 
   Profiling.mark('parse render functions')
@@ -135,7 +129,7 @@ async function prepareFunctions(
   const functionModules = createModuleProvider()
   const functionImports: { [stmt: string]: ClientImport } = {}
 
-  const [transform, { pluginContainer }] = await getBuildTransform({
+  const { transform, pluginContainer } = await getViteTransform({
     ...config,
     plugins: [functionModules, ...config.plugins],
   })
@@ -609,11 +603,6 @@ const serializeClientFunction = (func: ClientFunction) => ({
   route: func.route,
   ...func.transformResult,
 })
-
-function relativeToCwd(file: string) {
-  file = path.relative(process.cwd(), file)
-  return file.startsWith('../') ? file : './' + file
-}
 
 // Technically, top-level await is available since Node 14.8 but Esbuild
 // complains when this feature is used with a "node14" target environment.

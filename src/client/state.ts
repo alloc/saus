@@ -1,11 +1,11 @@
-import type { ClientState, StateModule } from '../core'
+import type { ClientState } from '../core'
 import { withCache } from '../core/withCache'
 import * as globalCache from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { unwrapDefault } from '../utils/unwrapDefault'
 
 export { clearState as clearClientState } from '../runtime/clearState'
-export type { ClientState, StateModule }
+export type { ClientState }
 
 /**
  * Load client state for the given URL, using the local cache if possible.

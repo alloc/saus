@@ -137,17 +137,19 @@ async function loadBuildRoutes(context: SausContext) {
   const { pluginContainer } = await vite.createTransformContext(context.config)
 
   const loading = startTask('Loading routes...')
-  await loadRoutes(context, async (id, importer) => {
-    if (builtinModules.includes(id)) {
-      return
-    }
-    const resolved = await pluginContainer.resolveId(
-      id,
-      importer,
-      undefined,
-      true
-    )
-    return resolved ? resolved.id : undefined
+  await loadRoutes(context, {
+    async resolveId(id, importer) {
+      if (builtinModules.includes(id)) {
+        return
+      }
+      const resolved = await pluginContainer.resolveId(
+        id,
+        importer,
+        undefined,
+        true
+      )
+      return resolved?.id
+    },
   })
 
   const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
