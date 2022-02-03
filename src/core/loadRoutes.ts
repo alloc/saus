@@ -33,7 +33,7 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
     Object.assign(context, routesConfig)
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
-    formatAsyncStack(error, moduleMap, [])
+    formatAsyncStack(error, moduleMap, [], context.config.filterStack)
     throw error
   } finally {
     setRoutesModule(null)
