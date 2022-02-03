@@ -13,7 +13,8 @@ const kFormattedStack = Symbol.for('saus:formattedStack')
 export function formatAsyncStack(
   error: any,
   moduleMap: ModuleMap,
-  asyncStack: (StackFrame | undefined)[]
+  asyncStack: (StackFrame | undefined)[],
+  filterStack?: (file: string) => boolean
 ) {
   if (!error || error[kFormattedStack]) {
     return
@@ -28,11 +29,15 @@ export function formatAsyncStack(
     ignoredFrameRE.test(frame.file)
   )
 
-  const relevantFrames = stack.frames
+  let relevantFrames = stack.frames
     .slice(0, ignoredFrameIndex)
     .concat(asyncStack.filter(Boolean) as StackFrame[])
-    .slice(0, 10)
 
+  if (filterStack) {
+    relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
+  }
+
+  relevantFrames = relevantFrames.slice(0, 10)
   if (!relevantFrames.length) {
     return
   }

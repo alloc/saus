@@ -18,6 +18,7 @@ import { servePlugin } from './plugins/serve'
 import { clearState } from './runtime/clearState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
+import { formatAsyncStack } from './vm/formatAsyncStack'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -39,12 +40,13 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     ])
 
   let context = await createContext()
+  let moduleMap: ModuleMap = {}
 
   events.on('error', onError)
   events.on('restart', restart)
 
   let server: vite.ViteDevServer | null = null
-  let serverPromise = startServer(context, events)
+  let serverPromise = startServer(context, moduleMap, events)
 
   // Stop promises from crashing the process.
   process.on('unhandledRejection', onError)
@@ -55,7 +57,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
       context.logger.clearScreen('info')
       context = await createContext()
-      server = await startServer(context, events, true)
+      server = await startServer(context, (moduleMap = {}), events, true)
       return server
     })
     serverPromise.catch(onError)
@@ -64,13 +66,8 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   function onError(error: any) {
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
-      server?.ssrRewriteStacktrace(error, context.config.filterStack)
-      const msg: string =
-        error instanceof SyntaxError
-          ? error.constructor.name + ': ' + error.message
-          : error.stack
-
-      logger.error(red(msg), { error })
+      formatAsyncStack(error, moduleMap, [], context.config.filterStack)
+      logger.error(error.stack, { error })
     }
   }
 
@@ -101,6 +98,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
 async function startServer(
   context: SausContext,
+  moduleMap: ModuleMap,
   events: EventEmitter,
   isRestart?: boolean
 ) {
@@ -126,10 +124,6 @@ async function startServer(
   // between calls to ssrLoadModule unless they (or a dependency
   // of theirs) have changed.
   const moduleCache = vite.ssrCreateContext(server, [overrideStateModules()])
-
-  // Track which files are compiled to know if we should reload
-  // the routes module when a file is changed.
-  let moduleMap: ModuleMap = {}
 
   const resolveId: ResolveIdHook = async (id, importer) => {
     const resolved = await server.pluginContainer.resolveId(
@@ -251,10 +245,10 @@ async function startServer(
     context.reloading = undefined
   }, 50)
 
-  const purgeModuleMap = ({ filename, importers }: CompiledModule) => {
-    if (!changedFiles.has(filename)) {
-      changedFiles.add(filename)
-      delete moduleMap[filename]
+  const purgeModuleMap = ({ id, importers }: CompiledModule) => {
+    if (!changedFiles.has(id)) {
+      changedFiles.add(id)
+      delete moduleMap[id]
       for (const importer of importers) {
         purgeModuleMap(importer)
       }

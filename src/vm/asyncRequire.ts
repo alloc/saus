@@ -20,6 +20,7 @@ export type RequireAsyncConfig = {
   resolveId: ResolveIdHook
   isCompiledModule: (id: string) => boolean
   compileModule: CompileModuleHook
+  filterStack?: (file: string) => boolean
 }
 
 const nodeRequire: NodeRequire = eval('require')
@@ -29,6 +30,7 @@ export function createAsyncRequire({
   resolveId,
   isCompiledModule,
   compileModule,
+  filterStack,
 }: RequireAsyncConfig): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
 
@@ -43,7 +45,7 @@ export function createAsyncRequire({
     try {
       resolvedId = await resolveId(id, importer, isDynamic)
     } catch (error: any) {
-      formatAsyncStack(error, moduleMap, asyncStack)
+      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
       throw error
     }
 
@@ -89,7 +91,7 @@ export function createAsyncRequire({
                 Error(`Cannot find module '${resolvedId}'`),
                 { code: 'ERR_MODULE_NOT_FOUND' }
               )
-              formatAsyncStack(error, moduleMap, asyncStack)
+              formatAsyncStack(error, moduleMap, asyncStack, filterStack)
               throw error
             }
             if (!isDynamic) {
@@ -102,7 +104,7 @@ export function createAsyncRequire({
         try {
           exports = await executeModule(await modulePromise)
         } catch (error: any) {
-          formatAsyncStack(error, moduleMap, asyncStack)
+          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
       }
@@ -117,11 +119,16 @@ export function createAsyncRequire({
       } catch (error: any) {
         // Fall back to the Vite resolution if Node resolution fails.
         if (!resolvedId || !fs.existsSync(resolvedId)) {
-          formatAsyncStack(error, moduleMap, asyncStack)
+          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
       }
-      const unhook = traceNodeRequire(moduleMap, asyncStack, resolvedId)
+      const unhook = traceNodeRequire(
+        moduleMap,
+        asyncStack,
+        resolvedId,
+        filterStack
+      )
       try {
         isCached = resolvedId in nodeRequire.cache
         exports = nodeRequire(resolvedId)

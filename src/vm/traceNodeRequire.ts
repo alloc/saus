@@ -5,7 +5,8 @@ import { ModuleMap } from './types'
 export function traceNodeRequire(
   moduleMap: ModuleMap,
   asyncStack: (StackFrame | undefined)[],
-  skippedFile: string
+  skippedFile: string,
+  filterStack?: (file: string) => boolean
 ) {
   const requireHooks = require.extensions
   const evaluate = requireHooks['.js']
@@ -20,7 +21,7 @@ export function traceNodeRequire(
         asyncStack = asyncStack.slice(1)
       }
     } catch (error: any) {
-      formatAsyncStack(error, moduleMap, asyncStack)
+      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
       throw error
     }
   }

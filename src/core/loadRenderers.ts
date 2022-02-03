@@ -52,7 +52,7 @@ export async function loadRenderers(
       `Loaded ${plural(rendererCount, 'renderer')} in ${Date.now() - time}ms`
     )
   } catch (error: any) {
-    formatAsyncStack(error, moduleMap, [])
+    formatAsyncStack(error, moduleMap, [], context.config.filterStack)
     throw error
   } finally {
     setRenderModule(null)
