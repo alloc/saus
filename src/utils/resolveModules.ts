@@ -1,4 +1,4 @@
-import type { ResolvedState } from '../core'
+import type { ResolvedState } from '../runtime/stateModules'
 import { unwrapDefault } from './unwrapDefault'
 
 export async function resolveModules<T extends Promise<any>[]>(

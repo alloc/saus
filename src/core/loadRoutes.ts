@@ -1,75 +1,55 @@
 import * as esModuleLexer from 'es-module-lexer'
-import * as esbuild from 'esbuild'
 import fs from 'fs'
 import MagicString from 'magic-string'
-import { Module } from 'module'
-import path from 'path'
-import vm from 'vm'
-import { getBabelProgram, getImportDeclarations } from '../babel'
-import { generateRequireCalls } from '../babel/generateRequireCalls'
-import { CompileCache } from '../utils/CompileCache'
-import { __importDefault, __importStar } from '../utils/esmInterop'
-import { esmExportsToCjs } from '../utils/esmToCjs'
-import {
-  resolveMapSources,
-  SourceMap,
-  toInlineSourceMap,
-} from '../utils/sourceMap'
+import { createAsyncRequire, updateModuleMap } from '../vm/asyncRequire'
+import { compileNodeModule } from '../vm/compileNodeModule'
+import { compileSsrModule } from '../vm/compileSsrModule'
+import { executeModule } from '../vm/executeModule'
+import { formatAsyncStack } from '../vm/formatAsyncStack'
+import { ModuleMap, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
-import { RouteModule } from './routes'
-import { vite } from './vite'
 
-type Promisable<T> = T | Promise<T>
-type ResolveIdHook = (
-  id: string,
-  importer: string
-) => Promisable<string | undefined>
+type LoadOptions = {
+  moduleMap?: ModuleMap
+  resolveId?: ResolveIdHook
+}
 
-/**
- * Load the routes module in a Node environment. All local modules are
- * rewritten from ESM to CJS. Dynamic imports are executed according
- * to the given `loadRoute` function.
- */
-export async function loadRoutes(
-  context: SausContext,
-  resolveId: ResolveIdHook = () => undefined,
-  loadRoute: (id: string) => Promise<RouteModule> = id => import(id),
-  compiledFiles?: Set<string>
-) {
-  context.compileCache.locked = true
+export async function loadRoutes(context: SausContext, options: LoadOptions) {
   const time = Date.now()
-  const evaluate = await compileRoutesModule(
-    context,
-    loadRoute,
-    resolveId,
-    compiledFiles
-  )
+  const { moduleMap = {}, resolveId = () => undefined } = options
+
+  context.compileCache.locked = true
+  const routesModule = await compileRoutesModule(context, moduleMap, resolveId)
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],
     defaultState: [],
   })
   try {
-    await evaluate()
+    await executeModule(routesModule)
     context.compileCache.locked = false
     Object.assign(context, routesConfig)
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
+  } catch (error: any) {
+    formatAsyncStack(error, moduleMap, [])
+    throw error
   } finally {
     setRoutesModule(null)
   }
 }
 
-type ModuleLoader = () => Promise<any>
-
 async function compileRoutesModule(
-  { routesPath, root, compileCache, config }: SausContext,
-  loadRoute: (id: string) => Promise<RouteModule>,
-  resolveId: ResolveIdHook,
-  compiledFiles?: Set<string>
+  context: SausContext,
+  moduleMap: ModuleMap,
+  resolveId: ResolveIdHook
 ) {
-  let code = fs.readFileSync(routesPath, 'utf8')
+  const { routesPath, root } = context
+
+  // Import specifiers for route modules need to be rewritten
+  // as dev URLs for them to be imported properly by the browser.
+  const code = fs.readFileSync(routesPath, 'utf8')
   const editor = new MagicString(code)
   for (const imp of esModuleLexer.parse(code)[0]) {
     if (imp.d >= 0 && imp.n) {
@@ -83,232 +63,37 @@ async function compileRoutesModule(
       }
     }
   }
-  const exportsMap: Record<string, Promise<any>> = {}
-  const importMeta = { env: { ...config.env, SSR: true } }
-  return compileAsyncModule(
+
+  const isProjectFile = (id: string) =>
+    !id.includes('/node_modules/') && id.startsWith(root + '/')
+
+  const require = createAsyncRequire({
+    moduleMap,
+    resolveId,
+    isCompiledModule: id => /\.m?[tj]sx?$/.test(id) && isProjectFile(id),
+    // Vite plugins are skipped by the Node pipeline.
+    compileModule: async (id, require) => {
+      const code = fs.readFileSync(id, 'utf8')
+      return compileNodeModule(code, id, context, require)
+    },
+  })
+
+  const ssrRequire = createAsyncRequire({
+    moduleMap,
+    resolveId,
+    isCompiledModule: isProjectFile,
+    compileModule: (id, ssrRequire) =>
+      compileSsrModule(id, context, ssrRequire),
+  })
+
+  const modulePromise = compileNodeModule(
     editor.toString(),
     routesPath,
-    compileCache,
-    importMeta,
-    async function requireAsync(id, importer, nodeRequire): Promise<any> {
-      const time = Date.now()
-
-      let resolvedId = await resolveId(id, importer)
-      let useNodeRequire = true
-      let isCached = false
-
-      if (resolvedId && isCompiledModule(resolvedId, root)) {
-        compiledFiles?.add(resolvedId)
-        useNodeRequire = false
-        isCached = resolvedId in exportsMap
-      } else {
-        resolvedId = nodeRequire.resolve(id)
-        isCached = resolvedId in require.cache
-      }
-
-      const exports = useNodeRequire
-        ? nodeRequire(id)
-        : isCached
-        ? await exportsMap[resolvedId]
-        : await (exportsMap[resolvedId] = compileAsyncModule(
-            fs.readFileSync(resolvedId, 'utf8'),
-            resolvedId,
-            compileCache,
-            importMeta,
-            requireAsync
-          ).then(
-            async evaluate => {
-              const exports = await evaluate()
-              Object.defineProperty(exports, '__esModule', { value: true })
-              return exports
-            },
-            error => {
-              error.message =
-                'Failed to compile module "${resolvedId}". ' + error.message
-              throw error
-            }
-          ))
-
-      if (!isCached) {
-        debug(`Loaded "${resolvedId}" in ${Date.now() - time}ms`)
-      }
-
-      return exports
-    },
-    loadRoute
+    context,
+    (id, importer, isDynamic) =>
+      isDynamic ? ssrRequire(id, importer, true) : require(id, importer, false)
   )
-}
 
-function isCompiledModule(id: string, root: string) {
-  return (
-    /\.m?[tj]sx?$/.test(id) &&
-    !id.includes('/node_modules/') &&
-    id.startsWith(root + '/')
-  )
-}
-
-const importMetaId = '__importMeta'
-const importAsyncId = '__importAsync'
-const requireAsyncId = '__requireAsync'
-
-async function compileAsyncModule(
-  code: string,
-  filename: string,
-  compileCache: CompileCache,
-  importMeta: Record<string, any>,
-  requireAsync: (
-    id: string,
-    importer: string,
-    nodeRequire: NodeRequire
-  ) => Promise<any>,
-  importAsync = requireAsync
-): Promise<ModuleLoader> {
-  const nodeRequire = Module.createRequire(filename)
-  const module = {
-    exports: {},
-    require: nodeRequire,
-    __dirname: path.dirname(filename),
-    __filename: filename,
-    [importMetaId]: importMeta,
-    [importAsyncId]: (id: string) => importAsync(id, filename, nodeRequire),
-    [requireAsyncId]: (id: string) => requireAsync(id, filename, nodeRequire),
-  }
-  const cacheKey = compileCache.key(code)
-  const cached = compileCache.get(cacheKey)
-  if (cached) {
-    code = cached
-  } else {
-    // Transform into JavaScript ESM.
-    let script = await compileToEsm(code, filename)
-
-    const ast = getBabelProgram(script.code, filename)
-    const editor = new MagicString(script.code)
-
-    // Rewrite async imports and import.meta access
-    for (const imp of esModuleLexer.parse(script.code)[0]) {
-      if (imp.d >= 0) {
-        editor.overwrite(imp.ss, imp.s - 1, importAsyncId)
-      } else if (imp.d == -2) {
-        editor.overwrite(imp.s, imp.e, importMetaId)
-      }
-    }
-
-    // Convert export statements to CJS.
-    esmExportsToCjs(ast, editor, `await ${requireAsyncId}`)
-
-    const requireCalls: string[] = []
-    const requireHelpers = new Set<Function>()
-
-    // Generate require calls from import statements.
-    for (const { node } of getImportDeclarations(ast)) {
-      editor.overwrite(node.start!, node.end! + 1, '')
-      const { needsImportStar, needsImportDefault } = generateRequireCalls(
-        node,
-        requireAsyncId,
-        requireCalls
-      )
-      if (needsImportStar) {
-        requireHelpers.add(__importStar)
-      }
-      if (needsImportDefault) {
-        requireHelpers.add(__importDefault)
-      }
-    }
-
-    editor.prepend(requireCalls.join(''))
-    if (requireHelpers.size)
-      editor.prepend(
-        Array.from(requireHelpers, fn => fn.toString()).join('\n') + '\n'
-      )
-
-    const topLevelId = '__compiledModule'
-    editor.prepend(`async function ${topLevelId}(__moduleContext) {\n`)
-    const eofLineBreak = script.code.endsWith('\n') ? '' : '\n'
-    editor.append(eofLineBreak + `}`)
-
-    // Apply the edits.
-    script = overwriteScript(filename, script, {
-      code: editor.toString(),
-      map: editor.generateMap({ hires: true }),
-    })
-
-    // Ensure the module works in the current Node version.
-    script = await compileToNode(filename, script, process.version.slice(1))
-
-    // Inject module context. This is necessary to prevent Esbuild from
-    // renaming the `require` variable to `require2` which is wrong.
-    code = script.code.replace(
-      '__moduleContext',
-      Object.keys(module).join(', ')
-    )
-
-    // Return function and append the inline sourcemap.
-    code += `\n  return ${topLevelId}`
-    code = `(function() {${code}\n})()` + toInlineSourceMap(script.map!)
-
-    compileCache.set(cacheKey, code)
-  }
-  return (): Promise<any> => {
-    const init = vm.runInThisContext(code, { filename })
-    return init(...Object.values(module)).then(() => module.exports)
-  }
-}
-
-type Script = { code: string; map?: SourceMap }
-
-function overwriteScript(
-  filename: string,
-  oldScript: Script,
-  newScript: { code: string; map?: any }
-): Script {
-  let map: SourceMap | undefined
-  if (oldScript.map && newScript.map) {
-    map = vite.combineSourcemaps(filename, [
-      newScript.map,
-      oldScript.map as any,
-    ]) as any
-  } else {
-    map = newScript.map || oldScript.map
-  }
-  return {
-    code: newScript.code,
-    map,
-  }
-}
-
-async function compileToEsm(code: string, filename: string): Promise<Script> {
-  const lang = path.extname(filename)
-  if (/\.m?js/.test(lang)) {
-    return { code, map: undefined }
-  }
-  const compiled = await esbuild.transform(code, {
-    format: 'esm',
-    target: 'esnext',
-    loader: lang.slice(1) as any,
-    sourcemap: 'external',
-    sourcefile: filename,
-  })
-  const map = JSON.parse(compiled.map)
-  resolveMapSources(map, process.cwd())
-  return { code: compiled.code, map }
-}
-
-async function compileToNode(
-  filename: string,
-  script: Script,
-  version: string
-) {
-  const compiled = await esbuild.transform(script.code, {
-    format: 'cjs',
-    target: `node${version}`,
-    loader: 'js',
-    sourcemap: 'external',
-    sourcefile: filename,
-  })
-  const map = JSON.parse(compiled.map)
-  resolveMapSources(map, process.cwd())
-  return overwriteScript(filename, script, {
-    code: compiled.code,
-    map,
-  })
+  updateModuleMap(moduleMap, modulePromise)
+  return modulePromise
 }

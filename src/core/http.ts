@@ -4,6 +4,7 @@ import https from 'https'
 import md5Hex from 'md5-hex'
 import { getCachedState } from '../runtime/getCachedState'
 import { TimeToLive } from '../runtime/ttl'
+import { debug } from './debug'
 import { Response } from './response'
 
 type URL = import('url').URL
@@ -25,6 +26,7 @@ export function get(url: string | URL, opts?: GetOptions) {
     opts?.headers
   )
   return getCachedState(cacheKey, () => {
+    debug('Sending GET request: %O', url)
     return new Promise(resolvedGet.bind(null, url, opts || {}, cacheKey, 0))
   })
 }

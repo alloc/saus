@@ -1,1 +1,1 @@
-module.exports = require('saus/dist/bundle/runtime/html')
+module.exports = require('saus/dist/bundle/html.js')

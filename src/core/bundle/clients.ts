@@ -25,7 +25,13 @@ import {
   SausContext,
   vite,
 } from '../index'
-import { bundleDir, clientDir, coreDir, globalCachePath } from '../paths'
+import {
+  bundleDir,
+  clientDir,
+  coreDir,
+  globalCachePath,
+  runtimeDir,
+} from '../paths'
 import { BundleContext } from './context'
 
 const posixPath = path.posix
@@ -158,6 +164,10 @@ export async function generateClientModules(
         redirectModule(
           path.join(coreDir, 'http.ts'),
           path.join(clientDir, 'http.ts')
+        ),
+        redirectModule(
+          path.join(runtimeDir, 'loadStateModule.ts'),
+          path.join(clientDir, 'loadStateModule.ts')
         ),
       ]),
       routesPlugin(config.saus, clientRouteMap),

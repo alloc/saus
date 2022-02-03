@@ -38,6 +38,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
     command: 'build' | 'serve',
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
+  /** Only exists in dev mode */
+  server?: vite.ViteDevServer
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
   /** The URL prefix for all pages */
@@ -309,33 +311,35 @@ export async function loadConfigHooks(
   setConfigHooks(configHooks)
 
   for (const imp of imports) {
-    const moduleId = imp.n!
+    let moduleId = imp.n!
+
     // Skip relative imports
     if (moduleId[0] == '.') {
       continue
     }
+
+    // In the case of failed module resolution, we swallow the error
+    // and assume the module in question relies on Vite resolution,
+    // which means it can't provide a config hook.
     try {
-      // In the case of failed module resolution, we swallow the error
-      // and assume the module in question relies on Vite resolution,
-      // which means it can't provide a config hook.
-      const modulePath = require.resolve(moduleId)
-      if (!modulePath.endsWith('.js')) {
-        continue
-      }
+      moduleId = require.resolve(moduleId)
+    } catch {
+      continue
+    }
+
+    if (moduleId.endsWith('.js')) {
       if (oldConfigHooks) {
-        const module = require.cache[modulePath]
+        const module = require.cache[moduleId]
         module && resetHookSources(module, oldConfigHooks)
       }
       try {
-        require(modulePath)
+        require(moduleId)
       } catch (e: any) {
         // Ignore non-CJS modules
         if (!e.message.startsWith('Cannot use import')) {
           console.error(e)
         }
       }
-    } catch (e: any) {
-      debug(`Failed to resolve "${moduleId}" imported by "${importer}".`)
     }
   }
 

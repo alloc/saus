@@ -1,4 +1,6 @@
-import { resolve } from 'path'
+import * as convertSourceMap from 'convert-source-map'
+import { dirname, resolve } from 'path'
+import { debug } from '../core/debug'
 
 export interface SourceMap {
   version: number
@@ -21,4 +23,14 @@ export function resolveMapSources(map: SourceMap, sourceRoot: string) {
   map.sources = map.sources.map(source =>
     source ? resolve(sourceRoot, source) : null!
   )
+}
+
+export function loadSourceMap(code: string, file: string) {
+  let converter = convertSourceMap.fromSource(code)
+  try {
+    converter ||= convertSourceMap.fromMapFileSource(code, dirname(file))
+  } catch (e) {
+    debug(`Source map for "${file}" could not be loaded.`)
+  }
+  return converter?.toObject() as SourceMap | undefined
 }

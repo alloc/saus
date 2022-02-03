@@ -8,7 +8,6 @@ export * from './state'
 export * from './loadPageModule'
 
 // State modules
-export * from './loadStateModule'
 export * from '../runtime/stateModules'
 export * from '../runtime/ttl'
 

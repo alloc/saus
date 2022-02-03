@@ -6,7 +6,8 @@ export default defineConfig({
     'src/index.ts',
     // Submodules
     'src/core/index.ts',
-    'src/bundle/runtime/html.ts',
+    'src/client/node.ts',
+    'src/bundle/html.ts',
     'src/babel/index.ts',
     'src/build/worker.ts',
     // Commands
@@ -15,6 +16,7 @@ export default defineConfig({
     'src/dev.ts',
   ],
   format: ['cjs'],
+  target: 'node16',
   splitting: true,
   sourcemap: true,
   external: Object.keys(require('./package.json').dependencies),

@@ -7,17 +7,18 @@ import * as vite from 'vite'
 import { loadRoutes, SausContext } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
-import { setRenderModule } from './core/global'
-import { runtimeDir } from './core/paths'
+import { loadRenderers } from './core/loadRenderers'
+import { clientDir, runtimeDir } from './core/paths'
 import { clientPlugin } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
+import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { clearState } from './runtime/clearState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
-import { plural } from './utils/plural'
+import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
   const events = new EventEmitter()
@@ -28,6 +29,13 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
       config => routesPlugin(config),
       renderPlugin,
       transformClientState,
+      () =>
+        moduleRedirection([
+          redirectModule(
+            path.join(runtimeDir, 'loadStateModule.ts'),
+            path.join(clientDir, 'loadStateModule.ts')
+          ),
+        ]),
     ])
 
   let context = await createContext()
@@ -121,11 +129,22 @@ async function startServer(
 
   // Track which files are compiled to know if we should reload
   // the routes module when a file is changed.
-  const compiledFiles = new Set<string>()
+  let moduleMap: ModuleMap = {}
 
+  const resolveId: ResolveIdHook = async (id, importer) => {
+    const resolved = await server.pluginContainer.resolveId(
+      id,
+      importer,
+      undefined,
+      true
+    )
+    return resolved?.id
+  }
+
+  context.server = server
   try {
-    await loadServerRoutes(context, server, moduleCache, compiledFiles)
-    await loadRenderers(context, server, moduleCache)
+    await loadRoutes(context, { moduleMap, resolveId })
+    await loadRenderers(context, { moduleMap, resolveId })
   } catch (error: any) {
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
@@ -163,9 +182,8 @@ async function startServer(
     let renderersChanged = false
 
     if (changedFiles.has(context.routesPath)) {
-      compiledFiles.clear()
       try {
-        await loadServerRoutes(context, server, moduleCache, compiledFiles)
+        await loadRoutes(context, { moduleMap, resolveId })
         routesChanged = true
       } catch (error: any) {
         events.emit('error', error)
@@ -198,7 +216,7 @@ async function startServer(
       // when new HTTP requests come in.
       if (purged?.some(mod => mod.file == context.renderPath)) {
         try {
-          await loadRenderers(context, server, moduleCache)
+          await loadRenderers(context, { moduleMap, resolveId })
           renderersChanged = true
 
           const oldConfigHooks = context.configHooks
@@ -233,15 +251,22 @@ async function startServer(
     context.reloading = undefined
   }, 50)
 
-  watcher.prependListener('change', file => {
-    if (compiledFiles.has(file)) {
-      // Ensure the routes module is reloaded on the server.
-      changedFiles.add(context.routesPath)
-      // Ensure an HMR update is sent.
-      server.moduleGraph.createFileOnlyEntry(file)
+  const purgeModuleMap = ({ filename, importers }: CompiledModule) => {
+    if (!changedFiles.has(filename)) {
+      changedFiles.add(filename)
+      delete moduleMap[filename]
+      for (const importer of importers) {
+        purgeModuleMap(importer)
+      }
     }
-    changedFiles.add(file)
-    scheduleReload()
+  }
+
+  watcher.prependListener('change', file => {
+    const module = moduleMap[file]
+    if (module) {
+      purgeModuleMap(module)
+      scheduleReload()
+    }
   })
 
   return server
@@ -259,56 +284,6 @@ function overrideStateModules(): vite.SSRPlugin {
         return import('./runtime/stateModules')
       }
     },
-  }
-}
-
-function loadServerRoutes(
-  context: SausContext,
-  server: vite.ViteDevServer,
-  moduleCache: vite.SSRContext,
-  compiledFiles: Set<string>
-) {
-  return loadRoutes(
-    context,
-    async (id, importer) => {
-      const resolved = await server.pluginContainer.resolveId(
-        id,
-        importer,
-        undefined,
-        true
-      )
-      return resolved?.id
-    },
-    id => {
-      return server.ssrLoadModule(id, moduleCache)
-    },
-    compiledFiles
-  )
-}
-
-async function loadRenderers(
-  context: SausContext,
-  server: vite.ViteDevServer,
-  moduleCache?: vite.SSRContext
-) {
-  const time = Date.now()
-  const renderConfig = setRenderModule({
-    renderers: [],
-    beforeRenderHooks: [],
-  })
-  try {
-    await server.ssrLoadModule(
-      context.renderPath.replace(context.root, ''),
-      moduleCache
-    )
-    Object.assign(context, renderConfig)
-    const rendererCount =
-      context.renderers.length + (context.defaultRenderer ? 1 : 0)
-    debug(
-      `Loaded ${plural(rendererCount, 'renderer')} in ${Date.now() - time}ms`
-    )
-  } finally {
-    setRenderModule(null)
   }
 }
 
