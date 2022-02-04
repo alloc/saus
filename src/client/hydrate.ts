@@ -1,7 +1,7 @@
 import type { ClientState, RenderRequest } from '../core'
 import { loadedStateCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
-import { BASE_URL } from './constants'
+import { BASE_URL } from './constants/baseUrl'
 import routes from './routes'
 
 export type HydrateFn = (request: RenderRequest) => void

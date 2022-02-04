@@ -4,7 +4,7 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import Module from 'module'
 import { resolve } from 'path'
-import { clearState } from '../runtime/clearState'
+import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
@@ -96,7 +96,7 @@ function createContext(
     defaultState: [],
     stateModulesByFile: {},
     getCachedPage: withCache(localCache),
-    clearCachedPages: filter => clearState(filter, localCache),
+    clearCachedPages: filter => clearCachedState(filter, localCache),
     renderPath: config.saus.render,
     renderers: [],
     beforeRenderHooks: [],
@@ -290,8 +290,6 @@ function assertSausConfig(
     )
   }
 }
-
-export interface ModuleLoader extends vite.ViteDevServer {}
 
 export async function loadConfigHooks(
   importer: string,

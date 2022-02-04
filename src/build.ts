@@ -10,7 +10,6 @@ import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
-  loadRoutes,
   RouteParams,
   SausContext,
   vite,
@@ -21,6 +20,7 @@ import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { plural } from './utils/plural'
 import { toInlineSourceMap } from './utils/sourceMap'
+import { loadRoutes } from './vm/loadRoutes'
 
 export type FailedPage = { path: string; reason: string }
 

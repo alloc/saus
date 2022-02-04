@@ -7,13 +7,13 @@ const debug = createDebug('saus:cache')
  * Traverse the `loadingStateCache` and `loadedStateCache` maps,
  * removing any keys that match.
  */
-export function clearState(
+export function clearCachedState(
   filter: string | ((key: string) => boolean) = () => true,
   { loadingStateCache, loadedStateCache } = globalCache
 ) {
   if (typeof filter == 'function') {
     const clear = (_: any, key: string, cache: Map<string, any>) =>
-      filter(key) && cache.delete(key) && debug('clearState(%O)', key)
+      filter(key) && cache.delete(key) && debug('clearCachedState(%O)', key)
 
     loadingStateCache.forEach(clear)
     loadedStateCache.forEach(clear)
@@ -22,7 +22,7 @@ export function clearState(
       wasLoading = loadingStateCache.delete(filter)
 
     if (wasLoaded || wasLoading) {
-      debug('clearState(%O)', filter)
+      debug('clearCachedState(%O)', filter)
     }
   }
 }

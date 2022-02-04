@@ -1,15 +1,20 @@
 import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
-import { createAsyncRequire, updateModuleMap } from '../vm/asyncRequire'
-import { compileNodeModule } from '../vm/compileNodeModule'
-import { compileSsrModule } from '../vm/compileSsrModule'
-import { executeModule } from '../vm/executeModule'
-import { formatAsyncStack } from '../vm/formatAsyncStack'
-import { ModuleMap, ResolveIdHook } from '../vm/types'
-import { SausContext } from './context'
+import path from 'path'
+import { SausContext } from '../core/context'
+import { setRoutesModule } from '../core/global'
+import {
+  createAsyncRequire,
+  injectNodeModule,
+  updateModuleMap,
+} from './asyncRequire'
+import { compileNodeModule } from './compileNodeModule'
+import { compileSsrModule } from './compileSsrModule'
 import { debug } from './debug'
-import { setRoutesModule } from './global'
+import { executeModule } from './executeModule'
+import { formatAsyncStack } from './formatAsyncStack'
+import { ModuleMap, ResolveIdHook } from './types'
 
 type LoadOptions = {
   moduleMap?: ModuleMap
@@ -31,6 +36,7 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
     await executeModule(routesModule)
     context.compileCache.locked = false
     Object.assign(context, routesConfig)
+    injectRoutesMap(context)
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
     formatAsyncStack(error, moduleMap, [], context.config.filterStack)
@@ -96,4 +102,15 @@ async function compileRoutesModule(
 
   updateModuleMap(moduleMap, modulePromise)
   return modulePromise
+}
+
+function injectRoutesMap(context: SausContext) {
+  const routesMap: Record<string, string> = {}
+  const loaders: Record<string, () => Promise<any>> = {}
+  for (const route of context.routes) {
+    routesMap[route.path] = route.moduleId
+    loaders[route.path] = route.load
+  }
+  Object.defineProperty(routesMap, 'loaders', { value: loaders })
+  injectNodeModule(path.resolve(__dirname, '../client/routes.cjs'), routesMap)
 }

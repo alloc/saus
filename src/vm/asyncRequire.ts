@@ -61,14 +61,12 @@ export function createAsyncRequire({
 
     let isCached = true
     let exports: any
+    let module: CompiledModule | undefined
 
     if (resolvedId && (isVirtual || isCompiledModule(resolvedId))) {
       await moduleMap.__compileQueue
       if ((isCached = resolvedId in moduleMap)) {
-        const module = moduleMap[resolvedId]
-        if (!isDynamic) {
-          module.importers.add(moduleMap[importer])
-        }
+        module = moduleMap[resolvedId]
         const circularIndex = asyncStack.findIndex(
           frame => frame?.file == resolvedId
         )
@@ -101,22 +99,17 @@ export function createAsyncRequire({
               formatAsyncStack(error, moduleMap, asyncStack, filterStack)
               throw error
             }
-            if (!isDynamic) {
-              module.importers.add(moduleMap[importer])
-            }
             return module
           }
         )
-        updateModuleMap(moduleMap, Promise.resolve(modulePromise))
+        updateModuleMap(moduleMap, modulePromise)
+        module = await modulePromise
         try {
-          exports = await executeModule(await modulePromise)
+          exports = await executeModule(module)
         } catch (error: any) {
           formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
-      }
-      if (!isDynamic) {
-        callStack = callStack.slice(1)
       }
     } else {
       try {
@@ -130,21 +123,27 @@ export function createAsyncRequire({
           throw error
         }
       }
-      const unhook = traceNodeRequire(
-        moduleMap,
-        asyncStack,
-        resolvedId,
-        filterStack
-      )
-      try {
-        isCached = resolvedId in nodeRequire.cache
-        exports = nodeRequire(resolvedId)
-      } finally {
-        unhook()
-        if (!isDynamic) {
-          callStack = callStack.slice(1)
+      const cached = nodeRequire.cache[resolvedId]
+      if ((isCached = !!cached)) {
+        exports = cached.exports
+      } else {
+        const unhook = traceNodeRequire(
+          moduleMap,
+          asyncStack,
+          resolvedId,
+          filterStack
+        )
+        try {
+          exports = nodeRequire(resolvedId)
+        } finally {
+          unhook()
         }
       }
+    }
+
+    if (!isDynamic) {
+      module?.importers.add(moduleMap[importer])
+      callStack = callStack.slice(1)
     }
 
     if (!isCached) {
@@ -172,4 +171,12 @@ export function updateModuleMap(
       return compileQueue
     })
     .catch(noop)
+}
+
+export function injectNodeModule(filename: string, exports: any) {
+  nodeRequire.cache[filename] = Object.assign(new Module(filename), {
+    filename,
+    exports,
+    loaded: true,
+  })
 }
