@@ -1,12 +1,12 @@
+import { SausContext } from '../core/context'
+import { debug } from '../core/debug'
+import { setRenderModule } from '../core/global'
 import { plural } from '../utils/plural'
-import { createAsyncRequire, updateModuleMap } from '../vm/asyncRequire'
-import { compileSsrModule } from '../vm/compileSsrModule'
-import { executeModule } from '../vm/executeModule'
-import { formatAsyncStack } from '../vm/formatAsyncStack'
-import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
-import { SausContext } from './context'
-import { debug } from './debug'
-import { setRenderModule } from './global'
+import { createAsyncRequire, updateModuleMap } from './asyncRequire'
+import { compileSsrModule } from './compileSsrModule'
+import { executeModule } from './executeModule'
+import { formatAsyncStack } from './formatAsyncStack'
+import { ModuleMap, RequireAsync, ResolveIdHook } from './types'
 
 type LoadOptions = {
   moduleMap?: ModuleMap

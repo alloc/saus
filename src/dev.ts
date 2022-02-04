@@ -1,13 +1,12 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
-import { gray, red } from 'kleur/colors'
+import { gray } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import { loadRoutes, SausContext } from './core'
+import { SausContext } from './core'
 import { loadConfigHooks, loadContext } from './core/context'
 import { debug } from './core/debug'
-import { loadRenderers } from './core/loadRenderers'
 import { clientDir, runtimeDir } from './core/paths'
 import { clientPlugin } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
@@ -15,10 +14,12 @@ import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
-import { clearState } from './runtime/clearState'
+import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
+import { loadRenderers } from './vm/loadRenderers'
+import { loadRoutes } from './vm/loadRoutes'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -178,9 +179,18 @@ async function startServer(
       const stateModuleIds = context.stateModulesByFile[file]
       if (stateModuleIds) {
         // State modules use the global cache.
-        clearState(key => {
+        clearCachedState(key => {
           return stateModuleIds.some(id => key.startsWith(id + '.'))
         })
+      }
+    }
+
+    if (changedFiles.has(context.routesPath)) {
+      try {
+        await loadRoutes(context, { moduleMap, resolveId })
+        routesChanged = true
+      } catch (error: any) {
+        events.emit('error', error)
       }
     }
 
@@ -208,15 +218,6 @@ async function startServer(
         if (needsRestart) {
           return events.emit('restart')
         }
-      } catch (error: any) {
-        events.emit('error', error)
-      }
-    }
-
-    if (changedFiles.has(context.routesPath)) {
-      try {
-        await loadRoutes(context, { moduleMap, resolveId })
-        routesChanged = true
       } catch (error: any) {
         events.emit('error', error)
       }
