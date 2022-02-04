@@ -7,3 +7,18 @@ export * from '../core/buffer'
 export * from '../utils/getPagePath'
 export * from '../utils/resolveModules'
 export * from '../utils/unwrapDefault'
+
+export const loadPageModule = clientOnly('loadPageModule')
+export const loadClientState = clientOnly('loadClientState')
+
+function clientOnly(name: string) {
+  return () => {
+    throw Object.assign(
+      Error(
+        `Calling "${name}" in SSR is forbidden. ` +
+          `Ensure \`import.meta.env.SSR\` is false before calling it.`
+      ),
+      { framesToPop: 1 }
+    )
+  }
+}

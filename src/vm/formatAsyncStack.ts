@@ -25,12 +25,10 @@ export function formatAsyncStack(
   })
 
   const stack = parseStackTrace(error.stack)
-  const ignoredFrameIndex = stack.frames.findIndex(frame =>
-    ignoredFrameRE.test(frame.file)
-  )
 
   let relevantFrames = stack.frames
-    .slice(0, ignoredFrameIndex)
+    .slice(error.framesToPop || 0)
+    .filter(frame => !ignoredFrameRE.test(frame.file))
     .concat(asyncStack.filter(Boolean) as StackFrame[])
 
   if (filterStack) {
@@ -75,7 +73,7 @@ export function formatAsyncStack(
 
   error.stack =
     stack.header +
-    '\n' +
+    '\n\n' +
     relevantFrames
       .map(frame => {
         const module = moduleMap[frame.file]

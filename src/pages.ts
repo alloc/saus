@@ -48,7 +48,8 @@ export function createPageFactory(
   context: PageFactoryContext,
   functions: ClientFunctions,
   config: RuntimeConfig,
-  setup?: () => Promise<any>
+  setup?: () => Promise<any>,
+  onError: (error: any) => void = context.logger.error
 ) {
   let {
     basePath,
@@ -57,7 +58,6 @@ export function createPageFactory(
     defaultRoute,
     defaultState,
     getCachedPage,
-    logger,
     processHtml,
     renderers,
     routes,
@@ -75,7 +75,7 @@ export function createPageFactory(
       try {
         onSetup(config)
       } catch (error: any) {
-        logger.error(error.stack)
+        onError(error)
       }
     })
     setRoutesModule(null)
@@ -220,7 +220,7 @@ export function createPageFactory(
     let loading = loaded.get(state.id)
     if (!loading) {
       loading = state.load().catch(error => {
-        logger.error(error.stack)
+        onError(error)
         return null
       })
       loaded.set(state.id, loading)

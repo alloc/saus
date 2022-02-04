@@ -64,10 +64,11 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   }
 
   function onError(error: any) {
+    // console.log('ERROR CAUGHT')
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
-      logger.error(error.stack, { error })
+      // logger.error('\n' + error.stack, { error })
     }
   }
 
@@ -75,7 +76,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
   const onExit = addExitCallback((signal, exitCode, error) => {
     if (error) {
-      server?.ssrRewriteStacktrace(error, context.config.filterStack)
+      formatAsyncStack(error, moduleMap, [], context.config.filterStack)
     }
   })
 
