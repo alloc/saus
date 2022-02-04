@@ -20,16 +20,18 @@ export class CompileCache {
       if (error || this.locked || !this.used.size) {
         return
       }
-      const cacheDir = this.path
-      const cacheList = fs.readdirSync(cacheDir)
-      const numPurged = cacheList.reduce((count, key) => {
-        if (!this.used.has(key)) {
-          fs.unlinkSync(path.join(cacheDir, key))
-          count += 1
-        }
-        return count
-      }, 0)
-      debug(`Purged ${plural(numPurged, 'compiled file')} that went unused`)
+      try {
+        const cacheDir = this.path
+        const cacheList = fs.readdirSync(cacheDir)
+        const numPurged = cacheList.reduce((count, key) => {
+          if (!this.used.has(key)) {
+            fs.unlinkSync(path.join(cacheDir, key))
+            count += 1
+          }
+          return count
+        }, 0)
+        debug(`Purged ${plural(numPurged, 'compiled file')} that went unused`)
+      } catch {}
     })
   }
 

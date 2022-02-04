@@ -8,14 +8,15 @@ import { getPageFilename } from '../utils/getPageFilename'
 import { serializeImports } from '../utils/imports'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 
-const clientPrefix = '/@saus/'
+const clientUrlPrefix = '/@saus/'
+const clientIdPrefix = '\0' + clientUrlPrefix
 
-export function isClientUrl(id: string) {
-  return id.startsWith(clientPrefix)
+export function isClientId(id: string) {
+  return id.startsWith(clientIdPrefix)
 }
 
 export function getClientUrl(id: string, base: string) {
-  return base + clientPrefix.slice(1) + id
+  return base + clientUrlPrefix.slice(1) + id
 }
 
 /**
@@ -41,18 +42,18 @@ export function clientPlugin(
       },
     },
     resolveId(id, importer) {
-      if (isClientUrl(id)) {
-        return id
+      if (id.startsWith(clientUrlPrefix)) {
+        return '\0' + id
       }
-      if (importer && isClientUrl(importer)) {
+      if (importer && isClientId(importer)) {
         return this.resolve(id, renderPath, {
           skipSelf: true,
         })
       }
     },
     load(id) {
-      if (isClientUrl(id)) {
-        const client = loadedStateCache.get(id.replace(clientPrefix, ''))
+      if (isClientId(id)) {
+        const client = loadedStateCache.get(id.replace(clientIdPrefix, ''))
         if (client) {
           return client.code
         }
@@ -97,7 +98,7 @@ export function clientPlugin(
           // Find CSS modules used by the route module.
           await server.moduleGraph
             .getModuleByUrl(routeModuleId)
-            .then(mod => mod && collectCss(mod, cssUrls))
+            .then(mod => mod && collectCss(mod, server, cssUrls))
         }
 
         const client = page.client
@@ -112,7 +113,7 @@ export function clientPlugin(
             // Find CSS modules used by the generated client.
             await server.moduleGraph
               .getModuleByUrl(clientUrl)
-              .then(mod => mod && collectCss(mod, cssUrls))
+              .then(mod => mod && collectCss(mod, server, cssUrls))
           }
         }
 

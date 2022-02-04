@@ -2,7 +2,7 @@ import * as vite from 'vite'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { babel, transformSync, t, NodePath } from '../babel'
 import { SausConfig } from '../core'
-import { isClientUrl } from './client'
+import { isClientId } from './client'
 
 export function renderPlugin(
   { render: renderPath }: SausConfig,
@@ -15,7 +15,7 @@ export function renderPlugin(
       let visitor: babel.Visitor | undefined
       if (id === renderPath) {
         visitor = { Program: injectRenderMetadata }
-      } else if (isClientUrl(id) && configEnv.mode === 'production') {
+      } else if (isClientId(id) && configEnv.command === 'build') {
         visitor = { CallExpression: assumePurity }
       }
       if (visitor) {

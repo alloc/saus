@@ -64,11 +64,10 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   }
 
   function onError(error: any) {
-    // console.log('ERROR CAUGHT')
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
-      // logger.error('\n' + error.stack, { error })
+      logger.error('\n' + error.stack, { error })
     }
   }
 
@@ -121,11 +120,6 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  // The module cache prevents SSR modules from being re-executed
-  // between calls to ssrLoadModule unless they (or a dependency
-  // of theirs) have changed.
-  const moduleCache = vite.ssrCreateContext(server, [overrideStateModules()])
-
   const resolveId: ResolveIdHook = async (id, importer) => {
     const resolved = await server.pluginContainer.resolveId(
       id,
@@ -176,64 +170,55 @@ async function startServer(
     let routesChanged = false
     let renderersChanged = false
 
+    const files = Array.from(changedFiles)
+    changedFiles.clear()
+
+    // Remove cached state defined by the changed files.
+    for (const file of files) {
+      const stateModuleIds = context.stateModulesByFile[file]
+      if (stateModuleIds) {
+        // State modules use the global cache.
+        clearState(key => {
+          return stateModuleIds.some(id => key.startsWith(id + '.'))
+        })
+      }
+    }
+
+    // Reload the renderers immediately, so the dev server is up-to-date
+    // when new HTTP requests come in.
+    if (changedFiles.has(context.renderPath)) {
+      try {
+        await loadRenderers(context, { moduleMap, resolveId })
+        renderersChanged = true
+
+        const oldConfigHooks = context.configHooks
+        const newConfigHooks = await loadConfigHooks(
+          context.renderPath,
+          oldConfigHooks
+        )
+
+        const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
+        const newConfigPaths = newConfigHooks.map(ref => ref.path)
+
+        // Were the imports of any config providers added or removed?
+        const needsRestart =
+          oldConfigPaths.some(file => !newConfigPaths.includes(file)) ||
+          newConfigPaths.some(file => !oldConfigPaths.includes(file))
+
+        if (needsRestart) {
+          return events.emit('restart')
+        }
+      } catch (error: any) {
+        events.emit('error', error)
+      }
+    }
+
     if (changedFiles.has(context.routesPath)) {
       try {
         await loadRoutes(context, { moduleMap, resolveId })
         routesChanged = true
       } catch (error: any) {
         events.emit('error', error)
-      } finally {
-        changedFiles.delete(context.routesPath)
-      }
-    }
-
-    if (changedFiles.size) {
-      const files = Array.from(changedFiles)
-      changedFiles.clear()
-
-      // Remove cached state defined by the changed files.
-      for (const file of files) {
-        const stateModuleIds = context.stateModulesByFile[file]
-        if (stateModuleIds) {
-          // State modules use the global cache.
-          clearState(key => {
-            return stateModuleIds.some(id => key.startsWith(id + '.'))
-          })
-        }
-      }
-
-      const purged = await moduleCache.purge(files).catch(error => {
-        // Clone the error so unfixed Babel errors never go unnoticed.
-        events.emit('error', cloneError(error))
-      })
-
-      // Reload the renderers immediately, so the dev server is up-to-date
-      // when new HTTP requests come in.
-      if (purged?.some(mod => mod.file == context.renderPath)) {
-        try {
-          await loadRenderers(context, { moduleMap, resolveId })
-          renderersChanged = true
-
-          const oldConfigHooks = context.configHooks
-          const newConfigHooks = await loadConfigHooks(
-            context.renderPath,
-            oldConfigHooks
-          )
-
-          const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
-          const newConfigPaths = newConfigHooks.map(ref => ref.path)
-
-          // Were the imports of any config providers added or removed?
-          const needsRestart =
-            oldConfigPaths.some(file => !newConfigPaths.includes(file)) ||
-            newConfigPaths.some(file => !oldConfigPaths.includes(file))
-
-          if (needsRestart) {
-            return events.emit('restart')
-          }
-        } catch (error: any) {
-          events.emit('error', error)
-        }
       }
     }
 
@@ -256,30 +241,16 @@ async function startServer(
     }
   }
 
-  watcher.prependListener('change', file => {
+  watcher.prependListener('change', async file => {
     const module = moduleMap[file]
     if (module) {
+      await moduleMap.__compileQueue
       purgeModuleMap(module)
       scheduleReload()
     }
   })
 
   return server
-}
-
-/**
- * Ensure modules compiled by `loadRoutes` and modules loaded by Vite SSR
- * both use the same instance of the `defineStateModule` function.
- */
-function overrideStateModules(): vite.SSRPlugin {
-  const stateModulesPath = path.join(runtimeDir, 'stateModules.ts')
-  return {
-    setExports(id) {
-      if (id == stateModulesPath) {
-        return import('./runtime/stateModules')
-      }
-    },
-  }
 }
 
 function listen(
