@@ -82,7 +82,9 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         pageFactory = createPageFactory(
           context,
           extractClientFunctions(context.renderPath),
-          runtimeConfig
+          runtimeConfig,
+          undefined,
+          onError
         )
         init = {
           // Defer to the reload promise after the context is initialized.

@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { Module } from 'module'
 import { noop } from '../utils/noop'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { getStackFrame, StackFrame } from '../utils/resolveStackTrace'
@@ -23,7 +24,7 @@ export type RequireAsyncConfig = {
   filterStack?: (file: string) => boolean
 }
 
-const nodeRequire: NodeRequire = eval('require')
+const nodeRequire = Module.createRequire(__filename)
 
 export function createAsyncRequire({
   moduleMap,
