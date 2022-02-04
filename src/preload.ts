@@ -1,8 +1,9 @@
 import * as vite from 'vite'
 import { isCSSRequest } from './utils/isCSSRequest'
 
-export function collectCss(
+export async function collectCss(
   mod: vite.ModuleNode,
+  server: vite.ViteDevServer,
   urls = new Set<string>(),
   seen = new Set<string>()
 ) {
@@ -11,8 +12,11 @@ export function collectCss(
     if (isCssModule(mod)) {
       urls.add(mod.url)
     }
+    if (!mod.transformResult) {
+      await server.transformRequest(mod.url)
+    }
     mod.importedModules.forEach(dep => {
-      collectCss(dep, urls, seen)
+      collectCss(dep, server, urls, seen)
     })
   }
   return urls

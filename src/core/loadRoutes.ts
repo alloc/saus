@@ -53,7 +53,7 @@ async function compileRoutesModule(
   const editor = new MagicString(code)
   for (const imp of esModuleLexer.parse(code)[0]) {
     if (imp.d >= 0 && imp.n) {
-      const resolvedId = await resolveId(imp.n, routesPath)
+      const resolvedId = await resolveId(imp.n, routesPath, true)
       if (resolvedId) {
         const resolvedUrl = resolvedId.startsWith(root + '/')
           ? resolvedId.slice(root.length)

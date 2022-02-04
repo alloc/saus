@@ -1,3 +1,4 @@
+import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import { Module } from 'module'
 import { noop } from '../utils/noop'
@@ -36,8 +37,11 @@ export function createAsyncRequire({
   let callStack: (StackFrame | undefined)[] = []
 
   return async function requireAsync(id, importer, isDynamic) {
-    const time = Date.now()
+    if (builtinModules.includes(id)) {
+      return nodeRequire(id)
+    }
 
+    const time = Date.now()
     const asyncStack = isDynamic
       ? traceDynamicImport(Error())
       : (callStack = [getStackFrame(3), ...callStack])
@@ -50,8 +54,10 @@ export function createAsyncRequire({
       throw error
     }
 
-    const isVirtual =
-      !!resolvedId && (resolvedId[0] === '\0' || id === resolvedId)
+    const isVirtual = !!(
+      id.startsWith('virtual:') ||
+      (resolvedId && (resolvedId[0] === '\0' || id === resolvedId))
+    )
 
     let isCached = true
     let exports: any

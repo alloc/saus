@@ -1,9 +1,9 @@
 import { plural } from '../utils/plural'
-import { createAsyncRequire } from '../vm/asyncRequire'
+import { createAsyncRequire, updateModuleMap } from '../vm/asyncRequire'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
-import { ModuleMap, ResolveIdHook } from '../vm/types'
+import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRenderModule } from './global'
@@ -30,20 +30,13 @@ export async function loadRenderers(
   })
 
   context.compileCache.locked = true
-  const entryModule = await compileSsrModule(
-    context.renderPath,
-    context,
-    ssrRequire
-  )
-  if (!entryModule) {
-    throw Error(`Cannot find module '${context.renderPath}'`)
-  }
+  const renderModule = await compileRenderModule(context, ssrRequire, moduleMap)
   const renderConfig = setRenderModule({
     renderers: [],
     beforeRenderHooks: [],
   })
   try {
-    await executeModule(entryModule)
+    await executeModule(renderModule)
     context.compileCache.locked = false
     Object.assign(context, renderConfig)
     const rendererCount =
@@ -57,4 +50,23 @@ export async function loadRenderers(
   } finally {
     setRenderModule(null)
   }
+}
+
+function compileRenderModule(
+  context: SausContext,
+  ssrRequire: RequireAsync,
+  moduleMap: ModuleMap
+) {
+  const modulePromise = compileSsrModule(
+    context.renderPath,
+    context,
+    ssrRequire
+  ).then(module => {
+    if (!module) {
+      throw Error(`Cannot find module '${context.renderPath}'`)
+    }
+    return module
+  })
+  updateModuleMap(moduleMap, modulePromise)
+  return modulePromise
 }

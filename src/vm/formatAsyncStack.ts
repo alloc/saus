@@ -43,32 +43,34 @@ export function formatAsyncStack(
   // Remove the require stack added by Node.
   stack.header = stack.header.replace(/\nRequire stack:\n.+$/, '')
 
-  let file: string | undefined
-  let location: SourceLocation | undefined
-  if (error instanceof SyntaxError) {
-    const match = /^(\/[^\n:]+):(\d+)/.exec(stack.header)
-    if (match) {
-      file = match[1]
+  if (!relevantFrames[0].file.includes('/vite/')) {
+    let file: string | undefined
+    let location: SourceLocation | undefined
+    if (error instanceof SyntaxError) {
+      const match = /^(\/[^\n:]+):(\d+)/.exec(stack.header)
+      if (match) {
+        file = match[1]
+        location = {
+          start: { line: Number(match[2]) },
+        }
+      }
+    } else {
+      const frame = relevantFrames[0]
+      file = frame.file
       location = {
-        start: { line: Number(match[2]) },
+        start: frame,
       }
     }
-  } else {
-    const frame = relevantFrames[0]
-    file = frame.file
-    location = {
-      start: frame,
-    }
-  }
 
-  if (file && location) {
-    try {
-      const code = moduleMap[file]?.code ?? fs.readFileSync(file, 'utf8')
-      stack.header = codeFrameColumns(code, location, {
-        highlightCode: true,
-        message: stack.header,
-      })
-    } catch {}
+    if (file && location) {
+      try {
+        const code = moduleMap[file]?.code ?? fs.readFileSync(file, 'utf8')
+        stack.header = codeFrameColumns(code, location, {
+          highlightCode: true,
+          message: stack.header,
+        })
+      } catch {}
+    }
   }
 
   error.stack =
