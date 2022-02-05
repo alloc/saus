@@ -4,20 +4,22 @@ import { isCSSRequest } from './utils/isCSSRequest'
 export async function collectCss(
   mod: vite.ModuleNode,
   server: vite.ViteDevServer,
-  urls = new Set<string>(),
+  urls = new Set<vite.ModuleNode>(),
   seen = new Set<string>()
 ) {
   if (mod.url && !seen.has(mod.url)) {
     seen.add(mod.url)
     if (isCssModule(mod)) {
-      urls.add(mod.url)
+      urls.add(mod)
     }
     if (!mod.transformResult) {
       await server.transformRequest(mod.url)
     }
-    mod.importedModules.forEach(dep => {
-      collectCss(dep, server, urls, seen)
-    })
+    await Promise.all(
+      Array.from(mod.importedModules, dep => {
+        return collectCss(dep, server, urls, seen)
+      })
+    )
   }
   return urls
 }

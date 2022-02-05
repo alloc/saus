@@ -1,4 +1,5 @@
 import { TimeToLive } from '../runtime/ttl'
+import { debug } from './debug'
 
 type Caches = typeof import('../runtime/cache')
 type StateLoader<State = any> = () => Promise<State>
@@ -34,6 +35,7 @@ export function withCache(
     }
     let loadingState = loadingStateCache.get(cacheKey)
     if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
+      const time = Date.now()
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader().then(
@@ -46,6 +48,8 @@ export function withCache(
             // TTL may have been set to 0.
             if (TimeToLive.isAlive(cacheKey)) {
               loadedStateCache.set(cacheKey, loadedState)
+            } else {
+              debug('State %s expired while loading, skipping cache', cacheKey)
             }
             return loadedState
           },
