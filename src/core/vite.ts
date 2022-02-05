@@ -9,6 +9,10 @@ import { SausContext } from './context'
 
 export { vite }
 
+export type ResolvedConfig = vite.ResolvedConfig & {
+  readonly saus: Readonly<SausConfig>
+}
+
 export interface SausBundleConfig {
   /**
    * Path to the module bundled by the `saus bundle` command.

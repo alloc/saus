@@ -2,20 +2,20 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
-import { SausContext } from '../core/context'
-import { setRoutesModule } from '../core/global'
 import {
   createAsyncRequire,
   injectExports,
   updateModuleMap,
-} from './asyncRequire'
-import { compileNodeModule } from './compileNodeModule'
-import { compileSsrModule } from './compileSsrModule'
+} from '../vm/asyncRequire'
+import { compileNodeModule } from '../vm/compileNodeModule'
+import { compileSsrModule } from '../vm/compileSsrModule'
+import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
+import { executeModule } from '../vm/executeModule'
+import { formatAsyncStack } from '../vm/formatAsyncStack'
+import { ModuleMap, ResolveIdHook } from '../vm/types'
+import { SausContext } from './context'
 import { debug } from './debug'
-import { dedupeNodeResolve } from './dedupeNodeResolve'
-import { executeModule } from './executeModule'
-import { formatAsyncStack } from './formatAsyncStack'
-import { ModuleMap, ResolveIdHook } from './types'
+import { setRoutesModule } from './global'
 
 type LoadOptions = {
   moduleMap?: ModuleMap
@@ -117,6 +117,9 @@ function injectRoutesMap(context: SausContext) {
     routesMap[route.path] = route.moduleId
     loaders[route.path] = route.load
   }
-  Object.defineProperty(routesMap, 'loaders', { value: loaders })
+  Object.defineProperty(routesMap, 'loaders', {
+    value: loaders,
+    configurable: true,
+  })
   injectExports(path.resolve(__dirname, '../client/routes.cjs'), routesMap)
 }

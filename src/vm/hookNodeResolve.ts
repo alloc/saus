@@ -11,7 +11,6 @@ export type NodeResolveHook = (
 
 export function hookNodeResolve(resolve: NodeResolveHook) {
   const nodeResolve: Function = (Module as any)._resolveFilename
-  const logged = new Set<string>()
 
   // @ts-ignore
   Module._resolveFilename = (
@@ -28,20 +27,16 @@ export function hookNodeResolve(resolve: NodeResolveHook) {
         importer ? { paths: [importer] } : options
       )
     )
-    if (process.env.DEBUG && resolved) {
-      const importPair = parent.id + ' > ' + id
-      if (!logged.has(importPair)) {
-        logged.add(importPair)
-        if (resolved !== nodeResolve(id, parent, isMain, options))
-          debug(
-            `Resolved ${kleur.gray(
-              relativeToCwd(parent.id + ':')
-            )}${kleur.yellow(id)} into ${kleur.green(
-              relativeToCwd(resolved)
-            )} forcefully`
-          )
-      }
-    }
+
+    process.env.DEBUG &&
+      resolved &&
+      resolved !== nodeResolve(id, parent, isMain, options) &&
+      debug(
+        `Forced %s to resolve as %s`,
+        kleur.gray(relativeToCwd(parent.id + ':')) + kleur.yellow(id),
+        kleur.green(relativeToCwd(resolved))
+      )
+
     return resolved || nodeResolve(id, parent, isMain, options)
   }
 

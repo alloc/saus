@@ -15,12 +15,12 @@ import {
   vite,
 } from './core'
 import { loadBundleContext } from './core/bundle'
+import { loadRoutes } from './core/loadRoutes'
 import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { plural } from './utils/plural'
 import { toInlineSourceMap } from './utils/sourceMap'
-import { loadRoutes } from './vm/loadRoutes'
 
 export type FailedPage = { path: string; reason: string }
 
