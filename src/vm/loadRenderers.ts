@@ -4,6 +4,7 @@ import { setRenderModule } from '../core/global'
 import { plural } from '../utils/plural'
 import { createAsyncRequire, updateModuleMap } from './asyncRequire'
 import { compileSsrModule } from './compileSsrModule'
+import { dedupeNodeResolve } from './dedupeNodeResolve'
 import { executeModule } from './executeModule'
 import { formatAsyncStack } from './formatAsyncStack'
 import { ModuleMap, RequireAsync, ResolveIdHook } from './types'
@@ -19,10 +20,12 @@ export async function loadRenderers(
 ) {
   const time = Date.now()
   const { moduleMap = {}, resolveId = () => undefined } = options
+  const { dedupe } = context.config.resolve
 
   const ssrRequire = createAsyncRequire({
     moduleMap,
     resolveId,
+    nodeResolve: dedupe && dedupeNodeResolve(context.root, dedupe),
     isCompiledModule: id =>
       !id.includes('/node_modules/') && id.startsWith(context.root + '/'),
     compileModule: (id, ssrRequire) =>

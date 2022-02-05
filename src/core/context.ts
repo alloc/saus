@@ -2,14 +2,17 @@ import { flatten } from 'array-flatten'
 import arrify from 'arrify'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
-import Module from 'module'
-import { resolve } from 'path'
+import { Module } from 'module'
+import { dirname, resolve } from 'path'
+import { Profiling } from '../profiling'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
+import { findPackage } from '../utils/findPackage'
 import { plural } from '../utils/plural'
+import { createAsyncRequire } from '../vm/asyncRequire'
 import { ConfigHook, ConfigHookRef, setConfigHooks } from './config'
 import { debug } from './debug'
 import { HtmlContext } from './html'
@@ -115,8 +118,8 @@ export async function loadContext(
   const resolveConfig = getConfigResolver(
     inlineConfig || {},
     inlinePlugins,
-    async renderPath =>
-      context?.configHooks || (configHooks = await loadConfigHooks(renderPath)),
+    async config =>
+      context?.configHooks || (configHooks = await loadConfigHooks(config)),
     config => (context ||= createContext(config, configHooks, resolveConfig))
   )
 
@@ -152,7 +155,7 @@ function flattenPlugins<T extends vite.Plugin>(
 function getConfigResolver(
   defaultConfig: vite.InlineConfig,
   inlinePlugins: InlinePlugin[] | undefined,
-  getConfigHooks: (renderPath: string) => Promise<ConfigHookRef[]>,
+  getConfigHooks: (config: ResolvedConfig) => Promise<ConfigHookRef[]>,
   getContext: (config: ResolvedConfig) => SausContext
 ) {
   return async (
@@ -222,7 +225,7 @@ function getConfigResolver(
       )
     }
 
-    const configHooks = await getConfigHooks(sausConfig.render)
+    const configHooks = await getConfigHooks(userConfig as any)
     debug(`Found ${plural(configHooks.length, 'config hook')}`)
 
     for (const hookRef of configHooks) {
@@ -291,11 +294,10 @@ function assertSausConfig(
   }
 }
 
-export async function loadConfigHooks(
-  importer: string,
-  oldConfigHooks?: ConfigHookRef[]
-) {
-  const require = Module.createRequire(importer)
+export async function loadConfigHooks(config: ResolvedConfig) {
+  Profiling.mark('load config hooks')
+
+  const importer = config.saus.render
   const code = fs
     .readFileSync(importer, 'utf8')
     .split('\n')
@@ -308,61 +310,63 @@ export async function loadConfigHooks(
   const configHooks: ConfigHookRef[] = []
   setConfigHooks(configHooks)
 
-  for (const imp of imports) {
-    let moduleId = imp.n!
+  const { resolve } = Module.createRequire(importer)
 
-    // Skip relative imports
-    if (moduleId[0] == '.') {
-      continue
+  const bareImportRE = /^[\w@]/
+  const nodeResolve = (id: string, importer: string) => {
+    if (!bareImportRE.test(id)) {
+      return
     }
-
-    // In the case of failed module resolution, we swallow the error
-    // and assume the module in question relies on Vite resolution,
-    // which means it can't provide a config hook.
-    try {
-      moduleId = require.resolve(moduleId)
-    } catch {
-      continue
+    const isMatch = (name: string) => {
+      return id === name || id.startsWith(name + '/')
     }
-
-    if (moduleId.endsWith('.js')) {
-      if (oldConfigHooks) {
-        const module = require.cache[moduleId]
-        module && resetHookSources(module, oldConfigHooks)
+    if (!config.resolve.dedupe?.some(isMatch)) {
+      const pkgPath = findPackage(dirname(importer))
+      if (!pkgPath || dirname(pkgPath) === config.root) {
+        return
       }
-      try {
-        require(moduleId)
-      } catch (e: any) {
-        // Ignore non-CJS modules
-        if (!e.message.startsWith('Cannot use import')) {
-          console.error(e)
-        }
+      // Ensure peer dependencies are deduped if possible.
+      const { peerDependencies } = require(pkgPath)
+      if (!Object.keys(peerDependencies || {}).some(isMatch)) {
+        return
+      }
+    }
+    try {
+      return resolve(id, { paths: [config.root] })
+    } catch {}
+  }
+
+  const reloadList = new Set<string>()
+  const requireAsync = createAsyncRequire({
+    nodeResolve,
+    shouldReload(id) {
+      if (reloadList.has(id)) {
+        return false
+      }
+      reloadList.add(id)
+      return true
+    },
+  })
+
+  const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
+  for (const imp of imports) {
+    const id = imp.n
+    if (!id || relativePathRE.test(id) || imp.d !== -1) {
+      continue
+    }
+    try {
+      const resolvedId = nodeResolve(id, importer) || resolve(id)
+      if (!/\.c?js$/.test(resolvedId || '')) {
+        continue
+      }
+      await requireAsync(resolvedId, importer, false)
+    } catch (e: any) {
+      if (!/Cannot (use import|find module)/.test(e.message)) {
+        console.error(e)
       }
     }
   }
 
   setConfigHooks(null)
   return configHooks
-}
-
-function resetHookSources(
-  module: NodeModule,
-  configHooks: ConfigHookRef[],
-  resetCache = new Map<NodeModule, boolean>()
-) {
-  let needsReset = resetCache.get(module)
-  if (needsReset !== undefined) {
-    return needsReset
-  }
-  needsReset = configHooks.some(hook => hook.source == module.filename)
-  resetCache.set(module, needsReset)
-  for (const child of module.children) {
-    if (resetHookSources(child, configHooks, resetCache)) {
-      needsReset = true
-    }
-  }
-  if (needsReset) {
-    delete require.cache[module.filename]
-  }
-  return needsReset
 }

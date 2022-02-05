@@ -1,7 +1,10 @@
+import createDebug from 'debug'
 import { unwrapDefault } from '../utils/unwrapDefault'
 import { getCachedState } from './getCachedState'
 import type { ResolvedState } from './stateModules'
 import { TimeToLive } from './ttl'
+
+const debug = createDebug('saus:cache')
 
 export type StateModuleContext = {
   cacheKey: string
@@ -32,6 +35,7 @@ export const loadStateModule = <T, Args extends any[]>(
   ...args: Args
 ): Promise<ResolvedState<T>> =>
   getCachedState(cacheKey, async function loadStateModule() {
+    debug(`Loading "%s" state`, cacheKey)
     try {
       let result: any = loadImpl.apply(getStateModuleContext(cacheKey), args)
       if (result && typeof result == 'object') {

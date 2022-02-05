@@ -1,1 +1,2 @@
-// Stub module replaced at runtime.
+// Stub module updated by the SSR dev runtime.
+exports.loaders = {}

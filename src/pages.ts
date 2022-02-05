@@ -29,7 +29,9 @@ import {
   RenderPageOptions,
 } from './pages/types'
 import { loadedStateCache } from './runtime/cache'
+import { getCachedState } from './runtime/getCachedState'
 import { isStateModule, StateModule } from './runtime/stateModules'
+import { TimeToLive } from './runtime/ttl'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -240,49 +242,49 @@ export function createPageFactory(
     return included.map(loadStateModule.bind(null, loaded))
   }
 
-  async function loadClientState(
-    url: ParsedUrl,
-    params: RouteParams,
-    route: Route
-  ) {
-    let result: ClientState
+  const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
+    getCachedState(url.path, async () => {
+      // Start loading state modules before the route state is awaited.
+      const pendingStateModules = new Map<string, Promise<any>>()
+      for (const include of defaultState.concat([route.include || []])) {
+        loadStateModules(pendingStateModules, include, url, params)
+      }
 
-    // Start loading state modules before the route state is awaited.
-    const pendingStateModules = new Map<string, Promise<any>>()
-    for (const include of defaultState.concat([route.include || []])) {
-      loadStateModules(pendingStateModules, include, url, params)
-    }
+      let result: ClientState
+      if (route.state) {
+        result = (await route.state(
+          Object.values(params),
+          url.searchParams
+        )) as any
 
-    if (route.state) {
-      result = (await route.state(
-        Object.values(params),
-        url.searchParams
-      )) as any
+        // Load any embedded state modules.
+        JSON.stringify(result, (key, state) => {
+          if (!isStateModule(state)) {
+            return state
+          }
+          loadStateModule(pendingStateModules, state)
+          result[key] = { '@import': state.id }
+        })
+      } else {
+        result = {} as any
+      }
 
-      // Load any embedded state modules.
-      JSON.stringify(result, (key, state) => {
-        if (!isStateModule(state)) {
-          return state
-        }
-        loadStateModule(pendingStateModules, state)
-        result[key] = { '@import': state.id }
-      })
-    } else {
-      result = {} as any
-    }
+      await Promise.all(pendingStateModules.values())
+      stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
 
-    await Promise.all(pendingStateModules.values())
-    stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
+      if (config.command == 'dev')
+        Object.defineProperty(result, '_ts', {
+          value: Date.now(),
+        })
 
-    if (config.command == 'dev')
-      Object.defineProperty(result, '_ts', {
-        value: Date.now(),
-      })
+      // Reload the page state on almost every request, but keep it
+      // cached for `getCachedState` calls that have no loader.
+      TimeToLive.set(url.path, 1)
 
-    result.routePath = route.path
-    result.routeParams = params
-    return result
-  }
+      result.routePath = route.path
+      result.routeParams = params
+      return result
+    })
 
   let pageContextQueue = Promise.resolve()
 
