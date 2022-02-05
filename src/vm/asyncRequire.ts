@@ -18,6 +18,9 @@ import {
   RequireAsync,
   ResolveIdHook,
 } from './types'
+import kleur from 'kleur'
+import { forceNodeReload } from './forceNodeReload'
+import { getNodeModule as getCachedModule } from './getNodeModule'
 
 export type RequireAsyncConfig = {
   /**
@@ -58,10 +61,12 @@ export type RequireAsyncConfig = {
   nodeResolve?: NodeResolveHook
 }
 
+const neverReload = () => false
+
 export function createAsyncRequire({
   moduleMap = {},
   resolveId = () => undefined,
-  shouldReload = () => false,
+  shouldReload = neverReload,
   isCompiledModule = () => true,
   compileModule,
   filterStack,
@@ -150,6 +155,7 @@ export function createAsyncRequire({
       const nodeRequire = Module.createRequire(
         path.isAbsolute(importer) ? importer : path.resolve('index.js')
       )
+
       const restoreNodeResolve = nodeResolve
         ? hookNodeResolve(nodeResolve)
         : noop
@@ -165,13 +171,15 @@ export function createAsyncRequire({
           throw error
         }
       }
-      let cached = nodeRequire.cache[resolvedId]
-      if (cached && shouldReload(resolvedId)) {
-        delete nodeRequire.cache[resolvedId]
-        cached = undefined
-      }
+
+      const restoreModuleCache =
+        shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
+
+      const cached = getCachedModule(resolvedId)
       if (cached) {
         exports = cached.exports
+        restoreNodeResolve()
+        restoreModuleCache()
       } else {
         isCached = false
         const stopTracing = traceNodeRequire(
@@ -187,6 +195,7 @@ export function createAsyncRequire({
           throw error
         } finally {
           restoreNodeResolve()
+          restoreModuleCache()
           stopTracing()
         }
       }
@@ -197,8 +206,12 @@ export function createAsyncRequire({
       callStack = callStack.slice(1)
     }
 
-    if (!isCached) {
-      debug(`Loaded "${resolvedId}" in ${Date.now() - time}ms`)
+    if (!isCached && process.env.DEBUG) {
+      debug(
+        `Loaded %s in %sms`,
+        kleur.cyan(relativeToCwd(resolvedId)),
+        Date.now() - time
+      )
     }
 
     return exports
@@ -243,4 +256,8 @@ export function injectExports(filename: string, exports: object) {
       loaded: true,
     })
   }
+}
+
+function getCachedModule(id: string): NodeModule | undefined {
+  return (Module as any)._cache[id]
 }

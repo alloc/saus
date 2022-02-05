@@ -5,8 +5,11 @@ import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
 import { SausContext } from './core'
-import { loadConfigHooks, loadContext } from './core/context'
+import { loadContext } from './core/context'
 import { debug } from './core/debug'
+import { loadConfigHooks } from './core/loadConfigHooks'
+import { loadRenderers } from './core/loadRenderers'
+import { loadRoutes } from './core/loadRoutes'
 import { clientDir, runtimeDir } from './core/paths'
 import { clientPlugin } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
@@ -18,8 +21,6 @@ import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { loadRenderers } from './vm/loadRenderers'
-import { loadRoutes } from './vm/loadRoutes'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -54,7 +55,9 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
 
   function restart() {
     serverPromise = serverPromise.then(async oldServer => {
-      await oldServer?.close()
+      try {
+        await oldServer?.close()
+      } catch {}
 
       context.logger.clearScreen('info')
       context = await createContext()
@@ -154,12 +157,6 @@ async function startServer(
 
   const changedFiles = new Set<string>()
   const scheduleReload = debounce(async () => {
-    // Restart the server when Vite config is changed.
-    if (changedFiles.has(context.configPath!)) {
-      debug(`Vite config changed. Restarting server.`)
-      return events.emit('restart')
-    }
-
     // Wait for reloading to finish.
     while (context.reloading) {
       await context.reloading
@@ -246,6 +243,16 @@ async function startServer(
       purgeModuleMap(module)
       scheduleReload()
     }
+    // Restart the server when Vite config is changed.
+    else if (file == context.configPath) {
+      // Prevent handling by Vite.
+      context.config.server.hmr = false
+      // Skip SSR reloading by Saus.
+      changedFiles.clear()
+
+      debug(`Vite config changed. Restarting server.`)
+      events.emit('restart')
+    }
   })
 
   return server
@@ -323,11 +330,4 @@ function waitForChanges(
   events.on('close', onClose)
 
   logger.info(gray('Waiting for changes...'))
-}
-
-function cloneError(e: any) {
-  const clone = Object.assign(new e.constructor(), e)
-  clone.message = e.message
-  clone.stack = e.stack
-  return clone
 }

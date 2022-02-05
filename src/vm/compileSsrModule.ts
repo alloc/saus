@@ -3,6 +3,7 @@ import { basename } from 'path'
 import { SausContext, vite } from '../core'
 import { cleanUrl } from '../utils/cleanUrl'
 import { CompileCache } from '../utils/CompileCache'
+import { emptyDir } from '../utils/emptyDir'
 import { loadSourceMap, toInlineSourceMap } from '../utils/sourceMap'
 import { toDevPath } from '../utils/toDevPath'
 import {
@@ -24,8 +25,13 @@ export async function compileSsrModule(
 ): Promise<CompiledModule | null> {
   let cache = ssrCaches.get(context)
   if (!cache) {
-    cache = new CompileCache('node_modules/.vite/_ssr', context.root)
+    cache = new CompileCache('node_modules/.saus/ssr', context.root)
     ssrCaches.set(context, cache)
+
+    // TODO: force empty if config or lockfile were modified
+    if (context.config.server.force) {
+      emptyDir(cache.path)
+    }
   }
 
   const { config, server } = context

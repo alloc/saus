@@ -1,29 +1,20 @@
 import { flatten } from 'array-flatten'
 import arrify from 'arrify'
-import esModuleLexer from 'es-module-lexer'
-import fs from 'fs'
-import { Module } from 'module'
-import { dirname, resolve } from 'path'
-import { Profiling } from '../profiling'
+import { resolve } from 'path'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
-import { findPackage } from '../utils/findPackage'
-import { plural } from '../utils/plural'
-import { createAsyncRequire } from '../vm/asyncRequire'
-import { ConfigHook, ConfigHookRef, setConfigHooks } from './config'
+import { relativeToCwd } from '../utils/relativeToCwd'
+import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { HtmlContext } from './html'
+import { loadConfigHooks } from './loadConfigHooks'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { Plugin, SausConfig, SausPlugin, vite } from './vite'
+import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { withCache } from './withCache'
-
-type ResolvedConfig = vite.ResolvedConfig & {
-  readonly saus: Readonly<SausConfig>
-}
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
@@ -90,7 +81,7 @@ function createContext(
     configHooks,
     userConfig: config.inlineConfig,
     resolveConfig,
-    compileCache: new CompileCache('node_modules/.ssr', config.root),
+    compileCache: new CompileCache('node_modules/.saus', config.root),
     basePath: config.base,
     defaultPath: config.saus.defaultPath || '/404',
     routesPath: config.saus.routes,
@@ -226,8 +217,6 @@ function getConfigResolver(
     }
 
     const configHooks = await getConfigHooks(userConfig as any)
-    debug(`Found ${plural(configHooks.length, 'config hook')}`)
-
     for (const hookRef of configHooks) {
       const hookModule = require(hookRef.path)
       const configHook: ConfigHook = hookModule.__esModule
@@ -243,7 +232,9 @@ function getConfigResolver(
       if (result) {
         userConfig = vite.mergeConfig(userConfig, result)
       }
-      debug(`Applied config hook: ${hookRef.path}`)
+      if (process.env.DEBUG) {
+        debug(`Applied config hook: %O`, relativeToCwd(hookRef.path))
+      }
     }
 
     const config = (await vite.resolveConfig(
@@ -252,6 +243,10 @@ function getConfigResolver(
       defaultMode
     )) as ResolvedConfig
 
+    // @ts-ignore
+    config.configFile = loadResult.path
+
+    // The render module and "saus/client" need their deps optimized.
     config.optimizeDeps.entries = [
       ...arrify(config.optimizeDeps.entries),
       sausConfig.render,
@@ -292,81 +287,4 @@ function assertSausConfig(
       `[saus] You must define the "${keyPath}" property in your Vite config`
     )
   }
-}
-
-export async function loadConfigHooks(config: ResolvedConfig) {
-  Profiling.mark('load config hooks')
-
-  const importer = config.saus.render
-  const code = fs
-    .readFileSync(importer, 'utf8')
-    .split('\n')
-    .filter(line => line.startsWith('import '))
-    .join('\n')
-
-  await esModuleLexer.init
-  const [imports] = esModuleLexer.parse(code, importer)
-
-  const configHooks: ConfigHookRef[] = []
-  setConfigHooks(configHooks)
-
-  const { resolve } = Module.createRequire(importer)
-
-  const bareImportRE = /^[\w@]/
-  const nodeResolve = (id: string, importer: string) => {
-    if (!bareImportRE.test(id)) {
-      return
-    }
-    const isMatch = (name: string) => {
-      return id === name || id.startsWith(name + '/')
-    }
-    if (!config.resolve.dedupe?.some(isMatch)) {
-      const pkgPath = findPackage(dirname(importer))
-      if (!pkgPath || dirname(pkgPath) === config.root) {
-        return
-      }
-      // Ensure peer dependencies are deduped if possible.
-      const { peerDependencies } = require(pkgPath)
-      if (!Object.keys(peerDependencies || {}).some(isMatch)) {
-        return
-      }
-    }
-    try {
-      return resolve(id, { paths: [config.root] })
-    } catch {}
-  }
-
-  const reloadList = new Set<string>()
-  const requireAsync = createAsyncRequire({
-    nodeResolve,
-    shouldReload(id) {
-      if (reloadList.has(id)) {
-        return false
-      }
-      reloadList.add(id)
-      return true
-    },
-  })
-
-  const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
-  for (const imp of imports) {
-    const id = imp.n
-    if (!id || relativePathRE.test(id) || imp.d !== -1) {
-      continue
-    }
-    try {
-      const resolvedId = nodeResolve(id, importer) || resolve(id)
-      if (!/\.c?js$/.test(resolvedId || '')) {
-        continue
-      }
-      await requireAsync(resolvedId, importer, false)
-    } catch (e: any) {
-      if (!/Cannot (use import|find module)/.test(e.message)) {
-        console.error(e)
-      }
-    }
-  }
-
-  setConfigHooks(null)
-  return configHooks
 }
