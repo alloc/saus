@@ -182,7 +182,7 @@ async function startServer(
       }
     }
 
-    if (changedFiles.has(context.routesPath)) {
+    if (files.includes(context.routesPath)) {
       try {
         await loadRoutes(context, { moduleMap, resolveId })
         routesChanged = true
@@ -193,7 +193,7 @@ async function startServer(
 
     // Reload the renderers immediately, so the dev server is up-to-date
     // when new HTTP requests come in.
-    if (changedFiles.has(context.renderPath)) {
+    if (files.includes(context.renderPath)) {
       try {
         await loadRenderers(context, { moduleMap, resolveId })
         renderersChanged = true

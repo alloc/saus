@@ -16,7 +16,7 @@ export const TimeToLive = {
    */
   set(key: string, maxAge: number) {
     const ttl: TimeToLive = (ttlCache[key] = {
-      expiresAt: Date.now() + maxAge / 1e3,
+      expiresAt: Date.now() + maxAge * 1e3,
       get isAlive() {
         if (key in ttlCache && ttl.expiresAt <= Date.now()) {
           delete ttlCache[key]
@@ -25,7 +25,7 @@ export const TimeToLive = {
         return true
       },
       keepAlive() {
-        ttl.expiresAt = Date.now() + maxAge / 1e3
+        ttl.expiresAt = Date.now() + maxAge * 1e3
       },
     })
   },

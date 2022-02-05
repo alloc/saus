@@ -90,7 +90,7 @@ export function clientPlugin(
           ),
         ]
 
-        const cssUrls = new Set<string>()
+        const importedCss = new Set<vite.ModuleNode>()
         if (server) {
           // Cache the main route module.
           await server.transformRequest(routeModuleId)
@@ -98,7 +98,7 @@ export function clientPlugin(
           // Find CSS modules used by the route module.
           await server.moduleGraph
             .getModuleByUrl(routeModuleId)
-            .then(mod => mod && collectCss(mod, server, cssUrls))
+            .then(mod => mod && collectCss(mod, server, importedCss))
         }
 
         const client = page.client
@@ -113,7 +113,7 @@ export function clientPlugin(
             // Find CSS modules used by the generated client.
             await server.moduleGraph
               .getModuleByUrl(clientUrl)
-              .then(mod => mod && collectCss(mod, server, cssUrls))
+              .then(mod => mod && collectCss(mod, server, importedCss))
           }
         }
 
@@ -134,19 +134,32 @@ export function clientPlugin(
         })
 
         // Inject stylesheet tags for CSS modules.
-        cssUrls.forEach(href =>
-          tags.push({
-            injectTo: 'head',
-            tag: 'link',
-            attrs: {
-              rel: 'stylesheet',
-              href: base + href.slice(1),
-            },
-          })
+        const injectedStyles = await Promise.all(
+          Array.from(
+            importedCss,
+            async (mod): Promise<vite.HtmlTagDescriptor> => ({
+              injectTo: 'head',
+              tag: 'style',
+              attrs: {
+                'data-id': mod.id,
+              },
+              children:
+                '\n' +
+                (await server.transformRequest(toDirectRequest(mod.url)))!
+                  .code +
+                '\n',
+            })
+          )
         )
 
+        tags.push(...injectedStyles)
         return tags
       },
     },
   }
+}
+
+/** Add `?direct` so actual CSS is returned */
+function toDirectRequest(url: string) {
+  return url.replace(/(\?|$)/, q => '?direct' + (q ? '&' : ''))
 }
