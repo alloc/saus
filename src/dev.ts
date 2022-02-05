@@ -28,7 +28,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     loadContext('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
       clientPlugin,
-      config => routesPlugin(config),
+      () => routesPlugin(),
       renderPlugin,
       transformClientState,
       () =>
@@ -202,10 +202,7 @@ async function startServer(
         renderersChanged = true
 
         const oldConfigHooks = context.configHooks
-        const newConfigHooks = await loadConfigHooks(
-          context.renderPath,
-          oldConfigHooks
-        )
+        const newConfigHooks = await loadConfigHooks(context.config)
 
         const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
         const newConfigPaths = newConfigHooks.map(ref => ref.path)

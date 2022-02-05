@@ -1,7 +1,4 @@
-import createDebug from 'debug'
 import { TimeToLive } from '../runtime/ttl'
-
-const debug = createDebug('saus:cache')
 
 type Caches = typeof import('../runtime/cache')
 type StateLoader<State = any> = () => Promise<State>
@@ -25,12 +22,18 @@ export function withCache(
     undefined
 ) {
   return function getCachedState(cacheKey: string, loader?: StateLoader) {
-    if (loadedStateCache.has(cacheKey) && TimeToLive.isAlive(cacheKey)) {
-      return Promise.resolve(loadedStateCache.get(cacheKey))
+    if (loadedStateCache.has(cacheKey)) {
+      const useCachedValue =
+        TimeToLive.isAlive(cacheKey) ||
+        // Use expired state if no loader is given.
+        !(loader ||= getDefaultLoader(cacheKey))
+
+      if (useCachedValue) {
+        return Promise.resolve(loadedStateCache.get(cacheKey))
+      }
     }
     let loadingState = loadingStateCache.get(cacheKey)
     if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
-      debug(`Loading "%s" state`, cacheKey)
       loadingStateCache.set(
         cacheKey,
         (loadingState = loader().then(

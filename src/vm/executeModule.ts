@@ -10,7 +10,7 @@ export function executeModule(module: CompiledModule): Promise<any> {
     code += toInlineSourceMap(map)
   }
   const init = vm.runInThisContext(code, {
-    filename: cleanUrl(id),
+    filename: id[0] !== '\0' ? cleanUrl(id) : undefined,
   })
   return (module.exports = init(...Object.values(env)).then(() => {
     const exports = env[exportsId]

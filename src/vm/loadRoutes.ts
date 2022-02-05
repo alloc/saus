@@ -6,12 +6,13 @@ import { SausContext } from '../core/context'
 import { setRoutesModule } from '../core/global'
 import {
   createAsyncRequire,
-  injectNodeModule,
+  injectExports,
   updateModuleMap,
 } from './asyncRequire'
 import { compileNodeModule } from './compileNodeModule'
 import { compileSsrModule } from './compileSsrModule'
 import { debug } from './debug'
+import { dedupeNodeResolve } from './dedupeNodeResolve'
 import { executeModule } from './executeModule'
 import { formatAsyncStack } from './formatAsyncStack'
 import { ModuleMap, ResolveIdHook } from './types'
@@ -70,12 +71,16 @@ async function compileRoutesModule(
     }
   }
 
+  const { dedupe } = context.config.resolve
+  const nodeResolve = dedupe && dedupeNodeResolve(context.root, dedupe)
+
   const isProjectFile = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
   const require = createAsyncRequire({
     moduleMap,
     resolveId,
+    nodeResolve,
     isCompiledModule: id => /\.m?[tj]sx?$/.test(id) && isProjectFile(id),
     // Vite plugins are skipped by the Node pipeline.
     compileModule: async (id, require) => {
@@ -87,6 +92,7 @@ async function compileRoutesModule(
   const ssrRequire = createAsyncRequire({
     moduleMap,
     resolveId,
+    nodeResolve,
     isCompiledModule: isProjectFile,
     compileModule: (id, ssrRequire) =>
       compileSsrModule(id, context, ssrRequire),
@@ -112,5 +118,5 @@ function injectRoutesMap(context: SausContext) {
     loaders[route.path] = route.load
   }
   Object.defineProperty(routesMap, 'loaders', { value: loaders })
-  injectNodeModule(path.resolve(__dirname, '../client/routes.cjs'), routesMap)
+  injectExports(path.resolve(__dirname, '../client/routes.cjs'), routesMap)
 }

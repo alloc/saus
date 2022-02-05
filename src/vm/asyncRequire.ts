@@ -1,11 +1,13 @@
 import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import { Module } from 'module'
+import path from 'path'
 import { noop } from '../utils/noop'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { getStackFrame, StackFrame } from '../utils/resolveStackTrace'
 import { exportsId } from './compileEsm'
 import { debug } from './debug'
+import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
 import { executeModule } from './executeModule'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { traceNodeRequire } from './traceNodeRequire'
@@ -18,27 +20,64 @@ import {
 } from './types'
 
 export type RequireAsyncConfig = {
-  moduleMap: ModuleMap
-  resolveId: ResolveIdHook
-  isCompiledModule: (id: string) => boolean
-  compileModule: CompileModuleHook
+  /**
+   * Reuse compiled modules between `createAsyncRequire` calls,
+   * and wield full control over them.
+   */
+  moduleMap?: ModuleMap
+  /**
+   * This function must return a string before `isCompiledModule`
+   * can be called. If it doesn't, then Node's module resolution
+   * is used instead.
+   */
+  resolveId?: ResolveIdHook
+  /**
+   * When true is returned, the module is cleared from the module map
+   * and re-executed. Works for Node-based modules too.
+   */
+  shouldReload?: (id: string) => boolean
+  /**
+   * If undefined, then all modules resolved by `resolveId` are compiled,
+   * but only if `compileModule` is defined.
+   *
+   * Virtual modules are always compiled.
+   */
+  isCompiledModule?: (id: string) => boolean
+  /**
+   * Prepare a module for execution. Returning `null` will trigger
+   * an `ERR_MODULE_NOT_FOUND` error.
+   */
+  compileModule?: CompileModuleHook
+  /**
+   * Filter the stack trace to remove files you don't care about.
+   */
   filterStack?: (file: string) => boolean
+  /**
+   * Intercept native `require` calls to customize Node's module resolution.
+   */
+  nodeResolve?: NodeResolveHook
 }
 
-const nodeRequire = Module.createRequire(__filename)
-
 export function createAsyncRequire({
-  moduleMap,
-  resolveId,
-  isCompiledModule,
+  moduleMap = {},
+  resolveId = () => undefined,
+  shouldReload = () => false,
+  isCompiledModule = () => true,
   compileModule,
   filterStack,
-}: RequireAsyncConfig): RequireAsync {
+  nodeResolve,
+}: RequireAsyncConfig = {}): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
+
+  const mustCompile = (id: string, resolvedId: string) =>
+    resolvedId[0] === '\0' ||
+    id === resolvedId ||
+    id.startsWith('virtual:') ||
+    isCompiledModule(resolvedId)
 
   return async function requireAsync(id, importer, isDynamic) {
     if (builtinModules.includes(id)) {
-      return nodeRequire(id)
+      return Module.createRequire(importer)(id)
     }
 
     const time = Date.now()
@@ -54,18 +93,14 @@ export function createAsyncRequire({
       throw error
     }
 
-    const isVirtual = !!(
-      id.startsWith('virtual:') ||
-      (resolvedId && (resolvedId[0] === '\0' || id === resolvedId))
-    )
-
     let isCached = true
     let exports: any
     let module: CompiledModule | undefined
 
-    if (resolvedId && (isVirtual || isCompiledModule(resolvedId))) {
+    if (resolvedId && compileModule && mustCompile(id, resolvedId)) {
       await moduleMap.__compileQueue
-      if ((isCached = resolvedId in moduleMap)) {
+      isCached = resolvedId in moduleMap && !shouldReload(resolvedId)
+      if (isCached) {
         module = moduleMap[resolvedId]
         const circularIndex = asyncStack.findIndex(
           frame => frame?.file == resolvedId
@@ -112,22 +147,34 @@ export function createAsyncRequire({
         }
       }
     } else {
+      const nodeRequire = Module.createRequire(
+        path.isAbsolute(importer) ? importer : path.resolve('index.js')
+      )
+      const restoreNodeResolve = nodeResolve
+        ? hookNodeResolve(nodeResolve)
+        : noop
+
       try {
-        resolvedId = nodeRequire.resolve(id, {
-          paths: [importer],
-        })
+        resolvedId = nodeRequire.resolve(id)
       } catch (error: any) {
+        restoreNodeResolve()
+
         // Fall back to the Vite resolution if Node resolution fails.
         if (!resolvedId || !fs.existsSync(resolvedId)) {
           formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
       }
-      const cached = nodeRequire.cache[resolvedId]
-      if ((isCached = !!cached)) {
+      let cached = nodeRequire.cache[resolvedId]
+      if (cached && shouldReload(resolvedId)) {
+        delete nodeRequire.cache[resolvedId]
+        cached = undefined
+      }
+      if (cached) {
         exports = cached.exports
       } else {
-        const unhook = traceNodeRequire(
+        isCached = false
+        const stopTracing = traceNodeRequire(
           moduleMap,
           asyncStack,
           resolvedId,
@@ -135,8 +182,12 @@ export function createAsyncRequire({
         )
         try {
           exports = nodeRequire(resolvedId)
+        } catch (error: any) {
+          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+          throw error
         } finally {
-          unhook()
+          restoreNodeResolve()
+          stopTracing()
         }
       }
     }
@@ -173,10 +224,23 @@ export function updateModuleMap(
     .catch(noop)
 }
 
-export function injectNodeModule(filename: string, exports: any) {
-  nodeRequire.cache[filename] = Object.assign(new Module(filename), {
-    filename,
-    exports,
-    loaded: true,
-  })
+export function injectExports(filename: string, exports: object) {
+  const moduleCache = (Module as any)._cache as Record<string, NodeModule>
+  const module = moduleCache[filename]
+  if (module) {
+    if (exports.constructor == Object) {
+      Object.defineProperties(
+        module.exports,
+        Object.getOwnPropertyDescriptors(exports)
+      )
+    } else {
+      module.exports = exports
+    }
+  } else {
+    moduleCache[filename] = Object.assign(new Module(filename), {
+      filename,
+      exports,
+      loaded: true,
+    })
+  }
 }
