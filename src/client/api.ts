@@ -3,7 +3,6 @@
 export * from '../runtime/getCachedState'
 export * from '../runtime/clearCachedState'
 export * from '../runtime/stateModules'
-export * from '../runtime/ttl'
 
 export * from '../utils/getPagePath'
 export * from '../utils/resolveModules'

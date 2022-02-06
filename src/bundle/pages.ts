@@ -2,7 +2,7 @@ import path from 'path'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import { createPageFactory } from '../pages'
-import { loadedStateCache, loadingStateCache } from '../runtime/cache'
+import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
@@ -69,7 +69,7 @@ export async function renderPage(
 
   let page: InternalPage | null = null
   try {
-    if (renderStart && loadingStateCache.has(pageUrl)) {
+    if (renderStart && globalCache.loading[pageUrl.path]) {
       renderStart(pagePublicPath)
     }
     page = await pageFactory.render(pageUrl, {
@@ -198,7 +198,7 @@ export async function renderPage(
         id: stateModuleId,
         text: renderStateModule(
           stateId,
-          loadedStateCache.get(stateId),
+          globalCache.loaded[stateId]![0],
           config.base + config.stateCacheId
         ),
         exports: ['default'],

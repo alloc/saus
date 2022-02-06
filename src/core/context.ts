@@ -1,6 +1,7 @@
 import { flatten } from 'array-flatten'
 import arrify from 'arrify'
 import { resolve } from 'path'
+import { RenderedPage } from '../pages/types'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
@@ -14,7 +15,7 @@ import { loadConfigHooks } from './loadConfigHooks'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
-import { withCache } from './withCache'
+import { Cache, withCache } from './withCache'
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
@@ -46,6 +47,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   stateModulesByFile: Record<string, string[]>
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
+  getCachedPages: () => Promise<RenderedPage[]>
   /** Clear any matching pages (loading or loaded) */
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */
@@ -66,10 +68,12 @@ function createContext(
   configHooks: ConfigHookRef[],
   resolveConfig: SausContext['resolveConfig']
 ): SausContext {
-  // This cache is only for rendered pages. State modules use the global cache.
-  const localCache: typeof import('../runtime/cache') = {
-    loadingStateCache: new Map(),
-    loadedStateCache: new Map(),
+  const pageCache: Cache<RenderedPage> = { loading: {}, loaded: {} }
+
+  async function getCachedPages() {
+    return Object.values(pageCache.loaded)
+      .concat(await Promise.all(Object.values(pageCache.loading)))
+      .map(entry => entry[0])
   }
 
   return {
@@ -89,8 +93,9 @@ function createContext(
     runtimeHooks: [],
     defaultState: [],
     stateModulesByFile: {},
-    getCachedPage: withCache(localCache),
-    clearCachedPages: filter => clearCachedState(filter, localCache),
+    getCachedPage: withCache(pageCache),
+    clearCachedPages: filter => clearCachedState(filter, pageCache),
+    getCachedPages,
     renderPath: config.saus.render,
     renderers: [],
     beforeRenderHooks: [],

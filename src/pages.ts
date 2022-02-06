@@ -28,10 +28,9 @@ import {
   RenderFunction,
   RenderPageOptions,
 } from './pages/types'
-import { loadedStateCache } from './runtime/cache'
+import { globalCache } from './runtime/cache'
 import { getCachedState } from './runtime/getCachedState'
 import { isStateModule, StateModule } from './runtime/stateModules'
-import { TimeToLive } from './runtime/ttl'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -172,7 +171,7 @@ export function createPageFactory(
     if (page.html) {
       page.client = await getClient(functions, renderer, usedHooks)
       if (page.client) {
-        loadedStateCache.set(page.client.id, page.client)
+        globalCache.loaded[page.client.id] = [page.client]
       }
       page.head = parseHead(page.html)
     }
@@ -243,7 +242,7 @@ export function createPageFactory(
   }
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    getCachedState(url.path, async () => {
+    getCachedState(url.path, async (cacheControl) => {
       // Start loading state modules before the route state is awaited.
       const pendingStateModules = new Map<string, Promise<any>>()
       for (const include of defaultState.concat([route.include || []])) {
@@ -279,7 +278,7 @@ export function createPageFactory(
 
       // Reload the page state on almost every request, but keep it
       // cached for `getCachedState` calls that have no loader.
-      TimeToLive.set(url.path, 1)
+      cacheControl.maxAge = 1
 
       result.routePath = route.path
       result.routeParams = params

@@ -1,30 +1,13 @@
 import createDebug from 'debug'
+import type { CacheControl } from '../core/withCache'
 import { unwrapDefault } from '../utils/unwrapDefault'
 import { getCachedState } from './getCachedState'
 import type { ResolvedState } from './stateModules'
-import { TimeToLive } from './ttl'
 
 const debug = createDebug('saus:cache')
 
-export type StateModuleContext = {
-  cacheKey: string
-  /** Set the time-to-live (in seconds) */
-  maxAge: number
-}
-
-const getStateModuleContext = (cacheKey: string): StateModuleContext => ({
-  cacheKey,
-  get maxAge() {
-    return Infinity
-  },
-  set maxAge(value) {
-    TimeToLive.set(cacheKey, value)
-    Object.defineProperty(this, 'maxAge', { value })
-  },
-})
-
 export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
-  this: StateModuleContext,
+  this: CacheControl,
   ...args: Args
 ) => T
 
@@ -34,10 +17,10 @@ export const loadStateModule = <T, Args extends any[]>(
   loadImpl: StateModuleLoader<T, Args>,
   ...args: Args
 ): Promise<ResolvedState<T>> =>
-  getCachedState(cacheKey, async function loadStateModule() {
+  getCachedState(cacheKey, async function loadStateModule(cacheControl) {
     debug(`Loading "%s" state`, cacheKey)
     try {
-      let result: any = loadImpl.apply(getStateModuleContext(cacheKey), args)
+      let result: any = loadImpl.apply(cacheControl, args)
       if (result && typeof result == 'object') {
         // When an array is returned, await its elements.
         if (Array.isArray(result)) {

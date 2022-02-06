@@ -13,6 +13,7 @@ import {
   importMetaId,
   requireAsyncId,
 } from './compileEsm'
+import { ImporterSet } from './ImporterSet'
 import { overwriteScript } from './overwriteScript'
 import { CompiledModule, RequireAsync, Script } from './types'
 
@@ -61,7 +62,7 @@ export async function compileSsrModule(
     map: module.map,
     id,
     env,
-    importers: new Set(),
+    importers: new ImporterSet(),
   }
 }
 

@@ -1,16 +1,34 @@
-import { TimeToLive } from '../runtime/ttl'
 import { debug } from './debug'
 
-type Caches = typeof import('../runtime/cache')
-type StateLoader<State = any> = () => Promise<State>
+export type Cache<State = any> = {
+  loading: Record<string, Promise<CacheEntry<State>>>
+  loaded: Record<string, CacheEntry<State>>
+}
+
+/** The internal data structure used by `Cache` type */
+export type CacheEntry<State = any> = [state: State, expiresAt?: number]
+
+export type CacheControl = {
+  /** The string used to identify this entry */
+  readonly key: string
+  /**
+   * Number of seconds until this entry is reloaded on next request.
+   * Note that loaderless requests may be given expired data.
+   */
+  maxAge: number
+}
+
+type StateLoader<State = any> = {
+  (cacheControl: CacheControl): Promise<State>
+}
 
 export function withCache<State = any>(
-  caches: Caches,
+  cache: Cache,
   getDefaultLoader: (cacheKey: string) => StateLoader<State>
 ): (cacheKey: string, loader?: StateLoader<State>) => Promise<State>
 
 export function withCache<State = any>(
-  caches: Caches,
+  cache: Cache,
   getDefaultLoader?: (cacheKey: string) => StateLoader<State> | undefined
 ): {
   (cacheKey: string): Promise<State | undefined>
@@ -18,48 +36,61 @@ export function withCache<State = any>(
 }
 
 export function withCache(
-  { loadedStateCache, loadingStateCache }: Caches,
+  cache: Cache,
   getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () =>
     undefined
 ) {
   return function getCachedState(cacheKey: string, loader?: StateLoader) {
-    if (loadedStateCache.has(cacheKey)) {
+    const entry = cache.loaded[cacheKey]
+    if (entry) {
+      const expiresAt = entry[1] ?? Infinity
       const useCachedValue =
-        TimeToLive.isAlive(cacheKey) ||
+        expiresAt - Date.now() > 0 ||
         // Use expired state if no loader is given.
         !(loader ||= getDefaultLoader(cacheKey))
 
       if (useCachedValue) {
-        return Promise.resolve(loadedStateCache.get(cacheKey))
+        return Promise.resolve(entry[0])
       }
     }
-    let loadingState = loadingStateCache.get(cacheKey)
-    if (!loadingState && (loader ||= getDefaultLoader(cacheKey))) {
-      const time = Date.now()
-      loadingStateCache.set(
-        cacheKey,
-        (loadingState = loader().then(
-          loadedState => {
-            // If the promise is deleted before it resolves,
-            // assume the user does not want the state cached.
-            if (!loadingStateCache.delete(cacheKey)) {
-              return loadedState
-            }
-            // TTL may have been set to 0.
-            if (TimeToLive.isAlive(cacheKey)) {
-              loadedStateCache.set(cacheKey, loadedState)
-            } else {
-              debug('State %s expired while loading, skipping cache', cacheKey)
-            }
-            return loadedState
-          },
-          error => {
-            loadingStateCache.delete(cacheKey)
-            throw error
-          }
-        ))
-      )
+
+    let entryPromise = cache.loading[cacheKey] as
+      | Promise<CacheEntry>
+      | undefined
+
+    if (entryPromise || !(loader ||= getDefaultLoader(cacheKey))) {
+      return entryPromise
     }
-    return loadingState
+
+    const entryConfig: CacheControl = {
+      key: cacheKey,
+      maxAge: Infinity,
+    }
+
+    entryPromise = cache.loading[cacheKey] = loader(entryConfig)
+    return entryPromise.then(
+      state => {
+        // Skip caching if the promise is replaced or deleted
+        // before it resolves.
+        if (entryPromise == cache.loading[cacheKey]) {
+          const { maxAge } = entryConfig
+          if (maxAge > 0) {
+            cache.loaded[cacheKey] = isFinite(maxAge)
+              ? [state, Date.now() + maxAge * 1e3]
+              : [state]
+          } else {
+            debug('State %s expired while loading, skipping cache', cacheKey)
+          }
+          delete cache.loading[cacheKey]
+        }
+        return state
+      },
+      error => {
+        if (entryPromise == cache.loading[cacheKey]) {
+          delete cache.loading[cacheKey]
+        }
+        throw error
+      }
+    )
   }
 }

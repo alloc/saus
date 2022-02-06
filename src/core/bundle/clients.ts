@@ -189,7 +189,7 @@ export async function generateClientModules(
           dir: outDir,
           minifyInternalExports: false,
           manualChunks(id, api) {
-            // Ensure a chunk exporting the `loadedStateCache` object exists.
+            // Ensure a chunk exporting the `globalCache` object exists.
             if (id == globalCachePath) {
               return 'cache'
             }
@@ -201,7 +201,7 @@ export async function generateClientModules(
     },
   })
 
-  const buildResult = (await vite.build(config)) as vite.bundledCache
+  const buildResult = (await vite.build(config)) as vite.ViteBuild
   const { output } = buildResult.output[0]
 
   const { base } = runtimeConfig

@@ -11,6 +11,7 @@ import {
   importMetaId,
   requireAsyncId,
 } from './compileEsm'
+import { ImporterSet } from './ImporterSet'
 import { overwriteScript } from './overwriteScript'
 import { CompiledModule, RequireAsync, Script } from './types'
 
@@ -101,8 +102,8 @@ export async function compileNodeModule(
   return {
     ...script,
     id: filename,
-    importers: new Set(),
     env,
+    importers: new ImporterSet(),
   }
 }
 

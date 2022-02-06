@@ -1,11 +1,12 @@
 import { SourceMap } from '../utils/sourceMap'
+import type { ImporterSet } from './ImporterSet'
 
 export type Script = { code: string; map?: SourceMap }
 
 export interface CompiledModule extends Script {
   id: string
   env: Record<string, any>
-  importers: Set<CompiledModule>
+  importers: ImporterSet
   exports?: Promise<any>
 }
 
