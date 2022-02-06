@@ -1,5 +1,5 @@
 import md5Hex from 'md5-hex'
-import { loadedStateCache } from './cache'
+import { globalCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 
 export interface StateModule<T = any, Args extends any[] = any[]> {
@@ -32,8 +32,9 @@ export function defineStateModule<T, Args extends any[]>(
     id: toCacheKey([]),
     get(...args) {
       const cacheKey = toCacheKey(args)
-      if (loadedStateCache.has(cacheKey)) {
-        return loadedStateCache.get(cacheKey)
+      const cached = globalCache.loaded[cacheKey]
+      if (cached) {
+        return cached[0]
       }
       throw Error(
         `Failed to access "${cacheKey}" state. ` +

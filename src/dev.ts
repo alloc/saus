@@ -4,7 +4,7 @@ import { gray } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import { SausContext } from './core'
+import { getPageFilename, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
 import { loadConfigHooks } from './core/loadConfigHooks'
@@ -21,6 +21,7 @@ import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
+import { isImportedBy } from './vm/ImporterSet'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -156,6 +157,8 @@ async function startServer(
   await callPlugins(context.plugins, 'onContext', context)
 
   const changedFiles = new Set<string>()
+  const dirtyStateModules = new Set<CompiledModule>()
+
   const scheduleReload = debounce(async () => {
     // Wait for reloading to finish.
     while (context.reloading) {
@@ -171,21 +174,32 @@ async function startServer(
     const files = Array.from(changedFiles)
     changedFiles.clear()
 
-    // Remove cached state defined by the changed files.
-    for (const file of files) {
-      const stateModuleIds = context.stateModulesByFile[file]
-      if (stateModuleIds) {
-        // State modules use the global cache.
-        clearCachedState(key => {
-          return stateModuleIds.some(id => key.startsWith(id + '.'))
-        })
-      }
+    // Track which virtual modules need change events.
+    const changesToEmit = new Set<string>()
+
+    for (const { id } of dirtyStateModules) {
+      const stateModuleIds = context.stateModulesByFile[id]
+      clearCachedState(key => {
+        const isMatch = stateModuleIds.some(
+          moduleId => key == moduleId || key.startsWith(moduleId + '.')
+        )
+        if (isMatch) {
+          changesToEmit.add(context.basePath + 'state/' + key + '.js')
+        }
+        return isMatch
+      })
     }
 
     if (files.includes(context.routesPath)) {
       try {
         await loadRoutes(context, { moduleMap, resolveId })
         routesChanged = true
+
+        // Emit change events for page state modules.
+        for (const page of await context.getCachedPages())
+          changesToEmit.add(
+            '/' + getPageFilename(page.path, context.basePath) + '.js'
+          )
       } catch (error: any) {
         events.emit('error', error)
       }
@@ -222,16 +236,30 @@ async function startServer(
       await callPlugins(context.plugins, 'onContext', context)
     }
 
+    for (const file of changesToEmit) {
+      watcher.emit('change', file)
+    }
+
     context.reloading.resolve()
     context.reloading = undefined
   }, 50)
 
-  const purgeModuleMap = ({ id, importers }: CompiledModule) => {
-    if (!changedFiles.has(id)) {
-      changedFiles.add(id)
-      delete moduleMap[id]
+  const purgeModuleMap = (
+    module: CompiledModule,
+    stateModules: Set<CompiledModule>
+  ) => {
+    if (!changedFiles.has(module)) {
+      changedFiles.add(module)
+      delete moduleMap[module.id]
+      const { importers } = module
       for (const importer of importers) {
-        purgeModuleMap(importer)
+        purgeModuleMap(importer, stateModules)
+      }
+      for (const stateModule of stateModules) {
+        if (module == stateModule || importers.hasDynamic(stateModule)) {
+          dirtyStateModules.add(stateModule)
+          stateModules.delete(stateModule)
+        }
       }
     }
   }
@@ -240,7 +268,10 @@ async function startServer(
     const module = moduleMap[file]
     if (module) {
       await moduleMap.__compileQueue
-      purgeModuleMap(module)
+      const stateModules = new Set(
+        Object.keys(context.stateModulesByFile).map(file => moduleMap[file])
+      )
+      purgeModuleMap(module, stateModules)
       scheduleReload()
     }
     // Restart the server when Vite config is changed.

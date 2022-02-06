@@ -3,9 +3,9 @@ import http from 'http'
 import https from 'https'
 import md5Hex from 'md5-hex'
 import { getCachedState } from '../runtime/getCachedState'
-import { TimeToLive } from '../runtime/ttl'
 import { debug } from './debug'
 import { Response } from './response'
+import { CacheControl } from './withCache'
 
 type URL = import('url').URL
 declare const URL: typeof import('url').URL
@@ -25,16 +25,16 @@ export function get(url: string | URL, opts?: GetOptions) {
     typeof url == 'string' ? url : url.href,
     opts?.headers
   )
-  return getCachedState(cacheKey, () => {
+  return getCachedState(cacheKey, cacheControl => {
     debug('Sending GET request: %O', url)
-    return new Promise(resolvedGet.bind(null, url, opts || {}, cacheKey, 0))
+    return new Promise(resolvedGet.bind(null, url, opts || {}, cacheControl, 0))
   })
 }
 
 function resolvedGet(
   url: string | URL,
   opts: GetOptions,
-  cacheKey: string,
+  cacheControl: CacheControl,
   redirectCount: number,
   resolve: (response: Response) => void,
   reject: (e: any) => void
@@ -64,7 +64,7 @@ function resolvedGet(
           return resolvedGet(
             resp.headers.location,
             opts,
-            cacheKey,
+            cacheControl,
             redirectCount + 1,
             resolve,
             reject
@@ -72,8 +72,8 @@ function resolvedGet(
         }
         const status = resp.statusCode!
         if (status >= 200 && status < 400) {
-          if (status == 200 && cacheKey) {
-            readCacheControl(resp.headers['cache-control'], cacheKey)
+          if (status == 200) {
+            useCacheControl(cacheControl, resp.headers['cache-control'])
           }
           return resolve(
             new Response(Buffer.concat(chunks), status, resp.headers)
@@ -117,18 +117,17 @@ function getCacheKey(url: string, headers?: Record<string, string>) {
 const noCacheDirective = 'no-cache'
 const maxAgeDirective = 'max-age'
 
-function readCacheControl(cacheControl: string | undefined, cacheKey: string) {
-  if (!cacheControl) return
+function useCacheControl(cacheControl: CacheControl, header?: string) {
+  if (!header) return
 
-  const directives = cacheControl.split(/, */)
+  const directives = header.split(/, */)
   if (directives.includes(noCacheDirective)) {
-    TimeToLive.set(cacheKey, 0)
+    cacheControl.maxAge = 0
   } else {
     const maxAge = directives.find(d => d.startsWith(maxAgeDirective))
     if (maxAge) {
       // TODO: support must-revalidate?
-      const maxAgeSecs = Number(maxAge.slice(maxAgeDirective.length + 1))
-      TimeToLive.set(cacheKey, maxAgeSecs)
+      cacheControl.maxAge = Number(maxAge.slice(maxAgeDirective.length + 1))
     }
   }
 }

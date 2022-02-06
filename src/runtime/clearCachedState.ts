@@ -1,28 +1,31 @@
 import createDebug from 'debug'
-import * as globalCache from './cache'
+import { globalCache } from './cache'
 
 const debug = createDebug('saus:cache')
 
 /**
- * Traverse the `loadingStateCache` and `loadedStateCache` maps,
- * removing any keys that match.
+ * Traverse the given cache, removing any keys that match.
  */
 export function clearCachedState(
   filter: string | ((key: string) => boolean) = () => true,
-  { loadingStateCache, loadedStateCache } = globalCache
+  cache = globalCache
 ) {
   if (typeof filter == 'function') {
-    const clear = (_: any, key: string, cache: Map<string, any>) =>
-      filter(key) && cache.delete(key) && debug('clearCachedState(%O)', key)
-
-    loadingStateCache.forEach(clear)
-    loadedStateCache.forEach(clear)
+    const clear = (cache: Record<string, any>) => {
+      for (const key in cache) {
+        if (filter(key)) {
+          debug('clearCachedState(%O)', key)
+          delete cache[key]
+        }
+      }
+    }
+    clear(cache.loading)
+    clear(cache.loaded)
   } else {
-    const wasLoaded = loadedStateCache.delete(filter),
-      wasLoading = loadingStateCache.delete(filter)
-
-    if (wasLoaded || wasLoading) {
+    if (filter in cache.loaded || filter in cache.loading) {
       debug('clearCachedState(%O)', filter)
     }
+    delete cache.loading[filter]
+    delete cache.loaded[filter]
   }
 }

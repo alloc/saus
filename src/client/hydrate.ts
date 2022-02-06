@@ -1,5 +1,5 @@
 import type { ClientState, RenderRequest } from '../core'
-import { loadedStateCache } from '../runtime/cache'
+import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { BASE_URL } from './constants'
 import routes from './routes'
@@ -19,7 +19,7 @@ export function hydrate(
   const routePath = state.routePath.replace('/', BASE_URL)
   routes[routePath] = routeModuleUrl
   const path = location.pathname
-  loadedStateCache.set(path, state)
+  globalCache.loaded[path] = [state]
   runHydration({
     path,
     file: getPageFilename(path, import.meta.env.BASE_URL),

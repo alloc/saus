@@ -25,11 +25,15 @@ export function formatAsyncStack(
   })
 
   const stack = parseStackTrace(error.stack)
+  asyncStack = asyncStack.filter(Boolean)
 
-  let relevantFrames = stack.frames
-    .slice(error.framesToPop || 0)
-    .filter(frame => !ignoredFrameRE.test(frame.file))
-    .concat(asyncStack.filter(Boolean) as StackFrame[])
+  let relevantFrames =
+    error.code == 'MODULE_NOT_FOUND'
+      ? (asyncStack as StackFrame[])
+      : stack.frames
+          .slice(error.framesToPop || 0)
+          .filter(frame => !ignoredFrameRE.test(frame.file))
+          .concat(asyncStack as StackFrame[])
 
   if (filterStack) {
     relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))

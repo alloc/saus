@@ -3,7 +3,7 @@ import * as vite from 'vite'
 import { SausContext, Plugin, SausConfig, RenderedPage } from '../core'
 import { debug } from '../core/debug'
 import { collectCss } from '../preload'
-import { loadedStateCache } from '../runtime/cache'
+import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { serializeImports } from '../utils/imports'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
@@ -53,7 +53,8 @@ export function clientPlugin(
     },
     load(id) {
       if (isClientId(id)) {
-        const client = loadedStateCache.get(id.replace(clientIdPrefix, ''))
+        const cacheKey = id.replace(clientIdPrefix, '')
+        const [client] = globalCache.loaded[cacheKey]
         if (client) {
           return client.code
         }

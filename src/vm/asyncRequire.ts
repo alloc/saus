@@ -78,7 +78,8 @@ export function createAsyncRequire({
     resolvedId[0] === '\0' ||
     id === resolvedId ||
     id.startsWith('virtual:') ||
-    isCompiledModule(resolvedId)
+    isCompiledModule(resolvedId) ||
+    (resolvedId[0] === '/' && !fs.existsSync(resolvedId))
 
   return async function requireAsync(id, importer, isDynamic) {
     if (builtinModules.includes(id)) {
@@ -201,8 +202,8 @@ export function createAsyncRequire({
       }
     }
 
+    module?.importers.add(moduleMap[importer], isDynamic)
     if (!isDynamic) {
-      module?.importers.add(moduleMap[importer])
       callStack = callStack.slice(1)
     }
 
