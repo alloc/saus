@@ -20,7 +20,6 @@ import {
 } from './types'
 import kleur from 'kleur'
 import { forceNodeReload } from './forceNodeReload'
-import { getNodeModule as getCachedModule } from './getNodeModule'
 
 export type RequireAsyncConfig = {
   /**
@@ -61,6 +60,7 @@ export type RequireAsyncConfig = {
   nodeResolve?: NodeResolveHook
 }
 
+const isDebug = !!process.env.DEBUG
 const neverReload = () => false
 
 export function createAsyncRequire({
@@ -74,13 +74,6 @@ export function createAsyncRequire({
 }: RequireAsyncConfig = {}): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
 
-  const mustCompile = (id: string, resolvedId: string) =>
-    resolvedId[0] === '\0' ||
-    id === resolvedId ||
-    id.startsWith('virtual:') ||
-    isCompiledModule(resolvedId) ||
-    (resolvedId[0] === '/' && !fs.existsSync(resolvedId))
-
   return async function requireAsync(id, importer, isDynamic) {
     if (builtinModules.includes(id)) {
       return Module.createRequire(importer)(id)
@@ -92,28 +85,86 @@ export function createAsyncRequire({
       : (callStack = [getStackFrame(3), ...callStack])
 
     let resolvedId: string | undefined
-    try {
-      resolvedId = await resolveId(id, importer, isDynamic)
-    } catch (error: any) {
-      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-      throw error
+    let nodeResolvedId: string | undefined
+    let nodeRequire: NodeRequire
+
+    resolveStep: {
+      try {
+        resolvedId = await resolveId(id, importer, isDynamic)
+      } catch (error: any) {
+        formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+        throw error
+      }
+
+      if (resolvedId) {
+        if (isVirtual(id, resolvedId)) {
+          break resolveStep
+        }
+        if (isCompiledModule(resolvedId)) {
+          break resolveStep
+        }
+        if (!/\.[mc]?js(on)?$/.test(resolvedId)) {
+          break resolveStep
+        }
+      }
+
+      const restoreNodeResolve = nodeResolve
+        ? hookNodeResolve(nodeResolve)
+        : noop
+
+      try {
+        nodeRequire = createRequire(importer)
+        nodeResolvedId = nodeRequire.resolve(id)
+        if (resolvedId) {
+          if (isNodeRequirable(resolvedId)) {
+            nodeResolvedId = resolvedId
+          } else if (!isNodeRequirable(nodeResolvedId)) {
+            if (isDebug) {
+              debug(
+                `Compiling %s for Node compat`,
+                kleur.yellow(toDebugPath(resolvedId))
+              )
+            }
+            break resolveStep
+          }
+        }
+      } catch (error: any) {
+        if (!resolvedId) {
+          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+          throw error
+        }
+        if (!isNodeRequirable(resolvedId)) {
+          if (isDebug) {
+            debug(
+              `Compiling %s for Node compat`,
+              kleur.yellow(toDebugPath(resolvedId))
+            )
+          }
+          break resolveStep
+        }
+        // Use the custom resolution if Node resolution fails.
+        nodeResolvedId = resolvedId
+      } finally {
+        restoreNodeResolve()
+      }
+      resolvedId = undefined
     }
 
-    let isCached = true
+    let isCached: boolean
     let exports: any
     let module: CompiledModule | undefined
 
-    if (resolvedId && compileModule && mustCompile(id, resolvedId)) {
-      await moduleMap.__compileQueue
-      isCached = resolvedId in moduleMap && !shouldReload(resolvedId)
-      if (isCached) {
-        module = moduleMap[resolvedId]
-        const circularIndex = asyncStack.findIndex(
-          frame => frame?.file == resolvedId
-        )
-        if (circularIndex >= 0) {
-          exports = module.env[exportsId]
-          if (process.env.DEBUG) {
+    loadStep: {
+      if (resolvedId && compileModule) {
+        await moduleMap.__compileQueue
+
+        isCached = resolvedId in moduleMap && !shouldReload(resolvedId)
+        if (isCached) {
+          module = moduleMap[resolvedId]
+          const circularIndex = asyncStack.findIndex(
+            frame => frame?.file == resolvedId
+          )
+          if (circularIndex >= 0 && isDebug) {
             const importLoop = asyncStack
               .slice(0, circularIndex + 1)
               .filter(Boolean)
@@ -123,15 +174,16 @@ export function createAsyncRequire({
 
             debug(
               `Circular import may lead to unexpected behavior\n `,
-              importLoop.map(relativeToCwd).join(' → ')
+              importLoop.map(toDebugPath).join(' → ')
             )
           }
-        } else {
-          exports = module.exports
+          exports = circularIndex >= 0 ? module.env[exportsId] : module.exports
+          break loadStep
         }
-      } else {
-        const modulePromise = compileModule(resolvedId, requireAsync).then(
-          module => {
+
+        module = await updateModuleMap(
+          moduleMap,
+          compileModule(resolvedId, requireAsync).then(module => {
             if (!module) {
               const error = Object.assign(
                 Error(`Cannot find module '${resolvedId}'`),
@@ -141,62 +193,47 @@ export function createAsyncRequire({
               throw error
             }
             return module
-          }
+          })
         )
-        updateModuleMap(moduleMap, modulePromise)
-        module = await modulePromise
+
         try {
           exports = await executeModule(module)
         } catch (error: any) {
           formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
-      }
-    } else {
-      const nodeRequire = Module.createRequire(
-        path.isAbsolute(importer) ? importer : path.resolve('index.js')
-      )
-
-      const restoreNodeResolve = nodeResolve
-        ? hookNodeResolve(nodeResolve)
-        : noop
-
-      try {
-        resolvedId = nodeRequire.resolve(id)
-      } catch (error: any) {
-        restoreNodeResolve()
-
-        // Fall back to the Vite resolution if Node resolution fails.
-        if (!resolvedId || !fs.existsSync(resolvedId)) {
-          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-          throw error
-        }
-      }
-
-      const restoreModuleCache =
-        shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
-
-      const cached = getCachedModule(resolvedId)
-      if (cached) {
-        exports = cached.exports
-        restoreNodeResolve()
-        restoreModuleCache()
       } else {
-        isCached = false
+        resolvedId = nodeResolvedId!
+
+        const restoreModuleCache =
+          shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
+
+        const cached = getCachedModule(resolvedId)
+        if ((isCached = !!cached)) {
+          exports = cached.exports
+          restoreModuleCache()
+          break loadStep
+        }
+
+        const restoreNodeResolve = nodeResolve
+          ? hookNodeResolve(nodeResolve)
+          : noop
+
         const stopTracing = traceNodeRequire(
           moduleMap,
           asyncStack,
           resolvedId,
           filterStack
         )
+
         try {
-          exports = nodeRequire(resolvedId)
+          exports = nodeRequire!(resolvedId)
         } catch (error: any) {
           formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         } finally {
-          restoreNodeResolve()
           restoreModuleCache()
+          restoreNodeResolve()
           stopTracing()
         }
       }
@@ -207,10 +244,10 @@ export function createAsyncRequire({
       callStack = callStack.slice(1)
     }
 
-    if (!isCached && process.env.DEBUG) {
+    if (!isCached && isDebug) {
       debug(
         `Loaded %s in %sms`,
-        kleur.cyan(relativeToCwd(resolvedId)),
+        kleur.cyan(toDebugPath(resolvedId)),
         Date.now() - time
       )
     }
@@ -230,12 +267,15 @@ export function updateModuleMap(
       writable: true,
     })
   }
+
   moduleMap.__compileQueue = modulePromise
     .then(module => {
       moduleMap[module.id] = module
       return compileQueue
     })
     .catch(noop)
+
+  return modulePromise
 }
 
 export function injectExports(filename: string, exports: object) {
@@ -259,6 +299,37 @@ export function injectExports(filename: string, exports: object) {
   }
 }
 
+function createRequire(importer: string) {
+  return Module.createRequire(
+    path.isAbsolute(importer) ? importer : path.resolve('index.js')
+  )
+}
+
 function getCachedModule(id: string): NodeModule | undefined {
   return (Module as any)._cache[id]
+}
+
+const nodeExtensions = Module.createRequire(__filename).extensions
+
+function isNodeRequirable(file: string) {
+  const ext = path.extname(file)
+  if (ext !== '.js') {
+    return ext == '.cjs' || ext in nodeExtensions
+  }
+  try {
+    const code = fs.readFileSync(file, 'utf8')
+    return !/^(im|ex)port /m.test(code)
+  } catch {
+    return false
+  }
+}
+
+function isVirtual(id: string, resolvedId: string) {
+  return (
+    resolvedId[0] === '\0' || id === resolvedId || id.startsWith('virtual:')
+  )
+}
+
+function toDebugPath(file: string) {
+  return fs.existsSync(file) ? relativeToCwd(file) : file
 }

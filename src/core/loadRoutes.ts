@@ -82,7 +82,7 @@ async function compileRoutesModule(
     moduleMap,
     resolveId,
     nodeResolve,
-    isCompiledModule: id => /\.m?[tj]sx?$/.test(id) && isProjectFile(id),
+    isCompiledModule: isProjectFile,
     // Vite plugins are skipped by the Node pipeline.
     compileModule: async (id, require) => {
       const code = fs.readFileSync(id, 'utf8')
@@ -99,16 +99,18 @@ async function compileRoutesModule(
       compileSsrModule(id, context, ssrRequire),
   })
 
-  const modulePromise = compileNodeModule(
-    editor.toString(),
-    routesPath,
-    context,
-    (id, importer, isDynamic) =>
-      isDynamic ? ssrRequire(id, importer, true) : require(id, importer, false)
+  return updateModuleMap(
+    moduleMap,
+    compileNodeModule(
+      editor.toString(),
+      routesPath,
+      context,
+      (id, importer, isDynamic) =>
+        isDynamic
+          ? ssrRequire(id, importer, true)
+          : require(id, importer, false)
+    )
   )
-
-  updateModuleMap(moduleMap, modulePromise)
-  return modulePromise
 }
 
 function injectRoutesMap(context: SausContext) {

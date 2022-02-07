@@ -22,13 +22,6 @@ export async function loadPageModule<PageModule = RouteModule>(
       ? getPagePath(routePath, routeParams)
       : import.meta.env.DEFAULT_PATH
 
-  console.log('loadPageModule:', {
-    pagePath,
-    routeModuleUrl,
-    routePath,
-    routeParams,
-  })
-
   try {
     const pageState = await loadPageState(pagePath)
 

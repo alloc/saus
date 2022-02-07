@@ -60,16 +60,13 @@ function compileRenderModule(
   ssrRequire: RequireAsync,
   moduleMap: ModuleMap
 ) {
-  const modulePromise = compileSsrModule(
-    context.renderPath,
-    context,
-    ssrRequire
-  ).then(module => {
-    if (!module) {
-      throw Error(`Cannot find module '${context.renderPath}'`)
-    }
-    return module
-  })
-  updateModuleMap(moduleMap, modulePromise)
-  return modulePromise
+  return updateModuleMap(
+    moduleMap,
+    compileSsrModule(context.renderPath, context, ssrRequire).then(module => {
+      if (!module) {
+        throw Error(`Cannot find module '${context.renderPath}'`)
+      }
+      return module
+    })
+  )
 }
