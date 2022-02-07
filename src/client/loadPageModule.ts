@@ -1,20 +1,47 @@
-import type { RouteParams } from '../core/routes'
+import type { ClientState, RouteModule, RouteParams } from '../core'
 import { getPagePath } from '../utils/getPagePath'
 import { applyHead } from './head'
 import { loadPageState } from './loadPageState'
 import routes from './routes'
 
-export function loadPageModule(routePath: string, routeParams?: RouteParams) {
+export async function loadPageModule<PageModule = RouteModule>(
+  routePath: string,
+  routeParams?: RouteParams,
+  unwrapModule?: (
+    routeModule: RouteModule,
+    pageState: ClientState
+  ) => PageModule | Promise<PageModule>
+): Promise<PageModule> {
   const routeModuleUrl = routes[routePath]
   if (!routeModuleUrl) {
     throw Error(`Unknown route: "${routePath}"`)
   }
-  const pagePath = getPagePath(routePath, routeParams)
-  return loadPageState(pagePath).then(() => {
+
+  const pagePath =
+    routePath !== 'default'
+      ? getPagePath(routePath, routeParams)
+      : import.meta.env.DEFAULT_PATH
+
+  console.log('loadPageModule:', {
+    pagePath,
+    routeModuleUrl,
+    routePath,
+    routeParams,
+  })
+
+  try {
+    const pageState = await loadPageState(pagePath)
+
     // Add any desired <link> tags and update the <title> tag
     // before executing the route module.
     applyHead(pagePath)
 
-    return import(/* @vite-ignore */ routeModuleUrl)
-  })
+    const routeModule = await import(/* @vite-ignore */ routeModuleUrl)
+    return unwrapModule ? unwrapModule(routeModule, pageState) : routeModule
+  } catch (error: any) {
+    if (error.code == 'PAGE_404' && routePath !== 'default') {
+      return loadPageModule('default', undefined, unwrapModule)
+    }
+    throw error
+  }
 }

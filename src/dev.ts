@@ -21,7 +21,6 @@ import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { isImportedBy } from './vm/ImporterSet'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -30,7 +29,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     loadContext('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
       clientPlugin,
-      () => routesPlugin(),
+      routesPlugin(),
       renderPlugin,
       transformClientState,
       () =>
@@ -248,10 +247,10 @@ async function startServer(
     module: CompiledModule,
     stateModules: Set<CompiledModule>
   ) => {
-    if (!changedFiles.has(module)) {
-      changedFiles.add(module)
-      delete moduleMap[module.id]
-      const { importers } = module
+    const { id, importers } = module
+    if (!changedFiles.has(id)) {
+      changedFiles.add(id)
+      delete moduleMap[id]
       for (const importer of importers) {
         purgeModuleMap(importer, stateModules)
       }

@@ -68,7 +68,11 @@ function createContext(
   configHooks: ConfigHookRef[],
   resolveConfig: SausContext['resolveConfig']
 ): SausContext {
-  const pageCache: Cache<RenderedPage> = { loading: {}, loaded: {} }
+  const pageCache: Cache<RenderedPage> = {
+    loading: {},
+    loaders: {},
+    loaded: {},
+  }
 
   async function getCachedPages() {
     return Object.values(pageCache.loaded)
@@ -259,6 +263,9 @@ function getConfigResolver(
     ]
 
     const context = getContext(config)
+
+    config.env.DEFAULT_PATH = context.defaultPath
+
     const sausPlugins = getSausPlugins(config)
     context.plugins ||= sausPlugins
 

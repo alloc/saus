@@ -18,6 +18,9 @@
       "node": "./client/index.cjs",
       "default": "./client/index.js"
     },
+    "./client/env": {
+      "types": "./client/env.d.ts"
+    },
     "./core": "./core/index.js"
   },
   "files": [

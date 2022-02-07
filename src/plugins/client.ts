@@ -127,10 +127,14 @@ export function clientPlugin(
           attrs: { type: 'module' },
           children: endent`
             import pageState from "${pageStateUrl}"
-            import * as routeModule from "${routeModuleUrl}"
-            ${serializeImports(clientUrl ? [clientUrl] : [])}
             import { hydrate } from "${sausClientUrl}"
-            hydrate(pageState, routeModule, "${routeModuleUrl}")
+
+            Promise.all([
+              import("${routeModuleUrl}"),
+              import("${clientUrl}")
+            ]).then(([routeModule]) =>
+              hydrate(pageState, routeModule, "${routeModuleUrl}")
+            )
           `,
         })
 

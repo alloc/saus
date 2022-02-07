@@ -5,6 +5,6 @@
   "compilerOptions": {
     "lib": ["dom", "esnext"],
     "module": "esnext",
-    "types": ["vite/client"]
+    "types": ["../../client/env"]
   }
 }
