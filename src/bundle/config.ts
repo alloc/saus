@@ -1,4 +1,4 @@
-import { RuntimeConfig } from '../../core/config'
+import { RuntimeConfig } from '../core/config'
 
 /* Stub module replaced at build time */
 declare const config: RuntimeConfig

@@ -2,6 +2,7 @@ import { debug } from './debug'
 
 export type Cache<State = any> = {
   loading: Record<string, Promise<CacheEntry<State>>>
+  loaders: Record<string, StateLoader<State>>
   loaded: Record<string, CacheEntry<State>>
 }
 
@@ -23,12 +24,12 @@ type StateLoader<State = any> = {
 }
 
 export function withCache<State = any>(
-  cache: Cache,
+  cache: Cache<State>,
   getDefaultLoader: (cacheKey: string) => StateLoader<State>
 ): (cacheKey: string, loader?: StateLoader<State>) => Promise<State>
 
 export function withCache<State = any>(
-  cache: Cache,
+  cache: Cache<State>,
   getDefaultLoader?: (cacheKey: string) => StateLoader<State> | undefined
 ): {
   (cacheKey: string): Promise<State | undefined>
@@ -68,6 +69,8 @@ export function withCache(
     }
 
     entryPromise = cache.loading[cacheKey] = loader(entryConfig)
+    cache.loaders[cacheKey] = loader
+
     return entryPromise.then(
       state => {
         // Skip caching if the promise is replaced or deleted

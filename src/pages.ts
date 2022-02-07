@@ -19,6 +19,7 @@ import type {
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
+import { CacheControl } from './core/withCache'
 import {
   ClientFunction,
   ClientFunctions,
@@ -186,9 +187,15 @@ export function createPageFactory(
     config.command !== 'dev'
       ? Math.max(1, config.renderConcurrency ?? os.cpus().length)
       : 1,
-    (url: ParsedUrl, renderPage: RenderPageFn, options: RenderPageOptions) =>
+    (
+      url: ParsedUrl,
+      renderPage: RenderPageFn,
+      options: RenderPageOptions,
+      cacheControl: CacheControl
+    ) =>
       setupPromise.then(() => {
         debug(`Page in progress: %s`, url)
+
         options.renderStart?.(url.path)
         const rendering = renderPage(url)
         if (options.renderFinish)
@@ -196,6 +203,10 @@ export function createPageFactory(
             options.renderFinish.bind(null, url.path, null),
             options.renderFinish.bind(null, url.path)
           )
+
+        // Rerender the page on every request.
+        cacheControl.maxAge = 1
+
         return rendering
       })
   )
@@ -242,7 +253,7 @@ export function createPageFactory(
   }
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
-    getCachedState(url.path, async (cacheControl) => {
+    getCachedState(url.path, async cacheControl => {
       // Start loading state modules before the route state is awaited.
       const pendingStateModules = new Map<string, Promise<any>>()
       for (const include of defaultState.concat([route.include || []])) {

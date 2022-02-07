@@ -16,6 +16,7 @@ import { ModuleMap, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
+import { Route } from './routes'
 
 type LoadOptions = {
   moduleMap?: ModuleMap
@@ -112,14 +113,23 @@ async function compileRoutesModule(
 
 function injectRoutesMap(context: SausContext) {
   const routesMap: Record<string, string> = {}
+
   const loaders: Record<string, () => Promise<any>> = {}
-  for (const route of context.routes) {
-    routesMap[route.path] = route.moduleId
-    loaders[route.path] = route.load
-  }
   Object.defineProperty(routesMap, 'loaders', {
     value: loaders,
     configurable: true,
   })
-  injectExports(path.resolve(__dirname, '../client/routes.cjs'), routesMap)
+
+  let route: Route | undefined
+  for (route of context.routes) {
+    routesMap[route.path] = route.moduleId
+    loaders[route.path] = route.load
+  }
+  if ((route = context.defaultRoute)) {
+    routesMap.default = route.moduleId
+    loaders.default = route.load
+  }
+
+  const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
+  injectExports(routesMapPath, routesMap)
 }

@@ -10,6 +10,7 @@ import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
 import { RenderedFile } from '../pages/types'
+import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
@@ -48,12 +49,15 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         }
       } else if (isStateModuleRequest(id)) {
         await init
+
         const stateModuleId = id.slice(7, -3)
-        const state = await getCachedState(stateModuleId)
-        if (state !== undefined) {
+        await getCachedState(stateModuleId, globalCache.loaders[stateModuleId])
+
+        const stateEntry = globalCache.loaded[stateModuleId]
+        if (stateEntry) {
           return renderStateModule(
             stateModuleId,
-            state,
+            stateEntry,
             '/@fs/' + globalCachePath
           )
         }
@@ -130,7 +134,10 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
         async function renderPage(): Promise<Response | undefined> {
           try {
-            const page = await pageFactory.render(url)
+            let page = await pageFactory.render(url)
+            if (!page && !/\.[^./]+$/.test(url)) {
+              page = await pageFactory.render(context.defaultPath)
+            }
             if (page) {
               for (const file of page.files) {
                 fileCache[file.id] = file
