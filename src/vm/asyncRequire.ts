@@ -331,5 +331,5 @@ function isVirtual(id: string, resolvedId: string) {
 }
 
 function toDebugPath(file: string) {
-  return fs.existsSync(file) ? relativeToCwd(file) : file
+  return fs.existsSync(file.replace(/[#?].*$/, '')) ? relativeToCwd(file) : file
 }
