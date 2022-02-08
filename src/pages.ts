@@ -20,6 +20,8 @@ import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { CacheControl } from './core/withCache'
+import { createStateModuleMap } from './pages/createStateModuleMap'
+import { handleNestedState } from './pages/handleNestedState'
 import {
   ClientFunction,
   ClientFunctions,
@@ -31,7 +33,6 @@ import {
 } from './pages/types'
 import { globalCache } from './runtime/cache'
 import { getCachedState } from './runtime/getCachedState'
-import { isStateModule, StateModule } from './runtime/stateModules'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
@@ -43,6 +44,7 @@ import { ParsedUrl, parseUrl } from './utils/url'
 const debug = createDebug('saus:pages')
 
 const stateModulesMap = new WeakMap<ClientState, string[]>()
+const ssrStateMap = new WeakMap<ClientState, ClientState>()
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
@@ -122,7 +124,7 @@ export function createPageFactory(
       query: url.search,
       params: state.routeParams,
       module: routeModule,
-      state,
+      state: ssrStateMap.get(state)!,
     }
 
     const usedHooks: BeforeRenderHook[] = []
@@ -225,65 +227,33 @@ export function createPageFactory(
     )
   }
 
-  function loadStateModule(
-    loaded: Map<string, Promise<any>>,
-    state: StateModule
-  ) {
-    let loading = loaded.get(state.id)
-    if (!loading) {
-      loading = state.load().catch(error => {
-        onError(error)
-        return null
-      })
-      loaded.set(state.id, loading)
-    }
-    return loading
-  }
-
-  function loadStateModules(
-    loaded: Map<string, Promise<any>>,
-    include: RouteInclude,
-    url: ParsedUrl,
-    params: RouteParams
-  ) {
-    const included =
-      typeof include == 'function' ? include(url, params) : include
-
-    return included.map(loadStateModule.bind(null, loaded))
-  }
-
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
+      const stateModules = createStateModuleMap(onError)
+
       // Start loading state modules before the route state is awaited.
-      const pendingStateModules = new Map<string, Promise<any>>()
-      for (const include of defaultState.concat([route.include || []])) {
-        loadStateModules(pendingStateModules, include, url, params)
+      for (const included of defaultState.concat([route.include || []])) {
+        stateModules.include(included, url, params)
       }
 
-      let result: ClientState
-      if (route.state) {
-        result = (await route.state(
-          Object.values(params),
-          url.searchParams
-        )) as any
+      const state: ClientState = (
+        route.state
+          ? await route.state(Object.values(params), url.searchParams)
+          : {}
+      ) as any
 
-        // Load any embedded state modules.
-        JSON.stringify(result, (key, state) => {
-          if (!isStateModule(state)) {
-            return state
-          }
-          loadStateModule(pendingStateModules, state)
-          result[key] = { '@import': state.id }
-        })
-      } else {
-        result = {} as any
-      }
+      state.routePath = route.path
+      state.routeParams = params
 
-      await Promise.all(pendingStateModules.values())
-      stateModulesMap.set(result, Array.from(pendingStateModules.keys()))
+      // Load any embedded state modules.
+      ssrStateMap.set(state, handleNestedState(state, stateModules))
+
+      // Wait for state modules to load.
+      await Promise.all(stateModules.values())
+      stateModulesMap.set(state, Array.from(stateModules.keys()))
 
       if (config.command == 'dev')
-        Object.defineProperty(result, '_ts', {
+        Object.defineProperty(state, '_ts', {
           value: Date.now(),
         })
 
@@ -291,9 +261,7 @@ export function createPageFactory(
       // cached for `getCachedState` calls that have no loader.
       cacheControl.maxAge = 1
 
-      result.routePath = route.path
-      result.routeParams = params
-      return result
+      return state
     })
 
   let pageContextQueue = Promise.resolve()
