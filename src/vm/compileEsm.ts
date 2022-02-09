@@ -50,32 +50,52 @@ export async function compileEsm({
 
   const importedBindings: BindingMap = new Map()
 
-  async function resolveStaticImport(node: any, importer: string) {
+  async function resolveStaticImport(
+    node: any,
+    importer: string
+  ): Promise<ImportDescription | undefined> {
     let source: string = node.source?.value
-    if (source !== undefined && resolveId) {
-      const resolvedId = await resolveId(source, importer, false)
-      if (resolvedId) {
-        source = resolvedId
+    if (source !== undefined) {
+      let skip = false
+      if (resolveId) {
+        const resolvedId = await resolveId(source, importer, false)
+        if (resolvedId) {
+          source = resolvedId
+        } else if (resolvedId == '') {
+          skip = true
+        }
       }
+      return { source, skip }
     }
-    return source
   }
 
   let hoistIndex = 0
   for (const path of ast.get('body')) {
     if (path.isExportDeclaration()) {
-      const source = await resolveStaticImport(path.node, filename)
-      rewriteExport(path, source, editor, esmHelpers)
+      const imported = await resolveStaticImport(path.node, filename)
+      if (imported?.skip) {
+        injectAliasedImport(path, imported, editor)
+      }
+      rewriteExport(path, imported, editor, esmHelpers)
     } else if (path.isImportDeclaration()) {
-      const source = await resolveStaticImport(path.node, filename)
-      hoistIndex = rewriteImport(
-        path,
-        source,
-        editor,
-        importedBindings,
-        esmHelpers,
-        hoistIndex
-      )
+      const imported = (await resolveStaticImport(path.node, filename))!
+      if (imported.skip) {
+        const { start, end } = path.node as {
+          start: number
+          end: number
+        }
+        editor.remove(start, end + 1)
+        editor.prepend(code.slice(start, end + 1))
+      } else {
+        hoistIndex = rewriteImport(
+          path,
+          imported.source,
+          editor,
+          importedBindings,
+          esmHelpers,
+          hoistIndex
+        )
+      }
     }
   }
 
@@ -141,11 +161,54 @@ function rewriteImport(
   return hoistIndex
 }
 
+type ImportDescription = {
+  source: string
+  /**
+   * When true, skip transformation of this import and hoist it.
+   */
+  skip: boolean
+  /**
+   * If an alias exists, use it instead of `awaitRequire(source)`.
+   */
+  alias?: string
+  /**
+   * Use these aliases instead of a local namespace.
+   */
+  aliasMap?: Record<string, string>
+}
+
+function injectAliasedImport(
+  path: NodePath<t.ExportDeclaration>,
+  imported: ImportDescription,
+  editor: MagicString
+) {
+  const { node } = path
+  const specs = t.isExportNamedDeclaration(node) ? node.specifiers : []
+  if (
+    t.isExportAllDeclaration(node) ||
+    t.isExportNamespaceSpecifier(specs[0])
+  ) {
+    imported.alias = path.scope.generateUid(basename(imported.source))
+    editor.prepend(`import * as ${imported.alias} from "${imported.source}"`)
+  } else {
+    const declarators: string[] = []
+    imported.aliasMap = {}
+    for (const { local } of specs as t.ExportSpecifier[]) {
+      const alias = path.scope.generateUid(local.name)
+      declarators.push(`${local.name} as ${alias}`)
+      imported.aliasMap[local.name] = alias
+    }
+    editor.prepend(
+      `import { ${declarators.join(', ')} } from "${imported.source}"`
+    )
+  }
+}
+
 const awaitRequire = (source: string) => `await ${requireAsyncId}("${source}")`
 
 function rewriteExport(
   path: NodePath<t.ExportDeclaration>,
-  source: string | undefined,
+  imported: ImportDescription | undefined,
   editor: MagicString,
   esmHelpers: Set<Function>
 ) {
@@ -156,23 +219,40 @@ function rewriteExport(
   const decl = path.get('declaration') as NodePath<t.Declaration>
   if (path.isExportNamedDeclaration()) {
     const { node } = path
-    if (source) {
-      const requireCall = awaitRequire(source)
+    if (imported) {
       if (t.isExportNamespaceSpecifier(node.specifiers[0])) {
         const { name } = node.specifiers[0].exported
-        editor.overwrite(start, end, `${exportsId}.${name} = ${requireCall}`)
+        const fromExpr = imported.alias || awaitRequire(imported.source)
+        editor.overwrite(start, end, `${exportsId}.${name} = ${fromExpr}`)
       } else {
-        const required = path.scope.generateUid()
-        editor.overwrite(start, end, `const ${required} = ${requireCall}`)
+        // An alias map is defined when the caller wants to use identifiers
+        // declared by an uncompiled import declaration. Otherwise, we need
+        // to cache the `awaitRequire` expression for future reference.
+        const alias =
+          !imported.aliasMap &&
+          path.scope.generateUid(basename(imported.source))
+
+        if (alias) {
+          editor.overwrite(
+            start,
+            end,
+            `const ${alias} = ${awaitRequire(imported.source)}`
+          )
+        } else {
+          // An import declaration was prepended to the file.
+          editor.remove(start, end + 1)
+        }
+
         for (const spec of node.specifiers as t.ExportSpecifier[]) {
-          const property = t.isStringLiteral(spec.exported)
+          const exported = t.isStringLiteral(spec.exported)
             ? `["${spec.exported.value.replace(/"/g, '\\"')}"]`
             : `.${spec.exported.name}`
 
-          editor.appendLeft(
-            end,
-            `\n${exportsId}.${spec.local.name} = ${required}${property}`
-          )
+          const local = alias
+            ? `${alias}.${spec.local.name}`
+            : imported.aliasMap![spec.local.name]
+
+          editor.appendLeft(end, `\n${exportsId}${exported} = ${local}`)
         }
       }
     } else if (node.specifiers.length) {
@@ -210,12 +290,9 @@ function rewriteExport(
         )
       }
     }
-  } else if (source && path.isExportAllDeclaration()) {
-    editor.overwrite(
-      start,
-      end,
-      `__exportAll(${exportsId}, ${awaitRequire(source)})`
-    )
+  } else if (imported && path.isExportAllDeclaration()) {
+    const fromExpr = imported.alias || awaitRequire(imported.source)
+    editor.overwrite(start, end, `__exportAll(${exportsId}, ${fromExpr})`)
     esmHelpers.add(__exportAll)
   } else if (path.isExportDefaultDeclaration()) {
     editor.overwrite(
