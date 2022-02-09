@@ -18,7 +18,8 @@ const root = join(os.tmpdir(), 'saus-ssr')
 
 function toFilePath(url: string) {
   const { host, pathname } = new URL(url)
-  return join(root, host + decodeURIComponent(pathname))
+  const path = decodeURIComponent(pathname).replace(/(\.js)?$/, '.js')
+  return join(root, host + path)
 }
 
 function onExit() {
