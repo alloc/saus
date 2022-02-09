@@ -1,7 +1,8 @@
 import { flatten } from 'array-flatten'
 import arrify from 'arrify'
 import { resolve } from 'path'
-import { RenderedPage } from '../pages/types'
+import type { RenderedPage } from '../pages/types'
+import type { ServedPage } from '../plugins/serve'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { callPlugins } from '../utils/callPlugins'
@@ -35,6 +36,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   ) => Promise<ResolvedConfig>
   /** Only exists in dev mode */
   server?: vite.ViteDevServer
+  servePage?: (url: string) => Promise<ServedPage | undefined>
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
   /** The URL prefix for all pages */

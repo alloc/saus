@@ -13,6 +13,12 @@ import { RenderedFile } from '../pages/types'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 
+export type ServedPage = {
+  error?: any
+  body?: any
+  headers?: [string, string | number][]
+}
+
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
   // any early page requests until it is.
@@ -21,6 +27,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   init = new Promise(resolve => (didInit = resolve))
 
   let pageFactory: PageFactory
+  let servePage: (url: string) => Promise<ServedPage | undefined>
   let context: SausContext
 
   function isPageStateRequest(url: string) {
@@ -90,6 +97,39 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           undefined,
           onError
         )
+        servePage = context.servePage = async url => {
+          try {
+            let page = await pageFactory.render(url)
+            if (!page && !/\.[^./]+$/.test(url)) {
+              page = await pageFactory.render(context.defaultPath)
+            }
+            if (page) {
+              for (const file of page.files) {
+                fileCache[file.id] = file
+              }
+              let html = await context.server!.transformIndexHtml(
+                url,
+                page.html
+              )
+              if (context.htmlProcessors?.post.length) {
+                html = await applyHtmlProcessors(
+                  html,
+                  { page, config: runtimeConfig },
+                  context.htmlProcessors.post
+                )
+              }
+              return {
+                body: html,
+                headers: [
+                  ['Content-Type', 'text/html; charset=utf-8'],
+                  ['Content-Length', Buffer.byteLength(html)],
+                ],
+              }
+            }
+          } catch (error) {
+            return { error }
+          }
+        }
         init = {
           // Defer to the reload promise after the context is initialized.
           then: (...args) => (c.reloading || Promise.resolve()).then(...args),
@@ -121,52 +161,15 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
         let { reloadId } = context
         try {
-          await renderPage().then(respond)
+          await servePage(url).then(respond)
         } catch (error) {
           respond({ error })
         }
 
-        type Response = {
-          error?: any
-          body?: any
-          headers?: [string, string | number][]
-        }
-
-        async function renderPage(): Promise<Response | undefined> {
-          try {
-            let page = await pageFactory.render(url)
-            if (!page && !/\.[^./]+$/.test(url)) {
-              page = await pageFactory.render(context.defaultPath)
-            }
-            if (page) {
-              for (const file of page.files) {
-                fileCache[file.id] = file
-              }
-              let html = await server.transformIndexHtml(url, page.html)
-              if (context.htmlProcessors?.post.length) {
-                html = await applyHtmlProcessors(
-                  html,
-                  { page, config: runtimeConfig },
-                  context.htmlProcessors.post
-                )
-              }
-              return {
-                body: html,
-                headers: [
-                  ['Content-Type', 'text/html; charset=utf-8'],
-                  ['Content-Length', Buffer.byteLength(html)],
-                ],
-              }
-            }
-          } catch (error) {
-            return { error }
-          }
-        }
-
-        function respond({ error, body, headers }: Response = {}): any {
+        function respond({ error, body, headers }: ServedPage = {}): any {
           if (reloadId !== (reloadId = context.reloadId)) {
             return (context.reloading || Promise.resolve())
-              .then(renderPage)
+              .then(() => servePage(url))
               .then(respond)
           }
           if (error) {
