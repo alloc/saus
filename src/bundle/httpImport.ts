@@ -2,12 +2,14 @@ import fs from 'fs'
 import os from 'os'
 import { join } from 'path'
 import { URL } from 'url'
-import { get } from '../../core/http'
-import { emptyDir } from '../../utils/emptyDir'
+import { unwrapBuffer } from '../core/buffer'
+import { get } from '../core/http'
+import { emptyDir } from '../utils/emptyDir'
 
 export async function httpImport(url: string) {
   const file = toFilePath(url)
-  fs.writeFileSync(file, await get(url))
+  const resp = await get(url)
+  fs.writeFileSync(file, unwrapBuffer(resp.data))
   setExitHandler()
   return import(file)
 }
