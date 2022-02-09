@@ -9,9 +9,9 @@ import {
   Response,
   setup,
   unwrapBuffer,
+  isExternalUrl,
 } from 'saus/core'
 import { debug } from './debug'
-import { isExternalUrl } from './isExternalUrl'
 import { HtmlTagPath } from './path'
 import { $ } from './selector'
 import { traverseHtml } from './traversal'

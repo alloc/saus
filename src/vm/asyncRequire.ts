@@ -20,6 +20,8 @@ import {
 } from './types'
 import kleur from 'kleur'
 import { forceNodeReload } from './forceNodeReload'
+import { isExternalUrl } from '../utils/isExternalUrl'
+import { httpImport } from '../bundle/httpImport'
 
 export type RequireAsyncConfig = {
   /**
@@ -97,6 +99,9 @@ export function createAsyncRequire({
       }
 
       if (resolvedId) {
+        if (isExternalUrl(resolvedId)) {
+          return httpImport(resolvedId)
+        }
         if (isVirtual(id, resolvedId)) {
           break resolveStep
         }
