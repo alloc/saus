@@ -8,8 +8,13 @@ const ssrPrefix = 'saus-ssr:'
 const ssrModules: Record<string, ModuleGetter> = {}
 
 /** Require a SSR module defined with `__d` */
-export const __requireAsync = (id: string) => ssrModules[id]()
-export { __requireAsync as ssrRequire }
+export function __requireAsync(id: string) {
+  const get = ssrModules[id]
+  if (!get) {
+    throw Error(`Module not found: "${id}"`)
+  }
+  return get()
+}
 
 type ModuleExports = Record<string, any>
 type ModuleGetter = () => Promise<any>

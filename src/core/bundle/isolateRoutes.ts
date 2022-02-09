@@ -363,7 +363,7 @@ export async function isolateRoutes(
     editor.append('\n})')
 
     const esmHelperIds = Array.from(esmHelpers, f => f.name)
-    esmHelperIds.unshift(`__d`)
+    esmHelperIds.unshift(`__d`, `__requireAsync`)
     editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
 
     return {
@@ -580,7 +580,7 @@ function isolateRenderers(
 
       const chunkId = '/' + relative(config.root, chunkPath)
       rendererList.push(
-        `[${JSON.stringify(func.route)}, () => ssrRequire("${chunkId}")],`
+        `[${JSON.stringify(func.route)}, () => __requireAsync("${chunkId}")],`
       )
     }
   }
@@ -588,7 +588,7 @@ function isolateRenderers(
   modules.addModule({
     id: toDevPath(virtualRenderPath, config.root),
     code: endent`
-      import { addRenderers, ssrRequire } from "saus/core"
+      import { addRenderers, __requireAsync } from "saus/core"
 
       addRenderers([
         ${rendererList.join('\n')}

@@ -18,7 +18,7 @@ import functions from './functions'
 import { getModuleUrl } from './getModuleUrl'
 import { HtmlTagDescriptor, injectToBody, injectToHead } from './html'
 import { loadRenderers } from './render'
-import { ssrClearCache, ssrRequire } from './ssrModules'
+import { ssrClearCache, __requireAsync as ssrRequire } from './ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from './types'
 
 const getModule = (id: string) =>
