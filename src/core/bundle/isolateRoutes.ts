@@ -337,13 +337,20 @@ export async function isolateRoutes(
           hoistedImports.add(id)
           return id
         }
-        const unresolvedId = isolatedCjsModules.get(id)
-        if (unresolvedId) {
-          hoistedImports.add(unresolvedId)
+        const ssrId = isolatedCjsModules.get(id)
+        if (ssrId) {
+          hoistedImports.add(id)
+          return ssrId
         }
+        // Preserve the import declaration.
+        return ''
       },
     })
 
+    // These imports ensure the isolated modules are included in
+    // the SSR bundle. Some will be caught by our `resolveId` hook
+    // and others (namely isolated CJS modules) correspond to an
+    // existing file which is overridden by our `load` hook.
     for (const id of hoistedImports) {
       editor.prepend(`import "${id}"\n`)
     }
