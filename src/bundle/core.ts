@@ -16,7 +16,8 @@ export const defineClient = (x: any) => x
 export const addConfigHook = () => {}
 
 // These are needed for isolated routes.
-export { __d, __requireAsync } from './ssrModules'
-export { addRenderers } from './render'
+export * from './ssrModules'
+export * from './render'
+export * from '../utils/esmInterop'
 
 export * from '../core/api'

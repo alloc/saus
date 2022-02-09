@@ -170,7 +170,7 @@ export async function generateClientModules(
           path.join(clientDir, 'loadStateModule.ts')
         ),
       ]),
-      routesPlugin(config.saus, clientRouteMap),
+      routesPlugin(clientRouteMap)(),
       fixChunkImports(removedImports),
       rewriteHttpImports(context.logger, true),
       transformClientState(),

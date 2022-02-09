@@ -322,7 +322,7 @@ export async function isolateRoutes(
     }
   }
 
-  const isolateSsrModule = async (code: string, id: string) => {
+  const isolateSsrModule = async (code: string, id: string, ssrId: string) => {
     const hoistedImports = new Set<string>()
     const esmHelpers = new Set<Function>()
 
@@ -348,32 +348,23 @@ export async function isolateRoutes(
       editor.prepend(`import "${id}"\n`)
     }
 
+    if (ssrId == routesUrl) {
+      ssrId = ssrRoutesId
+
+      const routeModulePaths = new Set(
+        Array.from(routeImports.values(), resolved => resolved.file)
+      )
+      for (const file of routeModulePaths) {
+        editor.prepend(`import "${file}"\n`)
+      }
+    }
+
+    editor.prependRight(0, `__d("${ssrId}", async (exports) => {\n`)
+    editor.append('\n})')
+
     const esmHelperIds = Array.from(esmHelpers, f => f.name)
-
-    let url = bundleToEntryMap[id] || id
-    if (url == rendererUrl) {
-      for (const chunkPath in rendererMap) {
-        editor.prepend(`import "${chunkPath}"\n`)
-      }
-    } else {
-      let ssrId = url
-      if (url == routesUrl) {
-        const routeModulePaths = new Set(
-          Array.from(routeImports.values(), resolved => resolved.file)
-        )
-        for (const file of routeModulePaths) {
-          editor.prepend(`import "${file}"\n`)
-        }
-        ssrId = ssrRoutesId
-      }
-      esmHelperIds.unshift(`__d`)
-      editor.appendRight(0, `__d("${ssrId}", async (exports) => {\n`)
-      editor.append('\n})')
-    }
-
-    if (esmHelperIds.length) {
-      editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
-    }
+    esmHelperIds.unshift(`__d`)
+    editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
 
     return {
       code: editor.toString(),
@@ -502,7 +493,19 @@ export async function isolateRoutes(
     },
     transform(code, id) {
       if (bundledRoutes[id] || sharedModules[id]) {
-        return isolateSsrModule(code, id)
+        const ssrId = bundleToEntryMap[id] || id
+        if (ssrId == rendererUrl) {
+          const editor = new MagicString(code)
+          for (const chunkPath in rendererMap) {
+            editor.prepend(`import "${chunkPath}"\n`)
+          }
+          return {
+            code: editor.toString(),
+            map: editor.generateMap(),
+            moduleSideEffects: 'no-treeshake',
+          }
+        }
+        return isolateSsrModule(code, id, ssrId)
       }
       const ssrId = isolatedCjsModules.get(id)
       if (ssrId) {

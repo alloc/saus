@@ -1,5 +1,5 @@
-import { generateRoutePaths } from '../../core/routes'
-import { getPagePath } from '../../utils/getPagePath'
+import { generateRoutePaths } from '../core/routes'
+import { getPagePath } from '../utils/getPagePath'
 import config from './config'
 import { ssrRoutesId } from './constants'
 import { context } from './context'
