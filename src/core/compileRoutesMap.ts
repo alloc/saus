@@ -120,13 +120,7 @@ export async function compileRoutesMap(
     },
   }
 
-  let template = `export default {}`
-  if (!options.isClient) {
-    template =
-      `import { ssrRequire } from "/@fs/${coreRuntimePath}"\n` + template
-  }
-
-  const result = babel.transformSync(template, {
+  const result = babel.transformSync(`export default {}`, {
     plugins: [{ visitor: transformer }],
   }) as { code: string }
 

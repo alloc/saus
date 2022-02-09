@@ -1,4 +1,4 @@
-import { ssrRequire } from './ssrModules'
+import { __requireAsync as ssrRequire } from './ssrModules'
 import routes from './routes'
 
 /** This overrides `loadPageModule` (exported by `saus/client`) in SSR environment. */
