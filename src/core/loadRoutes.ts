@@ -17,6 +17,7 @@ import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
 import { Route } from './routes'
+import { isExternalUrl } from './utils'
 
 type LoadOptions = {
   moduleMap?: ModuleMap
@@ -63,7 +64,9 @@ async function compileRoutesModule(
     if (imp.d >= 0 && imp.n) {
       const resolvedId = await resolveId(imp.n, routesPath, true)
       if (resolvedId) {
-        const resolvedUrl = resolvedId.startsWith(root + '/')
+        const resolvedUrl = isExternalUrl(resolvedId)
+          ? resolvedId
+          : resolvedId.startsWith(root + '/')
           ? resolvedId.slice(root.length)
           : '/@fs/' + resolvedId
 
