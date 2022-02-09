@@ -391,7 +391,7 @@ async function generateSsrBundle(
   const config = await context.resolveConfig('build', {
     plugins: [
       ...inlinePlugins,
-      routesPlugin(context.config.saus, clientRouteMap),
+      routesPlugin(clientRouteMap)(),
       debugForbiddenImports([
         'vite',
         './src/core/index.ts',

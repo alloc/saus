@@ -130,14 +130,12 @@ function rewriteImport(
     start: number
     end: number
   }
-  editor.overwrite(
-    start,
-    end + 1,
-    generateRequireCalls(path, source, bindings, esmHelpers)
-  )
+  const requireCalls = generateRequireCalls(path, source, bindings, esmHelpers)
   if (start !== hoistIndex) {
-    editor.move(start, end + 1, hoistIndex)
+    editor.remove(start, end + 1)
+    editor.appendRight(hoistIndex, requireCalls)
   } else {
+    editor.overwrite(start, end + 1, requireCalls)
     hoistIndex = end + 1
   }
   return hoistIndex

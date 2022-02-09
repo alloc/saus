@@ -1,4 +1,4 @@
-import { ParsedRoute, RegexParam } from '../../core/routes'
+import { ParsedRoute, RegexParam } from '../core/routes'
 
 type RendererInit = () => Promise<any>
 

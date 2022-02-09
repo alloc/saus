@@ -1,4 +1,4 @@
-export { printFiles, writePages } from '../../build/write'
+export { printFiles, writePages } from '../build/write'
 export { getModuleUrl } from './getModuleUrl'
 export { default as moduleMap } from './clientModules'
 export { renderPage as default } from './pages'

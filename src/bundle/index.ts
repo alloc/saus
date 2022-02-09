@@ -1,2 +1,2 @@
 // Redirect "saus" imports here.
-export * from '../../api'
+export * from '../api'
