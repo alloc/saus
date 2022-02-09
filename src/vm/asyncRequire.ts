@@ -22,6 +22,7 @@ import kleur from 'kleur'
 import { forceNodeReload } from './forceNodeReload'
 import { isExternalUrl } from '../utils/isExternalUrl'
 import { httpImport } from '../bundle/httpImport'
+import { jsonImport } from '../runtime/jsonImport'
 
 export type RequireAsyncConfig = {
   /**
@@ -100,6 +101,9 @@ export function createAsyncRequire({
 
       if (resolvedId) {
         if (isExternalUrl(resolvedId)) {
+          if (resolvedId.endsWith('.json')) {
+            return jsonImport(resolvedId)
+          }
           return httpImport(resolvedId)
         }
         if (isVirtual(id, resolvedId)) {
