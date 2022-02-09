@@ -122,7 +122,7 @@ export async function compileEsm({
         if (blockParent) {
           const tempId = parent.scope.generateDeclaredUidIdentifier(
             (path.node as t.Identifier).name
-          )
+          ).name
           const { body } = blockParent.node as t.BlockStatement
           editor.prependRight(body[0].start!, `const ${tempId} = ${binding};\n`)
         }
