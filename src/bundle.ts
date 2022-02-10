@@ -425,30 +425,29 @@ async function generateSsrBundle(
         },
         context: 'globalThis',
         makeAbsoluteExternalsRelative: false,
-        external:
-          preferExternalPlugin &&
-          ((id, _importer, isResolved) => {
-            if (!isResolved) return
-            if (isolatedModules[id]) return
-            if (!path.isAbsolute(id)) return
-            if (!fs.existsSync(id)) return
-            const { external, msg } = preferExternalPlugin.isExternal(id)
-            if (msg && !!process.env.DEBUG) {
-              const relativeId = path
-                .relative(context.root, id)
-                .replace(/^([^.])/, './$1')
-              debug(relativeId)
-              debug((external ? kleur.green : kleur.yellow)(`  ${msg}`))
+        external: preferExternalPlugin
+          ? (id, _importer, isResolved) => {
+              if (!isResolved) return
+              if (isolatedModules[id]) return
+              if (!path.isAbsolute(id)) return
+              if (fs.existsSync(id)) {
+                const { external, msg } = preferExternalPlugin.isExternal(id)
+                if (msg && !!process.env.DEBUG) {
+                  const relativeId = path
+                    .relative(context.root, id)
+                    .replace(/^([^.])/, './$1')
+                  debug(relativeId)
+                  debug((external ? kleur.green : kleur.yellow)(`  ${msg}`))
+                }
+                return external
+              }
             }
-            if (external) {
-              return true
-            }
-          }),
+          : id => {
+              return builtinModules.includes(id)
+            },
       },
     },
   })
-
-  config.ssr!.external = []
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const bundle = buildResult.output[0].output[0]
