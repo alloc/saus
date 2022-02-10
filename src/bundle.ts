@@ -21,6 +21,7 @@ import {
   BundleContext,
   ClientImport,
   generateClientModules,
+  IsolatedModuleMap,
   isolateRoutes,
   preBundleSsrRuntime,
   resolveRouteImports,
@@ -57,12 +58,12 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
   const { functions, functionImports, routeImports, runtimeConfig } =
     await prepareFunctions(context)
 
+  const isolatedModules: IsolatedModuleMap = {}
+
   // Prepare these plugins in parallel with the client build.
-  const bundlePlugins = preBundleSsrRuntime(context, [
-    moduleRedirection(internalRedirects),
-  ]).then(async runtimeBundle => [
-    await isolateRoutes(context, routeImports, [runtimeBundle]),
-    runtimeBundle,
+  const bundlePlugins = Promise.all([
+    isolateRoutes(context, routeImports, isolatedModules),
+    preBundleSsrRuntime(context, [moduleRedirection(internalRedirects)]),
   ])
 
   Profiling.mark('generate client modules')
@@ -82,6 +83,7 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
     functions,
     moduleMap,
     clientRouteMap,
+    isolatedModules,
     await bundlePlugins
   )
 
@@ -311,6 +313,7 @@ async function generateSsrBundle(
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
   clientRouteMap: Record<string, string>,
+  isolatedModules: IsolatedModuleMap,
   inlinePlugins: vite.PluginOption[]
 ) {
   const bundleConfig = context.bundle
@@ -427,6 +430,7 @@ async function generateSsrBundle(
           preferExternalPlugin &&
           ((id, _importer, isResolved) => {
             if (!isResolved) return
+            if (isolatedModules[id]) return
             if (!path.isAbsolute(id)) return
             if (!fs.existsSync(id)) return
             const { external, msg } = preferExternalPlugin.isExternal(id)
