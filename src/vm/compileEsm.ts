@@ -21,12 +21,14 @@ export async function compileEsm({
   code,
   filename,
   esmHelpers,
+  keepImportCalls,
   keepImportMeta,
   resolveId,
 }: {
   code: string
   filename: string
   esmHelpers: Set<Function>
+  keepImportCalls?: boolean
   keepImportMeta?: boolean
   resolveId?: ResolveIdHook
 }): Promise<MagicString> {
@@ -34,19 +36,20 @@ export async function compileEsm({
   const editor = new MagicString(code)
 
   // Rewrite async imports and import.meta access
-  for (const imp of esModuleLexer.parse(code)[0]) {
-    if (imp.d >= 0) {
-      editor.overwrite(imp.ss, imp.s - 1, importAsyncId)
-      if (imp.n && resolveId) {
-        const resolvedId = await resolveId(imp.n, filename, true)
-        if (resolvedId) {
-          editor.overwrite(imp.s, imp.e, JSON.stringify(resolvedId))
+  if (!keepImportCalls || !keepImportMeta)
+    for (const imp of esModuleLexer.parse(code)[0]) {
+      if (!keepImportCalls && imp.d >= 0) {
+        editor.overwrite(imp.ss, imp.s - 1, importAsyncId)
+        if (imp.n && resolveId) {
+          const resolvedId = await resolveId(imp.n, filename, true)
+          if (resolvedId) {
+            editor.overwrite(imp.s, imp.e, JSON.stringify(resolvedId))
+          }
         }
+      } else if (!keepImportMeta && imp.d == -2) {
+        editor.overwrite(imp.s, imp.e, importMetaId)
       }
-    } else if (!keepImportMeta && imp.d == -2) {
-      editor.overwrite(imp.s, imp.e, importMetaId)
     }
-  }
 
   const importedBindings: BindingMap = new Map()
 

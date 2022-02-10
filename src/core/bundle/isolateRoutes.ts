@@ -23,7 +23,7 @@ import {
   toInlineSourceMap,
 } from '../../utils/sourceMap'
 import { toDevPath } from '../../utils/toDevPath'
-import { compileEsm, requireAsyncId } from '../../vm/compileEsm'
+import { compileEsm, exportsId, requireAsyncId } from '../../vm/compileEsm'
 import { debug } from '../debug'
 import {
   ClientFunction,
@@ -336,6 +336,7 @@ export async function isolateRoutes(
     const editor = await compileEsm({
       code,
       filename: id,
+      keepImportCalls: true,
       keepImportMeta: true,
       esmHelpers,
       resolveId(id) {
@@ -373,11 +374,11 @@ export async function isolateRoutes(
       }
     }
 
-    editor.prependRight(0, `__d("${ssrId}", async (exports) => {\n`)
+    editor.prependRight(0, `__d("${ssrId}", async (${exportsId}) => {\n`)
     editor.append('\n})')
 
     const esmHelperIds = Array.from(esmHelpers, f => f.name)
-    esmHelperIds.unshift(`__d`, `__requireAsync`)
+    esmHelperIds.unshift(`__d`, requireAsyncId)
     editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
 
     return {
@@ -433,12 +434,12 @@ export async function isolateRoutes(
         editor.overwrite(
           calleePath.node.start!,
           calleePath.node.end!,
-          `await __requireAsync`
+          `await ` + requireAsyncId
         )
 
         const importer = id
         resolving.push(
-          context.resolve(source, importer).then(resolved => {
+          context.resolve(source, importer).then(async resolved => {
             if (!resolved) {
               context.error(
                 `Failed to resolve import "${source}" from "${relative(
@@ -475,7 +476,7 @@ export async function isolateRoutes(
       editor.prepend(`const cjsRequire = id => require(id)\n`)
     }
     editor.prepend(esmImports.join(''))
-    editor.prepend(`import { __d, __requireAsync } from "saus/core"\n`)
+    editor.prepend(`import { __d, ${requireAsyncId} } from "saus/core"\n`)
     editor.prependRight(0, `__d("${ssrId}", async (exports, module) => {\n`)
     editor.append(`\n})`)
 
@@ -601,7 +602,9 @@ function isolateRenderers(
 
       const chunkId = '/' + relative(config.root, chunkPath)
       rendererList.push(
-        `[${JSON.stringify(func.route)}, () => __requireAsync("${chunkId}")],`
+        `[${JSON.stringify(
+          func.route
+        )}, () => ${requireAsyncId}("${chunkId}")],`
       )
     }
   }
@@ -609,7 +612,7 @@ function isolateRenderers(
   modules.addModule({
     id: toDevPath(virtualRenderPath, config.root),
     code: endent`
-      import { addRenderers, __requireAsync } from "saus/core"
+      import { addRenderers, ${requireAsyncId} } from "saus/core"
 
       addRenderers([
         ${rendererList.join('\n')}
