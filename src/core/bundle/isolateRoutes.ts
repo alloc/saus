@@ -17,6 +17,7 @@ import {
 import { dedupe } from '../../utils/dedupe'
 import { plural } from '../../utils/plural'
 import {
+  loadSourceMap,
   resolveMapSources,
   SourceMap,
   toInlineSourceMap,
@@ -36,16 +37,21 @@ import { RouteImports } from './routeModules'
 export const toBundleChunkId = (id: string) =>
   id.replace(/\.[^.]+$/, '.bundle.js')
 
+export type IsolatedModuleMap = Record<string, IsolatedModule>
+export type IsolatedModule = { code: string; map?: SourceMap }
+
 /**
  * Wrap modules with a runtime module system, so separate instances of each
  * module can be created for each rendered page. This removes the need for
  * manual SSR cleanup of global state. In the future, it will also be used
  * for route-specific bundles.
+ *
+ * The `isolatedModules` object is populated by this function.
  */
 export async function isolateRoutes(
   context: SausContext,
   routeImports: RouteImports,
-  inlinePlugins: vite.Plugin[]
+  isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
   const { config } = context
   const modules = createModuleProvider()
@@ -55,7 +61,6 @@ export async function isolateRoutes(
     plugins: [
       modules,
       rewriteRouteImports(context.routesPath, routeImports),
-      ...inlinePlugins,
       ...config.plugins.filter(p => {
         // CommonJS modules are externalized, so this plugin is just overhead.
         return p.name !== 'commonjs'
@@ -179,6 +184,10 @@ export async function isolateRoutes(
             const code = fs.readFileSync(resolved.id, 'utf8')
             const hasEsmSyntax = /^(import|export) /m.test(code)
             if (!hasEsmSyntax && /\b(module|exports|require)\b/.test(code)) {
+              isolatedModules[resolved.id] = {
+                code,
+                map: loadSourceMap(code, resolved.id),
+              }
               isolatedCjsModules.set(
                 resolved.id,
                 relative(config.root, resolved.id)
@@ -231,7 +240,7 @@ export async function isolateRoutes(
       async function loadModule({ path }: esbuild.OnLoadArgs) {
         const transformed = await transform(toDevPath(path, config.root, true))
         if (transformed) {
-          let { code, map } = transformed as OutputChunk
+          let { code, map } = transformed as IsolatedModule
           if (map) {
             map.sources = map.sources.map(source => {
               return source ? relative(dirname(path), source) : null!
@@ -295,8 +304,6 @@ export async function isolateRoutes(
   }
 
   const bundleToEntryMap: Record<string, string> = {}
-  const bundledRoutes: Record<string, OutputChunk> = {}
-  const sharedModules: Record<string, OutputChunk> = {}
 
   const outputs = Object.values(metafile!.outputs)
   for (let i = 1; i < outputFiles.length; i += 2) {
@@ -309,16 +316,16 @@ export async function isolateRoutes(
       if (entryUrl in entryUrlToFileMap) {
         const filePath = entryUrlToFileMap[entryUrl]
         const bundleId = toBundleChunkId(filePath)
-        bundledRoutes[bundleId] = { code: file.text, map }
+        isolatedModules[bundleId] = { code: file.text, map }
         bundleToEntryMap[bundleId] = entryUrl
       } else {
         const chunkPath = resolve(config.root, entryPoint)
-        sharedModules[chunkPath] = { code: file.text, map }
+        isolatedModules[chunkPath] = { code: file.text, map }
         bundleToEntryMap[chunkPath] = entryUrl
       }
     } else {
       const chunkId = '.saus' + file.path.slice(config.root.length)
-      sharedModules[chunkId] = { code: file.text, map }
+      isolatedModules[chunkId] = { code: file.text, map }
     }
   }
 
@@ -441,14 +448,22 @@ export async function isolateRoutes(
                 sourceArg.node.start!
               )
             }
-            source = relative(config.root, resolved.id)
-            isolatedCjsModules.set(resolved.id, source)
-            esmImports.push(`import "${resolved.id}"\n`)
-            editor.overwrite(
-              sourceArg.node.start!,
-              sourceArg.node.end!,
-              `"${source}"`
-            )
+            const moduleInfo = await context.load(resolved)
+            if (moduleInfo.code != null) {
+              const { code } = moduleInfo
+              isolatedModules[resolved.id] = {
+                code,
+                map: loadSourceMap(code, resolved.id),
+              }
+              source = relative(config.root, resolved.id)
+              isolatedCjsModules.set(resolved.id, source)
+              esmImports.push(`import "${resolved.id}"\n`)
+              editor.overwrite(
+                sourceArg.node.start!,
+                sourceArg.node.end!,
+                `"${source}"`
+              )
+            }
           })
         )
       },
@@ -475,14 +490,15 @@ export async function isolateRoutes(
     name: 'saus:isolatedModules',
     enforce: 'pre',
     async resolveId(id, importer) {
-      if (sharedModules[id]) {
+      if (isolatedModules[id]) {
         return id
       }
       const chunkId = toBundleChunkId(id)
-      if (bundledRoutes[chunkId]) {
+      if (isolatedModules[chunkId]) {
         return chunkId
       }
-      if (importer && !sharedModules[importer] && !bundledRoutes[importer]) {
+      // Throw an error if an isolated CJS module is imported by a non-isolated module.
+      if (importer && !isolatedModules[importer]) {
         const resolved = await this.resolve(id, importer, { skipSelf: true })
         if (resolved) {
           if (isolatedCjsModules.has(resolved.id))
@@ -496,11 +512,15 @@ export async function isolateRoutes(
       }
     },
     load(id) {
-      return bundledRoutes[id] || sharedModules[id]
+      return isolatedModules[id]
     },
     transform(code, id) {
-      if (bundledRoutes[id] || sharedModules[id]) {
-        const ssrId = bundleToEntryMap[id] || id
+      if (isolatedModules[id]) {
+        let ssrId = isolatedCjsModules.get(id)
+        if (ssrId) {
+          return isolateCjsModule(code, id, ssrId, this)
+        }
+        ssrId = bundleToEntryMap[id] || id
         if (ssrId == rendererUrl) {
           const editor = new MagicString(code)
           for (const chunkPath in rendererMap) {
@@ -513,10 +533,6 @@ export async function isolateRoutes(
           }
         }
         return isolateSsrModule(code, id, ssrId)
-      }
-      const ssrId = isolatedCjsModules.get(id)
-      if (ssrId) {
-        return isolateCjsModule(code, id, ssrId, this)
       }
     },
   }
@@ -548,16 +564,14 @@ function rewriteRouteImports(
   }
 }
 
-type OutputChunk = { code: string; map?: SourceMap }
-
 function isolateRenderers(
   renderPath: string,
-  renderModule: OutputChunk,
+  renderModule: IsolatedModule,
   virtualRenderPath: string,
   modules: ModuleProvider,
   config: vite.ResolvedConfig
 ) {
-  const rendererMap: Record<string, OutputChunk> = {}
+  const rendererMap: Record<string, IsolatedModule> = {}
   const rendererList: string[] = []
 
   const functions = extractClientFunctions(
@@ -614,7 +628,7 @@ function createRendererChunk(
   type: 'render' | 'beforeRender',
   func: ClientFunction,
   editor: MagicString
-): OutputChunk {
+): IsolatedModule {
   const preservedRanges: [number, number][] = []
   const preserveRange = (p: { node: t.Node }) =>
     preservedRanges.push([p.node.start!, p.node.end!])
