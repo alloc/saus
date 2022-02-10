@@ -15,9 +15,12 @@ export const defineClient = (x: any) => x
 // Ignore config hooks in SSR bundle.
 export const addConfigHook = () => {}
 
+export * from '../core/api'
+
+// HACK: Avoid esbuild bug (@see https://github.com/evanw/esbuild/issues/1737)
+export { get } from '../core/http'
+
 // These are needed for isolated routes.
 export * from './ssrModules'
 export * from './render'
 export * from '../utils/esmInterop'
-
-export * from '../core/api'
