@@ -69,8 +69,9 @@ cli
       options.write = false
     }
 
-    const { bundle, loadBundleContext } =
-      require('./bundle') as typeof import('./bundle')
+    const { bundle } = require('./bundle') as typeof import('./bundle')
+    const { loadBundleContext } =
+      require('./core/bundle/context') as typeof import('./core/bundle/context')
 
     try {
       const context = await loadBundleContext(options, {
@@ -82,7 +83,8 @@ cli
       if (noWrite) {
         if (map) {
           const { toInlineSourceMap } =
-            require('./bundle/sourceMap') as typeof import('./bundle/sourceMap')
+            require('./utils/sourceMap') as typeof import('./utils/sourceMap')
+
           code += toInlineSourceMap(map)
         }
         process.stdout.write(code)
