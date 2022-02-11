@@ -300,7 +300,7 @@ const internalRedirects = [
     path.join(bundleDir, 'config.ts')
   ),
   redirectModule(
-    path.join(clientDir, 'loadPageModule.ts'),
+    path.join(clientDir, 'node/loadPageModule.ts'),
     path.join(bundleDir, 'loadPageModule.ts')
   ),
 ]
