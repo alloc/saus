@@ -1,7 +1,7 @@
 // HTTP helpers suitable for browser and web worker environments.
-import type { GetOptions } from '../core/http'
-import { Headers, Response } from '../core/response'
-import { Buffer } from './buffer'
+import type { GetOptions } from '../../http/get'
+import { Headers, Response } from '../../http/response'
+import { Buffer } from '../buffer'
 
 export async function get(url: string, options?: GetOptions) {
   let signal: AbortSignal | undefined

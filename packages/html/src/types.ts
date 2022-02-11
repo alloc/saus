@@ -1,4 +1,4 @@
-import type { default as MagicString } from 'magic-string'
+import MagicString from 'magic-string'
 import type { HtmlProcessorState } from 'saus/core'
 import type { HtmlTagPath } from './path'
 import type { kTagPath } from './symbols'

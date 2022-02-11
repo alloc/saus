@@ -4,13 +4,12 @@ import MagicString from 'magic-string'
 import path from 'path'
 import {
   EnforcementPhase,
-  get,
   md5Hex,
-  Response,
   setup,
   unwrapBuffer,
   isExternalUrl,
 } from 'saus/core'
+import { get, Response } from 'saus/http'
 import { debug } from './debug'
 import { HtmlTagPath } from './path'
 import { $ } from './selector'

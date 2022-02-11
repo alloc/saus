@@ -1,11 +1,15 @@
+import { withCache } from '../core/withCache'
 import type { PageFactoryContext } from '../pages/types'
-import { getCachedState } from '../runtime/getCachedState'
 import config from './config'
 
 export const context: PageFactoryContext = {
   defaultPath: config.defaultPath,
   defaultState: [],
-  getCachedPage: getCachedState,
+  getCachedPage: withCache({
+    loading: {},
+    loaders: {},
+    loaded: {},
+  }),
   logger: {
     error: console.error,
   },

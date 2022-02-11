@@ -21,7 +21,8 @@
     "./client/env": {
       "types": "./client/env.d.ts"
     },
-    "./core": "./core/index.js"
+    "./core": "./core/index.js",
+    "./http": "./http/index.js"
   },
   "files": [
     "src",

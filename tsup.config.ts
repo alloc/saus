@@ -6,6 +6,7 @@ export default defineConfig({
     'src/index.ts',
     // Submodules
     'src/core/index.ts',
+    'src/http/index.ts',
     'src/client/index.node.ts',
     'src/bundle/html.ts',
     'src/babel/index.ts',

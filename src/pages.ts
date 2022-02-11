@@ -11,7 +11,6 @@ import type {
   Renderer,
   RenderRequest,
   Route,
-  RouteInclude,
   RouteModule,
   RouteParams,
   RuntimeConfig,
@@ -229,6 +228,7 @@ export function createPageFactory(
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
+      const time = Date.now()
       const stateModules = createStateModuleMap(onError)
 
       // Start loading state modules before the route state is awaited.
@@ -261,6 +261,7 @@ export function createPageFactory(
       // cached for `getCachedState` calls that have no loader.
       cacheControl.maxAge = 1
 
+      debug(`Loaded page state in ${Date.now() - time}ms`)
       return state
     })
 
