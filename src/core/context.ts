@@ -173,7 +173,7 @@ function getConfigResolver(
           preTransformRequests: !isBuild,
         },
         ssr: {
-          noExternal: ['saus/client'],
+          noExternal: isBuild ? true : ['saus/client'],
         },
         build: {
           ssr: true,
