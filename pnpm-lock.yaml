@@ -50,7 +50,7 @@ importers:
       terser: ^5.10.0
       tinypool: ^0.1.1
       ts-debounce: ^3.0.0
-      tsup: ^5.11.6
+      tsup: ^5.11.13
       typescript: ^4.0.0
       vite: npm:@alloc/vite@2.6.3-3
       vitest: '*'
@@ -103,7 +103,7 @@ importers:
       source-map-support: 0.5.20
       strip-comments: 2.0.1
       ts-debounce: 3.0.0
-      tsup: 5.11.6_typescript@4.4.3
+      tsup: 5.11.13_typescript@4.4.3
       typescript: 4.4.3
       vitest: 0.0.117
 
@@ -1121,12 +1121,14 @@ packages:
       semver: 7.3.5
     dev: true
 
-  /bundle-require/2.2.0_esbuild@0.14.15:
-    resolution: {integrity: sha512-JDVxYEAxEX1g8AWtadiIkCkFf42RulEl5AOIvUa4cpuEL/VKpK2lJwogyswHnp+qizNQxM0Ylamw7CjPRaJZuA==}
+  /bundle-require/3.0.4_esbuild@0.14.15:
+    resolution: {integrity: sha512-VXG6epB1yrLAvWVQpl92qF347/UXmncQj7J3U8kZEbdVZ1ZkQyr4hYeL/9RvcE8vVVdp53dY78Fd/3pqfRqI1A==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
     peerDependencies:
       esbuild: '>=0.13'
     dependencies:
       esbuild: 0.14.15
+      load-tsconfig: 0.2.3
     dev: true
 
   /cac/6.7.12:
@@ -2524,6 +2526,11 @@ packages:
       strip-bom: 2.0.0
     dev: false
 
+  /load-tsconfig/0.2.3:
+    resolution: {integrity: sha512-iyT2MXws+dc2Wi6o3grCFtGXpeMvHmJqS27sMPGtV2eUu4PeFnG+33I8BlFK1t1NWMjOpcx9bridn5yxLDX2gQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dev: true
+
   /local-pkg/0.4.0:
     resolution: {integrity: sha512-2XBWjO/v63JeR1HPzLJxdTVRQDB84Av2p2KtBA5ahvpyLUPubcAU6iXlAJrONcY7aSqgJhXxElAnKtnYsRolPQ==}
     engines: {node: '>=14'}
@@ -3581,16 +3588,16 @@ packages:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
     dev: true
 
-  /tsup/5.11.6_typescript@4.4.3:
-    resolution: {integrity: sha512-mKhLdQ1N2KMV31dsX4MLO5l4FOORf2+FvyAOott3ZgiSnKisZiOoCXwxPc97iPqIk5aouyQBTaZcjXKJV+C4pg==}
+  /tsup/5.11.13_typescript@4.4.3:
+    resolution: {integrity: sha512-NVMK01gVmojZn7+iZwxRK1CzW2BIabaVMyEjs7Nm9lm4DrSf7IAqs2F3fg0vT7rH72x1cIBsW9U/TlWrCvHVQQ==}
     hasBin: true
     peerDependencies:
-      typescript: ^4.2.3
+      typescript: ^4.1.0
     peerDependenciesMeta:
       typescript:
         optional: true
     dependencies:
-      bundle-require: 2.2.0_esbuild@0.14.15
+      bundle-require: 3.0.4_esbuild@0.14.15
       cac: 6.7.12
       chokidar: 3.5.2
       debug: 4.3.3
