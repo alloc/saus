@@ -11,38 +11,23 @@ export interface StateModuleMap extends Map<string, Promise<any>> {
   ): Promise<any>[]
 }
 
-type OnError = (error: any) => void
-
-export function createStateModuleMap(onError: OnError) {
+export function createStateModuleMap(onError: (error: any) => void) {
   const map = new Map() as StateModuleMap
-  map.load = loadStateModule.bind(null, map, onError)
-  map.include = includeStateModules.bind(null, map, onError)
-  return map
-}
-
-function loadStateModule(
-  loaded: Map<string, Promise<any>>,
-  onError: OnError,
-  state: StateModule
-) {
-  let loading = loaded.get(state.id)
-  if (!loading) {
-    loading = state.load().catch(error => {
-      onError(error)
-      return null
-    })
-    loaded.set(state.id, loading)
+  map.load = state => {
+    let loading = map.get(state.id)
+    if (!loading) {
+      loading = state.load().catch(error => {
+        onError(error)
+        return null
+      })
+      map.set(state.id, loading)
+    }
+    return loading
   }
-  return loading
-}
-
-function includeStateModules(
-  loaded: Map<string, Promise<any>>,
-  onError: OnError,
-  include: RouteInclude,
-  url: ParsedUrl,
-  params: RouteParams
-) {
-  const included = typeof include == 'function' ? include(url, params) : include
-  return included.map(loadStateModule.bind(null, loaded, onError))
+  map.include = (include, url, params) => {
+    const included =
+      typeof include == 'function' ? include(url, params) : include
+    return included.map(map.load)
+  }
+  return map
 }
