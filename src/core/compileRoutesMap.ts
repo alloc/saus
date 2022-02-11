@@ -3,9 +3,6 @@ import path from 'path'
 import { warn } from 'misty'
 import { babel, getBabelConfig, t } from '../babel'
 import { SausContext } from './context'
-import { bundleDir } from './paths'
-
-const coreRuntimePath = path.join(bundleDir, 'core.ts')
 
 export const routeMarker = '__sausRoute'
 
