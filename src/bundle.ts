@@ -365,8 +365,9 @@ async function generateSsrBundle(
 
   const moduleResolution: vite.PluginOption[] = [
     overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
-    overrideBareImport('saus/core', path.join(bundleDir, 'core.ts')),
     overrideBareImport('saus/bundle', bundleId),
+    overrideBareImport('saus/client', path.join(bundleDir, 'clientEntry.ts')),
+    overrideBareImport('saus/core', path.join(bundleDir, 'core.ts')),
   ]
 
   // Avoid using Node built-ins for `get` function.
