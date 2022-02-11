@@ -3,8 +3,8 @@ import os from 'os'
 import { join } from 'path'
 import { URL } from 'url'
 import { unwrapBuffer } from '../core/buffer'
-import { get } from '../core/http'
 import { emptyDir } from '../utils/emptyDir'
+import { get } from './get'
 
 export async function httpImport(url: string) {
   const file = toFilePath(url)

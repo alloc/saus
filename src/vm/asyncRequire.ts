@@ -21,8 +21,8 @@ import {
 import kleur from 'kleur'
 import { forceNodeReload } from './forceNodeReload'
 import { isExternalUrl } from '../utils/isExternalUrl'
-import { httpImport } from '../bundle/httpImport'
-import { jsonImport } from '../runtime/jsonImport'
+import { httpImport } from '../http/httpImport'
+import { jsonImport } from '../http/jsonImport'
 
 export type RequireAsyncConfig = {
   /**

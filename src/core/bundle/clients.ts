@@ -30,6 +30,7 @@ import {
   clientDir,
   coreDir,
   globalCachePath,
+  httpDir,
   runtimeDir,
 } from '../paths'
 import { BundleContext } from './context'
@@ -158,12 +159,12 @@ export async function generateClientModules(
       moduleRedirection([
         overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
         redirectModule(
-          path.join(coreDir, 'buffer.ts'),
-          path.join(clientDir, 'buffer.ts')
+          path.join(httpDir, 'get.ts'),
+          path.join(clientDir, 'http/get.ts')
         ),
         redirectModule(
-          path.join(coreDir, 'http.ts'),
-          path.join(clientDir, 'http.ts')
+          path.join(coreDir, 'buffer.ts'),
+          path.join(clientDir, 'buffer.ts')
         ),
         redirectModule(
           path.join(runtimeDir, 'loadStateModule.ts'),

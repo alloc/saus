@@ -89,6 +89,8 @@ cli
         }
         process.stdout.write(code)
       }
+      // Shamefully force exit since something unknown is keeping us alive.
+      process.exit(0)
     } catch (e: any) {
       if (e.message.startsWith('[saus]')) {
         fatal(e.message)

@@ -28,7 +28,7 @@ import {
 import { preferExternal } from './core/bundle/preferExternal'
 import type { RuntimeConfig } from './core/config'
 import { debug } from './core/debug'
-import { bundleDir, clientDir, coreDir } from './core/paths'
+import { bundleDir, clientDir, coreDir, httpDir } from './core/paths'
 import { vite } from './core/vite'
 import { getViteTransform } from './core/viteTransform'
 import { debugForbiddenImports } from './plugins/debug'
@@ -368,6 +368,7 @@ async function generateSsrBundle(
     overrideBareImport('saus/bundle', bundleId),
     overrideBareImport('saus/client', path.join(bundleDir, 'clientEntry.ts')),
     overrideBareImport('saus/core', path.join(bundleDir, 'core.ts')),
+    overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
   ]
 
   // Avoid using Node built-ins for `get` function.
@@ -375,8 +376,8 @@ async function generateSsrBundle(
   if (isWorker) {
     moduleResolution.push(
       redirectModule(
-        path.join(coreDir, 'http.ts'),
-        path.join(clientDir, 'http.ts')
+        path.join(httpDir, 'get.ts'),
+        path.join(clientDir, 'http/get.ts')
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&

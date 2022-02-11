@@ -64,12 +64,10 @@ export function rewriteHttpImports(
       if (editor) {
         const imports: string[] = []
         if (needsHttpImport) {
-          const source = `/@fs/${path.join(bundleDir, 'httpImport.ts')}`
-          imports.push(`import { httpImport } from "${source}"\n`)
+          imports.push(`import { httpImport } from "saus/http"\n`)
         }
         if (needsJsonImport) {
-          const source = `/@fs/${path.join(runtimeDir, 'jsonImport.ts')}`
-          imports.push(`import { jsonImport } from "${source}"\n`)
+          imports.push(`import { jsonImport } from "saus/http"\n`)
         }
         editor.prepend(imports.join(''))
         return {

@@ -1,6 +1,5 @@
 import MagicString from 'magic-string'
 import { escape } from 'saus'
-import { onChange } from './onChange'
 import { kRemovedNode, kTagPath } from './symbols'
 import { HtmlDocument, HtmlTag, HtmlVisitor, HtmlVisitorState } from './types'
 import { mergeVisitors } from './visitors/merge'

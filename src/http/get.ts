@@ -2,10 +2,10 @@
 import http from 'http'
 import https from 'https'
 import md5Hex from 'md5-hex'
+import type { CacheControl } from '../core/withCache'
 import { getCachedState } from '../runtime/getCachedState'
 import { debug } from './debug'
 import { Response } from './response'
-import { CacheControl } from './withCache'
 
 type URL = import('url').URL
 declare const URL: typeof import('url').URL
