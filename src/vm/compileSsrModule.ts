@@ -73,7 +73,7 @@ async function readSsrModule(
 ) {
   const filename = cleanUrl(id)
 
-  let loaded = await pluginContainer.load(id, true)
+  let loaded = await pluginContainer.load(id, { ssr: true })
   if (loaded == null) {
     loaded = fs.readFileSync(filename, 'utf8')
   }
@@ -98,12 +98,10 @@ async function readSsrModule(
     return script
   }
 
-  const transformed = await pluginContainer.transform(
-    script.code,
-    id,
-    script.map,
-    true
-  )
+  const transformed = await pluginContainer.transform(script.code, id, {
+    inMap: script.map,
+    ssr: true,
+  })
 
   if (transformed?.code != null) {
     script = transformed as Script

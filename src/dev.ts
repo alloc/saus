@@ -125,12 +125,9 @@ async function startServer(
   }
 
   const resolveId: ResolveIdHook = async (id, importer) => {
-    const resolved = await server.pluginContainer.resolveId(
-      id,
-      importer,
-      undefined,
-      true
-    )
+    const resolved = await server.pluginContainer.resolveId(id, importer, {
+      ssr: true,
+    })
     return resolved?.id
   }
 
