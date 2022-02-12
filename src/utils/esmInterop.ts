@@ -1,5 +1,5 @@
 /** Runtime `import *` emulation. */
-export function __importStar(exports: any) {
+export function __importAll(exports: any) {
   if (exports && exports.__esModule) {
     return new Proxy(exports, {
       get(_, key: string) {
@@ -12,12 +12,12 @@ export function __importStar(exports: any) {
   return exports
 }
 
-/** Runtime `default` export boxing. */
+/** Runtime `default` export unwrapping. */
 export function __importDefault(exports: any) {
   if (exports && exports.__esModule) {
-    return exports
+    return exports.default
   }
-  return { default: exports }
+  return exports
 }
 
 /** Runtime `export *` emulation. */
