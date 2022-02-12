@@ -5,7 +5,7 @@ import {
   __exportAll,
   __exportLet,
   __importDefault,
-  __importStar,
+  __importAll,
 } from '../utils/esmInterop'
 import { ResolveIdHook } from './types'
 
@@ -79,7 +79,7 @@ export async function compileEsm({
       if (imported?.skip) {
         injectAliasedImport(path, imported, editor)
       }
-      rewriteExport(path, imported, editor, esmHelpers)
+      rewriteExport(path, imported, importedBindings, editor, esmHelpers)
     } else if (path.isImportDeclaration()) {
       const imported = (await resolveStaticImport(path.node, filename))!
       if (imported.skip) {
@@ -105,6 +105,10 @@ export async function compileEsm({
   // Rewrite any references to imported bindings.
   for (const [{ referencePaths }, binding] of importedBindings) {
     for (const path of referencePaths) {
+      // Skip exported references as those are already rewritten.
+      if (path.findParent(parent => parent.isExportDeclaration())) {
+        continue
+      }
       const parent = path.parentPath!
       const grandParent = parent.parentPath!
 
@@ -212,6 +216,7 @@ const awaitRequire = (source: string) => `await ${requireAsyncId}("${source}")`
 function rewriteExport(
   path: NodePath<t.ExportDeclaration>,
   imported: ImportDescription | undefined,
+  bindings: BindingMap,
   editor: MagicString,
   esmHelpers: Set<Function>
 ) {
@@ -260,15 +265,55 @@ function rewriteExport(
       }
     } else if (node.specifiers.length) {
       const exported: string[] = []
-      for (const spec of node.specifiers) {
+      const specPaths = path.get('specifiers') as NodePath<t.ExportSpecifier>[]
+      node.specifiers.forEach((spec, i) => {
         if (!t.isExportSpecifier(spec)) {
-          continue
+          return
         }
-        const assignee = t.isStringLiteral(spec.exported)
-          ? `${exportsId}["${spec.exported.value.replace(/"/g, '\\"')}"]`
-          : `${exportsId}.${spec.exported.name}`
-        exported.push(`${assignee} = ${spec.local.name}`)
-      }
+
+        const specPath = specPaths[i]
+        const binding = specPath.scope.getBinding(spec.local.name)
+        if (!binding) {
+          return
+        }
+
+        let needsLiveBinding = false
+        if (
+          !binding.path.isImportDefaultSpecifier() &&
+          !binding.path.isImportNamespaceSpecifier()
+        ) {
+          const varDecl = binding.path.findParent(parent =>
+            parent.isVariableDeclaration()
+          ) as NodePath<t.VariableDeclaration>
+          needsLiveBinding = !varDecl || varDecl.node.kind !== 'const'
+        }
+
+        const local = bindings.get(binding) || spec.local.name
+
+        let property: string
+        let assignee: string | undefined
+
+        if (t.isStringLiteral(spec.exported)) {
+          property = spec.exported.value.replace(/"/g, '\\"')
+          if (!needsLiveBinding) {
+            assignee = `${exportsId}["${property}"]`
+          }
+        } else {
+          property = spec.exported.name
+          if (!needsLiveBinding) {
+            assignee = `${exportsId}.${property}`
+          }
+        }
+
+        exported.push(
+          assignee
+            ? `${assignee} = ${local}`
+            : `__exportLet(${exportsId}, "${property}", () => ${local})`
+        )
+        if (needsLiveBinding) {
+          esmHelpers.add(__exportLet)
+        }
+      })
       editor.overwrite(start, end, exported.join('\n'))
     } else if (decl.isFunctionDeclaration() || decl.isClassDeclaration()) {
       const { name } = decl.node.id!
@@ -332,18 +377,14 @@ export function generateRequireCalls(
   for (const spec of specifiers) {
     const alias = spec.node.local.name
     if (spec.isImportNamespaceSpecifier()) {
-      requireCalls += `const ${alias} = __importStar(${requireCall});\n`
-      esmHelpers.add(__importStar)
+      requireCalls += `const ${alias} = __importAll(${requireCall});\n`
+      esmHelpers.add(__importAll)
     } else if (spec.isImportDefaultSpecifier()) {
       const binding = spec.scope.getBinding(alias)
       if (!binding) {
         throw Error('Binding not found')
       }
-      if (!assumeStaticBinding) {
-        bindings.set(binding, alias + '.default')
-      }
-      const staticBinding = assumeStaticBinding ? '.default' : ''
-      const imported = `__importDefault(${requireCall})${staticBinding}`
+      const imported = `__importDefault(${requireCall})`
       requireCalls += `const ${alias} = ${imported};\n`
       esmHelpers.add(__importDefault)
     } else if (spec.isImportSpecifier()) {
@@ -358,13 +399,8 @@ export function generateRequireCalls(
       // immediately, which allows for a nicer debugging experience.
       const canBindStatically =
         t.isIdentifier(imported) &&
-        (assumeStaticBinding ||
-          binding.referencePaths.some(path => {
-            const nearestScope = path.findParent(isScopable)!
-            if (nearestScope.isProgram()) {
-              return true
-            }
-          }))
+        !isExported(binding) &&
+        (assumeStaticBinding || usedInProgramScope(binding))
 
       if (canBindStatically) {
         staticBindings.push([alias, imported.name])
@@ -399,6 +435,14 @@ export function generateRequireCalls(
   return requireCalls
 }
 
-function isScopable(path: NodePath) {
-  return path.isScopable()
+function isExported(binding: Binding) {
+  return binding.referencePaths.some(path =>
+    path.findParent(parent => parent.isExportNamedDeclaration())
+  )
+}
+
+function usedInProgramScope(binding: Binding) {
+  return binding.referencePaths.some(path =>
+    path.findParent(parent => parent.isScopable())!.isProgram()
+  )
 }
