@@ -159,12 +159,9 @@ export async function isolateRoutes(
             return { path, external: true }
           }
         }
-        const resolved = await pluginContainer.resolveId(
-          path,
-          importer,
-          undefined,
-          true
-        )
+        const resolved = await pluginContainer.resolveId(path, importer, {
+          ssr: true,
+        })
         if (resolved) {
           if (resolved.id == '__vite-browser-external') {
             return { path, external: true }

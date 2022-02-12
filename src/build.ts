@@ -142,12 +142,9 @@ async function loadBuildRoutes(context: SausContext) {
       if (builtinModules.includes(id)) {
         return
       }
-      const resolved = await pluginContainer.resolveId(
-        id,
-        importer,
-        undefined,
-        true
-      )
+      const resolved = await pluginContainer.resolveId(id, importer, {
+        ssr: true,
+      })
       return resolved?.id
     },
   })
