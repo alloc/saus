@@ -1,6 +1,6 @@
 import { $, createVisitor } from '@saus/html'
 import { defineStateModule } from 'saus/client'
-import { get } from 'saus/core'
+import { get } from 'saus/http'
 
 const wikiBaseUrl = `https://pokemon.fandom.com`
 

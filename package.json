@@ -35,7 +35,8 @@
   "scripts": {
     "build": "rimraf dist && tsup",
     "dev": "tsup --watch",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "test": "vitest"
   },
   "engines": {
     "node": ">=14"
@@ -54,6 +55,7 @@
     "esbuild": "^0.14.15",
     "magic-string": "^0.25.7",
     "md5-hex": "^3.0.0",
+    "rollup": "npm:@aleclarson/rollup@^2.62.0",
     "shared-log": "^1.2.4",
     "terser": "^5.10.0",
     "tinypool": "^0.1.1",

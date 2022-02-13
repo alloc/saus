@@ -30,9 +30,18 @@ export const __d = (id: string, loader: ModuleLoader) =>
     ssrPrefix + id,
     async function ssrLoadModule() {
       const exports: ModuleExports = {}
-      const module = { exports }
-      await loader(exports, module)
-      return module.exports
+      // CommonJS loader
+      if (loader.length > 1) {
+        const module = { exports }
+        await loader(exports, module)
+        return module.exports
+      }
+      // @ts-ignore: ESM loader
+      await loader(exports)
+      if (!exports.__esModule) {
+        Object.defineProperty(exports, '__esModule', { value: true })
+      }
+      return exports
     }
   ))
 

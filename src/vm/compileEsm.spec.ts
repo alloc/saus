@@ -36,10 +36,10 @@ describe('compileEsm', () => {
 
 // Compile ESM and return the code.
 async function transform(code: TemplateStringsArray, ...values: any[]) {
-  const result = await compileEsm({
+  const editor = await compileEsm({
     code: endent(code, ...values),
     filename: 'test.js',
     esmHelpers: new Set(),
   })
-  return result.toString()
+  return editor.toString()
 }

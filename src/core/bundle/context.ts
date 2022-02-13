@@ -24,7 +24,7 @@ export interface BundleContext extends SausContext {
 
 export async function loadBundleContext(
   options: InlineBundleConfig = {},
-  inlineConfig?: vite.UserConfig
+  inlineConfig: vite.UserConfig = {}
 ) {
   const context: BundleContext = (await loadContext('build', inlineConfig, [
     renderPlugin,

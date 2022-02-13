@@ -32,7 +32,7 @@ export function withCache<State = any>(
   cache: Cache<State>,
   getDefaultLoader?: (cacheKey: string) => StateLoader<State> | undefined
 ): {
-  (cacheKey: string): Promise<State | undefined>
+  (cacheKey: string): Promise<State | undefined> | undefined
   (cacheKey: string, loader: StateLoader<State>): Promise<State>
 }
 

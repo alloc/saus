@@ -1,21 +1,25 @@
 import * as esModuleLexer from 'es-module-lexer'
 import { basename } from 'path'
 import { getBabelProgram, MagicString, NodePath, t } from '../babel'
+import { vite } from '../core'
 import {
   __exportAll,
   __exportLet,
   __importDefault,
   __importAll,
 } from '../utils/esmInterop'
+import { SourceMap } from '../utils/sourceMap'
 import { ResolveIdHook } from './types'
 
-type Binding = { referencePaths: NodePath[] }
+type Binding = { path: NodePath; referencePaths: NodePath[] }
 type BindingMap = Map<Binding, string>
 
 export const exportsId = '__exports'
 export const importMetaId = '__importMeta'
 export const importAsyncId = '__importAsync'
 export const requireAsyncId = '__requireAsync'
+
+export type CompiledEsm = MagicString & { hoistIndex: number }
 
 export async function compileEsm({
   code,
@@ -31,9 +35,9 @@ export async function compileEsm({
   keepImportCalls?: boolean
   keepImportMeta?: boolean
   resolveId?: ResolveIdHook
-}): Promise<MagicString> {
+}) {
   const ast = getBabelProgram(code, filename)
-  const editor = new MagicString(code)
+  let editor = new MagicString(code)
 
   // Rewrite async imports and import.meta access
   if (!keepImportCalls || !keepImportMeta)
@@ -73,6 +77,8 @@ export async function compileEsm({
   }
 
   let hoistIndex = 0
+  let hasPreservedImports = false
+
   for (const path of ast.get('body')) {
     if (path.isExportDeclaration()) {
       const imported = await resolveStaticImport(path.node, filename)
@@ -83,12 +89,7 @@ export async function compileEsm({
     } else if (path.isImportDeclaration()) {
       const imported = (await resolveStaticImport(path.node, filename))!
       if (imported.skip) {
-        const { start, end } = path.node as {
-          start: number
-          end: number
-        }
-        editor.remove(start, end + 1)
-        editor.prepend(code.slice(start, end + 1))
+        hasPreservedImports = true
       } else {
         hoistIndex = rewriteImport(
           path,
@@ -142,6 +143,63 @@ export async function compileEsm({
     }
   }
 
+  if (hasPreservedImports) {
+    const map = editor.generateMap({ hires: true })
+    code = editor.toString()
+    editor = new MagicString(code)
+    attachInputSourcemap(editor, map, filename)
+
+    hoistIndex = 0
+    for (const imp of esModuleLexer.parse(code)[0]) {
+      if (imp.d !== -1) continue
+
+      const se = findStatementEnd(code, imp.se)
+      if (imp.ss !== hoistIndex) {
+        editor.move(imp.ss, se, hoistIndex)
+      } else {
+        hoistIndex = se
+      }
+    }
+  }
+
+  // @ts-ignore
+  editor.hoistIndex = hoistIndex
+
+  return editor as CompiledEsm
+}
+
+/**
+ * Find where the next statement begins.
+ *
+ * This assumes a single-line statement.
+ */
+function findStatementEnd(code: string, pos: number) {
+  const whitespaceRE = /\s/
+  let allowBreakOnSameLine = false
+  while (++pos < code.length) {
+    const char = code[pos - 1]
+    if (char === '\n') {
+      break
+    }
+    if (whitespaceRE.test(char)) {
+      allowBreakOnSameLine = true
+    } else if (allowBreakOnSameLine) {
+      break
+    }
+  }
+  return pos
+}
+
+function attachInputSourcemap(
+  editor: MagicString,
+  inMap: SourceMap,
+  filename: string
+) {
+  const { generateMap } = editor
+  editor.generateMap = function (options) {
+    const map = generateMap.call(editor, options)
+    return vite.combineSourcemaps(filename, [map as any, inMap as any]) as any
+  }
   return editor
 }
 
@@ -158,11 +216,10 @@ function rewriteImport(
     end: number
   }
   const requireCalls = generateRequireCalls(path, source, bindings, esmHelpers)
+  editor.overwrite(start, end + 1, requireCalls)
   if (start !== hoistIndex) {
-    editor.remove(start, end + 1)
-    editor.appendRight(hoistIndex, requireCalls)
+    editor.move(start, end + 1, hoistIndex)
   } else {
-    editor.overwrite(start, end + 1, requireCalls)
     hoistIndex = end + 1
   }
   return hoistIndex
@@ -184,6 +241,10 @@ type ImportDescription = {
   aliasMap?: Record<string, string>
 }
 
+function sourceAlias(source: string) {
+  return basename(source, '.js')
+}
+
 function injectAliasedImport(
   path: NodePath<t.ExportDeclaration>,
   imported: ImportDescription,
@@ -195,7 +256,7 @@ function injectAliasedImport(
     t.isExportAllDeclaration(node) ||
     t.isExportNamespaceSpecifier(specs[0])
   ) {
-    imported.alias = path.scope.generateUid(basename(imported.source))
+    imported.alias = path.scope.generateUid(sourceAlias(imported.source))
     editor.prepend(`import * as ${imported.alias} from "${imported.source}"`)
   } else {
     const declarators: string[] = []
@@ -238,7 +299,7 @@ function rewriteExport(
         // to cache the `awaitRequire` expression for future reference.
         const alias =
           !imported.aliasMap &&
-          path.scope.generateUid(basename(imported.source))
+          path.scope.generateUid(sourceAlias(imported.source))
 
         if (alias) {
           editor.overwrite(
@@ -277,18 +338,8 @@ function rewriteExport(
           return
         }
 
-        let needsLiveBinding = false
-        if (
-          !binding.path.isImportDefaultSpecifier() &&
-          !binding.path.isImportNamespaceSpecifier()
-        ) {
-          const varDecl = binding.path.findParent(parent =>
-            parent.isVariableDeclaration()
-          ) as NodePath<t.VariableDeclaration>
-          needsLiveBinding = !varDecl || varDecl.node.kind !== 'const'
-        }
-
         const local = bindings.get(binding) || spec.local.name
+        const needsLiveBinding = findMutableDeclaration(binding)
 
         let property: string
         let assignee: string | undefined
@@ -351,6 +402,32 @@ function rewriteExport(
   }
 }
 
+function findMutableDeclaration(binding: Binding) {
+  if (binding.path.isImportDefaultSpecifier()) {
+    return false
+  }
+  if (binding.path.isImportNamespaceSpecifier()) {
+    return false
+  }
+  let parentPath = binding.path as NodePath | null
+  while ((parentPath = parentPath!.parentPath)) {
+    if (parentPath.isVariableDeclaration()) {
+      // Assume "export var" is never used.
+      return parentPath.node.kind == 'let'
+    }
+    if (parentPath.isImportDeclaration()) {
+      return true
+    }
+    if (parentPath.isFunctionDeclaration()) {
+      return false
+    }
+    if (parentPath.isClassDeclaration()) {
+      return false
+    }
+  }
+  return false
+}
+
 export function generateRequireCalls(
   path: NodePath<t.ImportDeclaration>,
   source: string,
@@ -405,7 +482,7 @@ export function generateRequireCalls(
       if (canBindStatically) {
         staticBindings.push([alias, imported.name])
       } else {
-        aliasRoot ||= path.scope.generateUid(basename(source))
+        aliasRoot ||= path.scope.generateUid(sourceAlias(source))
         bindings.set(
           binding,
           t.isIdentifier(imported)

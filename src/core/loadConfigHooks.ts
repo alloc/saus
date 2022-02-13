@@ -38,7 +38,7 @@ export async function loadConfigHooks(config: ResolvedConfig) {
     const isMatch = (name: string) => {
       return id === name || id.startsWith(name + '/')
     }
-    if (!config.resolve.dedupe?.some(isMatch)) {
+    if (!config.resolve?.dedupe?.some(isMatch)) {
       const pkgPath = findPackage(dirname(importer))
       if (!pkgPath || dirname(pkgPath) === config.root) {
         return

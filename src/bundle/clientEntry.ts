@@ -1,6 +1,8 @@
 export * from '../client/index.node'
 export { default as routes } from '../client/routes'
 
+export const BASE_URL = import.meta.env.BASE_URL
+
 export const applyHead = unsupportedFn('applyHead')
 
 function unsupportedFn(name: string) {
