@@ -143,9 +143,7 @@ export async function generateClientModules(
 
   runtimeConfig.minify = minify
 
-  const removedImports = new Map<OutputChunk, string[]>()
   const clientRouteMap: Record<string, string> = {}
-
   const splitVendor = vite.splitVendorChunk({})
 
   config = await context.resolveConfig('build', {
@@ -172,7 +170,6 @@ export async function generateClientModules(
         ),
       ]),
       routesPlugin(clientRouteMap)(),
-      fixChunkImports(removedImports),
       rewriteHttpImports(context.logger, true),
       transformClientState(),
     ],
@@ -220,12 +217,12 @@ export async function generateClientModules(
     if (chunk.type !== 'chunk') {
       assets.push(chunk)
     } else {
-      // Restore imports that Vite removed.
-      const restoredImports = removedImports.get(chunk)
-      if (restoredImports) {
-        chunk.imports.push(...restoredImports)
-      }
       chunks.push(chunk)
+
+      // Restore imports that Vite removed.
+      chunk.imports.push(...chunk.importedAssets)
+      chunk.imports.push(...chunk.importedCss)
+
       if (chunk.isEntry) {
         const code = rewriteExports(chunk.code)
         const lines = stripComments(code).split('\n').filter(Boolean)
@@ -426,31 +423,6 @@ function rewriteExports(text: string) {
     .replace(/^export \{ [^}]+ \};?$/gm, '')
     .replace(/^export /gm, 'import ')
     .trim()
-}
-
-/**
- * Vite removes `.css` and other assets from the `imports` array
- * of each rendered JS chunk, but the SSR bundles still needs those
- * imports to be tracked.
- */
-function fixChunkImports(cache: Map<OutputChunk, string[]>): vite.Plugin {
-  return {
-    name: 'saus:fixChunkImports',
-    enforce: 'post',
-    configResolved(config) {
-      this.generateBundle = (_, bundle) => {
-        for (const id in bundle) {
-          const chunk = bundle[id]
-          if (chunk.type == 'chunk') {
-            const imports = [...chunk.importedCss, ...chunk.importedAssets]
-            if (imports.length) {
-              cache.set(chunk, imports)
-            }
-          }
-        }
-      }
-    },
-  }
 }
 
 /**
