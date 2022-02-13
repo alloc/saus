@@ -1,7 +1,7 @@
 export { default as routes } from './routes'
 
 export * from './api'
-export * from './constants'
+export * from './baseUrl'
 export * from './head'
 export * from './http/get'
 export * from './buffer'
