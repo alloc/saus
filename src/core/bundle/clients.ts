@@ -235,7 +235,12 @@ export async function generateClientModules(
           chunk.exports = []
         }
 
-        entryChunks.push(chunk)
+        const entryIndex = input.findIndex(id => {
+          id = resolveEntryUrl(id, config)
+          return chunk.modules[id] !== undefined
+        })
+
+        entryChunks[entryIndex] = chunk
       }
       if (globalCachePath in chunk.modules) {
         stateCache = chunk
@@ -294,7 +299,7 @@ export async function generateClientModules(
 
   const moduleMap: ClientModuleMap = {}
 
-  let entryIndex = -1
+  let entryIndex: number
   await mapSerial(chunks, async chunk => {
     // Convert relative imports to absolute imports, because we'll want
     // to inline the chunk if it only consists of import statements.
@@ -329,7 +334,10 @@ export async function generateClientModules(
     if (chunk.facadeModuleId == helpersPath) {
       key = 'helpers'
     } else if (chunk.isEntry) {
-      const importStmt = imports[chunk.isDebug ? entryIndex : ++entryIndex]
+      if (!chunk.isDebug) {
+        entryIndex = entryChunks.indexOf(chunk)
+      }
+      const importStmt = imports[entryIndex]
       if (!importStmt) {
         return warnOnce(`Unexpected entry module: "${chunk.fileName}"`)
       }
@@ -406,6 +414,16 @@ export async function generateClientModules(
 
 function quotes(text: string) {
   return `"${text}"`
+}
+
+const FS_PREFIX = /^\/@fs\/\/?/
+
+function resolveEntryUrl(id: string, config: vite.ResolvedConfig) {
+  return FS_PREFIX.test(id)
+    ? id.replace(FS_PREFIX, '/')
+    : id[0] === '/'
+    ? config.root + id
+    : id
 }
 
 /**
