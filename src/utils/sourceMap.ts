@@ -20,9 +20,10 @@ export function toInlineSourceMap(map: SourceMap) {
 }
 
 export function resolveMapSources(map: SourceMap, sourceRoot: string) {
-  map.sources = map.sources.map(source =>
-    source ? resolve(sourceRoot, source) : null!
-  )
+  if (map.sources.length)
+    map.sources = map.sources.map(source =>
+      source ? resolve(sourceRoot, source) : null!
+    )
 }
 
 export function loadSourceMap(code: string, file: string) {

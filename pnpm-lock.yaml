@@ -43,6 +43,7 @@ importers:
       react: ^17.0.2
       react-dom: ^17.0.2
       regexparam: ^2.0.0
+      rollup: npm:@aleclarson/rollup@^2.62.0
       shared-log: ^1.2.4
       source-map: 0.6.1
       source-map-support: ^0.5.20
@@ -68,6 +69,7 @@ importers:
       esbuild: 0.14.15
       magic-string: 0.25.7
       md5-hex: 3.0.1
+      rollup: /@aleclarson/rollup/2.62.0
       shared-log: 1.2.4
       terser: 5.10.0
       tinypool: 0.1.1
@@ -190,6 +192,14 @@ importers:
       saus: link:../..
 
 packages:
+
+  /@aleclarson/rollup/2.62.0:
+    resolution: {integrity: sha512-KFFDc3dw8hb0Pgh0pXwRGzYkSWWAKxpSsUE40+TtxnUSp3XEjD40p/hsyqG8OFoqDNvgUd678qfVwHY7NjiJLw==}
+    engines: {node: '>=10.0.0'}
+    hasBin: true
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: false
 
   /@alloc/fast-rimraf/1.0.8:
     resolution: {integrity: sha512-TsRTRLLDW6Q4fWBAYlbkcaHQDAANKsI0smrhS/1x7/GHcjVxo+r+2VRbqrWaYpmjdhvCp5v7n2wtwkMYp+Kivw==}

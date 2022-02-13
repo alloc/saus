@@ -1,6 +1,5 @@
 import { createFilter } from '@rollup/pluginutils'
 import endent from 'endent'
-import * as esbuild from 'esbuild'
 import escalade from 'escalade/sync'
 import fs from 'fs'
 import { bold } from 'kleur/colors'
@@ -8,6 +7,7 @@ import MagicString from 'magic-string'
 import md5Hex from 'md5-hex'
 import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
+import * as rollup from 'rollup'
 import { babel, resolveReferences, t } from '../../babel'
 import { ssrRoutesId } from '../../bundle/constants'
 import {
@@ -20,7 +20,6 @@ import {
   loadSourceMap,
   resolveMapSources,
   SourceMap,
-  toInlineSourceMap,
 } from '../../utils/sourceMap'
 import { toDevPath } from '../../utils/toDevPath'
 import { compileEsm, exportsId, requireAsyncId } from '../../vm/compileEsm'
@@ -100,12 +99,6 @@ export async function isolateRoutes(
 
   // const NULL_BYTE_PLACEHOLDER = `__x00__`
   const isVirtual = (id: string) => id[0] === '\0'
-  const resolveVirtual = (id: string) => ({
-    // Replace the null byte so it's visible in compiled code
-    // when esbuild prepends the filename of the inlined module.
-    path: id, // id.replace('\0', NULL_BYTE_PLACEHOLDER),
-    namespace: 'virtual',
-  })
 
   const shouldForceIsolate = createFilter(
     config.saus.bundle?.isolate || /^$/,
@@ -141,113 +134,110 @@ export async function isolateRoutes(
   const isolatedCjsModules = new Map<string, string>()
   const cjsNotFoundCache = new Set<string>()
 
-  // This plugin bridges Esbuild and Vite.
-  const bridge: esbuild.Plugin = {
+  // This plugin bridges Rollup and Vite.
+  const bridge: rollup.Plugin = {
     name: 'vite-bridge',
-    setup(build) {
-      build.onResolve({ filter: /.+/ }, async ({ path, importer }) => {
-        if (!importer) {
-          return { path }
+    async resolveId(id, importer) {
+      if (!importer) {
+        return id
+      }
+      if (sausExternalRE.test(id)) {
+        return { id, external: true }
+      }
+      let forceIsolate = false
+      if (bareImportRE.test(id)) {
+        forceIsolate = shouldForceIsolate(id)
+        if (!forceIsolate && !shouldResolve(id, importer)) {
+          return { id, external: true }
         }
-        if (sausExternalRE.test(path)) {
-          return { path, external: true }
-        }
-        let forceIsolate = false
-        if (bareImportRE.test(path)) {
-          forceIsolate = shouldForceIsolate(path)
-          if (!forceIsolate && !shouldResolve(path, importer)) {
-            return { path, external: true }
-          }
-        }
-        const resolved = await pluginContainer.resolveId(path, importer, {
-          ssr: true,
-        })
-        if (resolved) {
-          if (resolved.id == '__vite-browser-external') {
-            return { path, external: true }
-          }
-
-          const maybeCjsModule =
-            forceIsolate &&
-            resolved.id.endsWith('.js') &&
-            !cjsNotFoundCache.has(resolved.id)
-
-          // We have to avoid bundling CommonJS modules with Esbuild,
-          // because the output is incompatible with our SSR module system.
-          if (maybeCjsModule) {
-            if (isolatedCjsModules.has(resolved.id)) {
-              return { path: resolved.id, external: true }
-            }
-            const code = fs.readFileSync(resolved.id, 'utf8')
-            const hasEsmSyntax = /^(import|export) /m.test(code)
-            if (!hasEsmSyntax && /\b(module|exports|require)\b/.test(code)) {
-              isolatedModules[resolved.id] = {
-                code,
-                map: loadSourceMap(code, resolved.id),
-              }
-              isolatedCjsModules.set(
-                resolved.id,
-                relative(config.root, resolved.id)
-              )
-              return { path: resolved.id, external: true }
-            }
-            cjsNotFoundCache.add(resolved.id)
-          }
-
-          path = resolved.id
-
-          if (isVirtual(path)) {
-            return resolveVirtual(path)
-          }
-
-          const sideEffects =
-            resolved.moduleSideEffects != null
-              ? !!resolved.moduleSideEffects
-              : undefined
-
-          // TODO: handle "relative" and "absolute" external values
-          const external =
-            !forceIsolate &&
-            (!!resolved.external ||
-              !path.startsWith(config.root + '/') ||
-              nodeModulesRE.test(path.slice(config.root.length)))
-
-          // Prepend /@fs/ for faster resolution by Rollup.
-          if (external && isAbsolute(path) && fs.existsSync(path)) {
-            path = '/@fs/' + path
-          }
-
-          return {
-            path,
-            external,
-            sideEffects,
-          }
-        }
-        if (path.endsWith('.node')) {
-          return { path, external: true }
-        }
+      }
+      const resolved = await pluginContainer.resolveId(id, importer, {
+        ssr: true,
       })
+      if (resolved) {
+        if (resolved.id == '__vite-browser-external') {
+          return { id, external: true }
+        }
 
-      build.onLoad({ filter: /.+/ }, loadModule)
-      build.onLoad({ filter: /.+/, namespace: 'virtual' }, args => {
-        // args.path = args.path.replace(NULL_BYTE_PLACEHOLDER, '\0')
-        return loadModule(args)
-      })
+        const maybeCjsModule =
+          forceIsolate &&
+          resolved.id.endsWith('.js') &&
+          !cjsNotFoundCache.has(resolved.id)
 
-      async function loadModule({ path }: esbuild.OnLoadArgs) {
-        const transformed = await transform(toDevPath(path, config.root, true))
-        if (transformed) {
-          let { code, map } = transformed as IsolatedModule
-          if (map) {
-            map.sources = map.sources.map(source => {
-              return source ? relative(dirname(path), source) : null!
-            })
-            code += map ? toInlineSourceMap(map) : ''
+        // We have to avoid bundling CommonJS modules with Esbuild,
+        // because the output is incompatible with our SSR module system.
+        if (maybeCjsModule) {
+          if (isolatedCjsModules.has(resolved.id)) {
+            return { id: resolved.id, external: true }
           }
-          return {
-            contents: code,
-            loader: 'js' as const,
+          const code = fs.readFileSync(resolved.id, 'utf8')
+          const hasEsmSyntax = /^(import|export) /m.test(code)
+          if (!hasEsmSyntax && /\b(module|exports|require)\b/.test(code)) {
+            isolatedModules[resolved.id] = {
+              code,
+              map: loadSourceMap(code, resolved.id),
+            }
+            isolatedCjsModules.set(
+              resolved.id,
+              relative(config.root, resolved.id)
+            )
+            return { id: resolved.id, external: true }
           }
+          cjsNotFoundCache.add(resolved.id)
+        }
+
+        id = resolved.id
+
+        if (isVirtual(id)) {
+          return id
+        }
+
+        const sideEffects =
+          resolved.moduleSideEffects != null
+            ? !!resolved.moduleSideEffects
+            : undefined
+
+        // TODO: handle "relative" and "absolute" external values
+        let external =
+          !forceIsolate &&
+          (!!resolved.external ||
+            !id.startsWith(config.root + '/') ||
+            nodeModulesRE.test(id.slice(config.root.length)))
+
+        if (isAbsolute(id)) {
+          if (fs.existsSync(id)) {
+            if (external) {
+              // Prepend /@fs/ for fast resolution post-isolation.
+              id = '/@fs/' + id
+            }
+          } else if (!forceIsolate) {
+            // Probably an asset from publicDir.
+            external = true
+          }
+        }
+
+        return {
+          id,
+          external,
+          sideEffects,
+        }
+      }
+      if (id.endsWith('.node')) {
+        return { id, external: true }
+      }
+    },
+    async load(id) {
+      const transformed = await transform(toDevPath(id, config.root, true))
+      if (transformed) {
+        let { code, map } = transformed as IsolatedModule
+        if (map) {
+          map.sources = map.sources.map(source => {
+            return source ? relative(dirname(id), source) : null!
+          })
+        }
+        return {
+          code,
+          map,
         }
       }
     },
@@ -261,26 +251,26 @@ export async function isolateRoutes(
 
   debug(`route entries: %O`, routeEntryPoints)
 
-  const { metafile, outputFiles } = await esbuild.build({
-    absWorkingDir: config.root,
-    allowOverwrite: true,
-    bundle: true,
-    entryPoints: [
-      virtualRenderPath,
-      context.routesPath,
-      ...Object.keys(rendererMap),
-      ...routeEntryPoints,
-    ],
-    format: 'esm',
-    logLevel: 'error',
-    metafile: true,
-    outdir: config.root,
+  const bundleInputs = [
+    virtualRenderPath,
+    context.routesPath,
+    ...Object.keys(rendererMap),
+    ...routeEntryPoints,
+  ]
+
+  const bundle = await rollup.rollup({
     plugins: [bridge],
-    target: 'esnext',
-    treeShaking: true,
-    sourcemap: true,
-    splitting: true,
-    write: false,
+    input: bundleInputs,
+    makeAbsoluteExternalsRelative: false,
+    context: 'globalThis',
+  })
+
+  const generated = await bundle.generate({
+    dir: config.root,
+    format: 'esm',
+    sourcemap: 'hidden',
+    minifyInternalExports: false,
+    preserveModules: true,
   })
 
   await pluginContainer.close()
@@ -302,27 +292,25 @@ export async function isolateRoutes(
 
   const bundleToEntryMap: Record<string, string> = {}
 
-  const outputs = Object.values(metafile!.outputs)
-  for (let i = 1; i < outputFiles.length; i += 2) {
-    const map = JSON.parse(outputFiles[i - 1].text) as SourceMap
-    const file = outputFiles[i]
-    const { entryPoint } = outputs[i]
-    resolveMapSources(map, dirname(file.path))
-    if (entryPoint) {
-      const entryUrl = '/' + entryPoint
-      if (entryUrl in entryUrlToFileMap) {
-        const filePath = entryUrlToFileMap[entryUrl]
-        const bundleId = toBundleChunkId(filePath)
-        isolatedModules[bundleId] = { code: file.text, map }
-        bundleToEntryMap[bundleId] = entryUrl
-      } else {
-        const chunkPath = resolve(config.root, entryPoint)
-        isolatedModules[chunkPath] = { code: file.text, map }
-        bundleToEntryMap[chunkPath] = entryUrl
-      }
+  for (const chunk of generated.output as rollup.OutputChunk[]) {
+    let moduleId = chunk.facadeModuleId!
+    const map = chunk.map!
+    if (moduleId !== virtualRenderPath) {
+      resolveMapSources(map, dirname(moduleId))
+    }
+    const moduleUrl = toDevPath(moduleId, config.root, true)
+    const entryPath = entryUrlToFileMap[moduleUrl]
+    if (entryPath) {
+      moduleId = toBundleChunkId(entryPath)
+      bundleToEntryMap[moduleId] = moduleUrl
+    } else if (bundleInputs.includes(moduleId)) {
+      bundleToEntryMap[moduleId] = moduleUrl
     } else {
-      const chunkId = '.saus' + file.path.slice(config.root.length)
-      isolatedModules[chunkId] = { code: file.text, map }
+      moduleId = resolve(config.root, chunk.fileName)
+    }
+    isolatedModules[moduleId] = {
+      code: chunk.code,
+      map,
     }
   }
 
@@ -336,13 +324,13 @@ export async function isolateRoutes(
       keepImportCalls: true,
       keepImportMeta: true,
       esmHelpers,
-      resolveId(id) {
+      resolveId(id, importer) {
         if (relativePathRE.test(id)) {
-          id = id.replace(relativePathRE, '.saus/')
+          id = resolve(dirname(importer), id)
           hoistedImports.add(id)
-          return id
+          return toSsrPath(id, config.root)
         }
-        const ssrId = isolatedCjsModules.get(id)
+        const ssrId = id == 'saus/client' ? id : isolatedCjsModules.get(id)
         if (ssrId) {
           hoistedImports.add(id)
           return ssrId
@@ -371,16 +359,22 @@ export async function isolateRoutes(
       }
     }
 
-    editor.prependRight(0, `__d("${ssrId}", async (${exportsId}) => {\n`)
+    editor.prependRight(
+      editor.hoistIndex,
+      `__d("${ssrId}", async (${exportsId}) => {\n`
+    )
     editor.append('\n})')
 
     const esmHelperIds = Array.from(esmHelpers, f => f.name)
     esmHelperIds.unshift(`__d`, requireAsyncId)
     editor.prepend(`import { ${esmHelperIds.join(', ')} } from "saus/core"\n`)
 
+    const map = editor.generateMap({ hires: true })
+    map.sources = [id]
+
     return {
+      map,
       code: editor.toString(),
-      map: editor.generateMap({ hires: true }),
       moduleSideEffects: 'no-treeshake' as const,
     }
   }
@@ -446,22 +440,19 @@ export async function isolateRoutes(
                 sourceArg.node.start!
               )
             }
-            const moduleInfo = await context.load(resolved)
-            if (moduleInfo.code != null) {
-              const { code } = moduleInfo
-              isolatedModules[resolved.id] = {
-                code,
-                map: loadSourceMap(code, resolved.id),
-              }
-              source = relative(config.root, resolved.id)
-              isolatedCjsModules.set(resolved.id, source)
-              esmImports.push(`import "${resolved.id}"\n`)
-              editor.overwrite(
-                sourceArg.node.start!,
-                sourceArg.node.end!,
-                `"${source}"`
-              )
+            const code = fs.readFileSync(resolved.id, 'utf8')
+            isolatedModules[resolved.id] = {
+              code,
+              map: loadSourceMap(code, resolved.id),
             }
+            source = relative(config.root, resolved.id)
+            isolatedCjsModules.set(resolved.id, source)
+            esmImports.push(`import "${resolved.id}"\n`)
+            editor.overwrite(
+              sourceArg.node.start!,
+              sourceArg.node.end!,
+              `"${source}"`
+            )
           })
         )
       },
@@ -518,7 +509,7 @@ export async function isolateRoutes(
         if (ssrId) {
           return isolateCjsModule(code, id, ssrId, this)
         }
-        ssrId = bundleToEntryMap[id] || id
+        ssrId = bundleToEntryMap[id]
         if (ssrId == rendererUrl) {
           const editor = new MagicString(code)
           for (const chunkPath in rendererMap) {
@@ -530,10 +521,18 @@ export async function isolateRoutes(
             moduleSideEffects: 'no-treeshake',
           }
         }
+        if (!ssrId) {
+          ssrId = toSsrPath(id, config.root)
+        }
         return isolateSsrModule(code, id, ssrId)
       }
     },
   }
+}
+
+function toSsrPath(id: string, root: string) {
+  const relativeId = relative(root, id)
+  return relativePathRE.test(relativeId) ? relativeId : '/' + relativeId
 }
 
 const relativePathRE = /^(?:\.\/|(\.\.\/)+)/

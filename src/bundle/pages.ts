@@ -8,12 +8,14 @@ import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 import { ParsedUrl, parseUrl } from '../utils/url'
+import * as clientEntry from './clientEntry'
 import moduleMap from './clientModules'
 import config from './config'
 import { ssrRoutesId } from './constants'
 import { context } from './context'
-import { applyHtmlProcessors, endent } from './core'
+import { applyHtmlProcessors, endent, __exportAll } from './core'
 import { injectDebugBase } from './debugBase'
+import { defineClientEntry } from './defineClientEntry'
 import functions from './functions'
 import { getModuleUrl } from './getModuleUrl'
 import { injectToBody, injectToHead } from './html/inject'
@@ -21,6 +23,9 @@ import { HtmlTagDescriptor } from './html/types'
 import { loadRenderers } from './render'
 import { ssrClearCache, __requireAsync as ssrRequire } from './ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from './types'
+
+// Allow `ssrRequire("saus/client")` outside page rendering.
+defineClientEntry()
 
 const getModule = (id: string) =>
   moduleMap[id] || Object.values(moduleMap).find(module => module.id == id)
@@ -70,7 +75,7 @@ export async function renderPage(
 
   let page: InternalPage | null = null
   try {
-    if (renderStart && globalCache.loading[pageUrl.path]) {
+    if (renderStart && context.getCachedPage(pageUrl.path)) {
       renderStart(pagePublicPath)
     }
     page = await pageFactory.render(pageUrl, {
@@ -78,6 +83,9 @@ export async function renderPage(
       // Prepare the page context with isolated modules.
       async setup(pageContext) {
         ssrClearCache()
+        defineClientEntry({
+          BASE_URL: isDebug ? debugBase : base,
+        })
         context.renderers = []
         context.defaultRenderer = undefined
         context.beforeRenderHooks = []
@@ -199,7 +207,7 @@ export async function renderPage(
         id: stateModuleId,
         text: renderStateModule(
           stateId,
-          globalCache.loaded[stateId]![0],
+          globalCache.loaded[stateId],
           config.base + config.stateCacheId
         ),
         exports: ['default'],
