@@ -143,6 +143,7 @@ export async function generateClientModules(
 
   runtimeConfig.minify = minify
 
+  const cjsModuleList: string[] = []
   const clientRouteMap: Record<string, string> = {}
   const splitVendor = vite.splitVendorChunk({})
 
@@ -172,6 +173,7 @@ export async function generateClientModules(
       routesPlugin(clientRouteMap)(),
       rewriteHttpImports(context.logger, true),
       transformClientState(),
+      collectCjsModules(cjsModuleList),
     ],
     css: {
       minify,
@@ -283,6 +285,10 @@ export async function generateClientModules(
         const index = unresolvedImports.indexOf(stmt)
         const chunk = entryChunks[index]
         updates.push(() => {
+          const filePath = resolveEntryUrl(importStmt.source, config)
+          if (cjsModuleList.includes(filePath)) {
+            stmt = (stmt as string).replace('* as ', '')
+          }
           referenced[i] = (stmt as string).replace(
             quotes(importStmt.id),
             quotes(base + chunk.fileName)
@@ -512,4 +518,18 @@ function useDebugRoutes(code: string, base: string, debugBase: string) {
       return assign + JSON.stringify(newRoutes, null, 2)
     }
   )
+}
+
+function collectCjsModules(cjsModuleList: string[]): vite.Plugin {
+  return {
+    name: 'saus:collectCjsModules',
+    enforce: 'post',
+    transform(_code, id) {
+      const { meta } = this.getModuleInfo(id)!
+      if (meta.commonjs?.isCommonJS) {
+        cjsModuleList.push(id)
+      }
+      return null
+    },
+  }
 }
