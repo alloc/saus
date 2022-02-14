@@ -83,6 +83,7 @@ export async function compileEsm({
     if (path.isExportDeclaration()) {
       const imported = await resolveStaticImport(path.node, filename)
       if (imported?.skip) {
+        hasPreservedImports = true
         injectAliasedImport(path, imported, editor)
       }
       rewriteExport(path, imported, importedBindings, editor, esmHelpers)
@@ -143,13 +144,16 @@ export async function compileEsm({
     }
   }
 
+  // Reset the hoist index, since this will represent where
+  // the end of the final ESM import is located.
+  hoistIndex = 0
+
   if (hasPreservedImports) {
     const map = editor.generateMap({ hires: true })
     code = editor.toString()
     editor = new MagicString(code)
     attachInputSourcemap(editor, map, filename)
 
-    hoistIndex = 0
     for (const imp of esModuleLexer.parse(code)[0]) {
       if (imp.d !== -1) continue
 
@@ -257,7 +261,7 @@ function injectAliasedImport(
     t.isExportNamespaceSpecifier(specs[0])
   ) {
     imported.alias = path.scope.generateUid(sourceAlias(imported.source))
-    editor.prepend(`import * as ${imported.alias} from "${imported.source}"`)
+    editor.prepend(`import * as ${imported.alias} from "${imported.source}"\n`)
   } else {
     const declarators: string[] = []
     imported.aliasMap = {}
@@ -267,7 +271,7 @@ function injectAliasedImport(
       imported.aliasMap[local.name] = alias
     }
     editor.prepend(
-      `import { ${declarators.join(', ')} } from "${imported.source}"`
+      `import { ${declarators.join(', ')} } from "${imported.source}"\n`
     )
   }
 }
