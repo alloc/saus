@@ -1,4 +1,4 @@
-import { __requireAsync as ssrRequire } from './ssrModules'
+import { ssrImport } from './ssrModules'
 import routes from './routes'
 
 /** This overrides `loadPageModule` (exported by `saus/client`) in SSR environment. */
@@ -11,7 +11,7 @@ export function loadPageModule(
   if (!routeModuleUrl) {
     throw Error(`Unknown route: "${routePath}"`)
   }
-  const routeModule = ssrRequire(routeModuleUrl)
+  const routeModule = ssrImport(routeModuleUrl)
   if (unwrapModule) {
     return unwrapModule(routeModule)
   }
