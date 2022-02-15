@@ -10,7 +10,6 @@ import { getPreloadTagsForModules } from '../utils/modulePreload'
 import { ParsedUrl, parseUrl } from '../utils/url'
 import moduleMap from './clientModules'
 import config from './config'
-import { ssrRoutesId } from './constants'
 import { context } from './context'
 import { applyHtmlProcessors, endent, __exportAll } from './core'
 import { injectDebugBase } from './debugBase'
@@ -35,7 +34,7 @@ const pageFactory = createPageFactory(
   functions,
   config,
   // Load the routes module.
-  () => ssrRequire(ssrRoutesId)
+  () => ssrRequire(config.ssrRoutesId)
 )
 
 // Enable "debug view" when this begins the URL pathname.
