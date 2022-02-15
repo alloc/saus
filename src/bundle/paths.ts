@@ -2,7 +2,7 @@ import { generateRoutePaths } from '../core/routes'
 import { getPagePath } from '../utils/getPagePath'
 import config from './config'
 import { context } from './context'
-import { __requireAsync as ssrRequire } from './ssrModules'
+import { ssrImport } from './ssrModules'
 
 const { logger } = context
 const debugBase =
@@ -12,7 +12,7 @@ export async function getKnownPaths(options: { noDebug?: boolean } = {}) {
   const paths: string[] = []
   const errors: { reason: string; path: string }[] = []
 
-  await ssrRequire(config.ssrRoutesId)
+  await ssrImport(config.ssrRoutesId)
   await generateRoutePaths(context, {
     path(path, params) {
       const pageId = getPagePath(path, params).slice(1)

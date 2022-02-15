@@ -19,10 +19,10 @@ import { getModuleUrl } from './getModuleUrl'
 import { injectToBody, injectToHead } from './html/inject'
 import { HtmlTagDescriptor } from './html/types'
 import { loadRenderers } from './render'
-import { ssrClearCache, __requireAsync as ssrRequire } from './ssrModules'
+import { ssrClearCache, ssrImport } from './ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from './types'
 
-// Allow `ssrRequire("saus/client")` outside page rendering.
+// Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
 
 const getModule = (id: string) =>
@@ -34,7 +34,7 @@ const pageFactory = createPageFactory(
   functions,
   config,
   // Load the routes module.
-  () => ssrRequire(config.ssrRoutesId)
+  () => ssrImport(config.ssrRoutesId)
 )
 
 // Enable "debug view" when this begins the URL pathname.
