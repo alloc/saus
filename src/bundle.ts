@@ -45,6 +45,7 @@ import { callPlugins } from './utils/callPlugins'
 import { parseImports, serializeImports } from './utils/imports'
 import { relativeToCwd } from './utils/relativeToCwd'
 import { resolveMapSources, SourceMap } from './utils/sourceMap'
+import { toDevPath } from './utils/toDevPath'
 
 export interface BundleOptions {
   absoluteSources?: boolean
@@ -267,6 +268,7 @@ async function prepareFunctions(context: BundleContext) {
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
+    ssrRoutesId: toDevPath(context.routesPath, config.root, true),
     // These are set by the `generateClientModules` function.
     minify: false,
     stateCacheId: '',

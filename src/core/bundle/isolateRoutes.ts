@@ -353,8 +353,6 @@ export async function isolateRoutes(
     }
 
     if (ssrId == routesUrl) {
-      ssrId = ssrRoutesId
-
       const routeModulePaths = new Set(
         Array.from(routeImports.values(), resolved => resolved.file)
       )

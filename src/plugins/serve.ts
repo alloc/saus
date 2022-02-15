@@ -88,6 +88,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           minify: false,
           mode: context.config.mode,
           publicDir: context.config.publicDir,
+          ssrRoutesId: '/@fs/' + context.routesPath,
           stateCacheId: '/@fs/' + globalCachePath,
         }
         pageFactory = createPageFactory(
