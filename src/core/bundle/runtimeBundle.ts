@@ -9,7 +9,7 @@ import {
   toInlineSourceMap,
 } from '../../utils/sourceMap'
 import { SausContext } from '../context'
-import { bundleDir, httpDir } from '../paths'
+import { bundleDir, clientDir, httpDir } from '../paths'
 import { vite } from '../vite'
 
 const sausRoot = path.resolve(__dirname, '../src') + '/'
@@ -55,7 +55,7 @@ export async function preBundleSsrRuntime(
     // "saus/bundle" entry point
     bundle: path.join(bundleDir, 'main.ts'),
     // "saus/client" entry point
-    client: path.join(bundleDir, 'clientEntry.ts'),
+    client: path.join(clientDir, 'index.ssr.ts'),
     // used by @saus/html
     html: path.join(bundleDir, 'html.ts'),
     // "saus/http" entry point

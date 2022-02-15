@@ -1,5 +1,5 @@
-export * from '../client/index.node'
-export { default as routes } from '../client/routes'
+export * from './index.node'
+export { default as routes } from './routes'
 
 export const BASE_URL = import.meta.env.BASE_URL
 
