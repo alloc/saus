@@ -57,6 +57,10 @@ export async function isolateRoutes(
 
   const { transform, pluginContainer } = await getViteTransform({
     ...config,
+    resolve: {
+      ...config.resolve,
+      conditions: ['ssr'],
+    },
     plugins: [
       modules,
       rewriteRouteImports(context.routesPath, routeImports),
