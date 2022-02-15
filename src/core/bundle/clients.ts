@@ -32,6 +32,7 @@ import {
   globalCachePath,
   httpDir,
   runtimeDir,
+  toSausPath,
 } from '../paths'
 import { BundleContext } from './context'
 
@@ -147,6 +148,8 @@ export async function generateClientModules(
   const clientRouteMap: Record<string, string> = {}
   const splitVendor = vite.splitVendorChunk({})
 
+  const { onwarn: userOnWarn } = context.config.build.rollupOptions
+
   config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([
@@ -197,6 +200,16 @@ export async function generateClientModules(
           },
         },
         preserveEntrySignatures: 'allow-extension',
+        onwarn(warning, warn) {
+          if (warning.plugin === 'rollup-plugin-dynamic-import-variables') {
+            if (warning.id?.startsWith(toSausPath('src'))) return
+          }
+          if (userOnWarn) {
+            userOnWarn(warning, warn)
+          } else {
+            warn(warning)
+          }
+        },
       },
     },
   })
