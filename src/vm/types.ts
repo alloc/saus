@@ -16,6 +16,17 @@ export type ModuleMap = Record<string, CompiledModule> & {
 
 export type ImportMeta = Record<string, any>
 
+/**
+ * This hook filters the given `imported` array, removing any import bindings
+ * that do not refer to a mutable variable. It can return `true` to indicate
+ * all bindings are mutable, or `false` to indicate none of them are.
+ */
+export type ForceLazyBindingHook = (
+  imported: string[],
+  source: string,
+  importer: string
+) => string[] | boolean
+
 type Promisable<T> = T | Promise<T>
 
 export type ResolveIdHook = (

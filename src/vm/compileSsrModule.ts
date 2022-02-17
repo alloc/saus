@@ -4,6 +4,7 @@ import { SausContext, vite } from '../core'
 import { cleanUrl } from '../utils/cleanUrl'
 import { CompileCache } from '../utils/CompileCache'
 import { emptyDir } from '../utils/emptyDir'
+import { isPackageRef } from '../utils/isPackageRef'
 import { loadSourceMap, toInlineSourceMap } from '../utils/sourceMap'
 import { toDevPath } from '../utils/toDevPath'
 import {
@@ -116,6 +117,7 @@ async function readSsrModule(
     code: script.code,
     filename,
     esmHelpers,
+    forceLazyBinding: (_, id) => !isPackageRef(id),
   })
 
   editor.append(

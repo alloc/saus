@@ -9,13 +9,14 @@ import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
 import * as rollup from 'rollup'
 import { babel, resolveReferences, t } from '../../babel'
-import { ssrRoutesId } from '../../bundle/constants'
 import {
   createModuleProvider,
   ModuleProvider,
 } from '../../plugins/moduleProvider'
 import { dedupe } from '../../utils/dedupe'
+import { findPackage } from '../../utils/findPackage'
 import { plural } from '../../utils/plural'
+import { relativeToCwd } from '../../utils/relativeToCwd'
 import {
   loadSourceMap,
   resolveMapSources,
@@ -23,6 +24,7 @@ import {
 } from '../../utils/sourceMap'
 import { toDevPath } from '../../utils/toDevPath'
 import { compileEsm, exportsId, requireAsyncId } from '../../vm/compileEsm'
+import { ForceLazyBindingHook } from '../../vm/types'
 import { debug } from '../debug'
 import {
   ClientFunction,
@@ -31,13 +33,15 @@ import {
   vite,
 } from '../index'
 import { getViteTransform } from '../viteTransform'
+import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
 import { RouteImports } from './routeModules'
 
-export const toBundleChunkId = (id: string) =>
-  id.replace(/\.[^.]+$/, '.bundle.js')
-
 export type IsolatedModuleMap = Record<string, IsolatedModule>
-export type IsolatedModule = { code: string; map?: SourceMap }
+export type IsolatedModule = {
+  code: string
+  map?: SourceMap
+  liveBindings?: LiveBinding[]
+}
 
 /**
  * Wrap modules with a runtime module system, so separate instances of each
@@ -135,8 +139,15 @@ export async function isolateRoutes(
   // CommonJS modules that are forced to isolate must be bundled
   // with Rollup to work properly. This object maps a specific
   // import statement to its resolved module path.
-  const isolatedCjsModules = new Map<string, string>()
+  const isolatedCjsModules = new Set<string>()
   const cjsNotFoundCache = new Set<string>()
+
+  // SSR modules need to be named, and this maps the rolled paths and
+  // source paths to their SSR module name.
+  const isolatedIds: Record<string, string> = {}
+
+  // Live bindings for each output chunk.
+  const liveBindingsByChunk = new Map<rollup.RenderedChunk, LiveBinding[]>()
 
   // This plugin bridges Rollup and Vite.
   const bridge: rollup.Plugin = {
@@ -163,34 +174,28 @@ export async function isolateRoutes(
           return { id, external: true }
         }
 
+        id = resolved.id
+
         const maybeCjsModule =
-          forceIsolate &&
-          resolved.id.endsWith('.js') &&
-          !cjsNotFoundCache.has(resolved.id)
+          forceIsolate && id.endsWith('.js') && !cjsNotFoundCache.has(id)
 
         // We have to avoid bundling CommonJS modules with Esbuild,
         // because the output is incompatible with our SSR module system.
         if (maybeCjsModule) {
-          if (isolatedCjsModules.has(resolved.id)) {
-            return { id: resolved.id, external: true }
+          if (isolatedCjsModules.has(id)) {
+            return { id, external: true }
           }
-          const code = fs.readFileSync(resolved.id, 'utf8')
+          const code = fs.readFileSync(id, 'utf8')
           const hasEsmSyntax = /^(import|export) /m.test(code)
           if (!hasEsmSyntax && /\b(module|exports|require)\b/.test(code)) {
-            isolatedModules[resolved.id] = {
-              code,
-              map: loadSourceMap(code, resolved.id),
-            }
-            isolatedCjsModules.set(
-              resolved.id,
-              relative(config.root, resolved.id)
-            )
-            return { id: resolved.id, external: true }
+            const map = loadSourceMap(code, id)
+            isolatedCjsModules.add(id)
+            isolatedModules[id] = { code, map }
+            isolatedIds[id] = toSsrPath(id, config.root)
+            return { id, external: true }
           }
-          cjsNotFoundCache.add(resolved.id)
+          cjsNotFoundCache.add(id)
         }
-
-        id = resolved.id
 
         if (isVirtual(id)) {
           return id
@@ -245,6 +250,23 @@ export async function isolateRoutes(
         }
       }
     },
+    async generateBundle(_, bundle) {
+      const chunks = Object.values(bundle).filter(
+        chunk => chunk.type == 'chunk'
+      ) as rollup.OutputChunk[]
+
+      for (const chunk of chunks) {
+        const ast: any = this.parse(chunk.code)
+        const importer = chunk.facadeModuleId!
+        const liveBindings = await findLiveBindings(ast, async id => {
+          if (relativePathRE.test(id)) {
+            return resolve(dirname(importer), id)
+          }
+          return id
+        })
+        liveBindingsByChunk.set(chunk, liveBindings)
+      }
+    },
   }
 
   const task = startTask(`Bundling routes...`)
@@ -262,11 +284,25 @@ export async function isolateRoutes(
     ...routeEntryPoints,
   ]
 
+  const importCycles: string[][] = []
+
   const bundle = await rollup.rollup({
     plugins: [bridge],
     input: bundleInputs,
     makeAbsoluteExternalsRelative: false,
     context: 'globalThis',
+    onwarn(warning, warn) {
+      if (warning.code == 'CIRCULAR_DEPENDENCY') {
+        const cycle = warning.cycle!.map(id => resolve(config.root, id))
+        importCycles.push(cycle)
+        debug(
+          `Circular import may lead to unexpected behavior\n `,
+          cycle.map(relativeToCwd).join(' → ')
+        )
+      } else {
+        warn(warning)
+      }
+    },
   })
 
   const generated = await bundle.generate({
@@ -282,40 +318,96 @@ export async function isolateRoutes(
   task.finish(`${plural(routeEntryPoints.length, 'route')} bundled.`)
 
   const routesUrl = toDevPath(context.routesPath, config.root)
-  const rendererUrl = toDevPath(virtualRenderPath, config.root)
 
-  const entryUrlToFileMap: Record<string, string> = {
-    [rendererUrl]: context.renderPath,
-    ...Object.fromEntries(
-      Array.from(routeImports.values(), resolved => [
-        resolved.url,
-        resolved.file,
-      ])
-    ),
-  }
-
-  const bundleToEntryMap: Record<string, string> = {}
+  // Rollup changes the file extension of rolled modules to use ".js"
+  // and this maps the source paths to their rolled path.
+  const rolledModulePaths: Record<string, string> = {}
 
   for (const chunk of generated.output as rollup.OutputChunk[]) {
-    let moduleId = chunk.facadeModuleId!
+    const modulePath = chunk.facadeModuleId!
+    const rolledPath = resolve(config.root, chunk.fileName)
+    const liveBindings = liveBindingsByChunk.get(chunk)
+
+    const ssrId = bundleInputs.includes(modulePath)
+      ? toDevPath(modulePath, config.root, true)
+      : toSsrPath(modulePath, config.root)
+
     const map = chunk.map!
-    if (moduleId !== virtualRenderPath) {
-      resolveMapSources(map, dirname(moduleId))
+    if (modulePath !== virtualRenderPath) {
+      resolveMapSources(map, dirname(modulePath))
     }
-    const moduleUrl = toDevPath(moduleId, config.root, true)
-    const entryPath = entryUrlToFileMap[moduleUrl]
-    if (entryPath) {
-      moduleId = toBundleChunkId(entryPath)
-      bundleToEntryMap[moduleId] = moduleUrl
-    } else if (bundleInputs.includes(moduleId)) {
-      bundleToEntryMap[moduleId] = moduleUrl
-    } else {
-      moduleId = resolve(config.root, chunk.fileName)
+
+    isolatedIds[modulePath] = ssrId
+    isolatedIds[rolledPath] = ssrId
+    isolatedModules[rolledPath] = { code: chunk.code, map, liveBindings }
+    rolledModulePaths[modulePath] = rolledPath
+  }
+
+  const resolveSsrImports =
+    (hoistedImports: Set<string>) => async (id: string, importer: string) => {
+      if (relativePathRE.test(id)) {
+        id = resolve(dirname(importer), id)
+        hoistedImports.add(id)
+        return isolatedIds[id] || toSsrPath(id, config.root)
+      }
+
+      const ssrId =
+        id == 'saus/client'
+          ? id
+          : isolatedCjsModules.has(id) && toSsrPath(id, config.root)
+
+      if (ssrId) {
+        hoistedImports.add(id)
+        return ssrId
+      }
+
+      // Preserve the import declaration.
+      return ''
     }
-    isolatedModules[moduleId] = {
-      code: chunk.code,
-      map,
+
+  const circularImports = importCycles.map(cycle =>
+    cycle
+      .slice(-2)
+      .map(id => rolledModulePaths[id])
+      .join(' > ')
+  )
+
+  const forceLazyBinding: ForceLazyBindingHook = (
+    imported,
+    source,
+    importer
+  ) => {
+    let modulePath: string | undefined
+    if (source[0] == '/') {
+      modulePath = config.root + source
+      modulePath = rolledModulePaths[modulePath]
     }
+    // Outside the project root
+    else if (source[0] == '.') {
+      modulePath = resolve(config.root, source)
+      modulePath = rolledModulePaths[modulePath]
+    }
+    // Runtime-defined module
+    if (!modulePath) {
+      return false
+    }
+    if (isolatedCjsModules.has(modulePath)) {
+      return true
+    }
+    if (circularImports.includes(importer + ' > ' + modulePath)) {
+      return true
+    }
+    const { liveBindings } = isolatedModules[modulePath] || {}
+    if (!liveBindings || !liveBindings.length) {
+      return false
+    }
+    imported = imported.filter(name =>
+      matchLiveBinding(name, liveBindings, isolatedModules)
+    )
+    if (imported.length) {
+      return imported
+    }
+    return false
   }
 
   const isolateSsrModule = async (code: string, id: string, ssrId: string) => {
@@ -328,20 +420,8 @@ export async function isolateRoutes(
       keepImportCalls: true,
       keepImportMeta: true,
       esmHelpers,
-      resolveId(id, importer) {
-        if (relativePathRE.test(id)) {
-          id = resolve(dirname(importer), id)
-          hoistedImports.add(id)
-          return toSsrPath(id, config.root)
-        }
-        const ssrId = id == 'saus/client' ? id : isolatedCjsModules.get(id)
-        if (ssrId) {
-          hoistedImports.add(id)
-          return ssrId
-        }
-        // Preserve the import declaration.
-        return ''
-      },
+      resolveId: resolveSsrImports(hoistedImports),
+      forceLazyBinding,
     })
 
     // These imports ensure the isolated modules are included in
@@ -442,14 +522,13 @@ export async function isolateRoutes(
                 sourceArg.node.start!
               )
             }
-            const code = fs.readFileSync(resolved.id, 'utf8')
-            isolatedModules[resolved.id] = {
-              code,
-              map: loadSourceMap(code, resolved.id),
-            }
-            source = relative(config.root, resolved.id)
-            isolatedCjsModules.set(resolved.id, source)
-            esmImports.push(`import "${resolved.id}"\n`)
+            const file = resolved.id
+            const code = fs.readFileSync(file, 'utf8')
+            const map = loadSourceMap(code, file)
+            isolatedCjsModules.add(file)
+            isolatedModules[file] = { code, map }
+            isolatedIds[file] = toSsrPath(file, config.root)
+            esmImports.push(`import "${file}"\n`)
             editor.overwrite(
               sourceArg.node.start!,
               sourceArg.node.end!,
@@ -480,51 +559,45 @@ export async function isolateRoutes(
   return {
     name: 'saus:isolatedModules',
     enforce: 'pre',
-    async resolveId(id, importer) {
+    async redirectModule(id, importer) {
+      const rolledPath = rolledModulePaths[id]
+      if (rolledPath) {
+        return rolledPath
+      }
       if (isolatedModules[id]) {
         return id
       }
-      const chunkId = toBundleChunkId(id)
-      if (isolatedModules[chunkId]) {
-        return chunkId
+      if (id == context.renderPath) {
+        return virtualRenderPath
       }
       // Throw an error if an isolated CJS module is imported by a non-isolated module.
       if (importer && !isolatedModules[importer]) {
-        const resolved = await this.resolve(id, importer, { skipSelf: true })
-        if (resolved) {
-          if (isolatedCjsModules.has(resolved.id))
-            throw Error(
-              `"${importer}" is ${bold('not')} isolated but depends on ` +
-                `an isolated module "${id}", so the import will fail.`
-            )
-
-          return resolved
-        }
+        if (isolatedCjsModules.has(id))
+          throw Error(
+            `"${importer}" is ${bold('not')} isolated but depends on ` +
+              `an isolated module "${id}", so the import will fail.`
+          )
       }
     },
     load(id) {
       return isolatedModules[id]
     },
-    transform(code, id) {
-      if (isolatedModules[id]) {
-        let ssrId = isolatedCjsModules.get(id)
-        if (ssrId) {
+    async transform(code, id) {
+      if (id == virtualRenderPath) {
+        const editor = new MagicString(code)
+        for (const chunkPath in rendererMap) {
+          editor.prepend(`import "${chunkPath}"\n`)
+        }
+        return {
+          code: editor.toString(),
+          map: editor.generateMap(),
+          moduleSideEffects: 'no-treeshake',
+        }
+      }
+      const ssrId = isolatedIds[id]
+      if (ssrId) {
+        if (isolatedCjsModules.has(id)) {
           return isolateCjsModule(code, id, ssrId, this)
-        }
-        ssrId = bundleToEntryMap[id]
-        if (ssrId == rendererUrl) {
-          const editor = new MagicString(code)
-          for (const chunkPath in rendererMap) {
-            editor.prepend(`import "${chunkPath}"\n`)
-          }
-          return {
-            code: editor.toString(),
-            map: editor.generateMap(),
-            moduleSideEffects: 'no-treeshake',
-          }
-        }
-        if (!ssrId) {
-          ssrId = toSsrPath(id, config.root)
         }
         return isolateSsrModule(code, id, ssrId)
       }
@@ -667,4 +740,36 @@ function createRendererChunk(
     code: editor.toString(),
     map: editor.generateMap(),
   }
+}
+
+function getPackageData(
+  file: string,
+  config: vite.ResolvedConfig,
+  context?: vite.RollupPluginContext
+) {
+  let pkg: vite.PackageData | undefined
+
+  const moduleInfo = context?.getModuleInfo(file)
+  if (moduleInfo) {
+    pkg = moduleInfo.meta.pkg
+  }
+
+  if (pkg) {
+    return pkg
+  }
+
+  const pkgPath = findPackage(dirname(file))
+  if (!pkgPath) {
+    return null
+  }
+
+  pkg = vite.loadPackageData(
+    pkgPath,
+    config.symlinkResolver,
+    config.packageCache
+  )
+  if (moduleInfo) {
+    moduleInfo.meta = { ...moduleInfo.meta, pkg }
+  }
+  return pkg
 }

@@ -16,6 +16,7 @@ importers:
       '@types/babel__code-frame': ^7.0.3
       '@types/convert-source-map': ^1.5.2
       '@types/debug': ^4.1.7
+      '@types/estree': ^0.0.51
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
       '@types/strip-comments': ^2.0.1
@@ -82,6 +83,7 @@ importers:
       '@types/babel__code-frame': 7.0.3
       '@types/convert-source-map': 1.5.2
       '@types/debug': 4.1.7
+      '@types/estree': 0.0.51
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
       '@types/strip-comments': 2.0.1
@@ -818,6 +820,10 @@ packages:
     resolution: {integrity: sha512-9AonUzyTjXXhEOa0DnqpzZi6VHlqKMswga9EXjpXnnqxwLtdvPPtlO8evrI5D9S6asFRCQ6v+wpiUKbw+vKqyg==}
     dependencies:
       '@types/ms': 0.7.31
+    dev: true
+
+  /@types/estree/0.0.51:
+    resolution: {integrity: sha512-CuPgU6f3eT/XgKKPqKd/gLZV1Xmvf1a2R5POBOGQa6uv82xpls89HU5zKeVoyR8XzHd1RGNOlQlvUe3CFkjWNQ==}
     dev: true
 
   /@types/etag/1.8.1:

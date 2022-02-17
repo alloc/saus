@@ -3,6 +3,7 @@ import * as esbuild from 'esbuild'
 import { Module } from 'module'
 import path from 'path'
 import { SausContext } from '../core'
+import { isPackageRef } from '../utils/isPackageRef'
 import { resolveMapSources, toInlineSourceMap } from '../utils/sourceMap'
 import {
   compileEsm,
@@ -59,6 +60,7 @@ export async function compileNodeModule(
       code: script.code,
       filename,
       esmHelpers,
+      forceLazyBinding: (_, id) => !isPackageRef(id),
     })
 
     const topLevelId = '__compiledModule'
