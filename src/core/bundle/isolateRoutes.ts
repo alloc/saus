@@ -741,35 +741,3 @@ function createRendererChunk(
     map: editor.generateMap(),
   }
 }
-
-function getPackageData(
-  file: string,
-  config: vite.ResolvedConfig,
-  context?: vite.RollupPluginContext
-) {
-  let pkg: vite.PackageData | undefined
-
-  const moduleInfo = context?.getModuleInfo(file)
-  if (moduleInfo) {
-    pkg = moduleInfo.meta.pkg
-  }
-
-  if (pkg) {
-    return pkg
-  }
-
-  const pkgPath = findPackage(dirname(file))
-  if (!pkgPath) {
-    return null
-  }
-
-  pkg = vite.loadPackageData(
-    pkgPath,
-    config.symlinkResolver,
-    config.packageCache
-  )
-  if (moduleInfo) {
-    moduleInfo.meta = { ...moduleInfo.meta, pkg }
-  }
-  return pkg
-}
