@@ -69,6 +69,7 @@
     "@types/babel__code-frame": "^7.0.3",
     "@types/convert-source-map": "^1.5.2",
     "@types/debug": "^4.1.7",
+    "@types/estree": "^0.0.51",
     "@types/physical-cpu-count": "^2.0.0",
     "@types/source-map-support": "^0.5.4",
     "@types/strip-comments": "^2.0.1",

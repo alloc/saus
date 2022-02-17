@@ -1,5 +1,5 @@
-import kleur from 'kleur'
 import path from 'path'
+import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
 
 type Promisable<T> = T | Promise<T>
@@ -7,7 +7,10 @@ type Promisable<T> = T | Promise<T>
 declare module 'vite' {
   export interface Plugin {
     /** Redirect an absolute module path to another. */
-    redirectModule?(id: string): Promisable<string | null | undefined>
+    redirectModule?(
+      id: string,
+      importer: string | undefined
+    ): Promisable<string | null | undefined>
     /** Resolve a bare import to an absolute module path. */
     resolveBareImport?(
       id: string,
@@ -47,7 +50,7 @@ export function moduleRedirection(
           }
         }
 
-      let resolved: any
+      let resolved: PartialResolvedId | null = null
       if (!path.isAbsolute(id)) {
         resolved = await this.resolve(id, importer, { skipSelf: true })
         if (!resolved) {
@@ -60,9 +63,9 @@ export function moduleRedirection(
       }
       for (const plugin of plugins) {
         if (plugin.redirectModule) {
-          const replacementId = await plugin.redirectModule(id)
+          const replacementId = await plugin.redirectModule(id, importer)
           if (replacementId != null) {
-            return replacementId
+            return { id: replacementId, meta: resolved?.meta }
           }
         }
       }
