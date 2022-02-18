@@ -2,8 +2,10 @@ import * as React from 'react'
 import { render } from '@saus/react'
 import { App } from './App'
 import { prependBase } from './url'
+import * as foo from './test/foo'
 
 render((module, { params }) => {
+  console.log(foo)
   const Page = module.default as React.ComponentType<any>
   return (
     <App>
