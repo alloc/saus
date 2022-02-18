@@ -44,6 +44,7 @@ export interface RuntimeConfig {
   command: 'dev' | 'bundle'
   debugBase?: string
   defaultPath: string
+  htmlTimeout?: number
   minify: boolean
   mode: string
   publicDir: string

@@ -1,12 +1,13 @@
 import { ClientModule } from '../bundle/types'
 import type { RenderedPage } from '../pages/types'
 import { reduceSerial } from '../utils/reduceSerial'
+import { limitTime } from '../utils/limitTime'
 import type { RuntimeConfig } from './config'
 import { routesModule } from './global'
 
 export type HtmlContext = {
   htmlProcessors?: HtmlProcessorMap
-  processHtml?: (html: string, page: RenderedPage) => Promise<string>
+  processHtml?: MergedHtmlProcessor
 }
 
 export type HtmlProcessorState = Record<string, any> & {
@@ -26,42 +27,72 @@ export type HtmlProcessorState = Record<string, any> & {
 
 type Promisable<T> = T | PromiseLike<T>
 
+export type HtmlPlugin<State = HtmlProcessorState> = {
+  name: string
+  process: HtmlProcessor<State>
+}
+
 export type HtmlProcessor<State = HtmlProcessorState> = (
   html: string,
   state: State
 ) => Promisable<string | null | void>
 
+export type HtmlProcessorArray<State = HtmlProcessorState> = Array<
+  HtmlPlugin<State> | HtmlProcessor<State>
+>
+
 export type HtmlProcessorMap<State = HtmlProcessorState> = {
-  pre: HtmlProcessor<State>[]
-  default: HtmlProcessor<State>[]
-  post: HtmlProcessor<State>[]
+  pre: HtmlProcessorArray<State>
+  default: HtmlProcessorArray<State>
+  post: HtmlProcessorArray<State>
 }
+
+const applyHtmlProcessor = <State>(
+  html: string,
+  plugin: HtmlPlugin<State> | HtmlProcessor<State>,
+  state: State,
+  timeout = 10
+) =>
+  typeof plugin == 'function'
+    ? limitTime(plugin(html, state), timeout, `HTML processing took too long`)
+    : limitTime(
+        plugin.process(html, state),
+        timeout,
+        `HTML plugin "${plugin.name}" took too long`
+      )
 
 export function applyHtmlProcessors<State>(
   html: string,
+  plugins: HtmlProcessorArray<State>,
   state: State,
-  processors: HtmlProcessor<State>[]
+  timeout?: number
 ) {
-  if (!processors.length) {
+  if (!plugins.length) {
     return Promise.resolve(html)
   }
   return reduceSerial(
-    processors,
-    (html, processor) => processor(html, state),
+    plugins,
+    (html, plugin) => applyHtmlProcessor(html, plugin, state, timeout),
     html
   )
 }
 
+export type MergedHtmlProcessor = (
+  html: string,
+  page: RenderedPage,
+  timeout?: number
+) => Promise<string>
+
 export const mergeHtmlProcessors = <State>(
-  htmlProcessors: HtmlProcessorMap<State>,
+  htmlProcessors: HtmlProcessorMap<State> | undefined,
   getState: (page: RenderedPage) => State,
   phases: (keyof HtmlProcessorMap)[] = ['pre', 'default', 'post']
-) =>
+): MergedHtmlProcessor | undefined =>
   htmlProcessors &&
-  (async (html: string, page: RenderedPage) => {
+  (async (html, page, timeout) => {
     const state = getState(page)
-    const processHtml = (html: string, processor: HtmlProcessor<State>) =>
-      processor(html, state)
+    const processHtml = (html: string, plugin: any) =>
+      applyHtmlProcessor(html, plugin, state, timeout)
 
     for (const phase of phases) {
       html = await reduceSerial(htmlProcessors[phase], processHtml, html)
@@ -90,10 +121,10 @@ export const processHtml = ((arg, arg2) => {
     arg = arg2!
   }
   routesModule.htmlProcessors ??= { pre: [], default: [], post: [] }
-  const processors = routesModule.htmlProcessors[enforce || 'default']
-  for (const processor of Array.isArray(arg) ? arg : [arg]) {
-    processors.push(processor)
+  const plugins = routesModule.htmlProcessors[enforce || 'default']
+  for (const plugin of Array.isArray(arg) ? arg : [arg]) {
+    plugins.push(plugin)
   }
 }) as EnforcedHandler<
-  [processor: HtmlProcessor] | [processors: HtmlProcessor[]]
+  [plugin: HtmlPlugin | HtmlProcessor] | [plugins: HtmlProcessorArray]
 >

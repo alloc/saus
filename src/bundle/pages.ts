@@ -261,8 +261,9 @@ export async function renderPage(
 
   return applyHtmlProcessors(
     html,
+    postHtmlProcessors,
     { page, config, assets },
-    postHtmlProcessors
+    config.htmlTimeout
   ).then(html => {
     const finishedPage: RenderedPage = {
       id: filename,

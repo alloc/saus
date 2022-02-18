@@ -152,7 +152,7 @@ export function createPageFactory(
     }
 
     if (processHtml) {
-      html = await processHtml(html, page)
+      html = await processHtml(html, page, config.htmlTimeout)
     }
 
     await renderer.onDocument.call(

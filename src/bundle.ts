@@ -265,6 +265,7 @@ async function prepareFunctions(context: BundleContext) {
     command: 'bundle',
     debugBase: context.bundle.debugBase,
     defaultPath: context.defaultPath,
+    htmlTimeout: config.saus.htmlTimeout,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,

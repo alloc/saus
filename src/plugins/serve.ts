@@ -80,14 +80,16 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     saus: {
       onContext(c) {
         context = c
+        const { config } = c
         runtimeConfig = {
-          assetsDir: context.config.build.assetsDir,
+          assetsDir: config.build.assetsDir,
           base: context.basePath,
           command: 'dev',
           defaultPath: context.defaultPath,
+          htmlTimeout: config.saus.htmlTimeout,
           minify: false,
           mode: context.config.mode,
-          publicDir: context.config.publicDir,
+          publicDir: config.publicDir,
           ssrRoutesId: '/@fs/' + context.routesPath,
           stateCacheId: '/@fs/' + globalCachePath,
         }
@@ -115,8 +117,9 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
               if (context.htmlProcessors?.post.length) {
                 html = await applyHtmlProcessors(
                   html,
+                  context.htmlProcessors.post,
                   { page, config: runtimeConfig },
-                  context.htmlProcessors.post
+                  runtimeConfig.htmlTimeout
                 )
               }
               return {
