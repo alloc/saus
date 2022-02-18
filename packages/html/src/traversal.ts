@@ -36,6 +36,9 @@ export const traverseHtml = ((arg, arg2) => {
       visitors.push(arg)
     }
   } else {
-    processHtml(enforce, bindVisitors(arg))
+    processHtml(enforce, {
+      name: 'traverseHtml',
+      process: bindVisitors(arg),
+    })
   }
 }) as TraverseHtmlHook
