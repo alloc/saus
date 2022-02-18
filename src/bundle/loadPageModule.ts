@@ -13,7 +13,7 @@ export function loadPageModule(
   }
   const routeModule = ssrImport(routeModuleUrl)
   if (unwrapModule) {
-    return unwrapModule(routeModule)
+    return routeModule.then(unwrapModule)
   }
   return routeModule
 }
