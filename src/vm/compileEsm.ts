@@ -387,7 +387,7 @@ function rewriteExport(
           rewriteExportSpecifier(
             bindings.get(binding) || spec.local.name,
             spec.exported,
-            !binding.constant || bindings.has(binding),
+            binding.constant && !bindings.has(binding),
             esmHelpers
           )
         )
@@ -440,21 +440,22 @@ function rewriteExportSpecifier(
 
   if (t.isStringLiteral(exported)) {
     property = exported.value.replace(/"/g, '\\"')
-    if (!isConst) {
+    if (isConst) {
       assignee = `${exportsId}["${property}"]`
     }
   } else {
     property = exported.name
-    if (!isConst) {
+    if (isConst) {
       assignee = `${exportsId}.${property}`
     }
   }
 
   if (isConst) {
-    esmHelpers.add(__exportLet)
-    return `__exportLet(${exportsId}, "${property}", () => ${local})`
+    return `${assignee} = ${local}`
   }
-  return `${assignee} = ${local}`
+
+  esmHelpers.add(__exportLet)
+  return `__exportLet(${exportsId}, "${property}", () => ${local})`
 }
 
 export function generateRequireCalls(
