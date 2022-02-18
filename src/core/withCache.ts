@@ -1,7 +1,8 @@
+import { defer } from '../utils/defer'
 import { debug } from './debug'
 
 export type Cache<State = any> = {
-  loading: Record<string, Promise<CacheEntry<State>>>
+  loading: Record<string, Promise<State>>
   loaders: Record<string, StateLoader<State>>
   loaded: Record<string, CacheEntry<State>>
 }
@@ -17,6 +18,11 @@ export type CacheControl = {
    * Note that loaderless requests may be given expired data.
    */
   maxAge: number
+  /**
+   * Set a timeout that aborts the loading of this entry unless its
+   * promise resolves first.
+   */
+  setTimeout: (secs: number) => AbortSignal
 }
 
 type StateLoader<State = any> = {
@@ -55,27 +61,41 @@ export function withCache(
       }
     }
 
-    let entryPromise = cache.loading[cacheKey] as
-      | Promise<CacheEntry>
-      | undefined
-
-    if (entryPromise || !(loader ||= getDefaultLoader(cacheKey))) {
-      return entryPromise
+    const oldPromise = cache.loading[cacheKey] as Promise<any> | undefined
+    if (oldPromise || !(loader ||= getDefaultLoader(cacheKey))) {
+      return oldPromise
     }
+
+    const { promise, resolve, reject } = defer<any>()
+    cache.loading[cacheKey] = promise
+    cache.loaders[cacheKey] = loader
+
+    let timedOut = false
 
     const entryConfig: CacheControl = {
       key: cacheKey,
       maxAge: Infinity,
+      setTimeout: secs => {
+        const ctrl = new AbortController()
+        setTimeout(() => {
+          if (promise == cache.loading[cacheKey]) {
+            delete cache.loading[cacheKey]
+          }
+          ctrl.abort('Timed out')
+          reject(new Error('Timed out'))
+        }, secs * 1e3)
+
+        return ctrl.signal
+      },
     }
 
-    entryPromise = cache.loading[cacheKey] = loader(entryConfig)
-    cache.loaders[cacheKey] = loader
-
-    return entryPromise.then(
+    loader(entryConfig).then(
       state => {
         // Skip caching if the promise is replaced or deleted
         // before it resolves.
-        if (entryPromise == cache.loading[cacheKey]) {
+        if (promise == cache.loading[cacheKey]) {
+          delete cache.loading[cacheKey]
+
           const { maxAge } = entryConfig
           if (maxAge > 0) {
             cache.loaded[cacheKey] = isFinite(maxAge)
@@ -84,16 +104,17 @@ export function withCache(
           } else {
             debug('State %s expired while loading, skipping cache', cacheKey)
           }
-          delete cache.loading[cacheKey]
         }
-        return state
+        resolve(state)
       },
       error => {
-        if (entryPromise == cache.loading[cacheKey]) {
+        if (promise == cache.loading[cacheKey]) {
           delete cache.loading[cacheKey]
         }
-        throw error
+        reject(error)
       }
     )
+
+    return promise
   }
 }
