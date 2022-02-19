@@ -4,6 +4,12 @@ import path from 'path'
 import type { RenderedPage } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
 
+/**
+ * Write an array of rendered pages to disk. Shared modules are deduplicated.
+ *
+ * Returns a map of file names to their size in kilobytes. This object can be
+ * passed to the `printFiles` function.
+ */
 export function writePages(
   pages: ReadonlyArray<RenderedPage | null>,
   outDir: string
@@ -44,6 +50,14 @@ const writeColors: Record<string, Color> = {
   '.map': gray,
 }
 
+/**
+ * Print a bunch of files kind of like Vite does.
+ *
+ * @param logger The object responsible for printing
+ * @param files File names (relative to the `outDir`) mapped to their size in kilobytes
+ * @param outDir The directory (relative to your project root) where all given files reside
+ * @param sizeLimit Highlight files larger than the given number of kilobytes (default: `500`)
+ */
 export function printFiles(
   logger: { info(arg: string): void },
   files: Record<string, number>,

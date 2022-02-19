@@ -1,5 +1,5 @@
 // Redirect "saus/core" imports here.
-import type { RuntimeHook } from '../../core'
+import type { RuntimeHook } from '../core/setup'
 import { context } from './context'
 
 // This replaces the `setup` function exported from "saus/src/core/setup"

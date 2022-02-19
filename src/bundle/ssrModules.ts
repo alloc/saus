@@ -5,7 +5,7 @@ import { getCachedState } from '../runtime/getCachedState'
 const debug = createDebug('saus:cache')
 
 const ssrPrefix = 'saus-ssr:'
-const ssrLoaderMap: Record<string, ModuleLoader> = {}
+const ssrLoaderMap: Record<string, ModuleLoader<any>> = {}
 const ssrPendingExports = new Map<string, any>()
 
 /** Clear all loaded SSR modules */
@@ -16,13 +16,16 @@ export function ssrClearCache() {
 
 const importerStack: string[] = []
 
-export function ssrImport(id: string, isRequire?: boolean) {
+export function ssrImport<T = ModuleExports>(
+  id: string,
+  isRequire?: boolean
+): Promise<T> {
   const loader = ssrLoaderMap[id]
   if (!loader) {
     throw Error(`Module not found: "${id}"`)
   }
   return getCachedState(ssrPrefix + id, async function ssrLoadModule() {
-    const exports: ModuleExports = {}
+    const exports = {} as T & { __esModule?: boolean }
     try {
       ssrPendingExports.set(id, exports)
       if (isRequire) {
@@ -59,12 +62,14 @@ export function __requireAsync(id: string) {
   return ssrImport(id, true)
 }
 
+type Promisable<T> = T | PromiseLike<T>
+
 type ModuleExports = Record<string, any>
-type ModuleLoader = (
-  exports: ModuleExports,
-  module?: { exports: ModuleExports }
-) => Promise<void>
+type ModuleLoader<T = ModuleExports> = (
+  exports: T,
+  module?: { exports: T }
+) => Promisable<void>
 
 /** Define a SSR module with async loading capability */
-export const __d = (id: string, loader: ModuleLoader) =>
+export const __d = <T = ModuleExports>(id: string, loader: ModuleLoader<T>) =>
   (ssrLoaderMap[id] = loader)

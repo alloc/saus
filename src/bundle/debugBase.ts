@@ -5,7 +5,9 @@ import config from './config'
  * Scan the `<body>` tree for internal links to be rewritten
  * so they point to the debug-view equivalent URL.
  */
-export function injectDebugBase(debugBase: string) {
+export function injectDebugBase(
+  debugBase: string
+): (html: string, state: any) => Promise<string> {
   const resolver = createHtmlResolver(
     id =>
       id.startsWith(config.base) && !id.startsWith(debugBase)

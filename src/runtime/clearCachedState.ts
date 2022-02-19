@@ -1,4 +1,5 @@
 import createDebug from 'debug'
+import type { Cache } from '../core/withCache'
 import { globalCache } from './cache'
 
 const debug = createDebug('saus:cache')
@@ -8,7 +9,7 @@ const debug = createDebug('saus:cache')
  */
 export function clearCachedState(
   filter: string | ((key: string) => boolean) = () => true,
-  cache = globalCache
+  cache: Cache = globalCache
 ) {
   if (typeof filter == 'function') {
     const clear = (cache: Record<string, any>) => {

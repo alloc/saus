@@ -111,7 +111,7 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
 
     if (!context.bundle.entry) {
       fs.copyFileSync(
-        path.resolve(__dirname, '../src/bundle/types.ts'),
+        path.resolve(__dirname, '../bundle/types.d.ts'),
         bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
       )
     }

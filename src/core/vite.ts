@@ -37,7 +37,8 @@ export interface SausBundleConfig {
    */
   format?: 'esm' | 'cjs'
   /**
-   * When defined, client modules
+   * Expose a debug version of your site, with sourcemaps and unminified
+   * production files.
    */
   debugBase?: string
   /**
