@@ -1,6 +1,5 @@
+import { bareImportRE } from '../utils/bareImportRE'
 import { NodeResolveHook } from './hookNodeResolve'
-
-const bareImportRE = /^[\w@]/
 
 export function dedupeNodeResolve(
   root: string,

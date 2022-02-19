@@ -1,6 +1,7 @@
 import path from 'path'
 import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
+import { bareImportRE } from '../utils/bareImportRE'
 
 type Promisable<T> = T | Promise<T>
 
@@ -18,8 +19,6 @@ declare module 'vite' {
     ): Promisable<string | null | undefined>
   }
 }
-
-const bareImportRE = /^[\w@]/
 
 /**
  * This plugin must be added for `redirectModule` and `overrideBareImport`

@@ -2,6 +2,7 @@ import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
+import { bareImportRE } from '../../utils/bareImportRE'
 import { findPackage } from '../../utils/findPackage'
 import { SausContext } from '../context'
 import { debug } from '../debug'
@@ -73,7 +74,7 @@ export function preferExternal(context: SausContext): PreferExternal {
     enforce: 'pre',
     isExternal,
     async resolveId(id, importer) {
-      if (importer && /^[\w@]/.test(id)) {
+      if (importer && bareImportRE.test(id)) {
         if (builtinModules.includes(id)) {
           return { id, external: true }
         }

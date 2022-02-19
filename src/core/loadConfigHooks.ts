@@ -2,6 +2,7 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import { Module } from 'module'
 import { dirname } from 'path'
+import { bareImportRE } from '../utils/bareImportRE'
 import { findPackage } from '../utils/findPackage'
 import { plural } from '../utils/plural'
 import { createAsyncRequire } from '../vm/asyncRequire'
@@ -30,7 +31,6 @@ export async function loadConfigHooks(config: ResolvedConfig) {
     cache: { ...oldCache },
   } = Module.createRequire(importer)
 
-  const bareImportRE = /^[\w@]/
   const nodeResolve = (id: string, importer: string) => {
     if (!bareImportRE.test(id)) {
       return

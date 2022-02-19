@@ -13,6 +13,7 @@ import {
   createModuleProvider,
   ModuleProvider,
 } from '../../plugins/moduleProvider'
+import { bareImportRE } from '../../utils/bareImportRE'
 import { dedupe } from '../../utils/dedupe'
 import { findPackage } from '../../utils/findPackage'
 import { plural } from '../../utils/plural'
@@ -103,7 +104,6 @@ export async function isolateRoutes(
 
   const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
-  const bareImportRE = /^[\w@]/
 
   // const NULL_BYTE_PLACEHOLDER = `__x00__`
   const isVirtual = (id: string) => id[0] === '\0'
