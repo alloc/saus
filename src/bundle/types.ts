@@ -73,3 +73,14 @@ export declare function printFiles(
   outDir: string,
   sizeLimit?: number
 ): void
+
+type Promisable<T> = T | PromiseLike<T>
+
+export declare function ssrDefine<T = Record<string, any>>(
+  id: string,
+  loader: (exports: T) => Promisable<void>
+): typeof loader
+
+export declare function ssrImport<T = Record<string, any>>(
+  id: string
+): Promise<T>
