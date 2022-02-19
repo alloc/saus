@@ -30,7 +30,8 @@
     "babel",
     "bundle",
     "client",
-    "core"
+    "core",
+    "http"
   ],
   "scripts": {
     "build": "rimraf dist && tsup",
