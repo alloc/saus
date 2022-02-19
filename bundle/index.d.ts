@@ -85,4 +85,22 @@ declare type ModuleLoader<T = ModuleExports> = (exports: T, module?: {
 /** Define a SSR module with async loading capability */
 declare const __d: <T = ModuleExports>(id: string, loader: ModuleLoader<T>) => ModuleLoader<T>;
 
-export { renderPage as default, getKnownPaths, getModuleUrl, moduleMap, printFiles, __d as ssrDefine, ssrImport, writePages };
+interface RuntimeConfig {
+    assetsDir: string;
+    base: string;
+    bundleType?: 'script' | 'worker';
+    command: 'dev' | 'bundle';
+    debugBase?: string;
+    defaultPath: string;
+    htmlTimeout?: number;
+    minify: boolean;
+    mode: string;
+    publicDir: string;
+    renderConcurrency?: number;
+    ssrRoutesId: string;
+    stateCacheId: string;
+}
+
+declare const config: RuntimeConfig;
+
+export { ClientModule, ClientModuleMap, RenderPageOptions, RenderedFile, RenderedPage, config, renderPage as default, getKnownPaths, getModuleUrl, moduleMap, printFiles, __d as ssrDefine, ssrImport, writePages };
