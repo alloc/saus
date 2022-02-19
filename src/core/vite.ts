@@ -1,4 +1,3 @@
-import Module from 'module'
 import * as vite from 'vite'
 import { RenderedPage } from '../bundle/types'
 import { ModuleProvider } from '../plugins/moduleProvider'
@@ -6,6 +5,7 @@ import { PublicFile } from '../plugins/publicDir'
 import { SourceMap } from '../utils/sourceMap'
 import { ClientDescription } from './client'
 import { SausContext } from './context'
+import './viteRequire'
 
 export { vite }
 
@@ -159,17 +159,4 @@ export interface SausPlugin {
 
 export interface Plugin extends vite.Plugin {
   saus?: SausPlugin
-}
-
-const NodeModule: {
-  _resolveFilename(id: string, parent: NodeModule, ...rest: any[]): void
-} = Module as any
-
-const nodeResolve = NodeModule._resolveFilename
-NodeModule._resolveFilename = (id, parent, ...rest) => {
-  // Force plugins to use our version of Vite.
-  if (id === 'vite' && !parent.loaded) {
-    id = require.resolve(id)
-  }
-  return nodeResolve(id, parent, ...rest)
 }
