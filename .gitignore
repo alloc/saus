@@ -1,4 +1,5 @@
 packages/repng
+packages/test
 node_modules
 vendor
 dist

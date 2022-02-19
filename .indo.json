@@ -4,6 +4,10 @@
       "url": "https://github.com/alloc/saus-repng.git",
       "optional": true
     },
+    "packages/test": {
+      "url": "https://github.com/alloc/saus-test.git",
+      "optional": true
+    },
     "vendor/regexparam": {
       "url": "https://github.com/aleclarson/regexparam.git"
     }
