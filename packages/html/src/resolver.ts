@@ -6,7 +6,6 @@ import {
   HtmlResolverState,
   HtmlTagPath,
   HtmlVisitor,
-  HtmlVisitorState,
 } from './types'
 import { TraverseVisitor } from './visitors/bind'
 
@@ -71,14 +70,14 @@ function assertType<T>(value: unknown): asserts value is T {}
  * This function is exposed for SSR runtimes, so the visitor
  * **must be manually registered** via the `processHtml` function.
  */
-export function createHtmlResolver<State = HtmlVisitorState>(
-  resolver: HtmlResolver,
+export function createHtmlResolver<State extends HtmlResolver.BaseState = {}>(
+  resolver: HtmlResolver<State>,
   attrsMap = defaultAttrsMap
 ): HtmlVisitor<State> {
   const resolvers = [resolver]
   const resolve = async (
-    path: HtmlTagPath,
-    state: Partial<HtmlResolverState>,
+    path: HtmlTagPath<State>,
+    state: Partial<HtmlResolverState<State>>,
     attrs: string[]
   ) => {
     const importer = state.page!.path
@@ -90,11 +89,7 @@ export function createHtmlResolver<State = HtmlVisitorState>(
       state.tag = path
       state.attr = attr
       for (const resolveId of resolvers) {
-        const resolvedId = await resolveId(
-          id,
-          importer,
-          state as HtmlResolverState
-        )
+        const resolvedId = await resolveId(id, importer, state as any)
         if (resolvedId != null) {
           path.setAttribute(attr, resolvedId)
           break
@@ -107,7 +102,7 @@ export function createHtmlResolver<State = HtmlVisitorState>(
 
   const skipLinkRel: any[] = ['preconnect', 'dns-prefetch']
 
-  const visitor: HtmlVisitor = {
+  const visitor: HtmlVisitor<State> = {
     // Avoid resolving the URL of a removed node by
     // waiting for the "close" phase.
     close(path, state) {

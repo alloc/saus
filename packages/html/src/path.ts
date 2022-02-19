@@ -25,7 +25,9 @@ type InsertionMethod =
   | 'appendLeft'
   | 'appendRight'
 
-export class HtmlTagPath<State = HtmlVisitorState> {
+export class HtmlTagPath<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> {
   constructor(
     readonly document: HtmlDocument<State>,
     readonly node: HtmlTag,

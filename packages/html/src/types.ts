@@ -5,17 +5,26 @@ import type { kTagPath } from './symbols'
 
 type Promisable<T> = T | PromiseLike<T>
 
-export type HtmlResolverState = HtmlVisitorState & {
+type HtmlTagState<State = any> = {
   /** The tag whose URL attribute is being resolved */
-  tag: HtmlTagPath
+  tag: HtmlTagPath<State>
   /** The URL attribute being resolved */
   attr: string
 }
 
-export type HtmlResolver = (
+type Remap<T> = {} & { [P in keyof T]: T[P] }
+
+export namespace HtmlResolver {
+  export type BaseState = Partial<HtmlVisitorState & HtmlTagState>
+}
+
+export type HtmlResolverState<State extends HtmlResolver.BaseState = {}> =
+  Remap<State & HtmlVisitorState & HtmlTagState<State>>
+
+export type HtmlResolver<State = {}> = (
   id: string,
   importer: string,
-  state: HtmlResolverState
+  state: HtmlResolverState<State>
 ) => Promisable<string | null | void>
 
 export type HtmlNode = {
@@ -60,14 +69,18 @@ export type HtmlTag = HtmlNode & {
 
 export type { HtmlTagPath }
 
-export type HtmlTagVisitor<State = HtmlVisitorState> =
+export type HtmlTagVisitor<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> =
   | HtmlVisitFn<State>
   | {
       open?: HtmlVisitFn<State>
       close?: HtmlVisitFn<State>
     }
 
-export type HtmlVisitor<State = HtmlVisitorState> = {
+export type HtmlVisitor<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> = {
   [tag: string]: HtmlTagVisitor<State>
 } & {
   open?: HtmlVisitFn<State>
@@ -79,17 +92,22 @@ export type HtmlVisitor<State = HtmlVisitorState> = {
   html?: HtmlTagVisitor<State>
 }
 
-export type HtmlVisitFn<State = HtmlVisitorState> = (
-  path: HtmlTagPath<State>,
-  state: State
-) => void | Promise<void>
+export type HtmlVisitFn<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> = (path: HtmlTagPath<State>, state: State) => void | Promise<void>
+
+export namespace HtmlVisitor {
+  export type BaseState = Partial<HtmlVisitorState>
+}
 
 /**
  * Page-specific state shared between visitors.
  */
 export type HtmlVisitorState = HtmlProcessorState
 
-export type HtmlDocument<State = HtmlVisitorState> = {
+export type HtmlDocument<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> = {
   editor: MagicString
-  state: State
+  state: Remap<State & HtmlVisitorState>
 }

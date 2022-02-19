@@ -15,9 +15,9 @@ export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
   [kVisitorsArray]: HtmlVisitor[]
 }
 
-export function bindVisitors<State = HtmlVisitorState>(
-  arg: HtmlVisitor<State> | HtmlVisitor<State>[]
-) {
+export function bindVisitors<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+>(arg: HtmlVisitor<State> | HtmlVisitor<State>[]) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
   async function traverse(html: string, state: State) {

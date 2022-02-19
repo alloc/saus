@@ -10,7 +10,7 @@ export type HtmlContext = {
   processHtml?: MergedHtmlProcessor
 }
 
-export type HtmlProcessorState = Record<string, any> & {
+export type HtmlProcessorState = {
   page: RenderedPage
   config: RuntimeConfig
   /**

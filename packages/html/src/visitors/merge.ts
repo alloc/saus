@@ -2,9 +2,11 @@ import { HtmlTagPath } from '../path'
 import { kRemovedNode } from '../symbols'
 import { HtmlVisitor, HtmlVisitorState } from '../types'
 
-export function mergeVisitors<State = HtmlVisitorState>(
+export function mergeVisitors<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+>(
   arg: HtmlVisitor<State> | HtmlVisitor<State>[],
-  state: State
+  state: State & HtmlVisitorState
 ) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
