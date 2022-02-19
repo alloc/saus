@@ -1,3 +1,4 @@
+import { AbortController, AbortSignal } from 'node-abort-controller'
 import { defer } from '../utils/defer'
 import { debug } from './debug'
 
@@ -69,8 +70,6 @@ export function withCache(
     const { promise, resolve, reject } = defer<any>()
     cache.loading[cacheKey] = promise
     cache.loaders[cacheKey] = loader
-
-    let timedOut = false
 
     const entryConfig: CacheControl = {
       key: cacheKey,

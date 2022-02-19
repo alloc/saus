@@ -56,6 +56,7 @@
     "esbuild": "^0.14.15",
     "magic-string": "^0.25.7",
     "md5-hex": "^3.0.0",
+    "node-abort-controller": "^3.0.1",
     "rollup": "npm:@aleclarson/rollup@^2.62.1",
     "shared-log": "^1.2.4",
     "terser": "^5.10.0",
