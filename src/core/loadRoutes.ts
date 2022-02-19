@@ -89,7 +89,13 @@ async function compileRoutesModule(
     // Vite plugins are skipped by the Node pipeline.
     compileModule: async (id, require) => {
       const code = fs.readFileSync(id, 'utf8')
-      return compileNodeModule(code, id, context, require)
+      return compileNodeModule(
+        code,
+        id,
+        require,
+        context.compileCache,
+        context.config.env
+      )
     },
   })
 
@@ -107,11 +113,12 @@ async function compileRoutesModule(
     compileNodeModule(
       editor.toString(),
       routesPath,
-      context,
       (id, importer, isDynamic) =>
         isDynamic
           ? ssrRequire(id, importer, true)
-          : require(id, importer, false)
+          : require(id, importer, false),
+      context.compileCache,
+      context.config.env
     )
   )
 }

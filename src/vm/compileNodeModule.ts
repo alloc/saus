@@ -3,6 +3,7 @@ import * as esbuild from 'esbuild'
 import { Module } from 'module'
 import path from 'path'
 import { SausContext } from '../core'
+import { CompileCache } from '../utils/CompileCache'
 import { isPackageRef } from '../utils/isPackageRef'
 import { resolveMapSources, toInlineSourceMap } from '../utils/sourceMap'
 import {
@@ -19,21 +20,27 @@ import { CompiledModule, RequireAsync, Script } from './types'
 export async function compileNodeModule(
   code: string,
   filename: string,
-  { config, compileCache }: SausContext,
-  requireAsync: RequireAsync
+  requireAsync: RequireAsync,
+  compileCache?: CompileCache | null,
+  importMeta?: Record<string, any>
 ): Promise<CompiledModule> {
   const env = {
     require: Module.createRequire(filename),
     __dirname: path.dirname(filename),
     __filename: filename,
     [exportsId]: {},
-    [importMetaId]: { env: { ...config.env, SSR: true } },
+    [importMetaId]: { env: { ...importMeta, SSR: true } },
     [importAsyncId]: (id: string) => requireAsync(id, filename, true),
     [requireAsyncId]: (id: string) => requireAsync(id, filename, false),
   }
 
-  const cacheKey = compileCache.key(code)
-  const cached = compileCache.get(cacheKey)
+  let cacheKey = ''
+  let cached: string | null = null
+
+  if (compileCache) {
+    cacheKey = compileCache.key(code)
+    cached = compileCache.get(cacheKey)
+  }
 
   let script: Script
   if (cached) {
@@ -99,7 +106,9 @@ export async function compileNodeModule(
     script.code = `(function() { ${script.code}\nreturn ${topLevelId}\n})()`
 
     // Store the compiled module on disk with an inline source map.
-    compileCache.set(cacheKey, script.code + toInlineSourceMap(script.map!))
+    if (compileCache) {
+      compileCache.set(cacheKey, script.code + toInlineSourceMap(script.map!))
+    }
   }
   return {
     ...script,
