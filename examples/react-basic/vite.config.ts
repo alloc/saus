@@ -13,6 +13,9 @@ export default defineConfig({
       // minify: true,
     },
   },
+  test: {
+    frameworkPath: '@saus/test',
+  },
   build: {
     // minify: false,
   },

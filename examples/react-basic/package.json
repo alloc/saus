@@ -7,18 +7,15 @@
     "serve": "cd dist && node $SERVE_OPTIONS node/server.mjs"
   },
   "devDependencies": {
-    "@types/node": "^16.10.2",
-    "@types/serve-static": "^1.13.10",
-    "etag": "^1.8.1"
+    "@types/node": "^16.10.2"
   },
   "dependencies": {
     "@saus/html": "*",
     "@saus/react": "*",
-    "@types/etag": "^1.8.1",
+    "@saus/test": "*",
     "has-flag": "^5.0.1",
     "kleur": "^4.1.4",
     "misty": "^1.4.5",
-    "mrmime": "^1.0.0",
     "navaid": "^1.2.0",
     "saus": "*"
   }
