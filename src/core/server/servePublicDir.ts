@@ -9,7 +9,7 @@ import { debug } from './debug'
 
 export const servePublicDir = (
   config: RuntimeConfig,
-  publicDir: string,
+  publicDir: string = config.publicDir,
   ignore = /^$/
 ) =>
   async function servePublicFile(
