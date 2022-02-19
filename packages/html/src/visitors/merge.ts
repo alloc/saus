@@ -1,3 +1,4 @@
+import { limitTime } from 'saus/core'
 import { HtmlTagPath } from '../path'
 import { kRemovedNode } from '../symbols'
 import { HtmlVisitor, HtmlVisitorState } from '../types'
@@ -25,13 +26,21 @@ export function mergeVisitors<
   /** Visitors with a `close` listener. */
   let closeVisitors: Visitor[]
 
+  // Use a smaller timeout than configured to ensure ours triggers first.
+  const timeout = (state.config.htmlTimeout ?? 10) - 0.1
+
   const visit = async (
     path: TagPath,
     visitor: Visitor,
-    handler: (path: TagPath, state: State) => void | Promise<void>
+    handler: (path: TagPath, state: State) => void | Promise<void>,
+    name: string
   ) => {
     currentVisitor = visitor
-    await handler(path, state)
+    await limitTime(
+      handler(path, state),
+      timeout,
+      `HTML visitor "${name}" took too long`
+    )
     currentVisitor = null
   }
 
@@ -46,7 +55,7 @@ export function mergeVisitors<
   return {
     async open(path: TagPath) {
       for (const visitor of openVisitors) {
-        await visit(path, visitor, visitor.open!)
+        await visit(path, visitor, visitor.open!, 'open')
         if (path[kRemovedNode]) {
           return true
         }
@@ -57,7 +66,8 @@ export function mergeVisitors<
           handler && (typeof handler == 'function' ? handler : handler.open)
 
         if (openHandler) {
-          await visit(path, visitor, openHandler)
+          const name = path.node.name + (handler == openHandler ? '' : '.open')
+          await visit(path, visitor, openHandler, name)
           if (path[kRemovedNode]) {
             return true
           }
@@ -81,14 +91,14 @@ export function mergeVisitors<
           handler && typeof handler !== 'function' && handler.close
 
         if (closeHandler) {
-          await visit(path, visitor, closeHandler)
+          await visit(path, visitor, closeHandler, path.node.name + '.close')
           if (path[kRemovedNode]) {
             return
           }
         }
       }
       for (const visitor of closeVisitors) {
-        await visit(path, visitor, visitor.close!)
+        await visit(path, visitor, visitor.close!, 'close')
         if (path[kRemovedNode]) {
           return
         }
