@@ -1,11 +1,13 @@
 import {
   applyHtmlProcessors,
   extractClientFunctions,
+  matchRoute,
   Plugin,
   renderStateModule,
   RuntimeConfig,
   SausContext,
 } from '../core'
+import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
@@ -13,7 +15,9 @@ import { RenderedFile, RenderPageOptions } from '../pages/types'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { purgeModule } from '../vm/moduleMap'
+import { resetModule } from '../vm/moduleMap'
+import { createSsrImport } from '../vm/ssrImport'
+import { ResolveIdHook } from '../vm/types'
 
 export type ServedPage = {
   error?: any
@@ -82,6 +86,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     saus: {
       onContext(c) {
         context = c
+
         const { config } = c
         runtimeConfig = {
           assetsDir: config.build.assetsDir,
@@ -102,52 +107,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           undefined,
           onError
         )
-        const renderOpts: RenderPageOptions = {
-          setup(pageContext) {
-            const routeModulePath = resolveEntryUrl(route.moduleId, config)
-            const routeModule = context.moduleMap![routeModulePath]
-            if (routeModule) {
-              purgeModule(routeModule.)
-            } else {
+        servePage = context.servePage = createServePageFn(
+          context,
+          runtimeConfig,
+          pageFactory,
+          fileCache
+        )
 
-            }
-            return route.load()
-          },
-        }
-        servePage = context.servePage = async url => {
-          try {
-            let page = await pageFactory.render(url, renderOpts)
-            if (!page && !/\.[^./]+$/.test(url)) {
-              page = await pageFactory.render(context.defaultPath, renderOpts)
-            }
-            if (page) {
-              for (const file of page.files) {
-                fileCache[file.id] = file
-              }
-              let html = await context.server!.transformIndexHtml(
-                url,
-                page.html
-              )
-              if (context.htmlProcessors?.post.length) {
-                html = await applyHtmlProcessors(
-                  html,
-                  context.htmlProcessors.post,
-                  { page, config: runtimeConfig },
-                  runtimeConfig.htmlTimeout
-                )
-              }
-              return {
-                body: html,
-                headers: [
-                  ['Content-Type', 'text/html; charset=utf-8'],
-                  ['Content-Length', Buffer.byteLength(html)],
-                ],
-              }
-            }
-          } catch (error) {
-            return { error }
-          }
-        }
         init = {
           // Defer to the reload promise after the context is initialized.
           then: (...args) => (c.reloading || Promise.resolve()).then(...args),
@@ -207,4 +173,101 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   }
 
   return [serveState, servePages]
+}
+
+function createServePageFn(
+  context: SausContext,
+  runtimeConfig: RuntimeConfig,
+  pageFactory: PageFactory,
+  fileCache: Record<string, RenderedFile>
+) {
+  const { config } = context
+  const server = context.server!
+  const moduleMap = context.moduleMap!
+
+  const resolveId: ResolveIdHook = (id, importer) =>
+    server.pluginContainer
+      .resolveId(id, importer!, { ssr: true })
+      .then(resolved => resolved?.id)
+
+  const ssrImport = createSsrImport(context, {
+    moduleMap,
+    resolveId,
+  })
+
+  const routeModuleIds = new Set(context.routes.map(route => route.moduleId))
+  if (context.defaultRoute) {
+    routeModuleIds.add(context.defaultRoute.moduleId)
+  }
+
+  const entryPaths = Array.from(routeModuleIds, moduleId => {
+    return resolveEntryUrl(moduleId, config)
+  })
+  entryPaths.push(context.renderPath)
+
+  const renderOpts: RenderPageOptions = {
+    async setup(pageContext, pageUrl) {
+      const route =
+        context.routes.find(route => matchRoute(pageUrl.path, route)) ||
+        context.defaultRoute
+      if (!route) return
+
+      // Reset all modules used by every route or renderer, because we can't know
+      // which modules have side effects and are also used by the route matched
+      // for the currently rendering page.
+      for (const entryPath of entryPaths) {
+        const entryModule = moduleMap[entryPath]
+        if (entryModule) {
+          for (const module of entryModule.package || [entryModule]) {
+            resetModule(module)
+          }
+        }
+      }
+
+      // Load the route module and its dependencies now, since the
+      // setup function is guaranteed to run serially, which lets us
+      // ensure no local modules are shared between page renders.
+      const routeModulePath = resolveEntryUrl(route.moduleId, config)
+      await ssrImport(routeModulePath, null, true)
+
+      context.renderers = []
+      context.defaultRenderer = undefined
+      context.beforeRenderHooks = []
+      await loadRenderers(context, {
+        resolveId,
+      })
+      Object.assign(pageContext, context)
+    },
+  }
+  return async (url: string): Promise<ServedPage | undefined> => {
+    try {
+      let page = await pageFactory.render(url, renderOpts)
+      if (!page && !/\.[^./]+$/.test(url)) {
+        page = await pageFactory.render(context.defaultPath, renderOpts)
+      }
+      if (page) {
+        for (const file of page.files) {
+          fileCache[file.id] = file
+        }
+        let html = await context.server!.transformIndexHtml(url, page.html)
+        if (context.htmlProcessors?.post.length) {
+          html = await applyHtmlProcessors(
+            html,
+            context.htmlProcessors.post,
+            { page, config: runtimeConfig },
+            runtimeConfig.htmlTimeout
+          )
+        }
+        return {
+          body: html,
+          headers: [
+            ['Content-Type', 'text/html; charset=utf-8'],
+            ['Content-Length', Buffer.byteLength(html)],
+          ],
+        }
+      }
+    } catch (error) {
+      return { error }
+    }
+  }
 }

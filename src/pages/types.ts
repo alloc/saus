@@ -53,15 +53,7 @@ export type RenderPageOptions = {
    * allowing for rendered pages to be isolated from
    * each other if desired.
    */
-  setup?: (context: PageContext) => any
-  /**
-   * Intercept route loading for custom behavior.
-   */
-  loadRoute?: (
-    route: Route,
-    url: ParsedUrl,
-    state: ClientState
-  ) => RouteModule | PromiseLike<RouteModule>
+  setup?: (context: PageContext, url: ParsedUrl) => any
 }
 
 type BundledFunction = {

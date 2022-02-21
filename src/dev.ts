@@ -250,8 +250,7 @@ async function startServer(
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file])
       )
-      purgeModule(module, ({ id, importers }) => {
-        changedFiles.add(id)
+      purgeModule(module, changedFiles, ({ importers }) => {
         for (const stateModule of stateModules) {
           if (module == stateModule || importers.hasDynamic(stateModule)) {
             dirtyStateModules.add(stateModule)

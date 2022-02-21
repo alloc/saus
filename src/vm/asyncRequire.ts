@@ -81,12 +81,12 @@ export function createAsyncRequire({
 
   return async function requireAsync(id, importer, isDynamic) {
     if (builtinModules.includes(id)) {
-      return Module.createRequire(importer)(id)
+      return Module.createRequire(importer || __filename)(id)
     }
 
     const time = Date.now()
     const asyncStack = isDynamic
-      ? traceDynamicImport(Error())
+      ? traceDynamicImport(Error(), 3)
       : (callStack = [getStackFrame(3), ...callStack])
 
     let resolvedId: string | undefined
@@ -124,7 +124,7 @@ export function createAsyncRequire({
         : noop
 
       try {
-        nodeRequire = createRequire(importer)
+        nodeRequire = createRequire(importer || __filename)
         nodeResolvedId = nodeRequire.resolve(id)
         if (resolvedId) {
           if (isNodeRequirable(resolvedId)) {
@@ -170,12 +170,14 @@ export function createAsyncRequire({
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 
-        importerModule = moduleMap[importer]
         module = moduleMap[resolvedId]
+        if (importer) {
+          importerModule = moduleMap[importer]
+        }
 
         isCached = !!module?.exports && !shouldReload(resolvedId)
         if (isCached) {
-          if (internalPathRE.test(id)) {
+          if (importerModule && internalPathRE.test(id)) {
             connectModules(module, importerModule)
           }
           const circularIndex = asyncStack.findIndex(
@@ -213,7 +215,7 @@ export function createAsyncRequire({
           })
         )
 
-        if (internalPathRE.test(id)) {
+        if (importerModule && internalPathRE.test(id)) {
           connectModules(module, importerModule)
         }
 
@@ -328,7 +330,9 @@ function isNodeRequirable(file: string) {
 
 function isVirtual(id: string, resolvedId: string) {
   return (
-    resolvedId[0] === '\0' || id === resolvedId || id.startsWith('virtual:')
+    resolvedId[0] === '\0' ||
+    id.startsWith('virtual:') ||
+    (id === resolvedId && !(path.isAbsolute(id) && fs.existsSync(id)))
   )
 }
 

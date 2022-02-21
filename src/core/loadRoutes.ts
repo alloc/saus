@@ -25,7 +25,9 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
   const moduleMap = context.moduleMap || {}
 
   context.compileCache.locked = true
-  const routesModule = await compileRoutesModule(context, options, moduleMap)
+  const routesModule =
+    moduleMap[context.routesPath] ||
+    (await compileRoutesModule(context, options, moduleMap))
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],

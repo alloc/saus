@@ -34,7 +34,9 @@ export async function loadRenderers(
   })
 
   context.compileCache.locked = true
-  const renderModule = await compileRenderModule(context, ssrRequire, moduleMap)
+  const renderModule =
+    moduleMap[context.renderPath] ||
+    (await compileRenderModule(context, ssrRequire, moduleMap))
   const renderConfig = setRenderModule({
     renderers: [],
     beforeRenderHooks: [],

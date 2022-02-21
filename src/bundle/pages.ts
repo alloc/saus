@@ -84,6 +84,9 @@ export async function renderPage(
         defineClientEntry({
           BASE_URL: isDebug ? debugBase : base,
         })
+        context.renderers = []
+        context.defaultRenderer = undefined
+        context.beforeRenderHooks = []
         await loadRenderers(pageRenderPath)
         Object.assign(pageContext, context)
       },

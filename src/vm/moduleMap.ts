@@ -43,15 +43,15 @@ export function registerModuleOnceCompiled(
 export function purgeModule(
   module: CompiledModule,
   visited = new Set<string>(),
-  onPurge?: (module: CompiledModule) => void
+  onModule?: (module: CompiledModule) => void
 ) {
   if (!visited.has(module.id)) {
     visited.add(module.id)
+    onModule?.(module)
+    for (const importer of module.importers) {
+      resetImporters(importer, visited, onModule)
+    }
     debug('purge module: %O', module.id)
-    onPurge?.(module)
-    disconnectModule(module, importer => {
-      purgeModuleExports(importer, visited, onPurge)
-    })
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
       moduleMaps.delete(module)
@@ -60,32 +60,32 @@ export function purgeModule(
   }
 }
 
-export function purgeModuleExports(
+/**
+ * Reset the given module and its importers.
+ */
+export function resetImporters(
   module: CompiledModule,
-  visited: Set<string>,
-  onPurge?: (module: CompiledModule) => void
+  visited = new Set<string>(),
+  onModule?: (module: CompiledModule) => void
 ) {
   if (!visited.has(module.id)) {
     visited.add(module.id)
-    debug('purge exports: %O', module.id)
-    onPurge?.(module)
-    disconnectModule(module, importer => {
-      purgeModuleExports(importer, visited, onPurge)
-    })
-    module.exports = undefined
-    module.package = undefined
-    module.imports.clear()
-    module.importers = new ImporterSet()
+    onModule?.(module)
+    for (const importer of module.importers) {
+      resetImporters(importer, visited, onModule)
+    }
+    resetModule(module)
   }
 }
 
-function disconnectModule(
-  module: CompiledModule,
-  onImporter: (module: CompiledModule) => void
-) {
+export function resetModule(module: CompiledModule) {
+  debug('reset module: %O', module.id)
+  module.exports = undefined
   module.package?.delete(module)
-  module.importers.forEach(onImporter)
+  module.package = undefined
   for (const imported of module.imports) {
     imported.importers.delete(module)
   }
+  module.imports.clear()
+  module.importers = new ImporterSet()
 }

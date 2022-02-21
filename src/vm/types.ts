@@ -40,8 +40,8 @@ type Promisable<T> = T | Promise<T>
 
 export type ResolveIdHook = (
   id: string,
-  importer: string,
-  isDynamic: boolean
+  importer?: string | null,
+  isDynamic?: boolean
 ) => Promisable<string | undefined>
 
 export type CompileModuleHook = (
@@ -51,6 +51,6 @@ export type CompileModuleHook = (
 
 export type RequireAsync = (
   id: string,
-  importer: string,
-  isDynamic: boolean
+  importer?: string | null,
+  isDynamic?: boolean
 ) => Promise<any>

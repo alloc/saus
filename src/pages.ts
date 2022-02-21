@@ -282,7 +282,7 @@ export function createPageFactory(
       renderers: [],
       beforeRenderHooks: [],
     }
-    await options.setup(pageContext)
+    await options.setup(pageContext, url)
     return pageContext
   }
 
@@ -307,9 +307,7 @@ export function createPageFactory(
       let error: any
       try {
         state = await statePromise
-        routeModule = await (options.loadRoute
-          ? options.loadRoute(route, url, state)
-          : route.load())
+        routeModule = await route.load()
       } catch (e) {
         error = e
       }
