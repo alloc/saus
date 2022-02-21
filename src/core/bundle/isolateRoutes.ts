@@ -13,7 +13,7 @@ import {
   createModuleProvider,
   ModuleProvider,
 } from '../../plugins/moduleProvider'
-import { bareImportRE } from '../../utils/bareImportRE'
+import { bareImportRE, relativePathRE } from '../../utils/importRegex'
 import { dedupe } from '../../utils/dedupe'
 import { findPackage } from '../../utils/findPackage'
 import { plural } from '../../utils/plural'
@@ -105,9 +105,7 @@ export async function isolateRoutes(
   const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
 
-  // const NULL_BYTE_PLACEHOLDER = `__x00__`
   const isVirtual = (id: string) => id[0] === '\0'
-
   const shouldForceIsolate = createFilter(
     config.saus.bundle?.isolate || /^$/,
     undefined,
@@ -160,7 +158,7 @@ export async function isolateRoutes(
         return { id, external: true }
       }
       let forceIsolate = false
-      if (bareImportRE.test(id)) {
+      if (bareImportRE.test(id) && !id.startsWith('@/')) {
         forceIsolate = shouldForceIsolate(id)
         if (!forceIsolate && !shouldResolve(id, importer)) {
           return { id, external: true }
@@ -179,8 +177,7 @@ export async function isolateRoutes(
         const maybeCjsModule =
           forceIsolate && id.endsWith('.js') && !cjsNotFoundCache.has(id)
 
-        // We have to avoid bundling CommonJS modules with Esbuild,
-        // because the output is incompatible with our SSR module system.
+        // Prefer bundling CommonJS modules ourselves, instead of relying on Rollup.
         if (maybeCjsModule) {
           if (isolatedCjsModules.has(id)) {
             return { id, external: true }
@@ -609,8 +606,6 @@ function toSsrPath(id: string, root: string) {
   const relativeId = relative(root, id)
   return relativePathRE.test(relativeId) ? relativeId : '/' + relativeId
 }
-
-const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
 
 function rewriteRouteImports(
   routesPath: string,

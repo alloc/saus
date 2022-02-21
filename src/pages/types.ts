@@ -1,12 +1,14 @@
-import type { Buffer, HeadDescription } from '../client'
+import type { Buffer, HeadDescription, RouteModule } from '../client'
 import type {
   Client,
   ClientState,
   RenderModule,
+  Route,
   RoutesModule,
   SausContext,
   WrappedNode,
 } from '../core'
+import { ParsedUrl } from '../utils/url'
 
 export type BufferLike = string | Buffer | globalThis.Buffer
 
@@ -52,6 +54,14 @@ export type RenderPageOptions = {
    * each other if desired.
    */
   setup?: (context: PageContext) => any
+  /**
+   * Intercept route loading for custom behavior.
+   */
+  loadRoute?: (
+    route: Route,
+    url: ParsedUrl,
+    state: ClientState
+  ) => RouteModule | PromiseLike<RouteModule>
 }
 
 type BundledFunction = {

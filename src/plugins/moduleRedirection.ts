@@ -1,7 +1,7 @@
 import path from 'path'
 import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
-import { bareImportRE } from '../utils/bareImportRE'
+import { bareImportRE } from '../utils/importRegex'
 
 type Promisable<T> = T | Promise<T>
 
@@ -89,11 +89,15 @@ export function redirectModule(
 
 export function overrideBareImport(
   targetId: string,
-  replacementId: string
+  replacementId: string,
+  debug?: true | ((id: string) => boolean)
 ): vite.Plugin {
   return {
     name: 'overrideBareImport:' + targetId,
     resolveBareImport(id) {
+      if (debug && (debug == true || debug(id))) {
+        debugger
+      }
       if (id === targetId) {
         return replacementId
       }

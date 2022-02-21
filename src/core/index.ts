@@ -8,6 +8,7 @@ export * from './includeState'
 export * from './renderStateModule'
 export * from './tokens'
 export * from './vite'
+export * from '../test'
 
 export type { ConfigHook, RuntimeConfig } from './config'
 export type { SausContext } from './context'

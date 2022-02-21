@@ -1,4 +1,5 @@
 import { defineConfig } from 'saus'
+import sausTest from '@saus/test'
 
 export default defineConfig({
   base: '/staging/',
@@ -13,13 +14,12 @@ export default defineConfig({
       // minify: true,
     },
   },
-  test: {
-    frameworkPath: '@saus/test',
-  },
   build: {
     // minify: false,
   },
   // Once you put "types": ["@saus/react"] in your tsconfig.json,
   // you can customize Babel like this:
   babel: {},
+  // Run "saus test" to blow your mind.
+  testFramework: sausTest(),
 })

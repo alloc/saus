@@ -399,14 +399,18 @@ async function generateSsrBundle(
     plugins: [
       ...inlinePlugins,
       routesPlugin(clientRouteMap)(),
-      debugForbiddenImports([
-        'vite',
-        './src/core/index.ts',
-        './src/core/context.ts',
-      ]),
       modules,
       moduleResolution,
-      moduleRedirection(internalRedirects),
+      moduleRedirection([
+        debugForbiddenImports([
+          'vite',
+          './client/index.js',
+          './src/client/index.ts',
+          './src/core/index.ts',
+          './src/core/context.ts',
+        ]) || { name: '' },
+        ...internalRedirects,
+      ]),
       preferExternalPlugin,
       defineNodeConstants(),
       rewriteHttpImports(context.logger, isWorker),

@@ -99,6 +99,11 @@ cli
     }
   })
 
+cli.command('test').action(async () => {
+  const { startTestServer } = require('./test') as typeof import('./test')
+  await startTestServer()
+})
+
 cli.help()
 cli.version(require('../package.json').version)
 

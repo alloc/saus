@@ -11,12 +11,8 @@ export const servePublicDir = (
   config: RuntimeConfig,
   publicDir: string = config.publicDir,
   ignore = /^$/
-) =>
-  async function servePublicFile(
-    req: connect.Request,
-    res: connect.Response,
-    next: connect.NextFunction
-  ) {
+): connect.Middleware =>
+  async function servePublicFile(req, res, next) {
     const fileName = req.url.slice(config.base.length)
     if (ignore.test(fileName)) {
       return next()

@@ -1,16 +1,16 @@
 import { plural } from '../utils/plural'
-import { createAsyncRequire, updateModuleMap } from '../vm/asyncRequire'
+import { createAsyncRequire } from '../vm/asyncRequire'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
+import { registerModuleOnceCompiled } from '../vm/moduleMap'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRenderModule } from './global'
 
 type LoadOptions = {
-  moduleMap?: ModuleMap
   resolveId?: ResolveIdHook
 }
 
@@ -19,7 +19,8 @@ export async function loadRenderers(
   options: LoadOptions
 ) {
   const time = Date.now()
-  const { moduleMap = {}, resolveId = () => undefined } = options
+  const moduleMap = context.moduleMap || {}
+  const { resolveId = () => undefined } = options
   const { dedupe } = context.config.resolve
 
   const ssrRequire = createAsyncRequire({
@@ -60,7 +61,7 @@ function compileRenderModule(
   ssrRequire: RequireAsync,
   moduleMap: ModuleMap
 ) {
-  return updateModuleMap(
+  return registerModuleOnceCompiled(
     moduleMap,
     compileSsrModule(context.renderPath, context, ssrRequire).then(module => {
       if (!module) {

@@ -7,12 +7,8 @@ import { ModuleCache } from './moduleCache'
 export const servePages = (
   renderPage: typeof RenderPage,
   moduleCache: ModuleCache
-) =>
-  async function servePage(
-    req: connect.Request,
-    res: connect.Response,
-    next: connect.NextFunction
-  ) {
+): connect.Middleware =>
+  async function servePage(req, res, next) {
     try {
       const page = await renderPage(req.url)
       if (!page) {

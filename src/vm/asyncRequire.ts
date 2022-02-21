@@ -1,15 +1,22 @@
 import builtinModules from 'builtin-modules'
 import fs from 'fs'
+import kleur from 'kleur'
 import { Module } from 'module'
 import path from 'path'
+import { httpImport } from '../http/httpImport'
+import { jsonImport } from '../http/jsonImport'
+import { internalPathRE } from '../utils/importRegex'
+import { isExternalUrl } from '../utils/isExternalUrl'
 import { noop } from '../utils/noop'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { getStackFrame, StackFrame } from '../utils/resolveStackTrace'
 import { exportsId } from './compileEsm'
 import { debug } from './debug'
-import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
 import { executeModule } from './executeModule'
+import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
+import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
+import { registerModuleOnceCompiled } from './moduleMap'
 import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
@@ -18,11 +25,6 @@ import {
   RequireAsync,
   ResolveIdHook,
 } from './types'
-import kleur from 'kleur'
-import { forceNodeReload } from './forceNodeReload'
-import { isExternalUrl } from '../utils/isExternalUrl'
-import { httpImport } from '../http/httpImport'
-import { jsonImport } from '../http/jsonImport'
 
 export type RequireAsyncConfig = {
   /**
@@ -162,14 +164,20 @@ export function createAsyncRequire({
     let isCached: boolean
     let exports: any
     let module: CompiledModule | undefined
+    let importerModule: CompiledModule | undefined
 
     loadStep: {
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 
-        isCached = resolvedId in moduleMap && !shouldReload(resolvedId)
+        importerModule = moduleMap[importer]
+        module = moduleMap[resolvedId]
+
+        isCached = !!module?.exports && !shouldReload(resolvedId)
         if (isCached) {
-          module = moduleMap[resolvedId]
+          if (internalPathRE.test(id)) {
+            connectModules(module, importerModule)
+          }
           const circularIndex = asyncStack.findIndex(
             frame => frame?.file == resolvedId
           )
@@ -190,7 +198,7 @@ export function createAsyncRequire({
           break loadStep
         }
 
-        module = await updateModuleMap(
+        module = await registerModuleOnceCompiled(
           moduleMap,
           compileModule(resolvedId, requireAsync).then(module => {
             if (!module) {
@@ -204,6 +212,10 @@ export function createAsyncRequire({
             return module
           })
         )
+
+        if (internalPathRE.test(id)) {
+          connectModules(module, importerModule)
+        }
 
         try {
           exports = await executeModule(module)
@@ -248,7 +260,10 @@ export function createAsyncRequire({
       }
     }
 
-    module?.importers.add(moduleMap[importer], isDynamic)
+    if (module && importerModule) {
+      importerModule.imports.add(module)
+      module.importers.add(importerModule, isDynamic)
+    }
     if (!isDynamic) {
       callStack = callStack.slice(1)
     }
@@ -263,28 +278,6 @@ export function createAsyncRequire({
 
     return exports
   }
-}
-
-export function updateModuleMap(
-  moduleMap: ModuleMap,
-  modulePromise: Promise<CompiledModule>
-) {
-  const compileQueue = moduleMap.__compileQueue
-  if (!compileQueue) {
-    Object.defineProperty(moduleMap, '__compileQueue', {
-      value: undefined,
-      writable: true,
-    })
-  }
-
-  moduleMap.__compileQueue = modulePromise
-    .then(module => {
-      moduleMap[module.id] = module
-      return compileQueue
-    })
-    .catch(noop)
-
-  return modulePromise
 }
 
 export function injectExports(filename: string, exports: object) {
@@ -341,4 +334,34 @@ function isVirtual(id: string, resolvedId: string) {
 
 function toDebugPath(file: string) {
   return fs.existsSync(file.replace(/[#?].*$/, '')) ? relativeToCwd(file) : file
+}
+
+/**
+ * Ensure both modules are in the same `package` set.
+ */
+function connectModules(imported: CompiledModule, importer: CompiledModule) {
+  let importerPkg = importer.package!
+  let importedPkg = imported.package
+  if (importedPkg) {
+    if (importerPkg == importedPkg) {
+      return
+    }
+    if (importerPkg) {
+      importedPkg.forEach(module => {
+        importerPkg.add(module)
+        module.package = importerPkg
+      })
+    } else {
+      importedPkg.add(importer)
+      importer.package = importedPkg
+    }
+  } else {
+    if (importerPkg) {
+      importerPkg.add(imported)
+    } else {
+      importerPkg = new Set([importer, imported])
+      importer.package = importerPkg
+    }
+    imported.package = importerPkg
+  }
 }

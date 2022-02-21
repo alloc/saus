@@ -9,9 +9,11 @@ import {
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
-import { RenderedFile } from '../pages/types'
+import { RenderedFile, RenderPageOptions } from '../pages/types'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
+import { resolveEntryUrl } from '../utils/resolveEntryUrl'
+import { purgeModule } from '../vm/moduleMap'
 
 export type ServedPage = {
   error?: any
@@ -100,11 +102,23 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           undefined,
           onError
         )
+        const renderOpts: RenderPageOptions = {
+          setup(pageContext) {
+            const routeModulePath = resolveEntryUrl(route.moduleId, config)
+            const routeModule = context.moduleMap![routeModulePath]
+            if (routeModule) {
+              purgeModule(routeModule.)
+            } else {
+
+            }
+            return route.load()
+          },
+        }
         servePage = context.servePage = async url => {
           try {
-            let page = await pageFactory.render(url)
+            let page = await pageFactory.render(url, renderOpts)
             if (!page && !/\.[^./]+$/.test(url)) {
-              page = await pageFactory.render(context.defaultPath)
+              page = await pageFactory.render(context.defaultPath, renderOpts)
             }
             if (page) {
               for (const file of page.files) {

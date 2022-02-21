@@ -17,6 +17,7 @@ import { routesPlugin } from '../../plugins/routes'
 import { findPackage } from '../../utils/findPackage'
 import { parseImports } from '../../utils/imports'
 import { mapSerial } from '../../utils/mapSerial'
+import { resolveEntryUrl } from '../../utils/resolveEntryUrl'
 import { toInlineSourceMap } from '../../utils/sourceMap'
 import {
   ClientFunctions,
@@ -433,16 +434,6 @@ export async function generateClientModules(
 
 function quotes(text: string) {
   return `"${text}"`
-}
-
-const FS_PREFIX = /^\/@fs\/\/?/
-
-function resolveEntryUrl(id: string, config: vite.ResolvedConfig) {
-  return FS_PREFIX.test(id)
-    ? id.replace(FS_PREFIX, '/')
-    : id[0] === '/'
-    ? config.root + id
-    : id
 }
 
 /**

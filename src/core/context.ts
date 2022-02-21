@@ -9,10 +9,12 @@ import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
+import { ModuleMap } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { HtmlContext } from './html'
 import { loadConfigHooks } from './loadConfigHooks'
+import { toSausPath } from './paths'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
@@ -36,7 +38,10 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   ) => Promise<ResolvedConfig>
   /** Only exists in dev mode */
   server?: vite.ViteDevServer
+  /** Only exists in dev mode */
   servePage?: (url: string) => Promise<ServedPage | undefined>
+  /** Only exists in dev mode */
+  moduleMap?: ModuleMap
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
   /** The URL prefix for all pages */
@@ -78,8 +83,8 @@ function createContext(
 
   async function getCachedPages() {
     return Object.values(pageCache.loaded)
-      .concat(await Promise.all(Object.values(pageCache.loading)))
       .map(entry => entry[0])
+      .concat(await Promise.all(Object.values(pageCache.loading)))
   }
 
   return {
@@ -151,7 +156,7 @@ function flattenPlugins<T extends vite.Plugin>(
   filter?: (p: T) => any
 ) {
   const filtered: vite.Plugin[] = filter ? plugins.filter(filter) : [...plugins]
-  return flatten(vite.sortUserPlugins(filtered)) as T[]
+  return flatten(vite.sortVitePlugins(filtered)) as T[]
 }
 
 function getConfigResolver(
@@ -259,9 +264,12 @@ function getConfigResolver(
 
     // The render module and "saus/client" need their deps optimized.
     config.optimizeDeps.entries = [
-      ...arrify(config.optimizeDeps.entries),
       sausConfig.render,
-      resolve(__dirname, '../client/index.js'),
+      ...arrify(config.optimizeDeps.entries),
+      // Skip "saus/client" in build mode, so we don't get warnings
+      // from trying to resolve imports for modules included in the
+      // bundled Saus runtime (see "./bundle/runtimeBundle.ts").
+      ...arrify(isBuild ? undefined : toSausPath('client/index.js')),
     ]
 
     const context = getContext(config)

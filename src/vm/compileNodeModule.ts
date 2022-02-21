@@ -114,6 +114,7 @@ export async function compileNodeModule(
     ...script,
     id: filename,
     env,
+    imports: new Set(),
     importers: new ImporterSet(),
   }
 }

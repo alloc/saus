@@ -6,8 +6,17 @@ export type Script = { code: string; map?: SourceMap }
 export interface CompiledModule extends Script {
   id: string
   env: Record<string, any>
+  imports: Set<CompiledModule>
   importers: ImporterSet
   exports?: Promise<any>
+  /**
+   * Compiled modules referenced by a relative import are included
+   * in the same `package` as their importer.
+   *
+   * If undefined, this package never imported a module (or was imported
+   * by another module) using a relative path.
+   */
+  package?: Set<CompiledModule>
 }
 
 export type ModuleMap = Record<string, CompiledModule> & {

@@ -2,7 +2,7 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import { Module } from 'module'
 import { dirname } from 'path'
-import { bareImportRE } from '../utils/bareImportRE'
+import { bareImportRE, relativePathRE } from '../utils/importRegex'
 import { findPackage } from '../utils/findPackage'
 import { plural } from '../utils/plural'
 import { createAsyncRequire } from '../vm/asyncRequire'
@@ -77,7 +77,6 @@ export async function loadConfigHooks(config: ResolvedConfig) {
     },
   })
 
-  const relativePathRE = /^(?:\.\/|(\.\.\/)+)/
   for (const imp of imports) {
     const id = imp.n
     if (!id || relativePathRE.test(id) || imp.d !== -1) {

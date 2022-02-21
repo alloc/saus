@@ -63,6 +63,7 @@ export async function compileSsrModule(
     map: module.map,
     id,
     env,
+    imports: new Set(),
     importers: new ImporterSet(),
   }
 }

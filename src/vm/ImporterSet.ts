@@ -3,17 +3,23 @@ import { CompiledModule } from './types'
 export class ImporterSet extends Set<CompiledModule> {
   private _dynamics?: Set<CompiledModule>
 
-  add(module: CompiledModule, isDynamic?: boolean) {
+  add(importer: CompiledModule, isDynamic?: boolean) {
     if (isDynamic) {
       this._dynamics ||= new Set()
-      this._dynamics.add(module)
+      this._dynamics.add(importer)
     } else {
-      super.add(module)
+      super.add(importer)
     }
     return this
   }
 
-  hasDynamic(module: CompiledModule) {
-    return !!this._dynamics?.has(module)
+  delete(importer: CompiledModule) {
+    const wasStaticImporter = super.delete(importer)
+    const wasDynamicImporter = !!this._dynamics?.delete(importer)
+    return wasStaticImporter || wasDynamicImporter
+  }
+
+  hasDynamic(importer: CompiledModule) {
+    return !!this._dynamics?.has(importer)
   }
 }

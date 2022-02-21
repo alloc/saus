@@ -10,13 +10,14 @@ export function debugForbiddenImports(imports: string[]): vite.Plugin | false {
   return {
     name: 'debugForbiddenImports',
     enforce: 'pre',
-    async resolveId(id, importer) {
-      let absoluteId = id
-      if (id[0] == '.') {
-        const resolved = await this.resolve(id, importer, { skipSelf: true })
-        absoluteId = resolved?.id.replace(sausRoot, '.')!
+    async redirectModule(id, importer) {
+      if (!importer) return
+      if (id.startsWith('/@fs/')) {
+        id = id.slice(4)
       }
-      if (imports.includes(absoluteId)) {
+      const sausId = id.replace(sausRoot, '.')
+      if (sausId.startsWith('./') && imports.includes(sausId)) {
+        id = path.relative(importer, id)
         debug(`[!] Forbidden import "${id}" from "${importer}"`)
         return null
       }

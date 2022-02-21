@@ -1,11 +1,9 @@
 import endent from 'endent'
-import * as vite from 'vite'
-import { SausContext, Plugin, SausConfig, RenderedPage } from '../core'
+import { Plugin, RenderedPage, SausConfig, SausContext, vite } from '../core'
 import { debug } from '../core/debug'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
-import { serializeImports } from '../utils/imports'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 
 const clientUrlPrefix = '/@saus/'

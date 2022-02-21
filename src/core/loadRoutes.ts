@@ -2,16 +2,13 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
-import {
-  createAsyncRequire,
-  injectExports,
-  updateModuleMap,
-} from '../vm/asyncRequire'
+import { createAsyncRequire, injectExports } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
+import { registerModuleOnceCompiled } from '../vm/moduleMap'
 import { ModuleMap, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
@@ -20,16 +17,15 @@ import { Route } from './routes'
 import { isExternalUrl } from './utils'
 
 type LoadOptions = {
-  moduleMap?: ModuleMap
   resolveId?: ResolveIdHook
 }
 
 export async function loadRoutes(context: SausContext, options: LoadOptions) {
   const time = Date.now()
-  const { moduleMap = {}, resolveId = () => undefined } = options
+  const moduleMap = context.moduleMap || {}
 
   context.compileCache.locked = true
-  const routesModule = await compileRoutesModule(context, moduleMap, resolveId)
+  const routesModule = await compileRoutesModule(context, options, moduleMap)
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],
@@ -51,10 +47,11 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
 
 async function compileRoutesModule(
   context: SausContext,
-  moduleMap: ModuleMap,
-  resolveId: ResolveIdHook
+  options: LoadOptions,
+  moduleMap: ModuleMap
 ) {
   const { routesPath, root } = context
+  const resolveId = (options.resolveId ||= () => undefined)
 
   // Import specifiers for route modules need to be rewritten
   // as dev URLs for them to be imported properly by the browser.
@@ -82,8 +79,8 @@ async function compileRoutesModule(
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
   const require = createAsyncRequire({
+    ...options,
     moduleMap,
-    resolveId,
     nodeResolve,
     isCompiledModule: isProjectFile,
     // Vite plugins are skipped by the Node pipeline.
@@ -100,15 +97,15 @@ async function compileRoutesModule(
   })
 
   const ssrRequire = createAsyncRequire({
+    ...options,
     moduleMap,
-    resolveId,
     nodeResolve,
     isCompiledModule: isProjectFile,
     compileModule: (id, ssrRequire) =>
       compileSsrModule(id, context, ssrRequire),
   })
 
-  return updateModuleMap(
+  return registerModuleOnceCompiled(
     moduleMap,
     compileNodeModule(
       editor.toString(),

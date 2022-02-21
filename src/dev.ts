@@ -21,6 +21,7 @@ import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
+import { purgeModule } from './vm/moduleMap'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
 export async function createServer(inlineConfig?: vite.UserConfig) {
@@ -84,6 +85,7 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
   })
 
   return {
+    events,
     restart,
     async close() {
       process.off('unhandledRejection', onError)
@@ -131,10 +133,11 @@ async function startServer(
     return resolved?.id
   }
 
+  context.moduleMap = moduleMap
   context.server = server
   try {
-    await loadRoutes(context, { moduleMap, resolveId })
-    await loadRenderers(context, { moduleMap, resolveId })
+    await loadRoutes(context, { resolveId })
+    await loadRenderers(context, { resolveId })
   } catch (error: any) {
     // Babel errors use `.id` and Vite SSR uses `.file`
     const filename = error.id || error.file
@@ -188,7 +191,7 @@ async function startServer(
 
     if (files.includes(context.routesPath)) {
       try {
-        await loadRoutes(context, { moduleMap, resolveId })
+        await loadRoutes(context, { resolveId })
         routesChanged = true
 
         // Emit change events for page state modules.
@@ -205,7 +208,7 @@ async function startServer(
     // when new HTTP requests come in.
     if (files.includes(context.renderPath)) {
       try {
-        await loadRenderers(context, { moduleMap, resolveId })
+        await loadRenderers(context, { resolveId })
         renderersChanged = true
 
         const oldConfigHooks = context.configHooks
@@ -240,26 +243,6 @@ async function startServer(
     context.reloading = undefined
   }, 50)
 
-  const purgeModuleMap = (
-    module: CompiledModule,
-    stateModules: Set<CompiledModule>
-  ) => {
-    const { id, importers } = module
-    if (!changedFiles.has(id)) {
-      changedFiles.add(id)
-      delete moduleMap[id]
-      for (const importer of importers) {
-        purgeModuleMap(importer, stateModules)
-      }
-      for (const stateModule of stateModules) {
-        if (module == stateModule || importers.hasDynamic(stateModule)) {
-          dirtyStateModules.add(stateModule)
-          stateModules.delete(stateModule)
-        }
-      }
-    }
-  }
-
   watcher.prependListener('change', async file => {
     const module = moduleMap[file]
     if (module) {
@@ -267,7 +250,15 @@ async function startServer(
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file])
       )
-      purgeModuleMap(module, stateModules)
+      purgeModule(module, ({ id, importers }) => {
+        changedFiles.add(id)
+        for (const stateModule of stateModules) {
+          if (module == stateModule || importers.hasDynamic(stateModule)) {
+            dirtyStateModules.add(stateModule)
+            stateModules.delete(stateModule)
+          }
+        }
+      })
       scheduleReload()
     }
     // Restart the server when Vite config is changed.

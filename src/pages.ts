@@ -307,7 +307,9 @@ export function createPageFactory(
       let error: any
       try {
         state = await statePromise
-        routeModule = await route.load()
+        routeModule = await (options.loadRoute
+          ? options.loadRoute(route, url, state)
+          : route.load())
       } catch (e) {
         error = e
       }

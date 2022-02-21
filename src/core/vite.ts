@@ -1,10 +1,11 @@
 import * as vite from 'vite'
-import { RenderedPage } from '../bundle/types'
-import { ModuleProvider } from '../plugins/moduleProvider'
-import { PublicFile } from '../plugins/publicDir'
-import { SourceMap } from '../utils/sourceMap'
-import { ClientDescription } from './client'
-import { SausContext } from './context'
+import type { RenderedPage } from '../bundle/types'
+import type { ModuleProvider } from '../plugins/moduleProvider'
+import type { PublicFile } from '../plugins/publicDir'
+import type { TestFramework } from '../test'
+import type { SourceMap } from '../utils/sourceMap'
+import type { ClientDescription } from './client'
+import type { SausContext } from './context'
 import './viteRequire'
 
 export { vite }
@@ -99,6 +100,12 @@ export interface SausConfig {
 declare module 'vite' {
   interface UserConfig {
     saus?: Partial<SausConfig>
+    /**
+     * You can't use `saus test` command until this is defined.
+     */
+    testFramework?: (
+      config: import('./vite').UserConfig
+    ) => Promise<TestFramework | { default: TestFramework }>
     /**
      * Filter the stack trace from an SSR error so there's
      * less noise from files you don't care about.

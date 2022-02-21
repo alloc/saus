@@ -112,43 +112,41 @@ importers:
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
       regexparam: 2.0.0
-      rollup-plugin-dts: 4.1.0_typescript@4.4.3
+      rollup-plugin-dts: 4.1.0_2c8c78c351c8d9759647bc04e53c400a
       source-map: 0.6.1
       source-map-support: 0.5.20
       strip-comments: 2.0.1
       ts-debounce: 3.0.0
       tsup: 5.11.13_typescript@4.4.3
       typescript: 4.4.3
-      vitest: 0.0.117
+      vitest: 0.0.117_@alloc+vite@2.6.3-3
 
   examples/react-basic:
     specifiers:
       '@saus/html': '*'
       '@saus/react': '*'
-      '@types/etag': ^1.8.1
+      '@saus/test': '*'
       '@types/node': ^16.10.2
-      '@types/serve-static': ^1.13.10
-      etag: ^1.8.1
       has-flag: ^5.0.1
       kleur: ^4.1.4
       misty: ^1.4.5
-      mrmime: ^1.0.0
       navaid: ^1.2.0
+      react: ^17.0.2
+      react-dom: ^17.0.2
       saus: '*'
     dependencies:
       '@saus/html': link:../../packages/html
       '@saus/react': link:../../packages/react
-      '@types/etag': 1.8.1
+      '@saus/test': link:../../packages/test
       has-flag: 5.0.1
       kleur: 4.1.4
       misty: 1.4.5
-      mrmime: 1.0.0
       navaid: 1.2.0
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
       saus: link:../..
     devDependencies:
       '@types/node': 16.10.2
-      '@types/serve-static': 1.13.10
-      etag: 1.8.1
 
   packages/html:
     specifiers:
@@ -837,6 +835,7 @@ packages:
     resolution: {integrity: sha512-bsKkeSqN7HYyYntFRAmzcwx/dKW4Wa+KVMTInANlI72PWLQmOpZu96j0OqHZGArW4VQwCmJPteQlXaUDeOB0WQ==}
     dependencies:
       '@types/node': 16.10.2
+    dev: true
 
   /@types/glob/7.2.0:
     resolution: {integrity: sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==}
@@ -855,10 +854,6 @@ packages:
     resolution: {integrity: sha512-B9X2CUeDv/uUeY9CqkzSTfmsLkeJP6PkmXlh4lODBbf9SwpmNuLS30WzUOi863dgsjY3zt3gY5q2F+UdifRi1A==}
     dependencies:
       '@types/node': 16.10.2
-    dev: true
-
-  /@types/mime/1.3.2:
-    resolution: {integrity: sha512-YATxVxgRqNH6nHEIsvg6k2Boc1JHI9ZbH5iWFFv/MTkchz3b1ieGDa5T0a9RznNdI0KhVbdbWSN+KWWrQZRxTw==}
     dev: true
 
   /@types/minimatch/3.0.5:
@@ -899,13 +894,6 @@ packages:
 
   /@types/scheduler/0.16.2:
     resolution: {integrity: sha512-hppQEBDmlwhFAXKJX2KnWLYu5yMfi91yazPb2l+lbJiwW+wdo1gNeRA+3RgNSO39WYX2euey41KEwnqesU2Jew==}
-    dev: true
-
-  /@types/serve-static/1.13.10:
-    resolution: {integrity: sha512-nCkHGI4w7ZgAdNkrEu0bv+4xNV/XDqW+DydknebMOQwkpDGx8G+HTlj7R7ABI8i8nKxVw0wtKPi1D+lPOkh4YQ==}
-    dependencies:
-      '@types/mime': 1.3.2
-      '@types/node': 16.10.2
     dev: true
 
   /@types/source-map-support/0.5.4:
@@ -1910,6 +1898,7 @@ packages:
   /etag/1.8.1:
     resolution: {integrity: sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=}
     engines: {node: '>= 0.6'}
+    dev: false
 
   /exec-buffer/3.2.0:
     resolution: {integrity: sha512-wsiD+2Tp6BWHoVv3B+5Dcx6E7u5zky+hUwOHjuH2hKSLR3dvRmX8fk8UD8uqQixHs4Wk6eDmiegVrMPjKj7wpA==}
@@ -2571,7 +2560,6 @@ packages:
     hasBin: true
     dependencies:
       js-tokens: 4.0.0
-    dev: true
 
   /loud-rejection/1.6.0:
     resolution: {integrity: sha1-W0b4AUft7leIcPCG0Eghz5mOVR8=}
@@ -3085,7 +3073,6 @@ packages:
       object-assign: 4.1.1
       react: 17.0.2
       scheduler: 0.20.2
-    dev: true
 
   /react-refresh/0.10.0:
     resolution: {integrity: sha512-PgidR3wST3dDYKr6b4pJoqQFpPGNKDSCDx4cZoshjXipw3LzO7mG1My2pwEzz2JVkF+inx3xRpDeQLFQGH/hsQ==}
@@ -3098,7 +3085,6 @@ packages:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-    dev: true
 
   /read-pkg-up/1.0.1:
     resolution: {integrity: sha1-nWPBMnbAZZGNV/ACpX9AobZD+wI=}
@@ -3204,7 +3190,7 @@ packages:
       glob: 7.1.6
     dev: false
 
-  /rollup-plugin-dts/4.1.0_typescript@4.4.3:
+  /rollup-plugin-dts/4.1.0_2c8c78c351c8d9759647bc04e53c400a:
     resolution: {integrity: sha512-rriXIm3jdUiYeiAAd1Fv+x2AxK6Kq6IybB2Z/IdoAW95fb4uRUurYsEYKa8L1seedezDeJhy8cfo8FEL9aZzqg==}
     engines: {node: '>=v12.22.7'}
     peerDependencies:
@@ -3212,6 +3198,7 @@ packages:
       typescript: ~4.1 || ~4.2 || ~4.3 || ~4.4 || ~4.5
     dependencies:
       magic-string: 0.25.7
+      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.4.3
     optionalDependencies:
       '@babel/code-frame': 7.16.7
@@ -3242,7 +3229,6 @@ packages:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-    dev: true
 
   /seek-bzip/1.0.6:
     resolution: {integrity: sha512-e1QtP3YL5tWww8uKaOCQ18UxIT2laNBXHjV/S2WYCiK4udiv8lkG89KRIoCjUagnAmCBurjF4zEVX2ByBbnCjQ==}
@@ -3710,7 +3696,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: false
 
-  /vitest/0.0.117:
+  /vitest/0.0.117_@alloc+vite@2.6.3-3:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -3733,6 +3719,7 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
+      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/1.3.1:

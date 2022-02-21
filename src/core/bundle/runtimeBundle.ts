@@ -29,6 +29,7 @@ const sausExternals = [
   'bundle/functions.ts',
   'bundle/routes.ts',
   'client/routes.ts',
+  'client/baseUrl.ts',
 ]
 
 // These imports are handled by Rollup.
