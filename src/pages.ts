@@ -55,6 +55,7 @@ export function createPageFactory(
   onError: (error: any) => void = context.logger.error
 ) {
   let {
+    basePath,
     beforeRenderHooks,
     defaultRenderer,
     defaultRoute,
@@ -118,7 +119,7 @@ export function createPageFactory(
     const { path } = url
     const request: RenderRequest = {
       path,
-      file: getPageFilename(path, context.basePath),
+      file: getPageFilename(path, basePath),
       query: url.search,
       params: state.routeParams,
       module: routeModule,

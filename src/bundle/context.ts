@@ -2,11 +2,7 @@ import { withCache } from '../core/withCache'
 import type { PageFactoryContext } from '../pages/types'
 import config from './config'
 
-interface RuntimeContext extends PageFactoryContext {
-  debugBasePath: string
-}
-
-export const context: RuntimeContext = {
+export const context: PageFactoryContext = {
   defaultPath: config.defaultPath,
   defaultState: [],
   getCachedPage: withCache({
@@ -17,14 +13,7 @@ export const context: RuntimeContext = {
   logger: {
     error: console.error,
   },
-  // Lazy binding so "config.base" can be mutated.
-  get basePath() {
-    return config.base
-  },
-  // Enable "debug view" when this begins the URL pathname.
-  get debugBasePath() {
-    return config.debugBase ? config.base.replace(/\/$/, config.debugBase) : ''
-  },
+  basePath: config.base,
   beforeRenderHooks: [],
   runtimeHooks: [],
   renderers: [],
