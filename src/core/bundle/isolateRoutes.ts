@@ -366,8 +366,9 @@ export async function isolateRoutes(
   }
 
   const resolveSsrImports =
-    (hoistedImports: Set<string>) => async (id: string, importer: string) => {
-      if (relativePathRE.test(id)) {
+    (hoistedImports: Set<string>) =>
+    async (id: string, importer?: string | null) => {
+      if (importer && relativePathRE.test(id)) {
         id = resolve(dirname(importer), id)
         hoistedImports.add(id)
         return isolatedIds[id] || toSsrPath(id, config.root)
