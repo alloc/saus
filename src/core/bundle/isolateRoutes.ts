@@ -1,3 +1,4 @@
+import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
 import endent from 'endent'
 import escalade from 'escalade/sync'
@@ -13,9 +14,8 @@ import {
   createModuleProvider,
   ModuleProvider,
 } from '../../plugins/moduleProvider'
-import { bareImportRE, relativePathRE } from '../../utils/importRegex'
 import { dedupe } from '../../utils/dedupe'
-import { findPackage } from '../../utils/findPackage'
+import { bareImportRE, relativePathRE } from '../../utils/importRegex'
 import { plural } from '../../utils/plural'
 import { relativeToCwd } from '../../utils/relativeToCwd'
 import {
@@ -233,7 +233,32 @@ export async function isolateRoutes(
       }
     },
     async load(id) {
-      const transformed = await transform(toDevPath(id, config.root, true))
+      try {
+        var transformed = await transform(toDevPath(id, config.root, true))
+      } catch (e: any) {
+        // Acorn parsing error
+        const loc = /\((\d+):(\d+)\)$/.exec(e.message)
+        if (loc && e.pluginCode) {
+          const line = Number(loc[1])
+          const column = Number(loc[2]) + 1
+          const lines = e.pluginCode.split('\n') as string[]
+          if (line == lines.length && lines[line - 1][column - 1] == null) {
+            e.message = 'Unexpected end of file'
+          }
+          const frame = codeFrameColumns(
+            e.pluginCode,
+            { start: { line, column } },
+            {
+              message: e.message,
+              highlightCode: true,
+              linesAbove: 10,
+              linesBelow: 10,
+            }
+          )
+          e.message += '\n\n' + frame + '\n'
+        }
+        throw e
+      }
       if (transformed) {
         let { code, map } = transformed as IsolatedModule
         if (map) {
