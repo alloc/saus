@@ -35,3 +35,9 @@ export function loadSourceMap(code: string, file: string) {
   }
   return converter?.toObject() as SourceMap | undefined
 }
+
+const sourceMappingUrlRE = new RegExp('\\n//# sourceMappingURL=\\S+', 'g')
+
+export function removeSourceMapUrls(code: string) {
+  return code.replace(sourceMappingUrlRE, '')
+}

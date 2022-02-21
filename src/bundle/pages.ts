@@ -7,6 +7,7 @@ import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
+import { removeSourceMapUrls } from '../utils/sourceMap'
 import { ParsedUrl, parseUrl } from '../utils/url'
 import moduleMap from './clientModules'
 import config from './config'
@@ -211,9 +212,11 @@ export async function renderPage(
 
     // The hydrating module is inlined.
     const hydrateModule = moduleMap[hydrateImport]
-    const hydrateText = isDebug
-      ? rewriteImports(hydrateModule, new Set(), base)
-      : hydrateModule.text
+    const hydrateText = removeSourceMapUrls(
+      isDebug
+        ? rewriteImports(hydrateModule, new Set(), base)
+        : hydrateModule.text
+    )
     hydrateModule.imports?.forEach(addModule)
 
     // Hydrate the page. The route module is imported dynamically to ensure
@@ -321,9 +324,11 @@ function rewriteImports(
       imported.add(module.id)
     } else {
       // Modules that export nothing are inlined.
-      const text = module.imports
-        ? rewriteImports(module, imported, resolvedBase)
-        : module.text
+      const text = removeSourceMapUrls(
+        module.imports
+          ? rewriteImports(module, imported, resolvedBase)
+          : module.text
+      )
 
       splices.push([importStmt.start, importStmt.end, text])
     }
