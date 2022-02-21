@@ -5,12 +5,11 @@ import { context } from './context'
 import { ssrImport } from './ssrModules'
 
 const { logger } = context
-const debugBase =
-  config.debugBase && config.base.replace(/\/$/, config.debugBase)
 
 export async function getKnownPaths(options: { noDebug?: boolean } = {}) {
   const paths: string[] = []
   const errors: { reason: string; path: string }[] = []
+  const debugBase = context.debugBasePath
 
   await ssrImport(config.ssrRoutesId)
   await generateRoutePaths(context, {
