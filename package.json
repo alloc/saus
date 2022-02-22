@@ -61,6 +61,7 @@
     "node-abort-controller": "^3.0.1",
     "rollup": "npm:@aleclarson/rollup@^2.62.1",
     "shared-log": "^1.2.4",
+    "strict-event-emitter-types": "^2.0.0",
     "terser": "^5.10.0",
     "tinypool": "^0.1.1",
     "vite": "npm:@alloc/vite@2.6.3-3"

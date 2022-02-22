@@ -1,7 +1,9 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
+import http from 'http'
 import { gray } from 'kleur/colors'
 import path from 'path'
+import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
 import { getPageFilename, SausContext } from './core'
@@ -24,8 +26,31 @@ import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule } from './vm/moduleMap'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
 
-export async function createServer(inlineConfig?: vite.UserConfig) {
-  const events = new EventEmitter()
+export interface SausDevServer {
+  (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void): void
+
+  events: SausDevServer.EventEmitter
+  restart(): void
+  close(): Promise<void>
+}
+
+export namespace SausDevServer {
+  export interface Events {
+    listening(): void
+    restart(): void
+    close(): void
+    error(e: any): void
+  }
+  export type EventEmitter = StrictEventEmitter<
+    import('events').EventEmitter,
+    Events
+  >
+}
+
+export async function createServer(
+  inlineConfig?: vite.UserConfig
+): Promise<SausDevServer> {
+  const events: SausDevServer.EventEmitter = new EventEmitter()
   const createContext = () =>
     loadContext('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
@@ -84,41 +109,57 @@ export async function createServer(inlineConfig?: vite.UserConfig) {
     }
   })
 
-  return {
-    events,
-    restart,
-    async close() {
-      process.off('unhandledRejection', onError)
-      events.emit('close')
-      try {
-        const server = await serverPromise
-        await server?.close()
-      } catch (e) {
-        onError(e)
-      } finally {
-        removeExitCallback(onExit)
+  function middleware(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    next?: () => void
+  ): void {
+    serverPromise.then(server => {
+      if (server) {
+        server.middlewares(req, res, next)
+      } else if (next) {
+        next()
       }
-    },
+    }, next)
   }
+
+  middleware.events = events
+  middleware.restart = restart
+  middleware.close = async () => {
+    process.off('unhandledRejection', onError)
+    events.emit('close')
+    try {
+      const server = await serverPromise
+      await server?.close()
+    } catch (e) {
+      onError(e)
+    } finally {
+      removeExitCallback(onExit)
+    }
+  }
+
+  return middleware
 }
 
 async function startServer(
   context: SausContext,
   moduleMap: ModuleMap,
-  events: EventEmitter,
+  events: SausDevServer.EventEmitter,
   isRestart?: boolean
 ) {
   const server = await vite.createServer(context.config)
   const watcher = server.watcher!
 
   // Listen immediately to ensure `buildStart` hook is called.
-  await listen(server, events, isRestart)
+  if (server.httpServer) {
+    await listen(server, events, isRestart)
 
-  if (context.logger.isLogged('info')) {
-    context.logger.info('')
-    server.printUrls()
-    server.bindShortcuts()
-    context.logger.info('')
+    if (context.logger.isLogged('info')) {
+      context.logger.info('')
+      server.printUrls()
+      server.bindShortcuts()
+      context.logger.info('')
+    }
   }
 
   // Ensure the Vite config is watched.
@@ -126,12 +167,10 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const resolveId: ResolveIdHook = async (id, importer) => {
-    const resolved = await server.pluginContainer.resolveId(id, importer, {
-      ssr: true,
-    })
-    return resolved?.id
-  }
+  const resolveId: ResolveIdHook = async (id, importer) =>
+    await server.pluginContainer
+      .resolveId(id, importer!, { ssr: true })
+      .then(resolved => resolved?.id)
 
   context.moduleMap = moduleMap
   context.server = server
@@ -272,12 +311,13 @@ async function startServer(
     }
   })
 
+  events.emit('listening')
   return server
 }
 
 function listen(
   server: vite.ViteDevServer,
-  events: EventEmitter,
+  events: SausDevServer.EventEmitter,
   isRestart?: boolean
 ): Promise<void> {
   let listening = false
@@ -322,7 +362,7 @@ function listen(
 function waitForChanges(
   input: string | Set<string>,
   server: vite.ViteDevServer,
-  events: EventEmitter,
+  events: SausDevServer.EventEmitter,
   callback: () => void
 ) {
   const { logger } = server.config
