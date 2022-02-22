@@ -106,12 +106,14 @@ export function clientPlugin(
           modulesToPreload.push(clientUrl)
 
           if (server) {
+            const clientVirtualId = clientUrlPrefix + client.id
+
             // Cache the generated client.
-            await server.transformRequest(clientUrl)
+            await server.transformRequest(clientVirtualId)
 
             // Find CSS modules used by the generated client.
             await server.moduleGraph
-              .getModuleByUrl(clientUrl)
+              .getModuleByUrl(clientVirtualId)
               .then(mod => mod && collectCss(mod, server, importedCss))
           }
         }
@@ -128,8 +130,9 @@ export function clientPlugin(
             import { hydrate } from "${sausClientUrl}"
 
             Promise.all([
-              import("${routeModuleUrl}"),
-              import("${clientUrl}")
+              import("${routeModuleUrl}"),${
+            clientUrl && `\nimport("${clientUrl}"),`
+          }
             ]).then(([routeModule]) =>
               hydrate(pageState, routeModule, "${routeModuleUrl}")
             )
