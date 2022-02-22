@@ -45,13 +45,9 @@ export const loadStateModule = <T, Args extends any[]>(
         }
       }
       return result
-    } catch (e: any) {
-      const errorPrefix = `[saus] Failed to load "${cacheKey}" state module.`
-      if (e instanceof Error) {
-        e.message = errorPrefix + ' ' + e.message
-      } else {
-        e = new Error(errorPrefix)
-      }
-      throw e
+    } catch (error: any) {
+      throw error && 'message' in error
+        ? Object.assign(error, { stateModuleKey: cacheKey })
+        : error
     }
   })

@@ -139,7 +139,7 @@ async function startServer(
     await loadRoutes(context, { resolveId })
     await loadRenderers(context, { resolveId })
   } catch (error: any) {
-    // Babel errors use `.id` and Vite SSR uses `.file`
+    // Babel errors use `.id` and Saus VM uses `.file`
     const filename = error.id || error.file
     if (filename) {
       events.emit('error', error)
@@ -346,5 +346,5 @@ function waitForChanges(
   watcher.on('change', onChange)
   events.on('close', onClose)
 
-  logger.info(gray('Waiting for changes...'))
+  logger.info('\n' + gray('Waiting for changes...'))
 }

@@ -11,18 +11,15 @@ export interface StateModuleMap extends Map<string, Promise<any>> {
   ): Promise<any>[]
 }
 
-export function createStateModuleMap(onError: (error: any) => void) {
+export function createStateModuleMap() {
   const map = new Map() as StateModuleMap
   map.load = state => {
     let loading = map.get(state.id)
     if (!loading) {
-      loading = state.load().catch(error => {
-        onError(error)
-        return null
-      })
+      loading = state.load()
       map.set(state.id, loading)
     }
-    return loading
+    return loading.catch(() => null)
   }
   map.include = (include, url, params) => {
     const included =

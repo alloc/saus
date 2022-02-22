@@ -5,9 +5,10 @@ import {
   StackFrame,
   traceStackFrame,
 } from '../utils/resolveStackTrace'
+import { removeSourceMapUrls } from '../utils/sourceMap'
 import { ModuleMap } from './types'
 
-const ignoredFrameRE = /(^node:|\/saus\/(?!examples))/
+const ignoredFrameRE = /(^node:|\/saus\/(?!examples|packages))/
 const kFormattedStack = Symbol.for('saus:formattedStack')
 
 export function formatAsyncStack(
@@ -47,6 +48,16 @@ export function formatAsyncStack(
   // Remove the require stack added by Node.
   stack.header = stack.header.replace(/\nRequire stack:\n.+$/, '')
 
+  const tracedFrames = relevantFrames
+    .map(frame => {
+      const module = moduleMap[frame.file]
+      if (module?.map) {
+        traceStackFrame(frame, module.map)
+      }
+      return frame.text.replace(/ __compiledModule \((.+?)\)/, ' $1')
+    })
+    .join('\n')
+
   if (!relevantFrames[0].file.includes('/vite/')) {
     let file: string | undefined
     let location: SourceLocation | undefined
@@ -67,9 +78,13 @@ export function formatAsyncStack(
     }
 
     if (file && location) {
+      error.file = file
       try {
-        const code = moduleMap[file]?.code ?? fs.readFileSync(file, 'utf8')
-        stack.header = codeFrameColumns(code, location, {
+        const code =
+          moduleMap[file]?.map?.sourcesContent?.[0] ??
+          moduleMap[file]?.code ??
+          fs.readFileSync(file, 'utf8')
+        stack.header = codeFrameColumns(removeSourceMapUrls(code), location, {
           highlightCode: true,
           message: stack.header,
         })
@@ -77,18 +92,7 @@ export function formatAsyncStack(
     }
   }
 
-  error.stack =
-    stack.header +
-    '\n\n' +
-    relevantFrames
-      .map(frame => {
-        const module = moduleMap[frame.file]
-        if (module?.map) {
-          traceStackFrame(frame, module.map)
-        }
-        return frame.text.replace(/ __compiledModule \((.+?)\)/, ' $1')
-      })
-      .join('\n')
+  error.stack = stack.header + '\n\n' + tracedFrames
 }
 
 export function traceDynamicImport(error: any, skip = 0) {

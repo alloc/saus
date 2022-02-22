@@ -19,8 +19,8 @@ import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
 import { CacheControl } from './core/withCache'
-import { createStateModuleMap } from './pages/createStateModuleMap'
 import { handleNestedState } from './pages/handleNestedState'
+import { createStateModuleMap } from './pages/stateModules'
 import {
   ClientFunction,
   ClientFunctions,
@@ -229,7 +229,7 @@ export function createPageFactory(
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
       const time = Date.now()
-      const stateModules = createStateModuleMap(onError)
+      const stateModules = createStateModuleMap()
 
       // Start loading state modules before the route state is awaited.
       for (const included of defaultState.concat([route.include || []])) {
@@ -295,6 +295,7 @@ export function createPageFactory(
     // State modules can be loaded in parallel, since the global state
     // cache is reused by all pages.
     const statePromise = loadClientState(url, params, route)
+    statePromise.catch(noop)
 
     // In SSR mode, multiple pages must not load their modules at the
     // same time, or else they won't be isolated from each other.
@@ -343,6 +344,8 @@ export function createPageFactory(
     }
 
     const statePromise = loadClientState(url, { error }, route)
+    statePromise.catch(noop)
+
     const contextPromise = pageContextQueue.then(async () => {
       const { defaultRenderer, beforeRenderHooks } = await getPageContext(
         url,

@@ -93,14 +93,8 @@ export function createAsyncRequire({
     let nodeResolvedId: string | undefined
     let nodeRequire: NodeRequire
 
-    resolveStep: {
-      try {
-        resolvedId = await resolveId(id, importer, isDynamic)
-      } catch (error: any) {
-        formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-        throw error
-      }
-
+    resolveStep: try {
+      resolvedId = await resolveId(id, importer, isDynamic)
       if (resolvedId) {
         if (isExternalUrl(resolvedId)) {
           if (resolvedId.endsWith('.json')) {
@@ -141,7 +135,6 @@ export function createAsyncRequire({
         }
       } catch (error: any) {
         if (!resolvedId) {
-          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
         }
         if (!isNodeRequirable(resolvedId)) {
@@ -159,6 +152,12 @@ export function createAsyncRequire({
         restoreNodeResolve()
       }
       resolvedId = undefined
+    } catch (error: any) {
+      if (!isDynamic) {
+        callStack = callStack.slice(1)
+      }
+      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+      throw error
     }
 
     let isCached: boolean
@@ -166,7 +165,7 @@ export function createAsyncRequire({
     let module: CompiledModule | undefined
     let importerModule: CompiledModule | undefined
 
-    loadStep: {
+    loadStep: try {
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 
@@ -203,15 +202,12 @@ export function createAsyncRequire({
         module = await registerModuleOnceCompiled(
           moduleMap,
           compileModule(resolvedId, requireAsync).then(module => {
-            if (!module) {
-              const error = Object.assign(
-                Error(`Cannot find module '${resolvedId}'`),
-                { code: 'ERR_MODULE_NOT_FOUND' }
-              )
-              formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-              throw error
+            if (module) {
+              return module
             }
-            return module
+            throw Object.assign(Error(`Cannot find module '${resolvedId}'`), {
+              code: 'ERR_MODULE_NOT_FOUND',
+            })
           })
         )
 
@@ -219,12 +215,7 @@ export function createAsyncRequire({
           connectModules(module, importerModule)
         }
 
-        try {
-          exports = await executeModule(module)
-        } catch (error: any) {
-          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-          throw error
-        }
+        exports = await executeModule(module)
       } else {
         resolvedId = nodeResolvedId!
 
@@ -260,14 +251,18 @@ export function createAsyncRequire({
           stopTracing()
         }
       }
+    } catch (error: any) {
+      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+      throw error
+    } finally {
+      if (!isDynamic) {
+        callStack = callStack.slice(1)
+      }
     }
 
     if (module && importerModule) {
       importerModule.imports.add(module)
       module.importers.add(importerModule, isDynamic)
-    }
-    if (!isDynamic) {
-      callStack = callStack.slice(1)
     }
 
     if (!isCached && isDebug) {

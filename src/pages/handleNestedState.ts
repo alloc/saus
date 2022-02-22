@@ -1,5 +1,5 @@
 import { isStateModule } from '../runtime/stateModules'
-import type { StateModuleMap } from './createStateModuleMap'
+import type { StateModuleMap } from './stateModules'
 
 /**
  * Find state modules in the given object or array. Replace them with an
