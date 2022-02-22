@@ -1,5 +1,5 @@
 import { fatal } from 'misty'
-import { Plugin, reduceSerial, UserConfig, vite } from './core'
+import { Plugin, UserConfig, vite } from './core'
 import { createServer } from './dev'
 import { unwrapDefault } from './utils/unwrapDefault'
 

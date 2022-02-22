@@ -80,7 +80,7 @@ export function withCache(
           if (promise == cache.loading[cacheKey]) {
             delete cache.loading[cacheKey]
           }
-          ctrl.abort('Timed out')
+          ctrl.abort()
           reject(new Error('Timed out'))
         }, secs * 1e3)
 
