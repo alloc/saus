@@ -18,9 +18,7 @@
       "node": "./client/index.cjs",
       "default": "./client/index.js"
     },
-    "./client/env": {
-      "types": "./client/env.d.ts"
-    },
+    "./env/*": "./env/*.d.ts",
     "./core": "./core/index.js",
     "./http": "./http/index.js"
   },
@@ -31,6 +29,7 @@
     "bundle",
     "client",
     "core",
+    "env",
     "http"
   ],
   "scripts": {
