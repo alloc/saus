@@ -1,11 +1,14 @@
 // HTTP helpers suitable for Node environments.
 import http from 'http'
 import https from 'https'
-import md5Hex from 'md5-hex'
 import type { CacheControl } from '../core/withCache'
 import { getCachedState } from '../runtime/getCachedState'
+import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
+import { loadResponseCache } from './responseCache'
 import { Response } from './response'
+import { HttpOptions } from './types'
+import { requestHook, responseHook } from './hooks'
 
 type URL = import('url').URL
 declare const URL: typeof import('url').URL
@@ -14,6 +17,8 @@ export type GetOptions = {
   headers?: Record<string, string>
   timeout?: number
 }
+
+const responseCache = loadResponseCache(process.cwd())
 
 /**
  * Do one thing, do it well.
@@ -26,14 +31,29 @@ export function get(url: string | URL, opts?: GetOptions) {
     opts?.headers
   )
   return getCachedState(cacheKey, cacheControl => {
+    const cached = responseCache.read(cacheKey)
+    if (cached) {
+      debug('Using cached GET request: %O', url)
+      return Promise.resolve(cached)
+    }
     debug('Sending GET request: %O', url)
-    return new Promise(resolvedGet.bind(null, url, opts || {}, cacheControl, 0))
+    return new Promise<Response>(
+      (resolvedGet as Function).bind(
+        null,
+        url,
+        opts || {},
+        Error(),
+        cacheControl,
+        0
+      )
+    )
   })
 }
 
 function resolvedGet(
   url: string | URL,
   opts: GetOptions,
+  trace: Error,
   cacheControl: CacheControl,
   redirectCount: number,
   resolve: (response: Response) => void,
@@ -43,46 +63,71 @@ function resolvedGet(
     url = new URL(url)
   }
 
-  const request = urlToHttpOptions(url)
-  request.headers = opts.headers
-  request.timeout = opts.timeout
+  const req = urlToHttpOptions(url)
+  req.headers = opts.headers
+  req.timeout = opts.timeout
 
-  const trace = Error()
+  Promise.resolve(requestHook.current(req)).then(resp => {
+    const onResponse = (resp: Response) =>
+      Promise.resolve(responseHook.current(req, resp)).then(() => {
+        if (resp.status == 200) {
+          useCacheControl(cacheControl, resp.headers['cache-control'] as string)
+          if (isFinite(cacheControl.maxAge)) {
+            responseCache.write(cacheControl.key, resp, cacheControl.maxAge)
+          }
+        }
+        return resolve(resp)
+      }, reject)
 
-  return (url.protocol == 'http' ? http : https)
-    .request(request, resp => {
-      const chunks: Buffer[] = []
-      resp.on('data', chunk => {
-        chunks.push(chunk)
-      })
-      resp.on('error', e => {
-        trace.message = e.message
-        reject(trace)
-      })
-      resp.on('close', () => {
-        if (isRedirect(resp) && redirectCount < 10) {
-          return resolvedGet(
-            resp.headers.location,
+    return resp
+      ? onResponse(resp)
+      : sendRequest(req, trace, reject, onResponse, redirectCount, url =>
+          /* onRedirect */
+          resolvedGet(
+            url,
             opts,
+            trace,
             cacheControl,
             redirectCount + 1,
             resolve,
             reject
           )
-        }
-        const status = resp.statusCode!
-        if (status >= 200 && status < 400) {
-          if (status == 200) {
-            useCacheControl(cacheControl, resp.headers['cache-control'])
-          }
-          return resolve(
-            new Response(Buffer.concat(chunks), status, resp.headers)
-          )
-        }
-        trace.message = `Request to ${url} ended with status code ${resp.statusCode}.`
-        reject(trace)
-      })
+        )
+  }, reject)
+}
+
+function sendRequest(
+  opts: HttpOptions,
+  trace: Error,
+  reject: (e: any) => void,
+  resolve: (resp: Response) => void,
+  redirectCount: number,
+  onRedirect: (url: string) => void
+) {
+  const { request } = opts.protocol == 'http:' ? http : https
+  request(opts, resp => {
+    const chunks: Buffer[] = []
+    resp.on('data', chunk => {
+      chunks.push(chunk)
     })
+    resp.on('error', e => {
+      trace.message = e.message
+      reject(trace)
+    })
+    resp.on('close', () => {
+      if (isRedirect(resp) && redirectCount < 10) {
+        return onRedirect(resp.headers.location)
+      }
+      const status = resp.statusCode!
+      if (status >= 200 && status < 400) {
+        return resolve(
+          new Response(Buffer.concat(chunks), status, resp.headers)
+        )
+      }
+      trace.message = `Request to ${opts.href} ended with status code ${resp.statusCode}.`
+      reject(trace)
+    })
+  })
     .on('error', e => {
       trace.message = e.message
       reject(trace)
@@ -96,22 +141,6 @@ function isRedirect(resp: {
 }): resp is { headers: { location: string } } {
   const status = resp.statusCode!
   return (status == 301 || status == 302) && !!resp.headers.location
-}
-
-function getCacheKey(url: string, headers?: Record<string, string>) {
-  let cacheKey = 'GET ' + url
-  if (headers) {
-    const keys = Object.keys(headers)
-    if (keys.length > 1) {
-      headers = keys.sort().reduce((sorted: any, key: string) => {
-        sorted[key] = headers![key]
-        return sorted
-      }, {})
-    }
-    const hash = md5Hex(JSON.stringify(headers))
-    cacheKey += ' ' + hash.slice(0, 8)
-  }
-  return cacheKey
 }
 
 const noCacheDirective = 'no-cache'
@@ -130,13 +159,6 @@ function useCacheControl(cacheControl: CacheControl, header?: string) {
       cacheControl.maxAge = Number(maxAge.slice(maxAgeDirective.length + 1))
     }
   }
-}
-
-interface HttpOptions extends http.RequestOptions {
-  hash?: string
-  search?: string
-  pathname?: string
-  href?: string
 }
 
 // https://github.com/nodejs/node/blob/0de6a6341a566f990d0058b28a0a3cb5b052c6b3/lib/internal/url.js#L1388
