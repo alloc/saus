@@ -13,7 +13,7 @@ import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
 import { clientDir, runtimeDir } from './core/paths'
-import { clientPlugin } from './plugins/client'
+import { clientPlugin, getClientUrl } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
 import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
@@ -263,6 +263,14 @@ async function startServer(
 
         if (needsRestart) {
           return events.emit('restart')
+        }
+
+        const pages = await context.getCachedPages()
+        for (const page of pages) {
+          if (page.client) {
+            // Ensure client entry modules are updated.
+            changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
+          }
         }
       } catch (error: any) {
         events.emit('error', error)
