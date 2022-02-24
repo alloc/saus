@@ -319,7 +319,12 @@ async function startServer(
     }
   })
 
-  events.emit('listening')
+  // Use process.nextTick to ensure whoever is awaiting the `createServer`
+  // call can handle this event.
+  process.nextTick(() => {
+    events.emit('listening')
+  })
+
   return server
 }
 
