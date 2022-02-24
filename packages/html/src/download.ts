@@ -8,6 +8,7 @@ import {
   setup,
   unwrapBuffer,
   isExternalUrl,
+  limitTime,
 } from 'saus/core'
 import { get, Response } from 'saus/http'
 import { debug } from './debug'
@@ -28,6 +29,7 @@ interface FileCache extends Map<string, File> {
 }
 
 export type DownloadOptions = {
+  timeout?: number
   enforce?: EnforcementPhase
   skip?: (url: string) => boolean
   onRequest?: (url: string) => void
@@ -82,8 +84,12 @@ function installHtmlHook({
         if (listeners) {
           listeners.push(onLoad)
         } else {
-          debug(`loading asset: ${url}`)
-          const loading = fetch(url, files)
+          debug(`loading asset: %O`, url)
+          const loading = limitTime(
+            fetch(url, files),
+            options.timeout ?? 0,
+            `Asset loading took too long: ${url}`
+          )
           files.set(file, [loading, [onLoad]])
         }
       }
