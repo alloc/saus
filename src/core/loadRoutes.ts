@@ -28,6 +28,7 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
   const routesModule =
     moduleMap[context.routesPath] ||
     (await compileRoutesModule(context, options, moduleMap))
+
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],
@@ -36,8 +37,15 @@ export async function loadRoutes(context: SausContext, options: LoadOptions) {
   try {
     await executeModule(routesModule)
     context.compileCache.locked = false
+
+    // Exclude the routes module from its package, or else it
+    // will have its modules cleared when it shouldn't.
+    routesModule.package?.delete(routesModule)
+    routesModule.package = undefined
+
     Object.assign(context, routesConfig)
     injectRoutesMap(context)
+
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
     formatAsyncStack(error, moduleMap, [], context.config.filterStack)
