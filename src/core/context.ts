@@ -85,6 +85,7 @@ function createContext(
     return Object.values(pageCache.loaded)
       .map(entry => entry[0])
       .concat(await Promise.all(Object.values(pageCache.loading)))
+      .filter(Boolean)
   }
 
   return {
