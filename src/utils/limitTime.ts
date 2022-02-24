@@ -1,16 +1,19 @@
 type Promisable<T> = T | PromiseLike<T>
 
-export const limitTime = <T>(
+export function limitTime<T>(
   promise: Promisable<T>,
   secs: number,
   reason?: string
-) =>
-  secs <= 0 || !(promise instanceof Promise)
-    ? Promise.resolve(promise)
-    : Promise.race([
-        promise,
-        new Promise<T>((_, reject) => {
-          const id = setTimeout(() => reject(reason || 'Timed out'), secs * 1e3)
-          promise.finally(() => clearTimeout(id))
-        }),
-      ])
+): Promise<T> {
+  if (secs <= 0 || !(promise instanceof Promise)) {
+    return Promise.resolve(promise)
+  }
+  const trace = Error(reason || 'Timed out')
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      const id = setTimeout(() => reject(trace), secs * 1e3)
+      promise.finally(() => clearTimeout(id))
+    }),
+  ])
+}
