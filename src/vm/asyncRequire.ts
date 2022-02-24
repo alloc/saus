@@ -201,7 +201,7 @@ export function createAsyncRequire({
           break loadStep
         }
 
-        module = await registerModuleOnceCompiled(
+        module ||= await registerModuleOnceCompiled(
           moduleMap,
           compileModule(resolvedId, requireAsync, virtualId).then(module => {
             if (module) {
