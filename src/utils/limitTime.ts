@@ -6,7 +6,7 @@ export const limitTime = <T>(
   reason?: string
 ) =>
   secs <= 0 || !(promise instanceof Promise)
-    ? promise
+    ? Promise.resolve(promise)
     : Promise.race([
         promise,
         new Promise<T>((_, reject) => {
