@@ -120,6 +120,7 @@ export interface UserConfig extends vite.UserConfig {
 
 export interface BuildOptions extends vite.BuildOptions {
   maxWorkers?: number
+  bundlePath?: string
 }
 
 type Promisable<T> = T | Promise<T>

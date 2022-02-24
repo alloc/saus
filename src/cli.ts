@@ -23,7 +23,7 @@ cli
   })
 
 cli
-  .command('build')
+  .command('build [bundlePath]')
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--outDir <dir>', `[string] output directory (default: dist)`)
@@ -31,9 +31,10 @@ cli
     '--emptyOutDir',
     `[boolean] force empty outDir when it's outside of root`
   )
-  .action(async (options: BuildOptions) => {
+  .action(async (bundlePath: string, options: BuildOptions) => {
     const { build } = require('./build') as typeof import('./build')
     try {
+      options.bundlePath = bundlePath
       const { pages, errors } = await build(options)
       if (errors.length) {
         log('')

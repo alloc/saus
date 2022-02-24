@@ -22,7 +22,7 @@ import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { plural } from './utils/plural'
-import { toInlineSourceMap } from './utils/sourceMap'
+import { loadSourceMap, toInlineSourceMap } from './utils/sourceMap'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -35,10 +35,13 @@ export async function build(options: BuildOptions) {
 
   await loadBuildRoutes(context)
 
-  const { code, map } = await bundle(
-    { isBuild: true, absoluteSources: true, preferExternal: true },
-    context
-  )
+  const { code, map } =
+    options.bundlePath && fs.existsSync(options.bundlePath)
+      ? readBundle(options.bundlePath)
+      : await bundle(
+          { isBuild: true, absoluteSources: true, preferExternal: true },
+          context
+        )
 
   const filename = context.compileCache.set(
     'bundle.js',
@@ -191,4 +194,10 @@ function prepareOutDir(
   } else {
     fs.mkdirSync(outDir, { recursive: true })
   }
+}
+
+function readBundle(bundlePath: string) {
+  const code = fs.readFileSync(bundlePath, 'utf8')
+  const map = loadSourceMap(code, bundlePath)
+  return { code, map }
 }
