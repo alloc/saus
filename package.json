@@ -1,0 +1,21 @@
+{
+  "name": "react-starter",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "saus dev",
+    "build": "saus build"
+  },
+  "dependencies": {
+    "@saus/html": "*",
+    "@saus/react": "*",
+    "@types/node": "^16.10.2",
+    "@types/react": "^17.0.39",
+    "@types/react-dom": "^17.0.11",
+    "navaid": "^1.2.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "saus": "*",
+    "typescript": "^4.5.5",
+    "vite-tsconfig-paths": "^3.4.1"
+  }
+}

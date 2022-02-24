@@ -1,0 +1,13 @@
+{
+  "State module": {
+    "prefix": "defineStateModule",
+    "description": "Define a state module in its own file",
+    "body": [
+      "import { defineStateModule } from 'saus/client'",
+      "",
+      "export const $1 = defineStateModule('$2', async function() {",
+      "  return $0",
+      "})"
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "esnext"],
+    "paths": {
+      "@/*": ["components/*", "state/*", "utils/*"]
+    },
+    "resolveJsonModule": true,
+    "types": ["saus/env/client"]
+  }
+}
