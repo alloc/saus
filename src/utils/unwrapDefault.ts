@@ -1,4 +1,4 @@
-export function unwrapDefault(module: any) {
+export function unwrapDefault<T = any>(module: any): T {
   const exported = Object.keys(module)
   if (exported.length == 1 && exported[0] == 'default') {
     return module.default
