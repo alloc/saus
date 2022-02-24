@@ -9,10 +9,10 @@ import {
   toInlineSourceMap,
 } from '../../utils/sourceMap'
 import { SausContext } from '../context'
-import { bundleDir, clientDir, httpDir } from '../paths'
+import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
 
-const sausRoot = path.resolve(__dirname, '../src') + '/'
+const sausRoot = toSausPath('src/')
 const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
 
 const sausVersion = sausRoot.includes('/node_modules/')

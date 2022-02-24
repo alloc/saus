@@ -170,23 +170,24 @@ function getConfigResolver(
     inlineConfig?: vite.InlineConfig
   ) => {
     const isBuild = command == 'build'
+    const sausDefaults: vite.InlineConfig = {
+      configFile: false,
+      server: {
+        preTransformRequests: !isBuild,
+      },
+      ssr: {
+        noExternal: isBuild ? true : ['saus/client'],
+      },
+      build: {
+        ssr: true,
+      },
+      optimizeDeps: {
+        exclude: ['saus'],
+      },
+    }
 
     inlineConfig = vite.mergeConfig(
-      {
-        configFile: false,
-        server: {
-          preTransformRequests: !isBuild,
-        },
-        ssr: {
-          noExternal: isBuild ? true : ['saus/client'],
-        },
-        build: {
-          ssr: true,
-        },
-        optimizeDeps: {
-          exclude: ['saus'],
-        },
-      },
+      sausDefaults,
       inlineConfig
         ? vite.mergeConfig(defaultConfig, inlineConfig)
         : defaultConfig

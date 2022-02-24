@@ -1,5 +1,4 @@
 import { noop } from '../utils/noop'
-import { debug } from './debug'
 import { ImporterSet } from './ImporterSet'
 import { CompiledModule, ModuleMap } from './types'
 
@@ -49,9 +48,8 @@ export function purgeModule(
     visited.add(module.id)
     onModule?.(module)
     for (const importer of module.importers) {
-      resetImporters(importer, visited, onModule)
+      resetModuleAndImporters(importer, visited, onModule)
     }
-    debug('purge module: %O', module.id)
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
       moduleMaps.delete(module)
@@ -63,7 +61,7 @@ export function purgeModule(
 /**
  * Reset the given module and its importers.
  */
-export function resetImporters(
+export function resetModuleAndImporters(
   module: CompiledModule,
   visited = new Set<string>(),
   onModule?: (module: CompiledModule) => void
@@ -72,14 +70,13 @@ export function resetImporters(
     visited.add(module.id)
     onModule?.(module)
     for (const importer of module.importers) {
-      resetImporters(importer, visited, onModule)
+      resetModuleAndImporters(importer, visited, onModule)
     }
     resetModule(module)
   }
 }
 
 export function resetModule(module: CompiledModule) {
-  debug('reset module: %O', module.id)
   module.exports = undefined
   module.package?.delete(module)
   module.package = undefined

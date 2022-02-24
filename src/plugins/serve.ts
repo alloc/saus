@@ -239,6 +239,7 @@ function createServePageFn(
       Object.assign(pageContext, context)
     },
   }
+
   return async (url: string): Promise<ServedPage | undefined> => {
     try {
       let page = await pageFactory.render(url, renderOpts)
