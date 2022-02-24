@@ -94,7 +94,10 @@ async function compileRoutesModule(
     nodeResolve,
     isCompiledModule: isProjectFile,
     // Vite plugins are skipped by the Node pipeline.
-    compileModule: async (id, require) => {
+    compileModule: async (id, require, virtualId) => {
+      if (virtualId) {
+        return compileSsrModule(id, context, ssrRequire)
+      }
       const code = fs.readFileSync(id, 'utf8')
       return compileNodeModule(
         code,

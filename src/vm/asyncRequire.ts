@@ -89,6 +89,7 @@ export function createAsyncRequire({
       ? traceDynamicImport(Error(), 3)
       : (callStack = [getStackFrame(3), ...callStack])
 
+    let virtualId: string | undefined
     let resolvedId: string | undefined
     let nodeResolvedId: string | undefined
     let nodeRequire: NodeRequire
@@ -103,6 +104,7 @@ export function createAsyncRequire({
           return httpImport(resolvedId)
         }
         if (isVirtual(id, resolvedId)) {
+          virtualId = id
           break resolveStep
         }
         if (isCompiledModule(resolvedId)) {
@@ -201,7 +203,7 @@ export function createAsyncRequire({
 
         module = await registerModuleOnceCompiled(
           moduleMap,
-          compileModule(resolvedId, requireAsync).then(module => {
+          compileModule(resolvedId, requireAsync, virtualId).then(module => {
             if (module) {
               return module
             }

@@ -46,7 +46,8 @@ export type ResolveIdHook = (
 
 export type CompileModuleHook = (
   id: string,
-  requireAsync: RequireAsync
+  requireAsync: RequireAsync,
+  virtualId?: string
 ) => Promise<CompiledModule | null>
 
 export type RequireAsync = (
