@@ -3,6 +3,7 @@ import fs from 'fs'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { runBundle } from './build/runBundle'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle } from './bundle'
@@ -10,6 +11,7 @@ import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
+  limitConcurrency,
   RouteParams,
   SausContext,
   vite,
@@ -65,12 +67,24 @@ export async function build(options: BuildOptions) {
   prepareOutDir(outDir, buildOptions.emptyOutDir, context)
   process.chdir(outDir)
 
-  const worker = new WorkerPool({
-    filename: path.resolve(__dirname, 'build/worker.js'),
-    workerData: { code, map, filename },
-    maxThreads: options.maxWorkers,
-    idleTimeout: 2000,
-  }) as BuildWorker
+  let render: (pagePath: string) => Promise<RenderedPage | null>
+  let worker: BuildWorker | undefined
+
+  if (options.maxWorkers === 0) {
+    render = limitConcurrency(
+      context.config.saus.renderConcurrency ?? 1,
+      runBundle({ code, map, filename })
+    )
+  } else {
+    worker = new WorkerPool({
+      filename: path.resolve(__dirname, 'build/worker.js'),
+      workerData: { code, map, filename },
+      maxThreads: options.maxWorkers,
+      idleTimeout: 2000,
+    }) as BuildWorker
+
+    render = worker.run.bind(worker)
+  }
 
   const pages: RenderedPage[] = []
   const errors: FailedPage[] = []
@@ -81,7 +95,7 @@ export async function build(options: BuildOptions) {
     await updateProgress()
     const pagePath = getPagePath(routePath, params)
     try {
-      const page = await worker.run(context.basePath + pagePath.slice(1))
+      const page = await render(context.basePath + pagePath.slice(1))
       if (page) {
         pages.push(page)
         renderCount++
@@ -113,7 +127,9 @@ export async function build(options: BuildOptions) {
   await Promise.all(promises)
   progress.finish()
 
-  await worker.destroy()
+  if (worker) {
+    await worker.destroy()
+  }
 
   if (buildOptions.write !== false) {
     await callPlugins(context.plugins, 'onWritePages', pages)
