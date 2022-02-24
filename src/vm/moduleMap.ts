@@ -1,5 +1,4 @@
 import { noop } from '../utils/noop'
-import { ImporterSet } from './ImporterSet'
 import { CompiledModule, ModuleMap } from './types'
 
 const moduleMaps = new WeakMap<CompiledModule, ModuleMap>()
@@ -84,5 +83,4 @@ export function resetModule(module: CompiledModule) {
     imported.importers.delete(module)
   }
   module.imports.clear()
-  module.importers = new ImporterSet()
 }
