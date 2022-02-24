@@ -175,6 +175,9 @@ function getConfigResolver(
       configFile: false,
       server: {
         preTransformRequests: !isBuild,
+        fs: {
+          allow: [toSausPath('')],
+        },
       },
       ssr: {
         noExternal: isBuild ? true : ['saus/client'],
