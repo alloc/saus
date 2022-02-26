@@ -12,21 +12,14 @@ import {
 } from 'saus/core'
 import { get, Response } from 'saus/http'
 import { debug } from './debug'
-import { HtmlTagPath } from './path'
 import { $ } from './selector'
 import { traverseHtml } from './traversal'
 import { HtmlDocument, HtmlVisitorState } from './types'
 
-type File = [FilePromise, ((url: string) => void)[], string]
-type FilePromise = Promise<string | Buffer>
-
-interface FileCache extends Map<string, File> {
-  load(
-    url: string,
-    fetch: (url: string, files: FileCache) => FilePromise,
-    onLoad: (newUrl: string) => void
-  ): void
-}
+type DataPromise = Promise<string | Buffer>
+type ReplicaListener = (replicaUrl: string) => void
+type Replica = [ReplicaListener[], string | null]
+type File = [source: string, dataPromise: DataPromise, replica: Replica]
 
 export type DownloadOptions = {
   timeout?: number
@@ -70,33 +63,46 @@ function installHtmlHook({
   // Reuse `fetch` calls between pages.
   const requests: { [url: string]: Promise<Buffer> } = {}
 
-  // Exists once writing has begun.
-  let scheduleWrite: ((entry: [string, File]) => void) | undefined
+  // Exists when writing is in progress.
+  let schedule: ((entry: [string, File]) => void) | undefined
 
-  const filesByDocument = new WeakMap<HtmlDocument, FileCache>()
-  const getFiles = (tag: HtmlTagPath) => {
-    let files = filesByDocument.get(tag.document)!
-    if (!files) {
-      files = new Map() as FileCache
-      files.load = (url, fetch, onLoad) => {
-        if (skip(url)) {
-          return debug(`skipped asset: %O`, url)
-        }
-        const filePath = toFilePath(url)
-        const listeners = files.get(filePath)?.[1]
-        if (listeners) {
-          listeners.push(onLoad)
-        } else {
-          debug(`loading asset: %O`, url)
-          const loading = fetch(url, files)
-          const file: File = [loading, [onLoad], url]
-          scheduleWrite?.([filePath, file])
-          files.set(filePath, file)
-        }
-      }
-      filesByDocument.set(tag.document, files)
+  const replicasByUrl = new Map<string, Replica>()
+  const filesByDocument = new WeakMap<HtmlDocument, Map<string, File>>()
+
+  function loadFile(
+    url: string,
+    document: HtmlDocument,
+    fetch: (url: string, document: HtmlDocument) => DataPromise,
+    onReplicate: (replicaUrl: string) => void
+  ) {
+    if (skip(url)) {
+      return debug(`skipped asset: %O`, url)
     }
-    return files
+    let files = filesByDocument.get(document)
+    if (!files) {
+      files = new Map()
+      filesByDocument.set(document, files)
+    }
+    let replica = replicasByUrl.get(url)
+    if (replica) {
+      const [listeners, replicaUrl] = replica
+      if (replicaUrl) {
+        onReplicate(replicaUrl)
+      } else {
+        listeners.push(onReplicate)
+      }
+    } else {
+      debug(`loading asset: %O`, url)
+      const dataPromise = fetch(url, document)
+
+      replica = [[onReplicate], null]
+      replicasByUrl.set(url, replica)
+
+      const file: File = [url, dataPromise, replica]
+      const filePath = toFilePath(url)
+      files.set(filePath, file)
+      schedule?.([filePath, file])
+    }
   }
 
   traverseHtml(options.enforce, [
@@ -106,16 +112,20 @@ function installHtmlHook({
         // This allows other HTML manipulation to occur while downloading.
         async close(tag, state) {
           const { config } = state
+          const files = filesByDocument.get(tag.document)
+          if (!files) {
+            return
+          }
 
-          let totalWritten = 0
-          async function writeOnceLoaded(entry: [string, File]) {
-            const [filePath, [loading, listeners, source]] = entry
+          let numReplicated = 0
+          async function replicate(entry: [string, File]) {
+            const [filePath, [loading, source, replica]] = entry
             const ext = path.extname(filePath)
             try {
               const content = await limitTime(
                 loading,
                 options.timeout ?? 0,
-                `Asset loading took too long: ${source}`
+                `Asset "${source}" is loading too slow`
               )
               const contentHash = md5Hex(content).slice(0, 8)
               const fileName = path.posix.join(
@@ -123,40 +133,38 @@ function installHtmlHook({
                 `${filePath.slice(1, -ext.length)}.${contentHash}${ext}`
               )
 
-              const url = config.base + fileName
-              listeners.forEach(onLoad => onLoad(url))
+              const replicaUrl = config.base + fileName
+              replica[0].forEach(onReplicate => onReplicate(replicaUrl))
+              replica[1] = replicaUrl
 
               await writeFile(fileName, content, state)
               onWriteFile?.(fileName)
-              totalWritten += 1
+              numReplicated += 1
             } catch (err) {
               console.error(err)
             }
           }
 
-          const scheduledWrites = Array.from(getFiles(tag))
-          scheduleWrite = entry => {
-            scheduledWrites.push(entry)
-          }
+          const queue = Array.from(files)
+          schedule = entry => queue.push(entry)
 
-          while (scheduledWrites.length) {
-            debug(
-              `${scheduledWrites.length} remote assets are being replicated`
-            )
-            const writing = Promise.all(scheduledWrites.map(writeOnceLoaded))
-            scheduledWrites.length = 0
+          while (queue.length) {
+            debug(`${queue.length} remote assets are being replicated`)
+            const writing = Promise.all(queue.map(replicate))
+            queue.length = 0
             await writing
           }
-          debug(`${totalWritten} remote assets were saved for rehosting`)
+
+          schedule = undefined
+          debug(`${numReplicated} remote assets were saved for rehosting`)
         },
       },
     },
     $('script[src]', scriptTag => {
       const scriptUrl = scriptTag.attributes.src
       if (typeof scriptUrl == 'string' && isExternalUrl(scriptUrl)) {
-        const files = getFiles(scriptTag)
         // Assume the script does not import anything.
-        files.load(scriptUrl, fetch, url => {
+        loadFile(scriptUrl, scriptTag.document, fetch, url => {
           scriptTag.setAttribute('src', url)
         })
       }
@@ -164,31 +172,22 @@ function installHtmlHook({
     $('link[rel="stylesheet"]', linkTag => {
       const cssUrl = linkTag.attributes.href
       if (typeof cssUrl == 'string' && isExternalUrl(cssUrl)) {
-        const files = getFiles(linkTag)
-        files.load(cssUrl, fetchStyles, url => {
+        loadFile(cssUrl, linkTag.document, fetchStyles, url => {
           linkTag.setAttribute('href', url)
         })
       }
     }),
   ])
 
-  async function fetchStyles(cssUrl: string, files: FileCache) {
+  async function fetchStyles(cssUrl: string, document: HtmlDocument) {
     const cssText = await fetch(cssUrl)
     return replaceCssUrls(
       cssText.toString('utf8'),
       cssUrl,
       assetUrl =>
         new Promise<string>(setAssetUrl => {
-          files.load(
-            assetUrl,
-            url =>
-              limitTime(
-                fetch(url),
-                options.timeout ?? 0,
-                `Asset "${assetUrl}" imported by "${cssUrl}" is loading too slow`
-              ),
-            setAssetUrl
-          )
+          debug(`asset "%s" imported by %s`, assetUrl, cssUrl)
+          loadFile(assetUrl, document, fetch, setAssetUrl)
         })
     )
   }
@@ -229,6 +228,8 @@ function installHtmlHook({
     return request
   }
 }
+
+declare const URL: typeof import('url').URL
 
 function toFilePath(url: string) {
   let filePath = '/'
