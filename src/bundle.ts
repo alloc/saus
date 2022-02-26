@@ -397,6 +397,7 @@ async function generateSsrBundle(
 
   const config = await context.resolveConfig('build', {
     plugins: [
+      options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
       routesPlugin(clientRouteMap)(),
       modules,
@@ -461,11 +462,22 @@ async function generateSsrBundle(
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const bundle = buildResult.output[0].output[0]
 
-  if (bundle.map && options.absoluteSources) {
-    resolveMapSources(bundle.map, bundleOutDir)
-  }
-
   return bundle
+}
+
+function mapSourcesPlugin(outDir: string): vite.Plugin {
+  return {
+    name: 'saus:mapSources',
+    enforce: 'pre',
+    generateBundle(_, chunks) {
+      for (const chunk of Object.values(chunks)) {
+        if (chunk.type == 'asset') continue
+        if (chunk.map) {
+          resolveMapSources(chunk.map, outDir)
+        }
+      }
+    },
+  }
 }
 
 function defineNodeConstants(): vite.Plugin {
