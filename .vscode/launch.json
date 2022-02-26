@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "pwa-node",
+      "request": "launch",
+      "name": "Build react-basic",
+      "cwd": "${workspaceFolder}/examples/react-basic",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/bin/saus",
+      "args": ["build", "--maxWorkers=0", "--cached"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/**"]
+    }
+  ]
+}
