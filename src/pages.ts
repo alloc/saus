@@ -187,7 +187,7 @@ export function createPageFactory(
     config.command !== 'dev'
       ? Math.max(1, config.renderConcurrency ?? os.cpus().length)
       : 1,
-    <T>(pagePath: string, loader: (this: CacheControl) => Promise<T>) =>
+    <T>(pagePath: string, loader: (cacheControl: CacheControl) => Promise<T>) =>
       getCachedPage(pagePath, loader)
   )
 
@@ -408,7 +408,7 @@ export function createPageFactory(
         url = parseUrl(url)
       }
 
-      const cachedPage = await getCachedPage<RenderedPage>(url.path)
+      const cachedPage = getCachedPage<RenderedPage>(url.path)
       if (cachedPage) {
         return cachedPage
       }
@@ -438,7 +438,7 @@ export function createPageFactory(
           )
 
         // Rerender the page on every request.
-        this.maxAge = 1
+        cacheControl.maxAge = 1
 
         return rendering
       })
