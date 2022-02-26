@@ -17,7 +17,7 @@ export const scrapedText = defineStateModule(
     const wikiHtml = (await get(wikiUrl)).toString('utf8')
 
     const isHeading = $('h1, h2, h3')
-    const process = createVisitor<void>(
+    const process = createVisitor<any>(
       $('#Physiology, #Behavior', async heading => {
         heading = heading.parentPath!
         const siblings = heading.parentPath!.children()
@@ -41,7 +41,7 @@ export const scrapedText = defineStateModule(
 )
 
 async function processParagraph(html: string) {
-  const process = createVisitor<void>([
+  const process = createVisitor<any>([
     // Lazy loading is not implemented, so load images immediately.
     $('img.lazyload', img => {
       const src = img.attributes['data-src'] as string

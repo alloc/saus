@@ -44,7 +44,14 @@ export function bindVisitors<
     value: visitors,
   })
 
-  return traverse
+  return traverse as [State] extends [Any]
+    ? (html: string, state?: State) => Promise<string>
+    : (html: string, state: State) => Promise<string>
+}
+
+// Used for `any` type detection.
+declare class Any {
+  private _: any
 }
 
 function injectHtmlTag(html: string) {
