@@ -22,47 +22,40 @@ import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { plural } from './utils/plural'
-import { loadSourceMap, toInlineSourceMap } from './utils/sourceMap'
 
 export type FailedPage = { path: string; reason: string }
 
 export async function build(options: BuildOptions) {
-  const context = await loadBundleContext({
-    write: false,
-    entry: null,
-    format: 'cjs',
-  })
+  const context = await loadBundleContext(
+    { write: false, entry: null, format: 'cjs' },
+    { plugins: [populateSourcesContent()] }
+  )
 
   await loadBuildRoutes(context)
 
-  const { code, map } =
+  const bundleFile = 'bundle.js'
+  if (options.cached) {
+    options.bundlePath = path.join(context.compileCache.path, bundleFile)
+  }
+
+  let { code, map } =
     options.bundlePath && fs.existsSync(options.bundlePath)
-      ? readBundle(options.bundlePath)
+      ? { code: fs.readFileSync(options.bundlePath, 'utf8'), map: undefined }
       : await bundle(
           { isBuild: true, absoluteSources: true, preferExternal: true },
           context
         )
 
-  const filename = context.compileCache.set(
-    'bundle.js',
-    code + (map ? toInlineSourceMap(map) : '')
-  )
-
-  let pageCount = 0
-  let renderCount = 0
-
-  const progress = startTask('0 of 0 pages rendered')
-  const updateProgress = () => {
-    progress.update(`${renderCount} of ${pageCount} pages rendered`)
-    // Wait for console to update.
-    return new Promise(next => setImmediate(next))
+  const mapFile = bundleFile + '.map'
+  if (map) {
+    context.compileCache.set(mapFile, JSON.stringify(map))
+    code += '\n//# sourceMappingURL=' + mapFile
   }
 
-  // Tinypool is ESM only, so use dynamic import to load it.
-  const dynamicImport = (0, eval)('id => import(id)')
-  const WorkerPool = (
-    (await dynamicImport('tinypool')) as typeof import('tinypool')
-  ).default
+  const filename = context.compileCache.set(bundleFile, code)
+  if (options.bundlePath == filename) {
+    context.compileCache.used.add(mapFile)
+  }
 
   const buildOptions = context.config.build
   const outDir = path.resolve(context.root, buildOptions.outDir)
@@ -76,17 +69,33 @@ export async function build(options: BuildOptions) {
   if (options.maxWorkers === 0) {
     render = limitConcurrency(
       context.config.saus.renderConcurrency ?? 1,
-      runBundle({ code, map, filename })
+      runBundle({ code, filename })
     )
   } else {
+    // Tinypool is ESM only, so use dynamic import to load it.
+    const dynamicImport = (0, eval)('id => import(id)')
+    const WorkerPool = (
+      (await dynamicImport('tinypool')) as typeof import('tinypool')
+    ).default
+
     worker = new WorkerPool({
       filename: path.resolve(__dirname, 'build/worker.js'),
-      workerData: { code, map, filename },
+      workerData: { code, filename },
       maxThreads: options.maxWorkers,
       idleTimeout: 2000,
     }) as BuildWorker
 
     render = worker.run.bind(worker)
+  }
+
+  let pageCount = 0
+  let renderCount = 0
+
+  const progress = startTask('0 of 0 pages rendered')
+  const updateProgress = () => {
+    progress.update(`${renderCount} of ${pageCount} pages rendered`)
+    // Wait for console to update.
+    return new Promise(next => process.nextTick(next))
   }
 
   const pages: RenderedPage[] = []
@@ -195,8 +204,20 @@ function prepareOutDir(
   }
 }
 
-function readBundle(bundlePath: string) {
-  const code = fs.readFileSync(bundlePath, 'utf8')
-  const map = loadSourceMap(code, bundlePath)
-  return { code, map }
+function populateSourcesContent(): vite.Plugin {
+  return {
+    name: 'build:sourcemap',
+    generateBundle(_, chunks) {
+      for (const chunk of Object.values(chunks)) {
+        if (chunk.type == 'chunk' && chunk.map) {
+          const sourcesContent = (chunk.map.sourcesContent ||= [])
+          chunk.map.sources.forEach((source, i) => {
+            try {
+              sourcesContent[i] ||= fs.readFileSync(source, 'utf8')
+            } catch {}
+          })
+        }
+      }
+    },
+  }
 }

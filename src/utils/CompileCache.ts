@@ -12,7 +12,7 @@ import { plural } from './plural'
  * prevent clean up in the case of unexpected errors.
  */
 export class CompileCache {
-  private used = new Set<string>()
+  used = new Set<string>()
 
   constructor(readonly name: string, private root: string) {
     // Remove unused files on exit, but only when exiting without error.

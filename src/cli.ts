@@ -25,6 +25,7 @@ cli
 cli
   .command('build [bundlePath]')
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
+  .option('--cached', `[boolean] use the most recent build`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--outDir <dir>', `[string] output directory (default: dist)`)
   .option(
