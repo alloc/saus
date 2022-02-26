@@ -1,13 +1,11 @@
+import remapping from '@ampproject/remapping'
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
+import fs from 'fs'
 import path from 'path'
 import { CompileCache } from '../../utils/CompileCache'
 import { relativeToCwd } from '../../utils/relativeToCwd'
-import {
-  resolveMapSources,
-  SourceMap,
-  toInlineSourceMap,
-} from '../../utils/sourceMap'
+import { resolveMapSources, SourceMap } from '../../utils/sourceMap'
 import { SausContext } from '../context'
 import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
@@ -66,7 +64,14 @@ export async function preBundleSsrRuntime(
   let bundleInfo: RuntimeBundleInfo
 
   const entryPaths = Object.values(entryMap)
-  const entryBundles = Object.keys(entryMap).map(key => cache.get(key + '.js'))
+  const entryBundles = Object.keys(entryMap).map(key => {
+    const code = cache.get(key + '.js')
+    if (code == null) {
+      return null!
+    }
+    const map = JSON.parse(cache.get(key + '.js.map')!)
+    return { code, map }
+  })
 
   if (entryBundles.every(Boolean)) {
     bundleInfo = JSON.parse(cache.get('_bundle.json')!)
@@ -134,20 +139,21 @@ export async function preBundleSsrRuntime(
       delete map.sourcesContent
 
       const file = outputFiles[i]
-      const code = file.text + toInlineSourceMap(map)
-
       const cacheKey = path.relative(cache.path, file.path)
-      cache.set(cacheKey, code)
+      cache.set(cacheKey, file.text)
+      cache.set(cacheKey + '.map', JSON.stringify(map))
 
       const entryPath = entryMap[removeExt(cacheKey)]
       if (entryPath) {
         const entryIndex = entryPaths.indexOf(entryPath)
-        entryBundles[entryIndex] = code
+        entryBundles[entryIndex] = { code: file.text, map }
       }
     }
   }
 
   const cacheDir = cache.path + '/'
+  const chunkPaths = listFiles(cacheDir, true)
+
   return {
     name: 'saus:runtimeBundle',
     enforce: 'pre',
@@ -186,6 +192,21 @@ export async function preBundleSsrRuntime(
         return cache.get(cacheKey)
       }
     },
+    generateBundle(_, chunks) {
+      for (const chunk of Object.values(chunks)) {
+        if (chunk.type == 'asset') continue
+        if (chunk.map) {
+          chunk.map = remapping(chunk.map as any, file => {
+            if (chunkPaths.includes(file)) {
+              const cacheKey = path.relative(cacheDir, file)
+              const map = cache.get(cacheKey + '.map')
+              return map ? JSON.parse(map) : null
+            }
+            return null
+          }) as any
+        }
+      }
+    },
   }
 }
 
@@ -212,4 +233,13 @@ function getBundleInfo(metafile: { outputs: Record<string, any> }) {
 
 function removeExt(file: string) {
   return file.replace(/\.[^.]+$/, '')
+}
+
+function listFiles(dir: string, absolute?: boolean) {
+  try {
+    var files = fs.readdirSync(dir)
+  } catch {
+    return []
+  }
+  return absolute ? files.map(name => path.join(dir, name)) : files
 }
