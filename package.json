@@ -96,7 +96,6 @@
     "regexparam": "^2.0.0",
     "rollup-plugin-dts": "^4.1.0",
     "source-map": "0.6.1",
-    "source-map-support": "^0.5.20",
     "strip-comments": "^2.0.1",
     "ts-debounce": "^3.0.0",
     "tsup": "^5.11.13",
