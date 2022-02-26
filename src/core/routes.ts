@@ -101,6 +101,8 @@ export interface RoutesModule extends HtmlContext {
   routes: Route[]
   /** The route used when no route is matched */
   defaultRoute?: Route
+  /** The route used when an error is thrown while rendering */
+  catchRoute?: Route
 }
 
 type RoutePathHandlers = {

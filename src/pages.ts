@@ -57,6 +57,7 @@ export function createPageFactory(
   let {
     basePath,
     beforeRenderHooks,
+    catchRoute,
     defaultRenderer,
     defaultRoute,
     defaultState,
@@ -255,12 +256,11 @@ export function createPageFactory(
     error: any,
     options: RenderPageOptions
   ) {
-    const route = defaultRoute
-    if (!route) {
+    if (!catchRoute) {
       throw error
     }
 
-    const statePromise = loadClientState(url, { error }, route)
+    const statePromise = loadClientState(url, { error }, catchRoute)
     statePromise.catch(noop)
 
     const contextPromise = pageContextQueue.then(async () => {
@@ -272,7 +272,7 @@ export function createPageFactory(
         throw error
       }
       const state = await statePromise
-      const routeModule = await route.load()
+      const routeModule = await catchRoute!.load()
       return [state, routeModule, defaultRenderer, beforeRenderHooks] as const
     })
 
@@ -283,7 +283,7 @@ export function createPageFactory(
     return renderPage(
       url,
       state,
-      route,
+      catchRoute,
       routeModule,
       renderer,
       beforeRenderHooks

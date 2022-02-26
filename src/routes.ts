@@ -20,6 +20,13 @@ export function route<RoutePath extends string, Module extends object>(
 /** Define the default route */
 export function route(load: RouteLoader): void
 
+/** Define a catch route */
+export function route<RoutePath extends string, Module extends object>(
+  path: 'error',
+  load: RouteLoader<Module>,
+  config?: RouteConfig<Module, { error: any }>
+): void
+
 /** @internal */
 export function route(
   pathOrLoad: string | RouteLoader,
@@ -43,12 +50,12 @@ export function route(
     ...config,
   } as Route
 
-  if (path === 'default') {
-    route.keys = []
-    route.pattern = /./
-    routesModule.defaultRoute = route
-  } else {
+  if (path[0] === '/') {
     Object.assign(route, RegexParam.parse(path))
     routesModule.routes.push(route)
+  } else if (path === 'default') {
+    routesModule.defaultRoute = route
+  } else if (path === 'error') {
+    routesModule.catchRoute = route
   }
 }
