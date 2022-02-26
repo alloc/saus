@@ -181,50 +181,14 @@ export function createPageFactory(
     return page
   }
 
-  type RenderPageFn = (url: ParsedUrl) => Promise<RenderedPage | null>
-
   const queuePage = limitConcurrency(
     // TODO: allow parallel rendering in dev mode?
     config.command !== 'dev'
       ? Math.max(1, config.renderConcurrency ?? os.cpus().length)
       : 1,
-    (
-      url: ParsedUrl,
-      renderPage: RenderPageFn,
-      options: RenderPageOptions,
-      cacheControl: CacheControl
-    ) =>
-      setupPromise.then(() => {
-        debug(`Page in progress: %s`, url)
-
-        options.renderStart?.(url.path)
-        const rendering = renderPage(url)
-        if (options.renderFinish)
-          rendering.then(
-            options.renderFinish.bind(null, url.path, null),
-            options.renderFinish.bind(null, url.path)
-          )
-
-        // Rerender the page on every request.
-        cacheControl.maxAge = 1
-
-        return rendering
-      })
+    <T>(pagePath: string, loader: (this: CacheControl) => Promise<T>) =>
+      getCachedPage(pagePath, loader)
   )
-
-  function loadPage(
-    url: string | ParsedUrl,
-    options: RenderPageOptions,
-    renderPage: RenderPageFn
-  ) {
-    if (typeof url == 'string') {
-      url = parseUrl(url)
-    }
-    return getCachedPage<RenderedPage>(
-      url.path,
-      queuePage.bind(null, url, renderPage, options)
-    )
-  }
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
@@ -286,53 +250,6 @@ export function createPageFactory(
     return pageContext
   }
 
-  async function loadPageContext(
-    url: ParsedUrl,
-    params: RouteParams,
-    route: Route,
-    options: RenderPageOptions
-  ) {
-    // State modules can be loaded in parallel, since the global state
-    // cache is reused by all pages.
-    const statePromise = loadClientState(url, params, route)
-    statePromise.catch(noop)
-
-    // In SSR mode, multiple pages must not load their modules at the
-    // same time, or else they won't be isolated from each other.
-    const contextPromise = pageContextQueue.then(async () => {
-      const { renderers, defaultRenderer, beforeRenderHooks } =
-        await getPageContext(url, options)
-
-      let routeModule: RouteModule
-      let state: ClientState
-      let error: any
-      try {
-        state = await statePromise
-        routeModule = await route.load()
-      } catch (e) {
-        error = e
-      }
-
-      return [
-        defaultRenderer,
-        renderers,
-        error,
-        (renderer: Renderer) =>
-          renderPage(
-            url,
-            state,
-            route,
-            routeModule,
-            renderer,
-            beforeRenderHooks
-          ),
-      ] as const
-    })
-
-    pageContextQueue = contextPromise.then(noop, noop)
-    return contextPromise
-  }
-
   async function renderErrorPage(
     url: ParsedUrl,
     error: any,
@@ -387,61 +304,145 @@ export function createPageFactory(
     return []
   }
 
+  async function loadPageContext(
+    url: ParsedUrl,
+    route: Route,
+    options: RenderPageOptions,
+    statePromise: Promise<ClientState>
+  ) {
+    // In SSR mode, multiple pages must not load their modules at the
+    // same time, or else they won't be isolated from each other.
+    const contextPromise = pageContextQueue.then(async () => {
+      const { renderers, defaultRenderer, beforeRenderHooks } =
+        await getPageContext(url, options)
+
+      let routeModule: RouteModule
+      let state: ClientState
+      let error: any
+      try {
+        state = await statePromise
+        routeModule = await route.load()
+      } catch (e) {
+        error = e
+      }
+
+      return [
+        defaultRenderer,
+        renderers,
+        error,
+        (renderer: Renderer) =>
+          renderPage(
+            url,
+            state,
+            route,
+            routeModule,
+            renderer,
+            beforeRenderHooks
+          ),
+      ] as const
+    })
+
+    pageContextQueue = contextPromise.then(noop, noop)
+    return contextPromise
+  }
+
+  async function loadPage(
+    url: ParsedUrl,
+    route: Route,
+    options: RenderPageOptions,
+    statePromise: Promise<ClientState>
+  ) {
+    let [defaultRenderer, renderers, error, render] = await loadPageContext(
+      url,
+      route,
+      options,
+      statePromise
+    )
+
+    let page: RenderedPage | null
+    let renderer: Renderer | undefined
+
+    if (!error)
+      for (renderer of renderers) {
+        if (!renderer.test(url.path)) {
+          continue
+        }
+        try {
+          if ((page = await render(renderer))) {
+            return page
+          }
+        } catch (e) {
+          error = e
+          break
+        }
+      }
+
+    if (!error) {
+      // Skip requests with file extension, unless explicitly
+      // handled by a non-default renderer.
+      if (/\.[^/]+$/.test(url.path)) {
+        return null
+      }
+      if (!(renderer = defaultRenderer)) {
+        debug(`No matching renderer: %s`, url.path)
+        return null
+      }
+      try {
+        if ((page = await render(renderer))) {
+          return page
+        }
+        return null
+      } catch (e) {
+        error = e
+      }
+    }
+
+    return renderErrorPage(url, error, options)
+  }
+
   return {
-    render: (url: string | ParsedUrl, options: RenderPageOptions = {}) =>
-      loadPage(url, options, async url => {
-        const [route, params] = resolveRoute(url)
-        if (!route) {
-          return null
-        }
+    async render(url: string | ParsedUrl, options: RenderPageOptions = {}) {
+      await setupPromise
 
-        let [defaultRenderer, renderers, error, render] = await loadPageContext(
-          url,
-          params || {},
-          route,
-          options
-        )
+      if (typeof url == 'string') {
+        url = parseUrl(url)
+      }
 
-        let page: RenderedPage | null
-        let renderer: Renderer | undefined
+      const cachedPage = await getCachedPage<RenderedPage>(url.path)
+      if (cachedPage) {
+        return cachedPage
+      }
 
-        if (!error)
-          for (renderer of renderers) {
-            if (!renderer.test(url.path)) {
-              continue
-            }
-            try {
-              if ((page = await render(renderer))) {
-                return page
-              }
-            } catch (e) {
-              error = e
-              break
-            }
-          }
+      const [route, params] = resolveRoute(url)
+      if (!route) {
+        return null
+      }
 
-        if (!error) {
-          // Skip requests with file extension, unless explicitly
-          // handled by a non-default renderer.
-          if (/\.[^/]+$/.test(url.path)) {
-            return null
-          }
-          if (!(renderer = defaultRenderer)) {
-            debug(`No matching renderer: %s`, url.path)
-            return null
-          }
-          try {
-            if ((page = await render(renderer))) {
-              return page
-            }
-            return null
-          } catch (e) {
-            error = e
-          }
-        }
+      // State modules can be loaded in parallel, since the global state
+      // cache is reused by all pages.
+      const statePromise = loadClientState(url, params || {}, route)
+      statePromise.catch(noop)
 
-        return renderErrorPage(url, error, options)
-      }),
+      const pagePath = url.path
+      const pageUrl = url
+
+      return queuePage(pagePath, function () {
+        debug(`Page in progress: %s`, pagePath)
+
+        options.renderStart?.(pagePath)
+        const rendering = loadPage(pageUrl, route, options, statePromise)
+        if (options.renderFinish)
+          rendering.then(
+            options.renderFinish.bind(null, pagePath, null),
+            options.renderFinish.bind(null, pagePath)
+          )
+
+        // Rerender the page on every request.
+        this.maxAge = 1
+
+        return rendering
+      })
+    },
   }
 }
 
