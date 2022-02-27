@@ -1,8 +1,14 @@
 import cac from 'cac'
+import * as inspector from 'inspector'
 import { red, gray } from 'kleur/colors'
 import { fatal, success } from 'misty'
 import log from 'shared-log'
 import { BuildOptions, vite } from './core'
+
+declare const globalThis: any
+if (inspector.url()) {
+  globalThis.__inspectorActive = true
+}
 
 const cli = cac('saus')
 

@@ -1,3 +1,5 @@
+declare const globalThis: any
+
 type Promisable<T> = T | PromiseLike<T>
 
 export function limitTime<T>(
@@ -8,7 +10,7 @@ export function limitTime<T>(
   if (!(promise instanceof Promise)) {
     return Promise.resolve(promise)
   }
-  if (secs <= 0) {
+  if (secs <= 0 || globalThis.__inspectorActive) {
     return promise
   }
   const trace = Error(reason || 'Timed out')
