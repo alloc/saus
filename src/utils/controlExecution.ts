@@ -81,18 +81,11 @@ export function controlExecution<Args extends any[], State, Result>(
         calls: new Map(),
       }
 
-      const methods: ExecutionGateMethods<Args> = {
+      const ctx: ExecutionGateContext<State, Args, Result> = {
+        __proto__: state,
         reschedule: scheduleCall,
         execute: executeCall,
-      }
-
-      const ctx = new Proxy(methods as any, {
-        get(methods, key) {
-          return key in methods
-            ? methods[key]
-            : state[key as keyof ExecutorState]
-        },
-      }) as ExecutionGateContext<State, Args, Result>
+      } as any
 
       async function scheduleCall(
         args?: Args,
