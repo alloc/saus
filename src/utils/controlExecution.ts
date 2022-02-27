@@ -32,7 +32,8 @@ export type ExecutionGate<
   Result = any
 > = (
   ctx: ExecutionGateContext<State, Args, Result>,
-  args: Args
+  args: Args,
+  wasQueued?: boolean
 ) => Promisable<void>
 
 /** Calls to this function are intercepted by an execution controller. */
@@ -95,11 +96,12 @@ export function controlExecution<Args extends any[], State, Result>(
 
       async function scheduleCall(
         args?: Args,
+        wasQueued?: boolean,
         call = args && ctx.calls.get(args)
       ) {
         if (!args || !call) return
         try {
-          await schedule(ctx, args)
+          await schedule(ctx, args, wasQueued)
         } catch (e: any) {
           call.reject(e)
         }
@@ -118,12 +120,12 @@ export function controlExecution<Args extends any[], State, Result>(
       function fn(...args: Args): any {
         const call = defer<Awaited<Result>>()
         ctx.calls.set(args, call)
-        scheduleCall(args, call)
+        scheduleCall(args, false, call)
         return call.promise.finally(() => {
           ctx.activeCalls.delete(args)
           ctx.calls.delete(args)
-          queueMicrotask(() => {
-            scheduleCall(ctx.queuedCalls.shift())
+          process.nextTick(() => {
+            scheduleCall(ctx.queuedCalls.shift(), true)
           })
         })
       }
