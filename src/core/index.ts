@@ -12,5 +12,6 @@ export * from '../test'
 export * from '../utils/sourceMap'
 
 export type { ConfigHook, RuntimeConfig } from './config'
+export type { CacheControl } from './withCache'
 export type { SausContext } from './context'
 export type { RenderedPage } from '../pages/types'
