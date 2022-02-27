@@ -1,15 +1,20 @@
 import os from 'os'
 import { ExecutionGateContext } from './controlExecution'
 
+const cpuCount = os.cpus().length
+
 /**
- * Prevent too many active calls at one time. Pass this to
- * the `controlExecution(…).with` method.
+ * Prevent too many active calls at one time.
  *
- * If `limit` is null, then `os.cpus().length` is used.
+ * If `limit` is null or undefined, then `os.cpus().length` is used.
  */
-export function limitConcurrency(limit: number | null) {
-  const maxConcurrency = limit == null ? os.cpus().length : limit
-  return (ctx: ExecutionGateContext) => {
-    return ctx.queuedCalls.length + ctx.activeCalls.size < maxConcurrency
+export function limitConcurrency(limit?: number | null) {
+  const maxConcurrency = limit == null ? cpuCount : limit
+  return (ctx: ExecutionGateContext, wasQueued?: boolean) => {
+    const availableCalls = maxConcurrency - ctx.activeCalls.size
+    if (!wasQueued && ctx.queuedCalls.length >= availableCalls) {
+      return false
+    }
+    return availableCalls > 0
   }
 }
