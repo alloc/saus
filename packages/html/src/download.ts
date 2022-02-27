@@ -1,6 +1,7 @@
 import { relative } from '@cush/relative'
 import fs from 'fs'
 import MagicString from 'magic-string'
+import { startTask } from 'misty/task'
 import path from 'path'
 import {
   EnforcementPhase,
@@ -149,10 +150,12 @@ function installHtmlHook({
           schedule = entry => queue.push(entry)
 
           while (queue.length) {
+            const task = startTask(`Downloading ${queue.length} files...`)
             debug(`${queue.length} remote assets are being replicated`)
             const writing = Promise.all(queue.map(replicate))
             queue.length = 0
             await writing
+            task.finish()
           }
 
           schedule = undefined
