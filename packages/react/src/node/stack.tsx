@@ -10,7 +10,7 @@ if (ReactDebugCurrentFrame) {
     (ReactDOM.renderToNodeStream(<div />) as any).partialRenderer
   )
 
-  const stackFrameRE = /^ {4}at (?:.+?\s+\()?.+?:\d+(?::\d+)?\)?/m
+  const stackFrameRE = /\n {4}at (?:.+?\s+\()?.+?:\d+(?::\d+)?\)?/
 
   // Ensure the component stack is included in stack traces.
   const { render } = ReactDOMServerRendererPrototype
@@ -21,9 +21,11 @@ if (ReactDebugCurrentFrame) {
       const componentStack = ReactDebugCurrentFrame.getStackAddendum()
       const firstFrame = stackFrameRE.exec(err.stack)
       if (firstFrame) {
-        const index = firstFrame.index + firstFrame[0].length
         err.stack =
-          err.stack.slice(0, index) + componentStack + err.stack.slice(index)
+          err.stack.slice(0, firstFrame.index) +
+          (componentStack.startsWith(firstFrame[0]) ? '' : firstFrame[0]) +
+          componentStack +
+          err.stack.slice(firstFrame.index + firstFrame[0].length)
       } else {
         err.message += componentStack
       }
