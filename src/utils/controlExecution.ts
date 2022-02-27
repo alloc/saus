@@ -12,18 +12,18 @@ type Executor<Args extends any[] = any, State = {}, Result = any> = {
   (this: State & ExecutorState<Args>, ...args: Args): Result
 }
 
-type ExecutionGateMethods<Args extends any[] = any[]> = {
+type ExecutionGateMethods<Args extends any[] = any[], Result = any> = {
   /** Rerun the `schedule` handler with the given args. */
   reschedule: (args: Args) => void
   /** Run the wrapped function with the given args immediately. */
-  execute: (args: Args) => Promise<void>
+  execute: (args: Args) => Promise<Result>
 }
 
 export type ExecutionGateContext<
   State = {},
   Args extends any[] = any,
   Result = any
-> = ExecutionGateMethods<Args> & ExecutorState<Args, Result> & State
+> = ExecutionGateMethods<Args, Result> & ExecutorState<Args, Result> & State
 
 /** This function controls which calls are queued and when. */
 export type ExecutionGate<
@@ -108,6 +108,7 @@ export function controlExecution<Args extends any[], State, Result>(
         } catch (e: any) {
           call.reject(e)
         }
+        return call.promise
       }
 
       function fn(...args: Args): any {
