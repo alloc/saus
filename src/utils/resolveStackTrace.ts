@@ -94,11 +94,17 @@ export function traceStackFrame(frame: StackFrame, map: SourceMap) {
   return frame
 }
 
-export function resolveStackTrace(stack: string, code: string, map: SourceMap) {
+export function resolveStackTrace(
+  stack: string,
+  getSourceMap: (file: string) => SourceMap | null
+) {
   const parsed = parseStackTrace(stack)
   const lines = [parsed.header]
   for (const frame of parsed.frames) {
-    traceStackFrame(frame, map)
+    const map = getSourceMap(frame.file)
+    if (map) {
+      traceStackFrame(frame, map)
+    }
     lines.push(frame.text)
   }
 

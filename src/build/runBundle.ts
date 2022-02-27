@@ -1,7 +1,7 @@
 import path from 'path'
 import vm from 'vm'
 import { RenderPageOptions } from '../bundle/types'
-import { loadSourceMap, removeSourceMapUrls, toInlineSourceMap } from '../core'
+import { loadSourceMap, removeSourceMapUrls } from '../core'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
 
 export function runBundle({
@@ -11,14 +11,12 @@ export function runBundle({
   code: string
   filename: string
 }) {
-  const map = loadSourceMap(code, filename)!
-
   const initialize: (exports: any, require: Function) => void =
     vm.runInThisContext(
       `(0, function(exports,require) {` +
         removeSourceMapUrls(code) +
-        `\n})\n//# sourceMappingURL=${path.basename(filename)}.map`,
-      { filename, lineOffset: -1 }
+        `\n})\n//# sourceMappingURL=${path.basename(filename)}.map\n`,
+      { filename }
     )
 
   const exports: any = {}
@@ -29,8 +27,12 @@ export function runBundle({
     try {
       return await renderPage(pagePath, options)
     } catch (e: any) {
-      console.log(e.stack)
-      e.stack = resolveStackTrace(e.stack, code, map)
+      const map = loadSourceMap(code, filename)
+      if (map) {
+        e.stack = resolveStackTrace(e.stack, source => {
+          return source == filename ? map : null
+        })
+      }
       throw e
     }
   }
