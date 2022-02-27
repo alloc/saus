@@ -103,9 +103,12 @@ export async function build(options: BuildOptions) {
   const failedRoutes = new Set<string>()
 
   const renderPage = async (routePath: string, params?: RouteParams) => {
+    const pagePath = getPagePath(routePath, params)
+    if (options.skip && options.skip(pagePath)) {
+      return
+    }
     pageCount++
     await updateProgress()
-    const pagePath = getPagePath(routePath, params)
     try {
       const page = await render(context.basePath + pagePath.slice(1))
       if (page) {

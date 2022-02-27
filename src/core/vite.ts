@@ -119,6 +119,7 @@ export interface UserConfig extends vite.UserConfig {
 }
 
 export interface BuildOptions extends vite.BuildOptions {
+  skip?: (pagePath: string) => boolean
   cached?: boolean
   maxWorkers?: number
   bundlePath?: string

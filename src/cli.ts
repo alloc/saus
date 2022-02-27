@@ -21,29 +21,44 @@ cli
     await createServer({ server: options })
   })
 
+type BuildFlags = BuildOptions & {
+  debug?: boolean
+}
+
 cli
   .command('build [bundlePath]')
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
   .option('--cached', `[boolean] use the most recent build`)
+  .option('--debug', `[boolean] rebuild pages that failed the last run`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--outDir <dir>', `[string] output directory (default: dist)`)
   .option(
     '--emptyOutDir',
     `[boolean] force empty outDir when it's outside of root`
   )
-  .action(async (bundlePath: string, options: BuildOptions) => {
+  .action(async (bundlePath: string, options: BuildFlags) => {
     const { build } = require('./build') as typeof import('./build')
+    const { getFailedPages, setFailedPages } =
+      require('./build/failedPages') as typeof import('./build/failedPages')
+
     try {
+      if (options.debug) {
+        const failedPages = getFailedPages()
+        options.skip = pagePath => !failedPages.includes(pagePath)
+      }
       options.bundlePath = bundlePath
       const { pages, errors } = await build(options)
+      const failedPages: string[] = []
       if (errors.length) {
         log('')
         for (const error of errors) {
+          failedPages.push(error.path)
           log.error(red(`Failed to render`), error.path)
           log.error(`  ` + gray(error.reason))
           log('')
         }
       }
+      setFailedPages(failedPages)
       success(`${pages.length} pages rendered.`)
       process.exit(errors.length ? 1 : 0)
     } catch (e: any) {
