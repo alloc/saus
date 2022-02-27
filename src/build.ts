@@ -122,6 +122,8 @@ export async function build(options: BuildOptions) {
           reason: e.stack,
         })
       }
+      pageCount--
+      await updateProgress()
     }
   }
 
