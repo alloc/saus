@@ -440,7 +440,11 @@ export function createPageFactory(
         // Rerender the page on every request.
         cacheControl.maxAge = 1
 
-        return rendering
+        return limitTime(
+          rendering,
+          options.timeout || 0,
+          `Page "${pagePath}" rendering took too long`
+        )
       })
     },
   }

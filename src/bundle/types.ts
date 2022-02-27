@@ -30,6 +30,7 @@ export interface ClientModuleMap {
 }
 
 export type RenderPageOptions = {
+  timeout?: number
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,
