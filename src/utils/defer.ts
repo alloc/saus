@@ -1,6 +1,6 @@
 export type Deferred<T> = PromiseLike<T> & {
-  resolve: T extends void
-    ? (value?: PromiseLike<void>) => void
+  resolve: undefined extends T
+    ? (value?: T | PromiseLike<T>) => void
     : (value: T | PromiseLike<T>) => void
   reject: (error?: any) => void
   promise: Promise<T>

@@ -1,10 +1,10 @@
 import createDebug from 'debug'
 import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import md5Hex from 'md5-hex'
-import os from 'os'
 import path from 'path'
 import type {
   BeforeRenderHook,
+  CacheControl,
   Client,
   ClientDescription,
   ClientState,
@@ -18,7 +18,6 @@ import type {
 import { setRoutesModule } from './core/global'
 import { mergeHtmlProcessors } from './core/html'
 import { matchRoute } from './core/routes'
-import { CacheControl } from './core/withCache'
 import { handleNestedState } from './pages/handleNestedState'
 import { createStateModuleMap } from './pages/stateModules'
 import {
@@ -32,9 +31,11 @@ import {
 } from './pages/types'
 import { globalCache } from './runtime/cache'
 import { getCachedState } from './runtime/getCachedState'
+import { controlExecution } from './utils/controlExecution'
 import { getPageFilename } from './utils/getPageFilename'
 import { serializeImports } from './utils/imports'
 import { limitConcurrency } from './utils/limitConcurrency'
+import { limitTime } from './utils/limitTime'
 import { noop } from './utils/noop'
 import { parseHead } from './utils/parseHead'
 import { plural } from './utils/plural'
@@ -182,14 +183,31 @@ export function createPageFactory(
     return page
   }
 
-  const queuePage = limitConcurrency(
-    // TODO: allow parallel rendering in dev mode?
-    config.command !== 'dev'
-      ? Math.max(1, config.renderConcurrency ?? os.cpus().length)
-      : 1,
-    <T>(pagePath: string, loader: (cacheControl: CacheControl) => Promise<T>) =>
-      getCachedPage(pagePath, loader)
+  // TODO: allow parallel rendering in dev mode?
+  const isRenderAllowed = limitConcurrency(
+    config.command == 'dev'
+      ? 1
+      : typeof config.renderConcurrency == 'number'
+      ? Math.max(1, config.renderConcurrency)
+      : null
   )
+
+  const queuePage = controlExecution(
+    (
+      pagePath: string,
+      statePromise: Promise<ClientState>,
+      loader: (cacheControl: CacheControl) => Promise<RenderedPage | null>
+    ) => getCachedPage(pagePath, loader)
+  ).with(async (ctx, args) => {
+    // The first page to finish loading its state is rendered next…
+    await args[1]
+    // …as long as not too many pages are currently rendering.
+    if (isRenderAllowed(ctx)) {
+      ctx.execute(args)
+    } else {
+      ctx.queuedCalls.push(args)
+    }
+  })
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
@@ -254,13 +272,10 @@ export function createPageFactory(
   async function renderErrorPage(
     url: ParsedUrl,
     error: any,
+    route: Route,
     options: RenderPageOptions
   ) {
-    if (!catchRoute) {
-      throw error
-    }
-
-    const statePromise = loadClientState(url, { error }, catchRoute)
+    const statePromise = loadClientState(url, { error }, route)
     statePromise.catch(noop)
 
     const contextPromise = pageContextQueue.then(async () => {
@@ -272,7 +287,7 @@ export function createPageFactory(
         throw error
       }
       const state = await statePromise
-      const routeModule = await catchRoute!.load()
+      const routeModule = await route.load()
       return [state, routeModule, defaultRenderer, beforeRenderHooks] as const
     })
 
@@ -283,7 +298,7 @@ export function createPageFactory(
     return renderPage(
       url,
       state,
-      catchRoute,
+      route,
       routeModule,
       renderer,
       beforeRenderHooks
@@ -397,7 +412,10 @@ export function createPageFactory(
       }
     }
 
-    return renderErrorPage(url, error, options)
+    if (catchRoute) {
+      return renderErrorPage(url, error, catchRoute, options)
+    }
+    throw error
   }
 
   return {
@@ -410,7 +428,7 @@ export function createPageFactory(
 
       const cachedPage = getCachedPage<RenderedPage>(url.path)
       if (cachedPage) {
-        return cachedPage
+        return cachedPage.then(page => page || null)
       }
 
       const [route, params] = resolveRoute(url)
@@ -418,15 +436,18 @@ export function createPageFactory(
         return null
       }
 
-      // State modules can be loaded in parallel, since the global state
-      // cache is reused by all pages.
-      const statePromise = loadClientState(url, params || {}, route)
-      statePromise.catch(noop)
-
       const pagePath = url.path
       const pageUrl = url
 
-      return queuePage(pagePath, function () {
+      // State modules can be loaded in parallel, since the global state
+      // cache is reused by all pages.
+      const statePromise = limitTime(
+        loadClientState(url, params || {}, route),
+        options.timeout || 0,
+        `Page "${pagePath}" state loading took too long`
+      )
+
+      return queuePage(pagePath, statePromise, cacheControl => {
         debug(`Page in progress: %s`, pagePath)
 
         options.renderStart?.(pagePath)

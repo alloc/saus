@@ -1,10 +1,10 @@
 // Public utils exposed by "saus/core" for third-party packages
+export * from '../utils/controlExecution'
 export * from '../utils/dataToEsm'
 export * from '../utils/escape'
 export * from '../utils/getPagePath'
 export * from '../utils/getPageFilename'
 export * from '../utils/isExternalUrl'
-export * from '../utils/limitByQueue'
 export * from '../utils/limitConcurrency'
 export * from '../utils/limitTime'
 export * from '../utils/reduceSerial'
