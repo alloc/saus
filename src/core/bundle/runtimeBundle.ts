@@ -5,7 +5,11 @@ import fs from 'fs'
 import path from 'path'
 import { CompileCache } from '../../utils/CompileCache'
 import { relativeToCwd } from '../../utils/relativeToCwd'
-import { resolveMapSources, SourceMap } from '../../utils/sourceMap'
+import {
+  loadSourceMap,
+  resolveMapSources,
+  SourceMap,
+} from '../../utils/sourceMap'
 import { SausContext } from '../context'
 import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
@@ -201,6 +205,10 @@ export async function preBundleSsrRuntime(
               const cacheKey = path.relative(cacheDir, file)
               const map = cache.get(cacheKey + '.map')
               return map ? JSON.parse(map) : null
+            }
+            if (!file.includes('/node_modules/')) {
+              const code = this.getModuleInfo(file)!.code!
+              return loadSourceMap(code, file)
             }
             return null
           }) as any
