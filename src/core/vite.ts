@@ -119,9 +119,16 @@ export interface UserConfig extends vite.UserConfig {
 }
 
 export interface BuildOptions extends vite.BuildOptions {
+  /** Skip certain pages when pre-rendering. */
   skip?: (pagePath: string) => boolean
+  /** Use the bundle from last `saus build` run. */
   cached?: boolean
+  /**
+   * Limit the number of worker threads.  \
+   * Use `0` to run on the main thread only.
+   */
   maxWorkers?: number
+  /** Use this bundle instead of generating one. */
   bundlePath?: string
 }
 
