@@ -3,11 +3,12 @@ import webp, { Options as WebpOptions } from 'imagemin-webp'
 import fs from 'fs/promises'
 import path from 'path'
 import { Plugin } from 'saus'
-import { limitConcurrency } from 'saus/core'
+import { limitConcurrency, controlExecution } from 'saus/core'
 import { createFilter } from '@rollup/pluginutils'
 import md5Hex from 'md5-hex'
 import { MistyTask, startTask } from 'misty/task'
 import { success } from 'misty'
+import { red } from 'kleur/colors'
 
 export interface Options extends WebpOptions {
   /** By default, all `.png` and `.jpg` files are converted. */
@@ -20,27 +21,31 @@ export interface Options extends WebpOptions {
 }
 
 const urlRE = /(\?|&)url(?:&|$)/
+const hasFreeThread = limitConcurrency()
 
 export function convertToWebp(options: Options = {}): Plugin {
-  let numConverting = 0
   let numConverted = 0
   let filter: (id: string) => boolean
   let task: MistyTask | undefined
 
   const converter = webp(options)
-  const convert = limitConcurrency(null, async (data: Buffer) => {
-    if (++numConverting == 1 && !options.silent) {
-      task = startTask('Converting images to WebP')
-    }
-    try {
-      data = await imagemin.buffer(data, { plugins: [converter] })
-      numConverted++
-    } finally {
-      if (--numConverting == 0) {
-        task?.finish()
-      }
-    }
+  const convert = controlExecution(async (data: Buffer) => {
+    data = await imagemin.buffer(data, { plugins: [converter] })
+    numConverted++
     return data
+  }).with((ctx, args) => {
+    if (hasFreeThread(ctx)) {
+      if (!ctx.activeCalls.size && !options.silent) {
+        task = startTask('Converting images to WebP')
+      }
+      ctx.execute(args).finally(() => {
+        if (!ctx.activeCalls.size) {
+          task?.finish()
+        }
+      })
+    } else {
+      ctx.queuedCalls.push(args)
+    }
   })
 
   return {
@@ -82,8 +87,9 @@ export function convertToWebp(options: Options = {}): Plugin {
             success(`[webp] Converted file: "${id}"`)
           }
         } catch (e: any) {
-          logger.error(`[!] Converting "${id}" to WebP failed. ${e.message}`)
-          return
+          return logger.error(
+            red(`[!] Converting "${id}" to WebP failed:\n`) + e.stack
+          )
         }
 
         let fileName = path.join(
