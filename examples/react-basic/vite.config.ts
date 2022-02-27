@@ -13,6 +13,7 @@ export default defineConfig({
       debugBase: '/debug/',
       // minify: true,
     },
+    renderConcurrency: 1,
   },
   build: {
     // minify: false,
