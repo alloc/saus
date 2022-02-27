@@ -198,11 +198,11 @@ export function createPageFactory(
       statePromise: Promise<ClientState>,
       loader: (cacheControl: CacheControl) => Promise<RenderedPage | null>
     ) => getCachedPage(pagePath, loader)
-  ).with(async (ctx, args) => {
+  ).with(async (ctx, args, wasQueued) => {
     // The first page to finish loading its state is rendered next…
     await args[1]
     // …as long as not too many pages are currently rendering.
-    if (isRenderAllowed(ctx)) {
+    if (isRenderAllowed(ctx, wasQueued)) {
       ctx.execute(args)
     } else {
       ctx.queuedCalls.push(args)
