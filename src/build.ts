@@ -11,7 +11,6 @@ import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
-  limitConcurrency,
   RouteParams,
   SausContext,
   vite,
@@ -67,10 +66,7 @@ export async function build(options: BuildOptions) {
   let worker: BuildWorker | undefined
 
   if (options.maxWorkers === 0) {
-    render = limitConcurrency(
-      context.config.saus.renderConcurrency ?? 1,
-      runBundle({ code, filename })
-    )
+    render = runBundle({ code, filename })
   } else {
     // Tinypool is ESM only, so use dynamic import to load it.
     const dynamicImport = (0, eval)('id => import(id)')
