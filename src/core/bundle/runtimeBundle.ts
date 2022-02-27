@@ -207,8 +207,10 @@ export async function preBundleSsrRuntime(
               return map ? JSON.parse(map) : null
             }
             if (!file.includes('/node_modules/')) {
-              const code = this.getModuleInfo(file)!.code!
-              return loadSourceMap(code, file)
+              const info = this.getModuleInfo(file)
+              if (info?.code) {
+                return loadSourceMap(info.code, file)
+              }
             }
             return null
           }) as any
