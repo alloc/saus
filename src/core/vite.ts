@@ -114,8 +114,9 @@ declare module 'vite' {
   }
 }
 
-export interface UserConfig extends vite.UserConfig {
+export interface UserConfig extends Omit<vite.UserConfig, 'build'> {
   saus: SausConfig
+  build?: BuildOptions
 }
 
 export interface BuildOptions extends vite.BuildOptions {
@@ -130,6 +131,8 @@ export interface BuildOptions extends vite.BuildOptions {
   maxWorkers?: number
   /** Use this bundle instead of generating one. */
   bundlePath?: string
+  /** Include `sourcesContent` is cached bundle sourcemap. */
+  sourcesContent?: boolean
 }
 
 type Promisable<T> = T | Promise<T>

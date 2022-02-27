@@ -27,7 +27,7 @@ export type FailedPage = { path: string; reason: string }
 export async function build(options: BuildOptions) {
   const context = await loadBundleContext(
     { write: false, entry: null, format: 'cjs' },
-    { plugins: [populateSourcesContent()] }
+    { plugins: [setSourcesContent(options)] }
   )
 
   await loadBuildRoutes(context)
@@ -203,18 +203,22 @@ function prepareOutDir(
   }
 }
 
-function populateSourcesContent(): vite.Plugin {
+function setSourcesContent(options: BuildOptions): vite.Plugin {
   return {
-    name: 'build:sourcemap',
+    name: 'saus:build:sourcesContent',
     generateBundle(_, chunks) {
       for (const chunk of Object.values(chunks)) {
         if (chunk.type == 'chunk' && chunk.map) {
-          const sourcesContent = (chunk.map.sourcesContent ||= [])
-          chunk.map.sources.forEach((source, i) => {
-            try {
-              sourcesContent[i] ||= fs.readFileSync(source, 'utf8')
-            } catch {}
-          })
+          if (!options.sourcesContent) {
+            chunk.map.sourcesContent = []
+          } else {
+            const sourcesContent = (chunk.map.sourcesContent ||= [])
+            chunk.map.sources.forEach((source, i) => {
+              try {
+                sourcesContent[i] ||= fs.readFileSync(source, 'utf8')
+              } catch {}
+            })
+          }
         }
       }
     },
