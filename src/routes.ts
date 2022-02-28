@@ -10,21 +10,21 @@ import type {
 const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
 
+/** Define the default route */
+export function route(load: RouteLoader): void
+
+/** Define a catch route */
+export function route<Module extends object>(
+  path: 'error',
+  load: RouteLoader<Module>,
+  config?: RouteConfig<Module, { error: any }>
+): void
+
 /** Define a route */
 export function route<RoutePath extends string, Module extends object>(
   path: RoutePath,
   load: RouteLoader<Module>,
   config?: RouteConfig<Module, InferRouteParams<RoutePath>>
-): void
-
-/** Define the default route */
-export function route(load: RouteLoader): void
-
-/** Define a catch route */
-export function route<RoutePath extends string, Module extends object>(
-  path: 'error',
-  load: RouteLoader<Module>,
-  config?: RouteConfig<Module, { error: any }>
 ): void
 
 /** @internal */
