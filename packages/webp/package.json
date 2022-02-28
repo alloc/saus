@@ -21,7 +21,7 @@
     "imagemin": "^7",
     "imagemin-webp": "^6",
     "kleur": "^4.1.4",
-    "misty": "^1.5.0"
+    "misty": "^1.6.0"
   },
   "peerDependencies": {
     "saus": "*"

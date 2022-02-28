@@ -2,6 +2,9 @@ import type { RenderedPage } from '../pages/types'
 import { dataToEsm } from '../utils/dataToEsm'
 import { INDENT, RETURN, SPACE } from './tokens'
 
+/**
+ * Render a client module for the page state.
+ */
 export function renderPageState(
   { path, state, stateModules, head }: RenderedPage,
   base: string,
@@ -14,7 +17,7 @@ export function renderPageState(
   const inlinedStateUrls: string[] = []
   const inlinedStateIdents: string[] = []
 
-  let code = dataToEsm(state, null, (_, value) => {
+  let code = dataToEsm(state._client, null, (_, value) => {
     const inlinedStateId = value && value['@import']
     if (inlinedStateId) {
       let stateUrl = toStateUrl(inlinedStateId)
@@ -34,7 +37,7 @@ export function renderPageState(
   if (inlinedStateUrls.length) {
     const idents = inlinedStateIdents.join(',' + SPACE)
     const imports = inlinedStateUrls
-      .concat(Array.from(stateModuleUrls, toStateUrl))
+      .concat(Array.from(stateModuleUrls))
       .map(url => INDENT + `import("${url}"),`)
 
     helpers.push('resolveModules')

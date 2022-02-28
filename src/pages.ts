@@ -44,7 +44,6 @@ import { ParsedUrl, parseUrl } from './utils/url'
 const debug = createDebug('saus:pages')
 
 const stateModulesMap = new WeakMap<ClientState, string[]>()
-const ssrStateMap = new WeakMap<ClientState, ClientState>()
 
 export type PageFactory = ReturnType<typeof createPageFactory>
 
@@ -125,7 +124,7 @@ export function createPageFactory(
       query: url.search,
       params: state.routeParams,
       module: routeModule,
-      state: ssrStateMap.get(state)!,
+      state,
     }
 
     const usedHooks: BeforeRenderHook[] = []
@@ -219,17 +218,20 @@ export function createPageFactory(
         stateModules.include(included, url, params)
       }
 
-      const state: ClientState = (
+      const clientState: ClientState = (
         route.state
           ? await route.state(Object.values(params), url.searchParams)
           : {}
       ) as any
 
-      state.routePath = route.path
-      state.routeParams = params
+      clientState.routePath = route.path
+      clientState.routeParams = params
 
       // Load any embedded state modules.
-      ssrStateMap.set(state, handleNestedState(state, stateModules))
+      const state = handleNestedState(clientState, stateModules)
+      Object.defineProperty(state, '_client', {
+        value: clientState,
+      })
 
       // Wait for state modules to load.
       await Promise.all(stateModules.values())

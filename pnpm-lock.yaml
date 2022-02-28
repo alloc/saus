@@ -42,7 +42,7 @@ importers:
       kleur: ^4.1.4
       magic-string: ^0.25.7
       md5-hex: ^3.0.0
-      misty: ^1.5.0
+      misty: ^1.6.0
       mrmime: ^1.0.0
       node-abort-controller: ^3.0.1
       prettier: ^2.0.5
@@ -78,6 +78,7 @@ importers:
       etag: 1.8.1
       magic-string: 0.25.7
       md5-hex: 3.0.1
+      misty: 1.6.0
       mrmime: 1.0.0
       node-abort-controller: 3.0.1
       rollup: /@aleclarson/rollup/2.62.1
@@ -110,7 +111,6 @@ importers:
       escalade: 3.1.1
       is-plain-object: 5.0.0
       kleur: 4.1.4
-      misty: 1.5.0
       prettier: 2.4.1
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
@@ -128,19 +128,21 @@ importers:
       '@saus/html': '*'
       '@saus/react': '*'
       '@saus/test': '*'
+      '@saus/webp': '*'
       '@types/node': ^16.10.2
       has-flag: ^5.0.1
       kleur: ^4.1.4
-      misty: ^1.4.5
+      misty: ^1.6.0
       navaid: ^1.2.0
       saus: '*'
     dependencies:
       '@saus/html': link:../../packages/html
       '@saus/react': link:../../packages/react
       '@saus/test': link:../../packages/test
+      '@saus/webp': link:../../packages/webp
       has-flag: 5.0.1
       kleur: 4.1.4
-      misty: 1.4.5
+      misty: 1.6.0
       navaid: 1.2.0
       saus: link:../..
     devDependencies:
@@ -154,6 +156,7 @@ importers:
       css-what: ^6.0.1
       debug: ^4.3.2
       magic-string: ^0.25.7
+      misty: ^1.6.0
       recrawl-sync: ^2.2.1
       saus: '*'
     dependencies:
@@ -161,6 +164,7 @@ importers:
       css-what: 6.0.1
       debug: 4.3.3
       magic-string: 0.25.7
+      misty: 1.6.0
     devDependencies:
       '@types/debug': 4.1.7
       '@types/node': 16.10.2
@@ -214,14 +218,14 @@ importers:
       imagemin: ^7
       imagemin-webp: ^6
       kleur: ^4.1.4
-      misty: ^1.5.0
+      misty: ^1.6.0
       saus: '*'
     dependencies:
       '@rollup/pluginutils': 4.1.2
       imagemin: 7.0.1
       imagemin-webp: 6.0.0
       kleur: 4.1.4
-      misty: 1.5.0
+      misty: 1.6.0
     devDependencies:
       '@types/imagemin-webp': 7.0.0
       saus: link:../..
@@ -263,7 +267,7 @@ packages:
     dependencies:
       '@babel/code-frame': 7.16.7
       esbuild: 0.13.3
-      misty: 1.5.0
+      misty: 1.6.0
       postcss: 8.3.8
       resolve: 1.20.0
       rollup: 2.61.1
@@ -914,6 +918,7 @@ packages:
 
   /@types/node/14.17.20:
     resolution: {integrity: sha512-gI5Sl30tmhXsqkNvopFydP7ASc4c2cLfGNQrVKN3X90ADFWFsPEsotm/8JHSUJQKTHbwowAHtcJPeyVhtKv0TQ==}
+    dev: false
 
   /@types/node/16.10.2:
     resolution: {integrity: sha512-zCclL4/rx+W5SQTzFs9wyvvyCwoK9QtBpratqz2IYJ3O8Umrn0m3nsTv0wQBk9sRGpvUe9CwPDrQFB10f1FIjQ==}
@@ -2834,18 +2839,12 @@ packages:
     resolution: {integrity: sha512-FM9nNUYrRBAELZQT3xeZQ7fmMOBg6nWNmJKTcgsJeaLstP/UODVpGsr5OhXhhXg6f+qtJ8uiZ+PUxkDWcgIXLw==}
     dev: false
 
-  /misty/1.4.5:
-    resolution: {integrity: sha512-S9KV0StLXRDiEik+sVUBW7+vetofsf750CjAFYREB1FmlcG2ntvniNzJDpAjWeJAwB2yL6Z3URezkdGiWyoTvw==}
+  /misty/1.6.0:
+    resolution: {integrity: sha512-xg5D7WIeinlPf7o9PctwGsJwr14hLazx6H47QVL36KlJRSX1X7bdcJiIUryqLfbOoL4sAqW0p1ZxnJ9FaL75Zg==}
     dependencies:
       kleur: 4.1.4
       shared-log: 1.2.4
     dev: false
-
-  /misty/1.5.0:
-    resolution: {integrity: sha512-00ptz3WFKEcYcl42DHwSFWKfZcoKL8NP2zCLla0owaBl5FJHUVmD7trChKiUg3IOXjoT631hC5Jfiux+HJz8ng==}
-    dependencies:
-      kleur: 4.1.4
-      shared-log: 1.2.4
 
   /mlly/0.2.10:
     resolution: {integrity: sha512-xfyW6c2QBGArtctzNnTV5leOKX8nOMz2simeubtXofdsdSJFSNw+Ncvrs8kxcN3pBrQLXuYBHNFV6NgZ5Ryf4A==}
@@ -3499,6 +3498,7 @@ packages:
     dependencies:
       '@types/node': 14.17.20
       callsites: 3.1.0
+    dev: false
 
   /shebang-command/1.2.0:
     resolution: {integrity: sha1-RKrGW2lbAzmJaMOfNj/uXer98eo=}

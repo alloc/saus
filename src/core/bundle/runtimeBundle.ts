@@ -35,7 +35,7 @@ const sausExternals = [
 ]
 
 // These imports are handled by Rollup.
-const bareExternals = [...builtinModules, 'debug']
+const bareExternals = [...builtinModules, 'debug', 'misty']
 
 function buildEntryMap(entries: Record<string, string>) {
   const entryMap: Record<string, string> = {}

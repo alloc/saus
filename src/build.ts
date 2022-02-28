@@ -1,4 +1,3 @@
-import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
@@ -168,9 +167,6 @@ async function loadBuildRoutes(context: SausContext) {
   const loading = startTask('Loading routes...')
   await loadRoutes(context, {
     resolveId(id, importer) {
-      if (builtinModules.includes(id)) {
-        return
-      }
       return pluginContainer
         .resolveId(id, importer!, { ssr: true })
         .then(resolved => resolved?.id)

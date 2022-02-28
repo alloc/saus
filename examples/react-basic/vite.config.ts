@@ -1,5 +1,6 @@
-import { defineConfig } from 'saus'
+import { copyPublicDir, defineConfig } from 'saus'
 import sausTest from '@saus/test'
+import { convertToWebp } from '@saus/webp'
 
 export default defineConfig({
   base: '/staging/',
@@ -18,6 +19,7 @@ export default defineConfig({
   build: {
     // minify: false,
   },
+  plugins: [copyPublicDir(), convertToWebp()],
   // Once you put "types": ["@saus/react"] in your tsconfig.json,
   // you can customize Babel like this:
   babel: {},

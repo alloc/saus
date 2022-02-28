@@ -120,7 +120,7 @@ function installHtmlHook({
 
           let numReplicated = 0
           async function replicate(entry: [string, File]) {
-            const [filePath, [loading, source, replica]] = entry
+            const [filePath, [source, loading, replica]] = entry
             const ext = path.extname(filePath)
             try {
               const content = await limitTime(

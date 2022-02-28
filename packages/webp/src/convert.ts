@@ -3,7 +3,7 @@ import webp, { Options as WebpOptions } from 'imagemin-webp'
 import fs from 'fs/promises'
 import path from 'path'
 import { Plugin } from 'saus'
-import { limitConcurrency, controlExecution } from 'saus/core'
+import { limitConcurrency, controlExecution, plural } from 'saus/core'
 import { createFilter } from '@rollup/pluginutils'
 import md5Hex from 'md5-hex'
 import { MistyTask, startTask } from 'misty/task'
@@ -23,6 +23,12 @@ export interface Options extends WebpOptions {
 const urlRE = /(\?|&)url(?:&|$)/
 const hasFreeThread = limitConcurrency()
 
+/**
+ * Convert images to WebP format.
+ *
+ * Images imported by JS modules are converted by default.  \
+ * Add the `copyPublicDir` plugin to convert images in `public` directory as well.
+ */
 export function convertToWebp(options: Options = {}): Plugin {
   let numConverted = 0
   let filter: (id: string) => boolean
@@ -33,8 +39,8 @@ export function convertToWebp(options: Options = {}): Plugin {
     data = await imagemin.buffer(data, { plugins: [converter] })
     numConverted++
     return data
-  }).with((ctx, args) => {
-    if (hasFreeThread(ctx)) {
+  }).with((ctx, args, wasQueued) => {
+    if (hasFreeThread(ctx, wasQueued)) {
       if (!ctx.activeCalls.size && !options.silent) {
         task = startTask('Converting images to WebP')
       }
@@ -87,7 +93,7 @@ export function convertToWebp(options: Options = {}): Plugin {
             success(`[webp] Converted file: "${id}"`)
           }
         } catch (e: any) {
-          return logger.error(
+          return void logger.error(
             red(`[!] Converting "${id}" to WebP failed:\n`) + e.stack
           )
         }
@@ -106,7 +112,7 @@ export function convertToWebp(options: Options = {}): Plugin {
       }
       this.generateBundle = () => {
         if (!options.silent) {
-          success(`${numConverted} images converted to WebP`)
+          success(`${plural(numConverted, 'image')} converted to WebP`)
         }
       }
     },
@@ -131,7 +137,7 @@ export function convertToWebp(options: Options = {}): Plugin {
             file.suffix = 'webp'
           } catch (e: any) {
             logger.error(
-              `[!] Converting "${file.name}" to WebP failed. ${e.message}`
+              red(`[!] Converting "${file.name}" to WebP failed:\n`) + e.stack
             )
           }
         }
