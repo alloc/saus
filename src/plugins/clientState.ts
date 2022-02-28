@@ -18,8 +18,8 @@ export function transformClientState(): Plugin {
         stateModulesByFile = context.stateModulesByFile
       },
     },
-    async transform(code, id, ssr) {
-      if (ssr) {
+    async transform(code, id, opts) {
+      if (opts?.ssr) {
         return // SSR needs the loader function
       }
       if (!includeRE.test(id)) {
