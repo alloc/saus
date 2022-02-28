@@ -415,6 +415,7 @@ export function createPageFactory(
     }
 
     if (catchRoute) {
+      onError(error)
       return renderErrorPage(url, error, catchRoute, options)
     }
     throw error
