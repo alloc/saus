@@ -67,6 +67,13 @@ export interface RouteConfig<
   include?: RouteInclude
 }
 
+export interface GeneratedRouteConfig<
+  Module extends object = RouteModule,
+  Params extends object = RouteParams
+> extends RouteConfig<Module, Params> {
+  entry: string
+}
+
 export interface ParsedRoute {
   pattern: RegExp
   keys: string[]
@@ -76,6 +83,7 @@ export interface Route extends RouteConfig, ParsedRoute {
   path: string
   load: RouteLoader
   moduleId: string
+  generated?: boolean
 }
 
 export function matchRoute(path: string, route: ParsedRoute) {

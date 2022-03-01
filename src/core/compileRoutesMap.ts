@@ -14,46 +14,15 @@ export async function compileRoutesMap(
   resolveId: (id: string, importer: string) => Promise<ResolvedId | null>,
   clientRouteMap?: Record<string, string>
 ) {
-  const routesModulePath = context.routesPath
-  const routesModule = babel.parseSync(
-    fs.readFileSync(routesModulePath, 'utf8'),
-    getBabelConfig(routesModulePath)
-  )!
-
-  let defaultRoute: string | undefined
-  let unresolvedRoutes: [string, string][] = []
-
-  babel.traverse(routesModule, {
-    CallExpression: path => {
-      const callee = path.get('callee')
-      if (callee.isIdentifier({ name: 'route' })) {
-        let [firstArg, importFn] = path.node.arguments as [
-          t.StringLiteral | t.ArrowFunctionExpression,
-          t.ArrowFunctionExpression
-        ]
-
-        let routePath: string | undefined
-        if (t.isArrowFunctionExpression(firstArg)) {
-          importFn = firstArg
-        } else {
-          routePath = context.basePath + firstArg.value.slice(1)
-        }
-
-        const routeModuleId = (
-          (importFn.body as t.CallExpression).arguments[0] as t.StringLiteral
-        ).value
-
-        if (routePath) {
-          unresolvedRoutes.push([routePath, routeModuleId])
-        } else {
-          defaultRoute = routeModuleId
-        }
-      }
-    },
-  })
-
-  if (defaultRoute) {
-    unresolvedRoutes.push(['default', defaultRoute])
+  const unresolvedRoutes: [string, string][] = []
+  for (const route of context.routes) {
+    unresolvedRoutes.push([
+      context.basePath + route.path.slice(1),
+      route.moduleId,
+    ])
+  }
+  if (context.defaultRoute) {
+    unresolvedRoutes.push(['default', context.defaultRoute.moduleId])
   }
 
   const routePaths = new Set<string>()
@@ -67,7 +36,7 @@ export async function compileRoutesMap(
 
       let resolvedId = clientRouteMap && clientRouteMap[routeModuleId]
       if (!resolvedId) {
-        const resolved = await resolveId(routeModuleId, routesModulePath)
+        const resolved = await resolveId(routeModuleId, context.routesPath)
         if (!resolved) {
           return warn(`Failed to resolve route: "${routeModuleId}"`)
         }

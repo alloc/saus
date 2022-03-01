@@ -1,6 +1,7 @@
 import * as RegexParam from 'regexparam'
 import { routesModule } from './core/global'
 import type {
+  GeneratedRouteConfig,
   InferRouteParams,
   Route,
   RouteConfig,
@@ -58,4 +59,22 @@ export function route(
   } else if (path === 'error') {
     routesModule.catchRoute = route
   }
+}
+
+/** Define a route */
+export function generateRoute<RoutePath extends string, Module extends object>(
+  path: RoutePath,
+  {
+    entry,
+    ...config
+  }: GeneratedRouteConfig<Module, InferRouteParams<RoutePath>>
+): void {
+  routesModule.routes.push({
+    ...(config as RouteConfig),
+    ...RegexParam.parse(path),
+    path,
+    load: () => import(entry),
+    moduleId: entry,
+    generated: true,
+  })
 }
