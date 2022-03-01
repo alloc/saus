@@ -24,7 +24,7 @@ export function defineStateModule<T, Args extends any[]>(
   loadImpl: StateModuleLoader<T, Args>
 ): StateModule<ResolvedState<T>, Args> {
   function toCacheKey(args: any[]) {
-    return id + '.' + md5Hex(JSON.stringify(args)).slice(0, 8)
+    return id + '.' + md5Hex(JSON.stringify(args, sortObjects)).slice(0, 8)
   }
   return {
     // @ts-ignore
@@ -76,3 +76,14 @@ type ResolvedModule<T> = T extends { default: infer DefaultExport }
     ? DefaultExport
     : T
   : T
+
+function sortObjects(_key: string, value: any) {
+  if (value && value.constructor == Object) {
+    const copy: any = {}
+    for (const key of Object.keys(value).sort()) {
+      copy[key] = value[key]
+    }
+    return copy
+  }
+  return value
+}
