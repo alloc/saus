@@ -474,7 +474,10 @@ export function createPageFactory(
           rendering,
           options.timeout || 0,
           `Page "${pagePath}" rendering took too long`
-        )
+        ).catch(error => {
+          onError(error)
+          return null
+        })
       })
     },
   }
