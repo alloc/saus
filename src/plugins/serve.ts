@@ -142,17 +142,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         }
 
         let { reloadId } = context
-        try {
-          await servePage(url).then(respond)
-        } catch (error) {
-          respond({ error })
-        }
+        await servePage(url).then(respond)
 
         function respond({ error, body, headers }: ServedPage = {}): any {
           if (reloadId !== (reloadId = context.reloadId)) {
-            return (context.reloading || Promise.resolve())
-              .then(() => servePage(url))
-              .then(respond)
+            return (context.reloading || Promise.resolve()).then(() => {
+              return servePage(url).then(respond)
+            })
           }
           if (error) {
             onError(error)
