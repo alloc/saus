@@ -416,7 +416,13 @@ export function createPageFactory(
 
     if (catchRoute) {
       onError(error)
-      return renderErrorPage(url, error, catchRoute, options)
+      try {
+        return await renderErrorPage(url, error, catchRoute, options)
+      } catch (error: any) {
+        error.message =
+          'The "error" route could not be rendered: ' + error.message
+        throw error
+      }
     }
     throw error
   }
