@@ -1,5 +1,4 @@
 import { AbortController, AbortSignal } from 'node-abort-controller'
-import { defer } from '../utils/defer'
 import { debug } from './debug'
 
 export type Cache<State = any> = {
@@ -67,53 +66,53 @@ export function withCache(
       return oldPromise
     }
 
-    const { promise, resolve, reject } = defer<any>()
-    cache.loading[cacheKey] = promise
-    cache.loaders[cacheKey] = loader
+    const promise = new Promise((resolve, reject) => {
+      const entryConfig: CacheControl = {
+        key: cacheKey,
+        maxAge: Infinity,
+        setTimeout: secs => {
+          const ctrl = new AbortController()
+          setTimeout(() => {
+            if (promise == cache.loading[cacheKey]) {
+              delete cache.loading[cacheKey]
+            }
+            ctrl.abort()
+            reject(new Error('Timed out'))
+          }, secs * 1e3)
 
-    const entryConfig: CacheControl = {
-      key: cacheKey,
-      maxAge: Infinity,
-      setTimeout: secs => {
-        const ctrl = new AbortController()
-        setTimeout(() => {
+          return ctrl.signal
+        },
+      }
+
+      loader!(entryConfig).then(
+        state => {
+          // Skip caching if the promise is replaced or deleted
+          // before it resolves.
+          if (promise == cache.loading[cacheKey]) {
+            delete cache.loading[cacheKey]
+
+            const { maxAge } = entryConfig
+            if (maxAge > 0) {
+              cache.loaded[cacheKey] = isFinite(maxAge)
+                ? [state, Date.now() + maxAge * 1e3]
+                : [state]
+            } else {
+              debug('State %s expired while loading, skipping cache', cacheKey)
+            }
+          }
+          resolve(state)
+        },
+        error => {
           if (promise == cache.loading[cacheKey]) {
             delete cache.loading[cacheKey]
           }
-          ctrl.abort()
-          reject(new Error('Timed out'))
-        }, secs * 1e3)
-
-        return ctrl.signal
-      },
-    }
-
-    loader(entryConfig).then(
-      state => {
-        // Skip caching if the promise is replaced or deleted
-        // before it resolves.
-        if (promise == cache.loading[cacheKey]) {
-          delete cache.loading[cacheKey]
-
-          const { maxAge } = entryConfig
-          if (maxAge > 0) {
-            cache.loaded[cacheKey] = isFinite(maxAge)
-              ? [state, Date.now() + maxAge * 1e3]
-              : [state]
-          } else {
-            debug('State %s expired while loading, skipping cache', cacheKey)
-          }
+          reject(error)
         }
-        resolve(state)
-      },
-      error => {
-        if (promise == cache.loading[cacheKey]) {
-          delete cache.loading[cacheKey]
-        }
-        reject(error)
-      }
-    )
+      )
+    })
 
+    cache.loaders[cacheKey] = loader
+    cache.loading[cacheKey] = promise
     return promise
   }
 }
