@@ -277,6 +277,9 @@ async function startServer(
         await loadRoutes(context, resolveId)
         routesChanged = true
 
+        // Reload the client-side routes map.
+        changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
+
         // Emit change events for page state modules.
         for (const page of await context.getCachedPages())
           changesToEmit.add(
