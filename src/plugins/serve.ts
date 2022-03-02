@@ -16,8 +16,6 @@ import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { resetModule } from '../vm/moduleMap'
-import { createSsrImport } from '../vm/ssrImport'
-import { ResolveIdHook } from '../vm/types'
 
 export type ServedPage = {
   error?: any
@@ -182,18 +180,7 @@ function createServePageFn(
   fileCache: Record<string, RenderedFile>
 ) {
   const { config } = context
-  const server = context.server!
   const moduleMap = context.moduleMap!
-
-  const resolveId: ResolveIdHook = (id, importer) =>
-    server.pluginContainer
-      .resolveId(id, importer!, { ssr: true })
-      .then(resolved => resolved?.id)
-
-  const ssrImport = createSsrImport(context, {
-    moduleMap,
-    resolveId,
-  })
 
   const routeModuleIds = new Set(context.routes.map(route => route.moduleId))
   if (context.defaultRoute) {
