@@ -2,6 +2,8 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
+import { relativeToCwd } from '../utils/relativeToCwd'
+import { toDevPath } from '../utils/toDevPath'
 import { injectExports } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { executeModule } from '../vm/executeModule'
@@ -40,6 +42,27 @@ export async function loadRoutes(
     // will have its modules cleared when it shouldn't.
     routesModule.package?.delete(routesModule)
     routesModule.package = undefined
+
+    for (const route of routesConfig.routes) {
+      if (route.generated) {
+        const routeModuleId = await resolveId(
+          route.moduleId,
+          context.routesPath,
+          true
+        )
+        if (!routeModuleId) {
+          const error = Error(
+            `Cannot find module "${
+              route.moduleId
+            }" (imported by ${relativeToCwd(context.routesPath)})`
+          )
+          throw Object.assign(error, {
+            code: 'ERR_MODULE_NOT_FOUND',
+          })
+        }
+        route.moduleId = toDevPath(routeModuleId, context.root)
+      }
+    }
 
     Object.assign(context, routesConfig)
     injectRoutesMap(context)
