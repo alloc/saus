@@ -18,7 +18,8 @@ export function createSsrImport(
     nodeResolve: resolve.dedupe && dedupeNodeResolve(root, resolve.dedupe),
     isCompiledModule: id =>
       !id.includes('/node_modules/') && id.startsWith(root + '/'),
-    compileModule: (id, ssrRequire) =>
-      compileSsrModule(id, context, ssrRequire),
+    compileModule(id) {
+      return compileSsrModule(id, context)
+    },
   })
 }

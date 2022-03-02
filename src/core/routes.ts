@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import type { RouteParams as InferRouteParams } from 'regexparam'
 import type { StateModule } from '../runtime/stateModules'
 import type { ParsedUrl, URLSearchParams } from '../utils/url'
+import { RequireAsync } from '../vm/types'
 import type { SausContext } from './context'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
@@ -111,6 +112,8 @@ export interface RoutesModule extends HtmlContext {
   defaultRoute?: Route
   /** The route used when an error is thrown while rendering */
   catchRoute?: Route
+  /** Used by generated routes to import their route module */
+  ssrRequire?: RequireAsync
 }
 
 type RoutePathHandlers = {

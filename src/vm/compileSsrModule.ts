@@ -16,14 +16,13 @@ import {
 } from './compileEsm'
 import { ImporterSet } from './ImporterSet'
 import { overwriteScript } from './overwriteScript'
-import { CompiledModule, RequireAsync, Script } from './types'
+import { CompiledModule, Script } from './types'
 
 const ssrCaches = new WeakMap<SausContext, CompileCache>()
 
 export async function compileSsrModule(
   id: string,
-  context: SausContext,
-  requireAsync: RequireAsync
+  context: SausContext
 ): Promise<CompiledModule | null> {
   let cache = ssrCaches.get(context)
   if (!cache) {
@@ -53,8 +52,8 @@ export async function compileSsrModule(
   const env = {
     [exportsId]: {},
     [importMetaId]: importMeta,
-    [importAsyncId]: (id: string) => requireAsync(id, importer, true),
-    [requireAsyncId]: (id: string) => requireAsync(id, importer, false),
+    [importAsyncId]: (id: string) => context.ssrRequire!(id, importer, true),
+    [requireAsyncId]: (id: string) => context.ssrRequire!(id, importer, false),
   }
 
   const params = Object.keys(env).join(', ')

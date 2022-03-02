@@ -9,7 +9,7 @@ import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { ModuleMap } from '../vm/types'
+import { ModuleMap, RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { HtmlContext } from './html'
@@ -42,6 +42,10 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   servePage?: (url: string) => Promise<ServedPage | undefined>
   /** Only exists in dev mode */
   moduleMap?: ModuleMap
+  /** Only exists in dev mode */
+  require?: RequireAsync
+  /** Only exists in dev mode */
+  ssrRequire?: RequireAsync
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
   /** The URL prefix for all pages */

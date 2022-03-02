@@ -1,5 +1,6 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
+import fs from 'fs'
 import http from 'http'
 import { gray } from 'kleur/colors'
 import path from 'path'
@@ -22,6 +23,10 @@ import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
+import { createAsyncRequire } from './vm/asyncRequire'
+import { compileNodeModule } from './vm/compileNodeModule'
+import { compileSsrModule } from './vm/compileSsrModule'
+import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule } from './vm/moduleMap'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
@@ -172,11 +177,50 @@ async function startServer(
       .resolveId(id, importer!, { ssr: true })
       .then(resolved => resolved?.id)
 
-  context.moduleMap = moduleMap
+  const { dedupe } = context.config.resolve
+  const nodeResolve = dedupe && dedupeNodeResolve(context.root, dedupe)
+
+  const isCompiledModule = (id: string) =>
+    !id.includes('/node_modules/') && id.startsWith(context.root + '/')
+
+  const ssrRequire = createAsyncRequire({
+    resolveId,
+    moduleMap,
+    nodeResolve,
+    isCompiledModule,
+    compileModule(id) {
+      return compileSsrModule(id, context)
+    },
+  })
+
   context.server = server
+  context.moduleMap = moduleMap
+  context.ssrRequire = ssrRequire
+  context.require = createAsyncRequire({
+    resolveId,
+    moduleMap,
+    nodeResolve,
+    isCompiledModule,
+    async compileModule(id, require, virtualId) {
+      if (virtualId) {
+        return compileSsrModule(id, context)
+      }
+      // Vite plugins are skipped by the Node pipeline,
+      // except for `resolveId` hooks.
+      const code = fs.readFileSync(id, 'utf8')
+      return compileNodeModule(
+        code,
+        id,
+        require,
+        context.compileCache,
+        context.config.env
+      )
+    },
+  })
+
   try {
-    await loadRoutes(context, { resolveId })
-    await loadRenderers(context, { resolveId })
+    await loadRoutes(context, resolveId)
+    await loadRenderers(context)
   } catch (error: any) {
     // Babel errors use `.id` and Saus VM uses `.file`
     const filename = error.id || error.file
@@ -230,7 +274,7 @@ async function startServer(
 
     if (files.includes(context.routesPath)) {
       try {
-        await loadRoutes(context, { resolveId })
+        await loadRoutes(context, resolveId)
         routesChanged = true
 
         // Emit change events for page state modules.
@@ -247,7 +291,7 @@ async function startServer(
     // when new HTTP requests come in.
     if (files.includes(context.renderPath)) {
       try {
-        await loadRenderers(context, { resolveId })
+        await loadRenderers(context)
         renderersChanged = true
 
         const oldConfigHooks = context.configHooks

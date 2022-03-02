@@ -227,15 +227,12 @@ function createServePageFn(
       // Load the route module and its dependencies now, since the
       // setup function is guaranteed to run serially, which lets us
       // ensure no local modules are shared between page renders.
-      const routeModulePath = resolveEntryUrl(route.moduleId, config)
-      await ssrImport(routeModulePath, null, true)
+      await route.load()
 
       context.renderers = []
       context.defaultRenderer = undefined
       context.beforeRenderHooks = []
-      await loadRenderers(context, {
-        resolveId,
-      })
+      await loadRenderers(context)
       Object.assign(pageContext, context)
     },
   }

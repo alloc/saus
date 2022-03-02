@@ -7,6 +7,7 @@ import type {
   RouteConfig,
   RouteLoader,
 } from './core/routes'
+import { getStackFrame } from './utils/resolveStackTrace'
 
 const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
@@ -69,11 +70,14 @@ export function generateRoute<RoutePath extends string, Module extends object>(
     ...config
   }: GeneratedRouteConfig<Module, InferRouteParams<RoutePath>>
 ): void {
+  const importer = getStackFrame(2)?.file
+  const ssrRequire = routesModule.ssrRequire!
+
   routesModule.routes.push({
     ...(config as RouteConfig),
     ...RegexParam.parse(path),
     path,
-    load: () => import(entry),
+    load: () => ssrRequire(entry, importer, true),
     moduleId: entry,
     generated: true,
   })
