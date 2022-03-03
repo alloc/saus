@@ -12,63 +12,60 @@ const serverRouteMapStubPath = path.join(bundleDir, 'routes.ts')
  */
 export const routesPlugin =
   (clientRouteMap?: Record<string, string>) => (): Plugin => {
-    let plugin: Plugin
-    return (plugin = {
+    return {
       name: 'saus:routes',
       enforce: 'pre',
-      saus: {
-        onContext(context) {
-          const isBuild = context.config.command == 'build'
+      saus(context) {
+        const isBuild = context.config.command == 'build'
 
-          plugin.load = async function (id) {
-            const isClient = id == clientRouteMapStubPath
-            if (isClient || id == serverRouteMapStubPath) {
-              return compileRoutesMap(
-                { isBuild, isClient },
-                context,
-                this.resolve.bind(this),
-                clientRouteMap
+        this.load = async function (id) {
+          const isClient = id == clientRouteMapStubPath
+          if (isClient || id == serverRouteMapStubPath) {
+            return compileRoutesMap(
+              { isBuild, isClient },
+              context,
+              this.resolve.bind(this),
+              clientRouteMap
+            )
+          }
+        }
+
+        type Chunk = {
+          fileName: string
+          code: string
+          modules: Record<string, any>
+        }
+
+        this.generateBundle = async function (_, bundle) {
+          const chunks = Object.values(bundle).filter(
+            chunk => chunk.type == 'chunk'
+          ) as Chunk[]
+
+          for (const chunk of chunks) {
+            if (chunk.code.includes(routeMarker)) {
+              chunk.code = chunk.code.replace(
+                new RegExp(routeMarker + '\\("(.+?)"\\)', 'g'),
+                (_, routeModuleId) => {
+                  let routeChunkUrl =
+                    clientRouteMap && clientRouteMap[routeModuleId]
+                  if (!routeChunkUrl) {
+                    const routeChunk = chunks.find(
+                      chunk => chunk.modules[routeModuleId]
+                    )
+                    if (!routeChunk) {
+                      throw Error(`Route chunk not found: "${routeModuleId}"`)
+                    }
+                    routeChunkUrl = context.basePath + routeChunk.fileName
+                    if (clientRouteMap) {
+                      clientRouteMap[routeModuleId] = routeChunkUrl
+                    }
+                  }
+                  return `"${routeChunkUrl}"`
+                }
               )
             }
           }
-
-          type Chunk = {
-            fileName: string
-            code: string
-            modules: Record<string, any>
-          }
-
-          plugin.generateBundle = async function (_, bundle) {
-            const chunks = Object.values(bundle).filter(
-              chunk => chunk.type == 'chunk'
-            ) as Chunk[]
-
-            for (const chunk of chunks) {
-              if (chunk.code.includes(routeMarker)) {
-                chunk.code = chunk.code.replace(
-                  new RegExp(routeMarker + '\\("(.+?)"\\)', 'g'),
-                  (_, routeModuleId) => {
-                    let routeChunkUrl =
-                      clientRouteMap && clientRouteMap[routeModuleId]
-                    if (!routeChunkUrl) {
-                      const routeChunk = chunks.find(
-                        chunk => chunk.modules[routeModuleId]
-                      )
-                      if (!routeChunk) {
-                        throw Error(`Route chunk not found: "${routeModuleId}"`)
-                      }
-                      routeChunkUrl = context.basePath + routeChunk.fileName
-                      if (clientRouteMap) {
-                        clientRouteMap[routeModuleId] = routeChunkUrl
-                      }
-                    }
-                    return `"${routeChunkUrl}"`
-                  }
-                )
-              }
-            }
-          }
-        },
+        }
       },
-    })
+    }
   }

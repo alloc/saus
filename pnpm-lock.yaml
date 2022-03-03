@@ -22,7 +22,6 @@ importers:
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
       '@types/strip-comments': ^2.0.1
-      array-flatten: ^3.0.0
       arrify: ^3.0.0
       builtin-modules: ^3.2.0
       cac: ^6.7.3
@@ -100,7 +99,6 @@ importers:
       '@types/physical-cpu-count': 2.0.0
       '@types/source-map-support': 0.5.4
       '@types/strip-comments': 2.0.1
-      array-flatten: 3.0.0
       arrify: 3.0.0
       builtin-modules: 3.2.0
       caller-path: 3.0.1
@@ -115,7 +113,7 @@ importers:
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
       regexparam: 2.0.0
-      rollup-plugin-dts: 4.1.0_rollup@2.62.1+typescript@4.4.3
+      rollup-plugin-dts: 4.1.0_typescript@4.4.3
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 3.0.0
@@ -1001,10 +999,6 @@ packages:
     resolution: {integrity: sha1-3wEKoSh+Fku9pvlyOwqWoexBh6E=}
     engines: {node: '>=0.10.0'}
     dev: false
-
-  /array-flatten/3.0.0:
-    resolution: {integrity: sha512-zPMVc3ZYlGLNk4mpK1NzP2wg0ml9t7fUgDsayR5Y5rSzxQilzR9FGu/EH2jQOcKSAeAfWeylyW8juy3OkWRvNA==}
-    dev: true
 
   /array-union/2.1.0:
     resolution: {integrity: sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==}
@@ -3231,7 +3225,7 @@ packages:
       glob: 7.1.6
     dev: false
 
-  /rollup-plugin-dts/4.1.0_rollup@2.62.1+typescript@4.4.3:
+  /rollup-plugin-dts/4.1.0_typescript@4.4.3:
     resolution: {integrity: sha512-rriXIm3jdUiYeiAAd1Fv+x2AxK6Kq6IybB2Z/IdoAW95fb4uRUurYsEYKa8L1seedezDeJhy8cfo8FEL9aZzqg==}
     engines: {node: '>=v12.22.7'}
     peerDependencies:
@@ -3239,7 +3233,6 @@ packages:
       typescript: ~4.1 || ~4.2 || ~4.3 || ~4.4 || ~4.5
     dependencies:
       magic-string: 0.25.7
-      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.4.3
     optionalDependencies:
       '@babel/code-frame': 7.16.7

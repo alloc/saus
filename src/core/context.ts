@@ -1,17 +1,16 @@
-import { flatten } from 'array-flatten'
 import arrify from 'arrify'
 import { resolve } from 'path'
 import type { RenderedPage } from '../pages/types'
 import type { ServedPage } from '../plugins/serve'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
-import { callPlugins } from '../utils/callPlugins'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { ModuleMap, RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
+import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
 import { loadConfigHooks } from './loadConfigHooks'
 import { toSausPath } from './paths'
@@ -22,7 +21,7 @@ import { Cache, withCache } from './withCache'
 
 export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   root: string
-  plugins: readonly ({ name: string } & SausPlugin)[]
+  plugins: readonly SausPlugin[]
   logger: vite.Logger
   config: ResolvedConfig
   configPath: string | undefined
@@ -94,7 +93,7 @@ function createContext(
 
   return {
     root: config.root,
-    plugins: getSausPlugins(config),
+    plugins: [],
     logger: config.logger,
     config,
     configPath: config.configFile,
@@ -137,31 +136,6 @@ export async function loadContext(
 
   await resolveConfig(command)
   return context!
-}
-
-const getSausPlugins = (config: vite.ResolvedConfig) =>
-  flattenPlugins(config.plugins as Plugin[], p => {
-    if (!p || !p.saus) {
-      return false
-    }
-    if (typeof p.apply == 'function') {
-      return p.apply(config.inlineConfig, {
-        command: config.command,
-        mode: config.mode,
-      })
-    }
-    return !p.apply || p.apply == config.command
-  }).map(p => ({
-    name: p.name,
-    ...p.saus,
-  }))
-
-function flattenPlugins<T extends vite.Plugin>(
-  plugins: readonly T[],
-  filter?: (p: T) => any
-) {
-  const filtered: vite.Plugin[] = filter ? plugins.filter(filter) : [...plugins]
-  return flatten(vite.sortVitePlugins(filtered)) as T[]
 }
 
 function getConfigResolver(
@@ -285,13 +259,10 @@ function getConfigResolver(
 
     config.env.DEFAULT_PATH = context.defaultPath
 
-    const sausPlugins = getSausPlugins(config)
-    context.plugins ||= sausPlugins
-
-    // In build mode, call `onContext` hooks right after `configResolved` hooks.
-    // In serve mode, routes are loaded before `onContext` hooks are called.
+    // In build mode, we create Saus plugins *before* routes load,
+    // whereas, in dev mode, they're created *after* that.
     if (config.command == 'build') {
-      await callPlugins(sausPlugins, 'onContext', context)
+      context.plugins = await getSausPlugins(context)
     }
 
     return config

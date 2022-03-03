@@ -80,7 +80,6 @@
     "@types/physical-cpu-count": "^2.0.0",
     "@types/source-map-support": "^0.5.4",
     "@types/strip-comments": "^2.0.1",
-    "array-flatten": "^3.0.0",
     "arrify": "^3.0.0",
     "builtin-modules": "^3.2.0",
     "caller-path": "^3.0.1",

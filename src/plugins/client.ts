@@ -34,10 +34,8 @@ export function clientPlugin(
     configureServer(s) {
       server = s
     },
-    saus: {
-      onContext(c) {
-        context = c
-      },
+    saus(c) {
+      context = c
     },
     resolveId(id, importer) {
       if (id.startsWith(clientUrlPrefix)) {

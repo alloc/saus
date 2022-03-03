@@ -10,6 +10,7 @@ import { getPageFilename, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
 import { getRequireFunctions } from './core/getRequireFunctions'
+import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
@@ -194,8 +195,8 @@ async function startServer(
     throw error
   }
 
-  // Tell plugins to update local state derived from Saus context.
-  await callPlugins(context.plugins, 'onContext', context)
+  // In dev mode, Saus plugins are recreated when routes/renderers are updated.
+  context.plugins = await getSausPlugins(context)
 
   const changedFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
@@ -285,7 +286,7 @@ async function startServer(
 
     if (routesChanged || renderersChanged) {
       context.clearCachedPages()
-      await callPlugins(context.plugins, 'onContext', context)
+      context.plugins = await getSausPlugins(context)
     }
 
     for (const file of changesToEmit) {

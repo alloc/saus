@@ -81,43 +81,41 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
   const servePages: Plugin = {
     name: 'saus:servePages',
-    saus: {
-      onContext(c) {
-        context = c
+    saus(c) {
+      context = c
 
-        const { config } = c
-        runtimeConfig = {
-          assetsDir: config.build.assetsDir,
-          base: context.basePath,
-          command: 'dev',
-          defaultPath: context.defaultPath,
-          htmlTimeout: config.saus.htmlTimeout,
-          minify: false,
-          mode: context.config.mode,
-          publicDir: config.publicDir,
-          ssrRoutesId: '/@fs/' + context.routesPath,
-          stateCacheId: '/@fs/' + globalCachePath,
-        }
-        pageFactory = createPageFactory(
-          context,
-          extractClientFunctions(context.renderPath),
-          runtimeConfig,
-          undefined,
-          onError
-        )
-        servePage = context.servePage = createServePageFn(
-          context,
-          runtimeConfig,
-          pageFactory,
-          fileCache
-        )
+      const { config } = c
+      runtimeConfig = {
+        assetsDir: config.build.assetsDir,
+        base: context.basePath,
+        command: 'dev',
+        defaultPath: context.defaultPath,
+        htmlTimeout: config.saus.htmlTimeout,
+        minify: false,
+        mode: context.config.mode,
+        publicDir: config.publicDir,
+        ssrRoutesId: '/@fs/' + context.routesPath,
+        stateCacheId: '/@fs/' + globalCachePath,
+      }
+      pageFactory = createPageFactory(
+        context,
+        extractClientFunctions(context.renderPath),
+        runtimeConfig,
+        undefined,
+        onError
+      )
+      servePage = context.servePage = createServePageFn(
+        context,
+        runtimeConfig,
+        pageFactory,
+        fileCache
+      )
 
-        init = {
-          // Defer to the reload promise after the context is initialized.
-          then: (...args) => (c.reloading || Promise.resolve()).then(...args),
-        }
-        didInit()
-      },
+      init = {
+        // Defer to the reload promise after the context is initialized.
+        then: (...args) => (c.reloading || Promise.resolve()).then(...args),
+      }
+      didInit()
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {

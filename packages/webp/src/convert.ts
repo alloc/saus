@@ -116,19 +116,19 @@ export function convertToWebp(options: Options = {}): Plugin {
         }
       }
     },
-    saus: {
-      onContext({ config, logger }) {
-        // Ignore public files in the `load` hook, since those are
-        // handled in the `transformPublicFile` hook.
-        const publicFileRE = new RegExp(
-          '^' + path.resolve(config.root, config.publicDir) + '/'
-        )
-        filter = createFilter(
-          options.include || [/\.(png|jpe?g)$/],
-          (options.exclude || []).concat(publicFileRE),
-          { resolve: false }
-        )
-        this.transformPublicFile = async file => {
+    saus({ config, logger }) {
+      // Ignore public files in the `load` hook, since those are
+      // handled in the `transformPublicFile` hook.
+      const publicFileRE = new RegExp(
+        '^' + path.resolve(config.root, config.publicDir) + '/'
+      )
+      filter = createFilter(
+        options.include || [/\.(png|jpe?g)$/],
+        (options.exclude || []).concat(publicFileRE),
+        { resolve: false }
+      )
+      return {
+        async transformPublicFile(file) {
           if (!filter(file.name)) {
             return
           }
@@ -140,8 +140,8 @@ export function convertToWebp(options: Options = {}): Plugin {
               red(`[!] Converting "${file.name}" to WebP failed:\n`) + e.stack
             )
           }
-        }
-      },
+        },
+      }
     },
   }
 }

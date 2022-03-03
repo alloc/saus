@@ -13,10 +13,8 @@ export function transformClientState(): Plugin {
   return {
     name: 'saus:transformClientState',
     enforce: 'pre',
-    saus: {
-      onContext(context) {
-        stateModulesByFile = context.stateModulesByFile
-      },
+    saus(context) {
+      stateModulesByFile = context.stateModulesByFile
     },
     async transform(code, id, opts) {
       if (opts?.ssr) {

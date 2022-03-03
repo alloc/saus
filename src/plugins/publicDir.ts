@@ -67,68 +67,69 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
   const copier: Plugin = {
     name: 'publicDir:copier',
     apply: 'build',
-    saus: {
-      async onContext(context) {
-        outDir = context.config.build.outDir
-        publicDir = context.config.publicDir
-        if (publicDir) {
-          publicDir = path.resolve(context.root, publicDir)
-        }
+    async saus(context) {
+      outDir = context.config.build.outDir
+      publicDir = context.config.publicDir
+      if (publicDir) {
+        publicDir = path.resolve(context.root, publicDir)
+      }
 
-        const transformers = context.plugins
-          .filter(p => p.transformPublicFile)
-          .map(p => p.transformPublicFile) as PublicFileTransform[]
+      const transformers = context.plugins
+        .filter(p => p.transformPublicFile)
+        .map(p => p.transformPublicFile) as PublicFileTransform[]
 
-        if (options.transform) {
-          transformers.push(options.transform)
-        }
+      if (options.transform) {
+        transformers.push(options.transform)
+      }
 
-        let transform: PublicFileTransform | undefined
-        if (transformers.length) {
-          transform = async file => {
-            const { name } = file
-            for (const transform of transformers) {
-              await transform(file)
-            }
-            if (name !== file.name) {
-              renamedFiles.set(name, file.name)
-            }
+      let transform: PublicFileTransform | undefined
+      if (transformers.length) {
+        transform = async file => {
+          const { name } = file
+          for (const transform of transformers) {
+            await transform(file)
+          }
+          if (name !== file.name) {
+            renamedFiles.set(name, file.name)
           }
         }
+      }
 
-        if (publicDir && fs.existsSync(publicDir)) {
-          await collectFiles(
-            publicDir,
-            outDir,
-            copiedFiles,
-            writtenFiles,
-            isExcluded,
-            transform
-          )
-        }
-      },
-      async fetchBundleImports(modules) {
-        if (renamedFiles.size) {
-          const renameMap = Object.fromEntries(renamedFiles.entries())
+      if (publicDir && fs.existsSync(publicDir)) {
+        await collectFiles(
+          publicDir,
+          outDir,
+          copiedFiles,
+          writtenFiles,
+          isExcluded,
+          transform
+        )
+      }
 
-          // Rewrite JS imports of public files.
-          resolveId = id => renameMap[id]
+      return {
+        async fetchBundleImports(modules) {
+          if (renamedFiles.size) {
+            const renameMap = Object.fromEntries(renamedFiles.entries())
 
-          // Rewrite HTML references of public files.
-          const renamer = modules.addModule({
-            id: '@saus/copyPublicDir/renamer.js',
-            code: endent`
+            // Rewrite JS imports of public files.
+            resolveId = id => renameMap[id]
+
+            // Rewrite HTML references of public files.
+            const renamer = modules.addModule({
+              id: '@saus/copyPublicDir/renamer.js',
+              code: endent`
               import {resolveHtmlImports} from "@saus/html"
               ${dataToEsm(renameMap, 'const renameMap')}
               resolveHtmlImports(id => renameMap[id])
             `,
-          })
+            })
 
-          return [renamer.id]
-        }
-      },
-      onWriteBundle: commitFiles,
-      onWritePages: commitFiles,
+            return [renamer.id]
+          }
+        },
+        onWriteBundle: commitFiles,
+        onWritePages: commitFiles,
+      }
     },
   }
 

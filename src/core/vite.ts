@@ -143,13 +143,12 @@ export const defineConfig = vite.defineConfig as (
     | ((env: vite.ConfigEnv) => Promisable<vite.UserConfig>)
 ) => vite.UserConfigExport
 
+/**
+ * Saus plugins are returned by the `saus` hook of a Vite plugin.
+ */
 export interface SausPlugin {
-  /**
-   * Called when the Saus context is created or replaced.
-   * When `saus dev` is used, this hook is also called when
-   * the routes/renderers are updated.
-   */
-  onContext?: (context: SausContext) => Promisable<void>
+  /** Used for debugging. If undefined, the Vite plugin name is used. */
+  name?: string
   /**
    * Transform files from the `publicDir` when the `copyPublicDir`
    * plugin is active in the project.
@@ -178,6 +177,16 @@ export interface SausPlugin {
   onWritePages?: (pages: RenderedPage[]) => void
 }
 
+/**
+ * Vite plugin with Saus extensions
+ */
 export interface Plugin extends vite.Plugin {
-  saus?: SausPlugin
+  /**
+   * Provide plugin hooks specific to Saus.
+   *
+   * If a function is given, it gets called whenever the Saus context
+   * is created or replaced. When `saus dev` is used, it's also called
+   * when the routes/renderers are updated.
+   */
+  saus?: SausPlugin | ((context: SausContext) => Promisable<SausPlugin | void>)
 }
