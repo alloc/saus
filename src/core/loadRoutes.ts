@@ -9,9 +9,10 @@ import { compileNodeModule } from '../vm/compileNodeModule'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from '../vm/moduleMap'
-import { ModuleMap, ResolveIdHook } from '../vm/types'
+import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
+import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
 import { Route } from './routes'
 import { isExternalUrl } from './utils'
@@ -22,17 +23,26 @@ export async function loadRoutes(
 ) {
   const time = Date.now()
   const moduleMap = context.moduleMap || {}
+  const { require, ssrRequire } = !context.require
+    ? getRequireFunctions(context, resolveId, moduleMap)
+    : (context as Required<SausContext>)
 
   context.compileCache.locked = true
   const routesModule =
     moduleMap[context.routesPath] ||
-    (await compileRoutesModule(context, moduleMap, resolveId))
+    (await compileRoutesModule(
+      context,
+      moduleMap,
+      resolveId,
+      (id, importer, isDynamic) =>
+        (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
+    ))
 
   const routesConfig = setRoutesModule({
     routes: [],
     runtimeHooks: [],
     defaultState: [],
-    ssrRequire: context.ssrRequire,
+    ssrRequire,
   })
   try {
     await executeModule(routesModule)
@@ -79,7 +89,8 @@ export async function loadRoutes(
 async function compileRoutesModule(
   context: SausContext,
   moduleMap: ModuleMap,
-  resolveId: ResolveIdHook
+  resolveId: ResolveIdHook,
+  requireAsync: RequireAsync
 ) {
   const { routesPath, root } = context
 
@@ -107,10 +118,7 @@ async function compileRoutesModule(
     compileNodeModule(
       editor.toString(),
       routesPath,
-      (id, importer, isDynamic) =>
-        isDynamic
-          ? context.ssrRequire!(id, importer, true)
-          : context.require!(id, importer, false),
+      requireAsync,
       context.compileCache,
       context.config.env
     )

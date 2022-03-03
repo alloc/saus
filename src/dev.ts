@@ -1,6 +1,5 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
-import fs from 'fs'
 import http from 'http'
 import { gray } from 'kleur/colors'
 import path from 'path'
@@ -10,6 +9,7 @@ import * as vite from 'vite'
 import { getPageFilename, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
+import { getRequireFunctions } from './core/getRequireFunctions'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
@@ -23,10 +23,6 @@ import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
-import { createAsyncRequire } from './vm/asyncRequire'
-import { compileNodeModule } from './vm/compileNodeModule'
-import { compileSsrModule } from './vm/compileSsrModule'
-import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule } from './vm/moduleMap'
 import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
@@ -177,46 +173,9 @@ async function startServer(
       .resolveId(id, importer!, { ssr: true })
       .then(resolved => resolved?.id)
 
-  const { dedupe } = context.config.resolve
-  const nodeResolve = dedupe && dedupeNodeResolve(context.root, dedupe)
-
-  const isCompiledModule = (id: string) =>
-    !id.includes('/node_modules/') && id.startsWith(context.root + '/')
-
-  const ssrRequire = createAsyncRequire({
-    resolveId,
-    moduleMap,
-    nodeResolve,
-    isCompiledModule,
-    compileModule(id) {
-      return compileSsrModule(id, context)
-    },
-  })
-
   context.server = server
   context.moduleMap = moduleMap
-  context.ssrRequire = ssrRequire
-  context.require = createAsyncRequire({
-    resolveId,
-    moduleMap,
-    nodeResolve,
-    isCompiledModule,
-    async compileModule(id, require, virtualId) {
-      if (virtualId) {
-        return compileSsrModule(id, context)
-      }
-      // Vite plugins are skipped by the Node pipeline,
-      // except for `resolveId` hooks.
-      const code = fs.readFileSync(id, 'utf8')
-      return compileNodeModule(
-        code,
-        id,
-        require,
-        context.compileCache,
-        context.config.env
-      )
-    },
-  })
+  Object.assign(context, getRequireFunctions(context, resolveId))
 
   try {
     await loadRoutes(context, resolveId)
