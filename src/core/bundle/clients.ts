@@ -19,6 +19,7 @@ import { parseImports } from '../../utils/imports'
 import { mapSerial } from '../../utils/mapSerial'
 import { resolveEntryUrl } from '../../utils/resolveEntryUrl'
 import { toInlineSourceMap } from '../../utils/sourceMap'
+import { textExtensions } from '../../utils/textExtensions'
 import {
   ClientFunctions,
   mapClientFunctions,
@@ -421,11 +422,12 @@ export async function generateClientModules(
     }
   })
 
-  // TODO: encode image/video/audio files with base64?
   assets.forEach(asset => {
     moduleMap[asset.fileName] = {
       id: asset.fileName,
-      text: Buffer.from(asset.source).toString('utf8'),
+      text: Buffer.from(asset.source).toString(
+        textExtensions.test(asset.fileName) ? 'utf8' : 'base64'
+      ),
     }
   })
 

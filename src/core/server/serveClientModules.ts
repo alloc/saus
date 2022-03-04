@@ -1,6 +1,7 @@
 import etag from 'etag'
 import { gray } from 'kleur/colors'
 import * as mime from 'mrmime'
+import { textExtensions } from '../../utils/textExtensions'
 import { connect } from './connect'
 import { debug } from './debug'
 import { ModuleCache } from './moduleCache'
@@ -23,6 +24,10 @@ export const serveClientModules =
       ETag: etag(module.text, { weak: true }),
       'Content-Type': mime.lookup(module.id)!,
     })
-    res.write(module.text)
+    res.write(
+      !textExtensions.test(module.id)
+        ? Buffer.from(module.text, 'base64')
+        : module.text
+    )
     return res.end()
   }

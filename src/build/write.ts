@@ -3,6 +3,7 @@ import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
 import type { RenderedPage } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
+import { textExtensions } from '../utils/textExtensions'
 
 /**
  * Write an array of rendered pages to disk. Shared modules are deduplicated.
@@ -27,8 +28,15 @@ export function writePages(
     if (!page) continue
     if (page.html) {
       writeFile(path.join(outDir, page.id), page.html)
-      for (const module of [...page.modules, ...page.assets]) {
+      for (const module of page.modules) {
         writeFile(path.join(outDir, module.id), module.text)
+      }
+      for (const asset of page.assets) {
+        const content = !textExtensions.test(asset.id)
+          ? Buffer.from(asset.text, 'base64')
+          : asset.text
+
+        writeFile(path.join(outDir, asset.id), content)
       }
     }
     for (const { id, data } of page.files) {
