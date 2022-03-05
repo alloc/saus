@@ -4,7 +4,7 @@ import { noop } from './noop'
 
 const varDeclRE = /^(const|let|var) /
 
-type Replacer = (key: string, value: any) => string | void
+type Replacer = (this: any, key: string, value: any) => string | void
 
 /**
  * Convert almost any kind of data to ESM code.
@@ -42,10 +42,11 @@ export function dataToEsm(
 function serialize(
   value: unknown,
   keyPath: string[],
-  replacer: Replacer
+  replacer: Replacer,
+  context?: any
 ): string {
   const key = keyPath.length ? keyPath[keyPath.length - 1] : ''
-  const replacement = replacer(key, value)
+  const replacement = replacer.call(context, key, value)
   if (typeof replacement === 'string') {
     return replacement
   }
@@ -68,7 +69,7 @@ function serialize(
     return serializeArray(value, keyPath, replacer)
   }
   if (typeof value === 'object') {
-    return serializeObject(value, keyPath, replacer)
+    return serializeObject(value!, keyPath, replacer)
   }
   return stringify(value)
 }
@@ -92,7 +93,8 @@ function serializeArray<T>(
     output += `${i > 0 ? ',' : ''}${separator}${serialize(
       arr[i],
       keyPath.concat(String(i)),
-      replacer
+      replacer,
+      arr
     )}`
   }
   return output + RETURN + baseIndent + ']'
@@ -119,7 +121,7 @@ function serializeObject(
       legalName +
       ':' +
       SPACE +
-      serialize(value, keyPath.concat(String(key)), replacer)
+      serialize(value, keyPath.concat(String(key)), replacer, obj)
   })
   return output + RETURN + baseIndent + '}'
 }
