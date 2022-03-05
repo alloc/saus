@@ -507,7 +507,7 @@ function slash(p: string): string {
  */
 function useDebugRoutes(code: string, base: string, debugBase: string) {
   return code.replace(
-    /\b(routes = )(\{[\s\S]+?\})/,
+    /\b(routes = )(\{[\s\S]*?\})/,
     (_, assign, routesJson) => {
       const routes: Record<string, string> = JSON.parse(routesJson)
       const newRoutes: Record<string, string> = {}
