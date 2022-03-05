@@ -81,6 +81,7 @@ cli
     '--mode <mode>',
     `[string] override the client mode (eg: development)`
   )
+  .option('--entry [file]', `[string|boolean] set the bundle entry`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--sourcemap', `[boolean] enable/disable source maps`)
   .action(async (outFile, options) => {

@@ -21,7 +21,7 @@ export interface SausBundleConfig {
    * to render pages on-demand and/or ahead-of-time.
    * @default null
    */
-  entry?: string | null
+  entry?: string | false | null
   /**
    * For serverless functions, you'll want to set this to `"worker"`.
    * @default "script"
