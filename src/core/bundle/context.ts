@@ -1,7 +1,10 @@
 import { warn } from 'misty'
+import { startTask } from 'misty/task'
 import path from 'path'
 import { renderPlugin } from '../../plugins/render'
+import { plural } from '../../utils/plural'
 import { loadContext, SausContext } from '../context'
+import { loadRoutes } from '../loadRoutes'
 import { SausBundleConfig, vite } from '../vite'
 
 export interface InlineBundleConfig
@@ -84,6 +87,20 @@ export async function loadBundleContext(
     outFile,
     debugBase,
   }
+
+  const { pluginContainer } = await vite.createTransformContext(context.config)
+
+  const loading = startTask('Loading routes...')
+  await loadRoutes(context, (id, importer) => {
+    return pluginContainer
+      .resolveId(id, importer!, { ssr: true })
+      .then(resolved => resolved?.id)
+  })
+
+  const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
+  loading.finish(`${plural(routeCount, 'route')} loaded.`)
+
+  await pluginContainer.close()
 
   return context
 }

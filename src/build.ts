@@ -16,11 +16,9 @@ import {
   vite,
 } from './core'
 import { loadBundleContext } from './core/bundle'
-import { loadRoutes } from './core/loadRoutes'
 import { callPlugins } from './utils/callPlugins'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
-import { plural } from './utils/plural'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -35,8 +33,6 @@ export async function build(options: BuildOptions) {
     { write: false, entry: null, format: 'cjs' },
     { plugins: buildPlugins }
   )
-
-  await loadBuildRoutes(context)
 
   const bundleFile = 'bundle.js'
   if (options.cached) {
@@ -166,22 +162,6 @@ export async function build(options: BuildOptions) {
     pages,
     errors,
   }
-}
-
-async function loadBuildRoutes(context: SausContext) {
-  const { pluginContainer } = await vite.createTransformContext(context.config)
-
-  const loading = startTask('Loading routes...')
-  await loadRoutes(context, (id, importer) => {
-    return pluginContainer
-      .resolveId(id, importer!, { ssr: true })
-      .then(resolved => resolved?.id)
-  })
-
-  const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
-  loading.finish(`${plural(routeCount, 'route')} loaded.`)
-
-  await pluginContainer.close()
 }
 
 function prepareOutDir(
