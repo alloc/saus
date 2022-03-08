@@ -12,12 +12,14 @@ export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
 ) => T
 
 /** @internal */
-export const loadStateModule = <T, Args extends any[]>(
-  cacheKey: string,
+export function loadStateModule<T, Args extends any[]>(
+  _id: string,
+  args: Args,
   loadImpl: StateModuleLoader<T, Args>,
-  ...args: Args
-): Promise<ResolvedState<T>> =>
-  getCachedState(cacheKey, async function loadStateModule(cacheControl) {
+  toCacheKey: (args: any[]) => string
+): Promise<ResolvedState<T>> {
+  const cacheKey = toCacheKey(args)
+  return getCachedState(cacheKey, async function loadStateModule(cacheControl) {
     debug(`Loading "%s" state`, cacheKey)
     try {
       let result: any = loadImpl.apply(cacheControl, args)
@@ -51,3 +53,4 @@ export const loadStateModule = <T, Args extends any[]>(
         : error
     }
   })
+}

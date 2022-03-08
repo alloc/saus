@@ -2,6 +2,8 @@ import md5Hex from 'md5-hex'
 import { globalCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 
+export const stateModulesById = new Map<string, StateModule>()
+
 export interface StateModule<T = any, Args extends any[] = any[]> {
   id: string
   load(...args: Args): Promise<T>
@@ -26,7 +28,7 @@ export function defineStateModule<T, Args extends any[]>(
   function toCacheKey(args: any[]) {
     return id + '.' + md5Hex(JSON.stringify(args, sortObjects)).slice(0, 8)
   }
-  return {
+  const stateModule: StateModule = {
     // @ts-ignore
     [kStateModule]: true,
     id: toCacheKey([]),
@@ -42,8 +44,7 @@ export function defineStateModule<T, Args extends any[]>(
       )
     },
     load(...args) {
-      const cacheKey = toCacheKey(args)
-      return loadStateModule(cacheKey, loadImpl, ...args)
+      return loadStateModule(id, args as Args, loadImpl, toCacheKey)
     },
     bind(...args) {
       return {
@@ -57,6 +58,8 @@ export function defineStateModule<T, Args extends any[]>(
       }
     },
   }
+  stateModulesById.set(id, stateModule)
+  return stateModule
 }
 
 export type ResolvedState<T> = T extends Promise<any>

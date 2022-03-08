@@ -1,3 +1,4 @@
+import getBody from 'raw-body'
 import {
   applyHtmlProcessors,
   extractClientFunctions,
@@ -12,6 +13,7 @@ import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { createPageFactory, PageFactory } from '../pages'
 import { RenderedFile, RenderPageOptions } from '../pages/types'
+import { stateModulesById } from '../runtime/stateModules'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
@@ -73,6 +75,31 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           )
         }
       }
+    },
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.method !== 'POST') {
+          return next()
+        }
+
+        const url = req.url!.slice(context.basePath.length - 1) || '/'
+        if (!isStateModuleRequest(url)) {
+          return next()
+        }
+
+        const [id, args] = JSON.parse(
+          (await getBody(req)).toString('utf8')
+        ) as [string, any[]]
+
+        const stateModule = stateModulesById.get(id)
+        if (!stateModule) {
+          return next()
+        }
+
+        await stateModule.load(...args)
+        res.writeHead(200)
+        res.end()
+      })
     },
   }
 
