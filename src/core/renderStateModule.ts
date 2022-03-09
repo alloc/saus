@@ -1,3 +1,4 @@
+import { stateModuleArguments } from '../runtime/loadStateModule'
 import { dataToEsm } from '../utils/dataToEsm'
 import type { CacheEntry } from './withCache'
 
@@ -9,10 +10,17 @@ export function renderStateModule(
   const cacheEntry =
     `[state` + config.map(value => ', ' + dataToEsm(value, '')).join('') + `]`
 
-  return [
+  const lines = [
     `import { globalCache } from "${stateCacheUrl}"`,
     dataToEsm(state, 'state'),
     `globalCache.loaded["${stateModuleId}"] = ${cacheEntry}`,
     `export default state`,
-  ].join('\n')
+  ]
+
+  const args = stateModuleArguments.get(stateModuleId)
+  if (args) {
+    lines.unshift(`/* ${JSON.stringify(args)} */`)
+  }
+
+  return lines.join('\n')
 }

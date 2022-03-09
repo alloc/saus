@@ -6,6 +6,8 @@ import type { ResolvedState } from './stateModules'
 
 const debug = createDebug('saus:cache')
 
+export const stateModuleArguments = new Map<string, any[]>()
+
 export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
   this: CacheControl,
   ...args: Args
@@ -46,6 +48,7 @@ export function loadStateModule<T, Args extends any[]>(
           result = unwrapDefault(result)
         }
       }
+      stateModuleArguments.set(cacheKey, args)
       return result
     } catch (error: any) {
       throw error && 'message' in error
