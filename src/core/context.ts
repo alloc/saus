@@ -262,7 +262,7 @@ function getConfigResolver(
     // In build mode, we create Saus plugins *before* routes load,
     // whereas, in dev mode, they're created *after* that.
     if (config.command == 'build') {
-      context.plugins = await getSausPlugins(context)
+      context.plugins = await getSausPlugins(context, config)
     }
 
     return config
