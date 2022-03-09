@@ -10,6 +10,9 @@
     },
     "vendor/regexparam": {
       "url": "https://github.com/aleclarson/regexparam.git"
+    },
+    "vendor/navaid": {
+      "url": "https://github.com/aleclarson/navaid.git"
     }
   },
   "alias": {
