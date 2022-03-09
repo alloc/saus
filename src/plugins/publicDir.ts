@@ -1,10 +1,10 @@
-import fs from 'fs'
-import path from 'path'
-import createDebug from 'debug'
-import { green } from 'kleur/colors'
 import { createFilter } from '@rollup/pluginutils'
-import { Plugin, endent, dataToEsm } from '../core'
+import createDebug from 'debug'
+import fs from 'fs'
+import { green } from 'kleur/colors'
 import { success } from 'misty'
+import path from 'path'
+import { dataToEsm, endent, Plugin, vite } from '../core'
 
 const isDebug = !!process.env.DEBUG
 const debug = createDebug('saus:publicDir')
@@ -21,7 +21,7 @@ export type CopyPublicOptions = {
  * as defined in your Vite config.
  */
 export function copyPublicDir(options: CopyPublicOptions = {}) {
-  let resolveId: ((id: string) => string | undefined) | undefined
+  let plugins: readonly vite.Plugin[]
   let publicDir: string
   let outDir: string
 
@@ -59,16 +59,16 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
     name: 'publicDir:resolver',
     apply: 'build',
     enforce: 'pre',
-    resolveId(id) {
-      return resolveId?.(id)
-    },
   }
 
   const copier: Plugin = {
     name: 'publicDir:copier',
     apply: 'build',
+    configResolved(config) {
+      plugins = config.plugins
+    },
     async saus(context) {
-      outDir = context.config.build.outDir
+      outDir = path.resolve(context.root, context.config.build.outDir)
       publicDir = context.config.publicDir
       if (publicDir) {
         publicDir = path.resolve(context.root, publicDir)
@@ -106,22 +106,59 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
         )
       }
 
+      const renamedFileMap = Object.fromEntries(renamedFiles.entries())
+
+      // Rewrite JS imports of public files.
+      if (renamedFiles.size) {
+        const originalFileMap: Record<string, string> = {}
+
+        resolver.resolveId = id => {
+          if (id[0] == '/') {
+            const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
+            const newId = renamedFileMap[cleanedId]
+            if (newId) {
+              originalFileMap[newId] = cleanedId
+              return '/' + newId + suffix
+            }
+          }
+        }
+
+        resolver.load = async function (id, options) {
+          if (id[0] == '/') {
+            const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
+            const originalId = originalFileMap[cleanedId]
+            if (!originalId) {
+              return
+            }
+            const originalUrl = '/' + originalId + suffix
+            for (const plugin of plugins) {
+              if (!plugin.load || plugin == resolver) {
+                continue
+              }
+              const loadResult = await plugin.load.call(
+                this,
+                originalUrl,
+                options
+              )
+              if (loadResult != null) {
+                return loadResult
+              }
+            }
+          }
+        }
+      }
+
       return {
         async fetchBundleImports(modules) {
           if (renamedFiles.size) {
-            const renameMap = Object.fromEntries(renamedFiles.entries())
-
-            // Rewrite JS imports of public files.
-            resolveId = id => renameMap[id]
-
             // Rewrite HTML references of public files.
             const renamer = modules.addModule({
               id: '@saus/copyPublicDir/renamer.js',
               code: endent`
-              import {resolveHtmlImports} from "@saus/html"
-              ${dataToEsm(renameMap, 'const renameMap')}
-              resolveHtmlImports(id => renameMap[id])
-            `,
+                import {resolveHtmlImports} from "@saus/html"
+                ${dataToEsm(renamedFileMap, 'const renameMap')}
+                resolveHtmlImports(id => renameMap[id])
+              `,
             })
 
             return [renamer.id]
