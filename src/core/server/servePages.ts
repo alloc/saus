@@ -2,11 +2,11 @@ import { gray } from 'kleur/colors'
 import type { default as RenderPage } from '../../bundle/main'
 import { connect } from './connect'
 import { debug } from './debug'
-import { ModuleCache } from './moduleCache'
+import { FileCache } from './fileCache'
 
 export const servePages = (
   renderPage: typeof RenderPage,
-  moduleCache: ModuleCache
+  cache: FileCache
 ): connect.Middleware =>
   async function servePage(req, res, next) {
     try {
@@ -15,8 +15,8 @@ export const servePages = (
         return next()
       }
       debug(gray('rendered'), req.url)
-      page.modules.forEach(moduleCache.add)
-      page.assets.forEach(moduleCache.add)
+      cache.addModules(page.modules)
+      cache.addAssets(page.assets)
       res.writeHead(200, {
         'Content-Type': 'text/html',
       })

@@ -8,17 +8,21 @@ const indexHtmlSuffix = '/index.html'
  * will be helpful. It returns the URL pathname that your server should
  * respond to for each module.
  */
-export function getModuleUrl(mod: ClientModule, base?: string | number) {
+export function getModuleUrl(
+  mod: string | ClientModule,
+  base?: string | number
+) {
   // Ignore non-string base, so getModuleUrl can be passed to `Array.from`
   if (typeof base !== 'string') {
     base = '/'
   }
 
-  const modulePath = mod.id.endsWith(htmlExtension)
-    ? ('/' + mod.id).endsWith(indexHtmlSuffix)
-      ? mod.id.slice(0, 1 - indexHtmlSuffix.length)
-      : mod.id.slice(0, -htmlExtension.length)
-    : mod.id
+  const moduleId = typeof mod == 'string' ? mod : mod.id
+  const modulePath = moduleId.endsWith(htmlExtension)
+    ? ('/' + moduleId).endsWith(indexHtmlSuffix)
+      ? moduleId.slice(0, 1 - indexHtmlSuffix.length)
+      : moduleId.slice(0, -htmlExtension.length)
+    : moduleId
 
   return base + modulePath
 }

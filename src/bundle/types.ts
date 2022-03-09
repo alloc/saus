@@ -1,3 +1,5 @@
+import { HttpRedirect } from '../http/redirect'
+
 export type RenderedFile = {
   id: string
   data: any
@@ -7,10 +9,15 @@ export type RenderedFile = {
 export interface RenderedPage {
   id: string
   html: string
-  modules: Set<ClientModule>
-  assets: Set<ClientModule>
+  /** Files generated whilst rendering. */
   files: RenderedFile[]
+  /** Modules required by the client. */
+  modules: Set<ClientModule>
+  /** Assets required by the client. */
+  assets: Map<string, ClientAsset>
 }
+
+export type ClientAsset = Buffer | HttpRedirect
 
 export interface ClientModule {
   id: string

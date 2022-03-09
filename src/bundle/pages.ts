@@ -6,10 +6,12 @@ import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
+import { isExternalUrl } from '../utils/isExternalUrl'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 import { removeSourceMapUrls } from '../utils/sourceMap'
 import { ParsedUrl, parseUrl } from '../utils/url'
-import moduleMap from './clientModules'
+import moduleMap from './moduleMap'
+import inlinedModules from './inlinedModules'
 import config from './config'
 import { context } from './context'
 import { applyHtmlProcessors, endent, __exportAll } from './core'
@@ -22,12 +24,20 @@ import { HtmlTagDescriptor } from './html/types'
 import { loadRenderers } from './render'
 import { ssrClearCache, ssrImport } from './ssrModules'
 import { ClientModule, RenderedPage, RenderPageOptions } from './types'
+import getModuleLoader from './moduleLoader'
+import getAssetLoader from './assetLoader'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
 
-const getModule = (id: string) =>
-  moduleMap[id] || Object.values(moduleMap).find(module => module.id == id)
+const { loadModule } = getModuleLoader()
+const { loadAsset } = getAssetLoader()
+
+// Avoid string duplication in the inlined module cache
+// by setting their `id` property at runtime.
+for (const id in inlinedModules) {
+  inlinedModules[id].id = id
+}
 
 const hydrateImport = `import { hydrate } from "saus/client"`
 const pageFactory = createPageFactory(
@@ -114,7 +124,7 @@ export async function renderPage(
       id: filename,
       html: '',
       modules: new Set(),
-      assets: new Set(),
+      assets: new Map(),
       files: page.files,
     }
     renderFinish?.(pagePublicPath, null, finishedPage)
@@ -123,12 +133,12 @@ export async function renderPage(
 
   const seen = new Set<ClientModule>()
   const modules = new Set<ClientModule>()
-  const assets = new Set<ClientModule>()
+  const assets = new Set<string>()
 
   const addModule = (id: string) => {
-    let module = getModule(id)
+    let module = inlinedModules[id]
     if (!module) {
-      console.warn(`Unknown module "${id}" was imported`)
+      assets.add(id)
       return null
     }
     if (seen.has(module)) {
@@ -146,9 +156,6 @@ export async function renderPage(
         }
       }
       modules.add(module)
-    } else {
-      // Assets are not renamed for debug view.
-      assets.add(module)
     }
     return module
   }
@@ -156,7 +163,7 @@ export async function renderPage(
   const headTags: HtmlTagDescriptor[] = []
   const bodyTags: HtmlTagDescriptor[] = []
 
-  const routeModule = addModule(page.routeModuleId)!
+  const routeModule = addModule(moduleMap[page.routeModuleId])!
   const entryId = page.client
     ? path.join(config.assetsDir, page.client.id)
     : null!
@@ -171,14 +178,17 @@ export async function renderPage(
   // No point in loading any JS if no entry module exists.
   if (entryModule) {
     const entryImports = new Set<string>()
-    entryModule.text = rewriteImports(entryModule, entryImports, base)
+    entryModule.text = await rewriteImports(entryModule, entryImports, base)
     entryModule.imports = Array.from(entryImports)
     entryModule.imports.forEach(addModule)
     modules.add(entryModule)
 
     // Anything imported by either the route module or the entry module is
     // pre-loaded by the page state module to speed up page navigation.
-    const preloadList = getPreloadList([routeModule, entryModule], isDebug)
+    const preloadList = await getPreloadList(
+      [routeModule, entryModule],
+      isDebug
+    )
 
     // The "page state module" initializes the global state cache with any
     // state modules used by the route module or entry module. It also
@@ -189,7 +199,7 @@ export async function renderPage(
       text: renderPageState(
         page,
         config.base,
-        addModule('helpers')!.id,
+        inlinedModules.helpers.id,
         preloadList
       ),
       exports: ['default'],
@@ -215,11 +225,11 @@ export async function renderPage(
     }
 
     // The hydrating module is inlined.
-    const hydrateModule = moduleMap[hydrateImport]
+    const hydrateModule = inlinedModules[moduleMap[hydrateImport]]
     const hydrateText = removeSourceMapUrls(
       isDebug
-        ? rewriteImports(hydrateModule, new Set(), base)
-        : hydrateModule.text
+        ? await rewriteImports(hydrateModule, new Set(), base)
+        : await loadModule(hydrateModule.id)
     )
     hydrateModule.imports?.forEach(addModule)
 
@@ -244,10 +254,7 @@ export async function renderPage(
     })
   }
 
-  getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
-  getTagsForAssets(assets, headTags)
-
-  let html = injectToHead(page.html, headTags)
+  let html = page.html
   if (bodyTags.length) {
     html = injectToBody(html, bodyTags)
   }
@@ -263,32 +270,50 @@ export async function renderPage(
     ]
   }
 
+  const { files } = page
   return applyHtmlProcessors(
     html,
     postHtmlProcessors,
     { page, config, assets },
     config.htmlTimeout
-  ).then(html => {
+  ).then(async html => {
+    const assetMap = new Map(
+      await Promise.all(
+        Array.from(assets)
+          .filter(assetId => !isExternalUrl(assetId))
+          .map(async assetId => {
+            const data = await loadAsset(assetId)
+            return [assetId, data] as const
+          })
+      )
+    )
+
+    getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
+    getTagsForAssets(assets, headTags)
+    html = injectToHead(html, headTags)
+
     const finishedPage: RenderedPage = {
       id: filename,
       html,
+      files,
       modules,
-      assets,
-      files: page!.files,
+      assets: assetMap,
     }
+
     renderFinish?.(pagePublicPath, null, finishedPage)
     return finishedPage
   })
 }
 
-function rewriteImports(
+async function rewriteImports(
   importer: ClientModule,
   imported: Set<string>,
   resolvedBase: string
-): string {
+): Promise<string> {
+  const importerText = await loadModule(importer.id)
   const isBaseReplaced = config.base !== resolvedBase
   const splices: Splice[] = []
-  for (const importStmt of parseImports(importer.text)) {
+  for (const importStmt of parseImports(importerText)) {
     const source = importStmt.source.value
 
     let resolvedId: string | undefined
@@ -298,7 +323,8 @@ function rewriteImports(
     }
 
     const module =
-      (resolvedId && getModule(resolvedId)) || moduleMap[importStmt.text]
+      (resolvedId && inlinedModules[resolvedId]) ||
+      inlinedModules[moduleMap[importStmt.text]]
 
     if (!module) {
       console.warn(`Unknown module "${source}" imported by "${importer.id}"`)
@@ -306,17 +332,16 @@ function rewriteImports(
     }
 
     if (resolvedId) {
-      resolvedUrl =
-        isBaseReplaced && module.debugText
-          ? source.replace(config.base, resolvedBase)
-          : source
+      resolvedUrl = isBaseReplaced
+        ? source.replace(config.base, resolvedBase)
+        : source
     }
 
     if (module.exports) {
+      imported.add(module.id)
       if (!resolvedId || isBaseReplaced) {
         resolvedId = module.id
-        resolvedUrl =
-          (module.debugText ? resolvedBase : config.base) + resolvedId
+        resolvedUrl = resolvedBase + resolvedId
 
         splices.push([
           importStmt.source.start,
@@ -324,20 +349,18 @@ function rewriteImports(
           resolvedUrl,
         ])
       }
-      moduleMap[resolvedId] = module
-      imported.add(module.id)
     } else {
       // Modules that export nothing are inlined.
       const text = removeSourceMapUrls(
         module.imports
-          ? rewriteImports(module, imported, resolvedBase)
-          : module.text
+          ? await rewriteImports(module, imported, resolvedBase)
+          : await loadModule(module.id)
       )
 
       splices.push([importStmt.start, importStmt.end, text])
     }
   }
-  return applySplices(importer.text, splices)
+  return applySplices(importerText, splices)
 }
 
 type Splice = [start: number, end: number, replacement: string]
@@ -352,21 +375,21 @@ function applySplices(text: string, splices: Splice[]) {
   return text
 }
 
-function getPreloadList(
+async function getPreloadList(
   entries: (ClientModule | undefined)[],
   isDebug: boolean
-): string[] {
+): Promise<string[]> {
   const preloadList: string[] = []
   const modules = new Set(entries)
   modules.forEach(module => {
     if (module) {
       let preloadId = module.id
-      if (isDebug && module.debugText && !entries.includes(module)) {
+      if (isDebug && !entries.includes(module)) {
         preloadId = debugDir + preloadId
       }
       preloadList.push(preloadId)
       module.imports?.forEach(id => {
-        modules.add(getModule(id))
+        modules.add(inlinedModules[id])
       })
     }
   })
@@ -374,11 +397,11 @@ function getPreloadList(
 }
 
 function getTagsForAssets(
-  assets: Iterable<ClientModule>,
+  assetIds: Iterable<string>,
   headTags: HtmlTagDescriptor[]
 ) {
-  for (const asset of assets) {
-    const url = config.base + asset.id
+  for (const assetId of assetIds) {
+    const url = isExternalUrl(assetId) ? assetId : config.base + assetId
     if (isCSSRequest(url)) {
       headTags.push({
         tag: 'link',

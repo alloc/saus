@@ -10,7 +10,7 @@ import './viteRequire'
 
 export { vite }
 
-export type ResolvedConfig = vite.ResolvedConfig & {
+export type ResolvedConfig = Omit<vite.ResolvedConfig, 'saus'> & {
   readonly saus: Readonly<SausConfig>
 }
 
@@ -55,6 +55,19 @@ export interface SausBundleConfig {
    * by default.
    */
   isolate?: (string | RegExp)[]
+  /**
+   * Control how the map of client modules is stored by the server.
+   *
+   * For the `"inline"` setting, client modules are inlined into the bundle
+   * and encoded with Base64 if needed. This increases the bundle size
+   * considerably.
+   *
+   * For the `"external"` setting, client modules are written to their own files
+   * and loaded with `fs.readFileSync` on-demand.
+   *
+   * @default "inline"
+   */
+  moduleMap?: 'external' | 'inline'
 }
 
 export interface SausConfig {

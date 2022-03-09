@@ -4,7 +4,6 @@ import path from 'path'
 import type { OutputAsset } from 'rollup'
 import type { RenderedPage } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
-import { textExtensions } from '../utils/textExtensions'
 
 /**
  * Write an array of rendered pages to disk. Shared modules are deduplicated.
@@ -34,12 +33,10 @@ export function writePages(
       for (const module of page.modules) {
         writeFile(path.join(outDir, module.id), module.text)
       }
-      for (const asset of page.assets) {
-        const content = !textExtensions.test(asset.id)
-          ? Buffer.from(asset.text, 'base64')
-          : asset.text
-
-        writeFile(path.join(outDir, asset.id), content)
+      for (const [assetId, content] of page.assets) {
+        if (Buffer.isBuffer(content)) {
+          writeFile(path.join(outDir, assetId), content)
+        }
       }
     }
     for (const { id, data } of page.files) {

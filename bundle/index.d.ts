@@ -1,4 +1,10 @@
+import { OutputAsset } from 'rollup';
 import { URLSearchParams } from 'url';
+
+declare class HttpRedirect {
+    readonly location: string;
+    constructor(location: string);
+}
 
 declare type RenderedFile = {
     id: string;
@@ -8,10 +14,14 @@ declare type RenderedFile = {
 interface RenderedPage {
     id: string;
     html: string;
-    modules: Set<ClientModule>;
-    assets: Set<ClientModule>;
+    /** Files generated whilst rendering. */
     files: RenderedFile[];
+    /** Modules required by the client. */
+    modules: Set<ClientModule>;
+    /** Assets required by the client. */
+    assets: Map<string, ClientAsset>;
 }
+declare type ClientAsset = Buffer | HttpRedirect;
 interface ClientModule {
     id: string;
     text: string;
@@ -28,6 +38,7 @@ interface ClientModuleMap {
     [key: string]: ClientModule;
 }
 declare type RenderPageOptions = {
+    timeout?: number;
     renderStart?: (url: string) => void;
     renderFinish?: (url: string, error: Error | null, page?: RenderedPage | null) => void;
 };
@@ -38,7 +49,7 @@ declare type RenderPageOptions = {
  * Returns a map of file names to their size in kilobytes. This object can be
  * passed to the `printFiles` function.
  */
-declare function writePages(pages: ReadonlyArray<RenderedPage | null>, outDir: string): Record<string, number>;
+declare function writePages(pages: ReadonlyArray<RenderedPage | null>, outDir: string, rollupAssets?: Map<string, OutputAsset>): Record<string, number>;
 /**
  * Print a bunch of files kind of like Vite does.
  *
@@ -56,9 +67,7 @@ declare function printFiles(logger: {
  * will be helpful. It returns the URL pathname that your server should
  * respond to for each module.
  */
-declare const getModuleUrl: (mod: ClientModule) => string;
-
-declare const moduleMap: ClientModuleMap;
+declare function getModuleUrl(mod: string | ClientModule, base?: string | number): string;
 
 declare class ParsedUrl {
     readonly searchParams: URLSearchParams;
@@ -70,7 +79,7 @@ declare class ParsedUrl {
     slice(start: number, end?: number): ParsedUrl;
 }
 
-declare function renderPage(pageUrl: string | ParsedUrl, { renderStart, renderFinish }?: RenderPageOptions): Promise<RenderedPage | null>;
+declare function renderPage(pageUrl: string | ParsedUrl, { timeout, renderStart, renderFinish }?: RenderPageOptions): Promise<RenderedPage | null>;
 
 declare function getKnownPaths(options?: {
     noDebug?: boolean;
@@ -103,4 +112,4 @@ interface RuntimeConfig {
 
 declare const config: RuntimeConfig;
 
-export { ClientModule, ClientModuleMap, RenderPageOptions, RenderedFile, RenderedPage, config, renderPage as default, getKnownPaths, getModuleUrl, moduleMap, printFiles, __d as ssrDefine, ssrImport, writePages };
+export { ClientAsset, ClientModule, ClientModuleMap, RenderPageOptions, RenderedFile, RenderedPage, config, renderPage as default, getKnownPaths, getModuleUrl, printFiles, __d as ssrDefine, ssrImport, writePages };

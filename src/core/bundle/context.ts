@@ -7,8 +7,10 @@ import { loadContext, SausContext } from '../context'
 import { loadRoutes } from '../loadRoutes'
 import { SausBundleConfig, vite } from '../vite'
 
+type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'moduleMap' | 'target'
+
 export interface InlineBundleConfig
-  extends Pick<SausBundleConfig, 'debugBase' | 'entry' | 'format' | 'target'> {
+  extends Pick<SausBundleConfig, InheritedKeys> {
   outFile?: string
   write?: boolean
 }
@@ -41,6 +43,7 @@ export async function loadBundleContext(
     entry,
     format = bundleConfig.format || 'cjs',
     outFile,
+    moduleMap = bundleConfig.moduleMap || 'inline',
     target = bundleConfig.target || 'node14',
     write = buildConfig.write,
   } = options
@@ -84,6 +87,7 @@ export async function loadBundleContext(
     entry,
     target,
     format,
+    moduleMap,
     outFile,
     debugBase,
   }

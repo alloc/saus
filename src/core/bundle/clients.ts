@@ -324,6 +324,7 @@ export async function generateClientModules(
   })
 
   const moduleMap: ClientModuleMap = {}
+  const assetMap: Record<string, Buffer> = {}
 
   let entryIndex: number
   await mapSerial(chunks, async chunk => {
@@ -428,15 +429,17 @@ export async function generateClientModules(
   })
 
   assets.forEach(asset => {
-    moduleMap[asset.fileName] = {
-      id: asset.fileName,
-      text: Buffer.from(asset.source).toString(
-        textExtensions.test(asset.fileName) ? 'utf8' : 'base64'
-      ),
+    if (textExtensions.test(asset.fileName)) {
+      moduleMap[asset.fileName] = {
+        id: asset.fileName,
+        text: asset.source + '',
+      }
+    } else {
+      assetMap[asset.fileName] = Buffer.from(asset.source)
     }
   })
 
-  return { moduleMap, clientRouteMap }
+  return { moduleMap, assetMap, clientRouteMap }
 }
 
 function quotes(text: string) {

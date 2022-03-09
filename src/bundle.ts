@@ -45,6 +45,7 @@ import { callPlugins } from './utils/callPlugins'
 import { parseImports, serializeImports } from './utils/imports'
 import { relativeToCwd } from './utils/relativeToCwd'
 import { resolveMapSources, SourceMap } from './utils/sourceMap'
+import { textExtensions } from './utils/textExtensions'
 import { toDevPath } from './utils/toDevPath'
 
 export interface BundleOptions {
@@ -67,7 +68,7 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
   ])
 
   Profiling.mark('generate client modules')
-  const { moduleMap, clientRouteMap } = await generateClientModules(
+  const { moduleMap, assetMap, clientRouteMap } = await generateClientModules(
     functions,
     functionImports,
     runtimeConfig,
@@ -82,6 +83,7 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
     runtimeConfig,
     functions,
     moduleMap,
+    assetMap,
     clientRouteMap,
     isolatedModules,
     await bundlePlugins
@@ -91,6 +93,8 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
     path: context.bundle.outFile,
     code,
     map: map as SourceMap | undefined,
+    modules: moduleMap,
+    assets: assetMap,
   }
 
   if (bundle.path) {
@@ -114,6 +118,28 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
         path.resolve(__dirname, '../bundle/index.d.ts'),
         bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
       )
+    }
+
+    if (context.bundle.moduleMap == 'external') {
+      const outDir = path.resolve(
+        context.config.root,
+        context.config.build.outDir
+      )
+      for (const module of Object.values(moduleMap)) {
+        let file = path.join(outDir, module.id)
+        fs.mkdirSync(path.dirname(file), { recursive: true })
+        fs.writeFileSync(
+          file,
+          textExtensions.test(module.id)
+            ? module.text
+            : Buffer.from(module.text, 'base64')
+        )
+        if (runtimeConfig.debugBase && module.debugText) {
+          file = path.join(outDir, runtimeConfig.debugBase, module.id)
+          fs.mkdirSync(path.dirname(file), { recursive: true })
+          fs.writeFileSync(file, module.debugText)
+        }
+      }
     }
   }
 
@@ -314,6 +340,7 @@ async function generateSsrBundle(
   runtimeConfig: RuntimeConfig,
   functions: ClientFunctions,
   moduleMap: ClientModuleMap,
+  assetMap: Record<string, Buffer>,
   clientRouteMap: Record<string, string>,
   isolatedModules: IsolatedModuleMap,
   inlinePlugins: vite.PluginOption[]
@@ -327,8 +354,41 @@ async function generateSsrBundle(
   })
 
   modules.addModule({
-    id: path.join(bundleDir, 'clientModules.ts'),
-    code: dataToEsm(moduleMap),
+    id: path.join(bundleDir, 'inlinedModules.ts'),
+    code: dataToEsm(
+      Object.values(moduleMap).reduce(
+        (moduleMap, { id, text, debugText, ...props }) => {
+          moduleMap[id] = props as any
+          if (bundleConfig.moduleMap !== 'external') {
+            Object.assign(props, { text, debugText })
+          }
+          return moduleMap
+        },
+        {} as typeof import('./bundle/inlinedModules').default
+      )
+    ),
+  })
+
+  modules.addModule({
+    id: path.join(bundleDir, 'inlinedAssets.ts'),
+    code: dataToEsm(
+      Object.entries(assetMap).reduce((assetMap, [id, data]) => {
+        assetMap[id] = data.toString('base64')
+        return assetMap
+      }, {} as typeof import('./bundle/inlinedAssets').default)
+    ),
+  })
+
+  modules.addModule({
+    id: path.join(bundleDir, 'moduleMap.ts'),
+    code: dataToEsm(
+      Object.keys(moduleMap).reduce((moduleIds, key) => {
+        if (key !== moduleMap[key].id) {
+          moduleIds[key] = moduleMap[key].id
+        }
+        return moduleIds
+      }, {} as typeof import('./bundle/moduleMap').default)
+    ),
   })
 
   if (!bundleConfig.debugBase)

@@ -16,13 +16,10 @@ export type HtmlProcessorState = {
   /**
    * Only exists in SSR bundle environment.
    *
-   * If an HTML processor wants to provide self-hosted assets,
-   * it should add the asset to this cache for the SSR bundle
-   * to access, but make sure to also inject a `<link>` tag (or
-   * whatever makes most sense for your use case) or else the
-   * asset won't be loaded by the browser.
+   * By adding an asset URL to this `Set`, it will be loaded
+   * or pre-fetched by the rendered page.
    */
-  assets?: Set<ClientModule>
+  assets?: Set<string>
 }
 
 type Promisable<T> = T | PromiseLike<T>

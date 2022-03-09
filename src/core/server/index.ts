@@ -1,5 +1,5 @@
 export * from './connect'
-export * from './moduleCache'
-export * from './serveClientModules'
+export * from './fileCache'
+export * from './serveCachedFiles'
 export * from './servePages'
 export * from './servePublicDir'
