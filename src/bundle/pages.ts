@@ -411,7 +411,13 @@ function getTagsForAssets(
         },
       })
     } else {
-      // TODO: preload other assets
+      headTags.push({
+        tag: 'link',
+        attrs: {
+          rel: 'prefetch',
+          href: url,
+        },
+      })
     }
   }
 }
