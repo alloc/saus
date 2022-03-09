@@ -109,19 +109,19 @@ function serializeObject(
   const baseIndent = INDENT.repeat(keyPath.length)
   const separator = RETURN + baseIndent + INDENT
 
-  const definedEntries = Object.entries(obj)
+  const definedEntries = Object.entries(obj).filter(entry => {
+    const [key, value] = entry
     // Ignore undefined property values like JSON.stringify does
-    .filter(entry => entry[1] !== undefined)
+    if (value !== undefined) {
+      entry[1] = serialize(value, keyPath.concat(String(key)), replacer, obj)
+      return entry[1] !== ''
+    }
+  })
 
   definedEntries.forEach(([key, value], i) => {
     const legalName = /^[$_a-z0-9]+$/i.test(key) ? key : stringify(key)
-    output +=
-      (i > 0 ? ',' : '') +
-      separator +
-      legalName +
-      ':' +
-      SPACE +
-      serialize(value, keyPath.concat(String(key)), replacer, obj)
+    output += (i > 0 ? ',' : '') + separator + legalName + ':' + SPACE + value
   })
+
   return output + RETURN + baseIndent + '}'
 }
