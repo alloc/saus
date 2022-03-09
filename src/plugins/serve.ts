@@ -18,6 +18,7 @@ import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { resetModule } from '../vm/moduleMap'
+import { formatAsyncStack } from '../vm/formatAsyncStack'
 
 export type ServedPage = {
   error?: any
@@ -87,18 +88,30 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           return next()
         }
 
-        const [id, args] = JSON.parse(
-          (await getBody(req)).toString('utf8')
-        ) as [string, any[]]
+        try {
+          const [id, args] = JSON.parse(
+            (await getBody(req)).toString('utf8')
+          ) as [string, any[]]
 
-        const stateModule = stateModulesById.get(id)
-        if (!stateModule) {
-          return next()
+          const stateModule = stateModulesById.get(id)
+          if (!stateModule) {
+            return next()
+          }
+
+          await stateModule.load(...args)
+          res.writeHead(200)
+          res.end()
+        } catch (error: any) {
+          formatAsyncStack(
+            error,
+            context.moduleMap!,
+            [],
+            context.config.filterStack
+          )
+          console.error(error)
+          res.writeHead(500)
+          res.end()
         }
-
-        await stateModule.load(...args)
-        res.writeHead(200)
-        res.end()
       })
     },
   }
