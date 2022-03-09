@@ -7,7 +7,7 @@ export function mergeVisitors<
   State extends HtmlVisitor.BaseState = HtmlVisitorState
 >(
   arg: HtmlVisitor<State> | HtmlVisitor<State>[],
-  state: State & HtmlVisitorState
+  state?: State & HtmlVisitorState
 ) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
@@ -27,7 +27,7 @@ export function mergeVisitors<
   let closeVisitors: Visitor[]
 
   // Use a smaller timeout than configured to ensure ours triggers first.
-  const timeout = (state.config.htmlTimeout ?? 10) - 0.1
+  const timeout = (state?.config.htmlTimeout ?? 10) - 0.1
 
   const visit = async (
     path: TagPath,
@@ -37,7 +37,7 @@ export function mergeVisitors<
   ) => {
     currentVisitor = visitor
     await limitTime(
-      handler(path, state),
+      handler(path, state!),
       timeout,
       `HTML visitor "${name}" took too long`
     )
