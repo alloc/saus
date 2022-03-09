@@ -6,12 +6,11 @@ import { MistyTask, startTask } from 'misty/task'
 import renderPage, {
   config,
   getKnownPaths,
-  moduleMap,
   RenderPageOptions,
 } from 'saus/bundle'
 import {
-  createModuleCache,
-  serveClientModules,
+  createFileCache,
+  serveCachedFiles,
   servePages,
   servePublicDir,
 } from 'saus/core'
@@ -19,9 +18,9 @@ import { connect } from './connect'
 
 const debug = !!process.env.DEBUG || hasFlag('debug') ? console.log : () => {}
 
-const moduleCache = createModuleCache(config.base, Object.values(moduleMap))
+const moduleCache = createFileCache(config.base)
 const servePage = servePages(renderPage, moduleCache)
-const serveModule = serveClientModules(moduleCache)
+const serveModule = serveCachedFiles(moduleCache)
 
 const app = connect()
   .use((req, res, next) => {
