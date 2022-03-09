@@ -5,6 +5,6 @@
   "compilerOptions": {
     "lib": ["dom", "esnext"],
     "module": "esnext",
-    "types": ["../../client/env"]
+    "types": ["../../env/client"]
   }
 }
