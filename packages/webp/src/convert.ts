@@ -22,6 +22,7 @@ export interface Options extends WebpOptions {
 
 const urlRE = /(\?|&)url(?:&|$)/
 const hasFreeThread = limitConcurrency()
+const convertedImages = new Map<string, Buffer>()
 
 /**
  * Convert images to WebP format.
@@ -59,15 +60,8 @@ export function convertToWebp(options: Options = {}): Plugin {
     apply: 'build',
     enforce: 'pre',
     configResolved(config) {
-      // Leave client builds alone.
-      if (!config.build.ssr) {
-        return
-      }
       const { logger } = config
       this.load = async function (id) {
-        if (id.startsWith('\0')) {
-          return
-        }
         if (!filter(id)) {
           return
         }
@@ -77,41 +71,46 @@ export function convertToWebp(options: Options = {}): Plugin {
           return
         }
 
-        let buffer!: Buffer
-        try {
-          buffer = await fs.readFile(id)
-        } catch {
-          if (id[0] === '/') {
+        let buffer = convertedImages.get(id)
+        if (!buffer) {
+          try {
+            buffer = await fs.readFile(id)
+          } catch {
+            if (id[0] !== '/') {
+              return
+            }
             const publicId = path.join(config.publicDir, id.slice(1))
             buffer = await fs.readFile(publicId)
           }
-        }
-
-        try {
-          buffer = await convert(buffer)
-          if (options.verbose) {
-            success(`[webp] Converted file: "${id}"`)
+          try {
+            buffer = await convert(buffer)
+            convertedImages.set(id, buffer)
+            if (options.verbose) {
+              success(`[webp] Converted file: "${id}"`)
+            }
+          } catch (e: any) {
+            return void logger.error(
+              red(`[!] Converting "${id}" to WebP failed:\n`) + e.stack
+            )
           }
-        } catch (e: any) {
-          return void logger.error(
-            red(`[!] Converting "${id}" to WebP failed:\n`) + e.stack
-          )
         }
 
-        let fileName = path.join(
+        const fileName = path.join(
           config.build.assetsDir,
           id.replace(/\.[^.]+$/, '.' + md5Hex(buffer).slice(0, 8) + '.webp')
         )
-        this.emitFile({
-          type: 'asset',
-          fileName,
-          source: buffer,
-        })
+
+        if (!config.build.ssr)
+          this.emitFile({
+            type: 'asset',
+            fileName,
+            source: buffer,
+          })
 
         return `export default "${config.base}${fileName}"`
       }
       this.generateBundle = () => {
-        if (!options.silent) {
+        if (!options.silent && numConverted > 0) {
           success(`${plural(numConverted, 'image')} converted to WebP`)
         }
       }
