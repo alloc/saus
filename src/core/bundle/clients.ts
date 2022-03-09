@@ -162,6 +162,11 @@ export async function generateClientModules(
       modules,
       moduleRedirection([
         overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
+        overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
+        redirectModule(
+          path.join(httpDir, 'httpImport.ts'),
+          path.join(runtimeDir, 'emptyModule.ts')
+        ),
         redirectModule(
           path.join(httpDir, 'get.ts'),
           path.join(clientDir, 'http/get.ts')
