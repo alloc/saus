@@ -397,7 +397,7 @@ export async function generateClientModules(
       chunk.code = minified.code!
     }
 
-    if (chunk.map) {
+    if (chunk.map && !chunk.isDebug) {
       chunk.code += toInlineSourceMap(chunk.map)
     }
 
