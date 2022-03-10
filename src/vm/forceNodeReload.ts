@@ -1,4 +1,7 @@
 import { Module } from 'module'
+import createDebug from 'debug'
+
+const debug = createDebug('saus:forceNodeReload')
 
 export function forceNodeReload(shouldReload: (id: string) => boolean) {
   const rawCache = (Module as any)._cache as Record<string, NodeModule>
@@ -10,6 +13,7 @@ export function forceNodeReload(shouldReload: (id: string) => boolean) {
       if (!cached || !shouldReload(id)) {
         return cached
       }
+      debug('Forcing reload: %s', id)
       delete rawCache[id]
     },
   })
