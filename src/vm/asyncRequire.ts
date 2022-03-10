@@ -292,11 +292,13 @@ export function createAsyncRequire({
     }
 
     if (!isCached && isDebug) {
-      debug(
-        `Loaded %s in %sms`,
-        kleur.cyan(toDebugPath(resolvedId)),
-        Date.now() - time
-      )
+      const loadTime = Date.now() - time
+      if (loadTime > 500)
+        debug(
+          `Loaded %s in %ss`,
+          kleur.cyan(toDebugPath(resolvedId)),
+          (Math.floor(loadTime / 100) / 10).toFixed(2)
+        )
     }
 
     return exports
