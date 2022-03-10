@@ -1,5 +1,9 @@
 {
   "repos": {
+    "packages/imagetools": {
+      "url": "https://github.com/alloc/saus-imagetools.git",
+      "optional": true
+    },
     "packages/repng": {
       "url": "https://github.com/alloc/saus-repng.git",
       "optional": true
