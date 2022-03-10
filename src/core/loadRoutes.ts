@@ -135,13 +135,14 @@ function injectRoutesMap(context: SausContext) {
   })
 
   let route: Route | undefined
-  for (route of context.routes) {
-    routesMap[route.path] = route.moduleId
-    loaders[route.path] = route.load
-  }
   if ((route = context.defaultRoute)) {
     routesMap.default = route.moduleId
     loaders.default = route.load
+  }
+  for (let i = context.routes.length; --i >= 0; ) {
+    route = context.routes[i]
+    routesMap[route.path] = route.moduleId
+    loaders[route.path] = route.load
   }
 
   const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
