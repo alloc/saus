@@ -33,6 +33,17 @@ export type RequireAsyncConfig = {
    */
   moduleMap?: ModuleMap
   /**
+   * Modules loaded with Node's module loader (instead of Vite-based compilation)
+   * have their exports cached in here.
+   *
+   * This lets us prevent compiled modules from using different instances of the
+   * same external module; for example, if two compiled modules were reloaded
+   * separately, and an external module was cleared (from Node's require cache)
+   * before the last one could reload, this cache will prevent another instance
+   * of the external module from being loaded by a compiled import.
+   */
+  externalExports?: Map<string, any>
+  /**
    * This function must return a string before `isCompiledModule`
    * can be called. If it doesn't, then Node's module resolution
    * is used instead.
@@ -70,6 +81,7 @@ const neverReload = () => false
 
 export function createAsyncRequire({
   moduleMap = {},
+  externalExports = new Map(),
   resolveId = () => undefined,
   shouldReload = neverReload,
   isCompiledModule = () => true,
@@ -221,15 +233,26 @@ export function createAsyncRequire({
       } else {
         resolvedId = nodeResolvedId!
 
-        const restoreModuleCache =
-          shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
+        let isReloading = false
+        if (externalExports.has(resolvedId)) {
+          if (!(isReloading = shouldReload(resolvedId))) {
+            isCached = true
+            exports = externalExports.get(resolvedId)
+            break loadStep
+          }
+          // Delete the exports now, in case the module fails to load.
+          externalExports.delete(resolvedId)
+        }
 
-        const cached = getCachedModule(resolvedId)
+        const cached = isReloading ? null : getCachedModule(resolvedId)
         if ((isCached = !!cached)) {
           exports = cached.exports
-          restoreModuleCache()
+          externalExports.set(resolvedId, exports)
           break loadStep
         }
+
+        const restoreModuleCache =
+          shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
 
         const restoreNodeResolve = nodeResolve
           ? hookNodeResolve(nodeResolve)
@@ -244,6 +267,7 @@ export function createAsyncRequire({
 
         try {
           exports = nodeRequire!(resolvedId)
+          externalExports.set(resolvedId, exports)
         } catch (error: any) {
           formatAsyncStack(error, moduleMap, asyncStack, filterStack)
           throw error
