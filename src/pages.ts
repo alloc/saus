@@ -435,9 +435,16 @@ export function createPageFactory(
         url = parseUrl(url)
       }
 
-      const cachedPage = getCachedPage<RenderedPage>(url.path)
-      if (cachedPage) {
-        return cachedPage.then(page => page || null)
+      const cachedPage = await getCachedPage<RenderedPage | null | void>(
+        url.path,
+        cacheControl => {
+          // The cached page is expired or non-existent.
+          // Skip caching of this call.
+          cacheControl.maxAge = 0
+        }
+      )
+      if (cachedPage !== undefined) {
+        return cachedPage
       }
 
       const [route, params] = resolveRoute(url)
