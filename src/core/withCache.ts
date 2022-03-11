@@ -25,8 +25,9 @@ export type CacheControl = {
   setTimeout: (secs: number) => AbortSignal
 }
 
+type Promisable<T> = T | PromiseLike<T>
 type StateLoader<State = any> = {
-  (cacheControl: CacheControl): Promise<State>
+  (cacheControl: CacheControl): Promisable<State>
 }
 
 export function withCache<State = any>(
@@ -84,7 +85,7 @@ export function withCache(
         },
       }
 
-      loader!(entryConfig).then(
+      Promise.resolve(loader!(entryConfig)).then(
         state => {
           // Skip caching if the promise is replaced or deleted
           // before it resolves.
