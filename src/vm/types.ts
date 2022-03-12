@@ -3,10 +3,22 @@ import type { ImporterSet } from './ImporterSet'
 
 export type Script = { code: string; map?: SourceMap }
 
+/** This property exists on linked Node.js module instances */
+export const kLinkedModule = Symbol.for('saus.LinkedModule')
+
+/**
+ * A Node.js-compatible module that's been linked into the
+ * `node_modules` of the project.
+ */
+export interface LinkedModule {
+  id: string
+  importers: Set<string>
+}
+
 export interface CompiledModule extends Script {
   id: string
   env: Record<string, any>
-  imports: Set<CompiledModule>
+  imports: Set<CompiledModule | LinkedModule>
   importers: ImporterSet
   exports?: Promise<any>
   /**

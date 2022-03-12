@@ -22,6 +22,7 @@ import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
   CompileModuleHook,
+  LinkedModule,
   ModuleMap,
   RequireAsync,
   ResolveIdHook,
@@ -33,6 +34,11 @@ export type RequireAsyncConfig = {
    * and wield full control over them.
    */
   moduleMap?: ModuleMap
+  /**
+   * Any modules whose packages have been linked into the project's
+   * `node_modules` directory will be tracked in here.
+   */
+  linkedModules?: Record<string, LinkedModule>
   /**
    * Modules loaded with Node's module loader (instead of Vite-based compilation)
    * have their exports cached in here.
@@ -82,6 +88,7 @@ const neverReload = () => false
 
 export function createAsyncRequire({
   moduleMap = {},
+  linkedModules = {},
   externalExports = new Map(),
   resolveId = () => undefined,
   shouldReload = neverReload,
@@ -91,6 +98,40 @@ export function createAsyncRequire({
   nodeResolve,
 }: RequireAsyncConfig = {}): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
+
+  const addLinkedModule = (
+    file: string,
+    importer: string | null | undefined
+  ) => {
+    let linkedModule = linkedModules[file]
+    if (!linkedModule) {
+      linkedModule = linkedModules[file] = {
+        id: file,
+        importers: new Set(),
+      }
+    }
+    if (importer) {
+      linkedModule.importers.add(importer)
+    }
+  }
+
+  const trackLinkedModules = (
+    nodeResolve: NodeResolveHook | undefined,
+    isImporterLinked: boolean
+  ): NodeResolveHook =>
+    !isImporterLinked
+      ? nodeResolve!
+      : (id, importer, resolve) => {
+          const resolvedId =
+            (nodeResolve && nodeResolve(id, importer, resolve)) ||
+            resolve(id, importer)
+
+          if (!resolvedId.includes('/node_modules/')) {
+            addLinkedModule(resolvedId, importer)
+          }
+
+          return resolvedId
+        }
 
   return async function requireAsync(id, importer, isDynamic) {
     if (builtinModules.includes(id)) {
@@ -255,9 +296,11 @@ export function createAsyncRequire({
         const restoreModuleCache =
           shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
 
-        const restoreNodeResolve = nodeResolve
-          ? hookNodeResolve(nodeResolve)
-          : noop
+        const isLinkedModule = !resolvedId.includes('/node_modules/')
+        const restoreNodeResolve =
+          nodeResolve || isLinkedModule
+            ? hookNodeResolve(trackLinkedModules(nodeResolve, isLinkedModule))
+            : noop
 
         const stopTracing = traceNodeRequire(
           moduleMap,
@@ -287,9 +330,13 @@ export function createAsyncRequire({
       }
     }
 
-    if (module && importerModule) {
-      importerModule.imports.add(module)
-      module.importers.add(importerModule, isDynamic)
+    if (module) {
+      if (importerModule) {
+        importerModule.imports.add(module)
+        module.importers.add(importerModule, isDynamic)
+      }
+    } else if (!resolvedId.includes('/node_modules/')) {
+      addLinkedModule(resolvedId, importer)
     }
 
     if (!isCached && isDebug) {
