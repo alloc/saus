@@ -81,6 +81,12 @@ export type RequireAsyncConfig = {
    * Intercept native `require` calls to customize Node's module resolution.
    */
   nodeResolve?: NodeResolveHook
+  /**
+   * Different modules may be resolved for SSR than for the client,
+   * which your file watcher needs to know about, or else it won't
+   * be able to reload the SSR-only modules when they're changed.
+   */
+  watchFile?: (file: string) => void
 }
 
 const isDebug = !!process.env.DEBUG
@@ -96,6 +102,7 @@ export function createAsyncRequire({
   compileModule,
   filterStack,
   nodeResolve,
+  watchFile = noop,
 }: RequireAsyncConfig = {}): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
 
@@ -105,6 +112,7 @@ export function createAsyncRequire({
   ) => {
     let linkedModule = linkedModules[file]
     if (!linkedModule) {
+      watchFile(file)
       linkedModule = linkedModules[file] = {
         id: file,
         importers: new Set(),
@@ -259,6 +267,7 @@ export function createAsyncRequire({
           moduleMap,
           compileModule(resolvedId, requireAsync, virtualId).then(module => {
             if (module) {
+              watchFile(resolvedId!)
               return module
             }
             throw Object.assign(Error(`Cannot find module '${resolvedId}'`), {
