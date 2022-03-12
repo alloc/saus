@@ -17,6 +17,7 @@ import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
 import { registerModuleOnceCompiled } from './moduleMap'
+import { getCachedModule } from './nodeModuleCache'
 import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
@@ -330,10 +331,6 @@ function createRequire(importer: string) {
   return Module.createRequire(
     path.isAbsolute(importer) ? importer : path.resolve('index.js')
   )
-}
-
-function getCachedModule(id: string): NodeModule | undefined {
-  return (Module as any)._cache[id]
 }
 
 const nodeExtensions = Module.createRequire(__filename).extensions
