@@ -267,7 +267,9 @@ export function createAsyncRequire({
           moduleMap,
           compileModule(resolvedId, requireAsync, virtualId).then(module => {
             if (module) {
-              watchFile(resolvedId!)
+              if (path.isAbsolute(resolvedId!) && fs.existsSync(resolvedId!)) {
+                watchFile(resolvedId!)
+              }
               return module
             }
             throw Object.assign(Error(`Cannot find module '${resolvedId}'`), {
