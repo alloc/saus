@@ -1,7 +1,7 @@
 import path from 'path'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
-import { createPageFactory } from '../pages'
+import { createRenderPageFn } from '../pages/renderPage'
 import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
@@ -40,7 +40,7 @@ for (const id in inlinedModules) {
 }
 
 const hydrateImport = `import { hydrate } from "saus/client"`
-const pageFactory = createPageFactory(
+const requestPage = createRenderPageFn(
   context,
   functions,
   config,
@@ -87,7 +87,7 @@ export async function renderPage(
     if (renderStart && context.getCachedPage(pageUrl.path)) {
       renderStart(pagePublicPath)
     }
-    page = await pageFactory.render(pageUrl, {
+    page = await requestPage(pageUrl, {
       timeout,
       renderStart: renderStart && (() => renderStart(pagePublicPath)),
       // Prepare the page context with isolated modules.

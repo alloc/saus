@@ -1,9 +1,13 @@
 import * as vite from 'vite'
 import type { RenderedPage } from '../bundle/types'
+import type { RenderPageFn } from '../pages/renderPage'
+import type { ServePageFn } from '../pages/servePage'
+import { RenderedFile } from '../pages/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
 import type { SourceMap } from '../utils/sourceMap'
+import type { LinkedModule, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
 import './viteRequire'
@@ -124,6 +128,19 @@ declare module 'vite' {
      * less noise from files you don't care about.
      */
     filterStack?: (source: string) => boolean
+  }
+
+  interface ViteDevServer {
+    /** Produce an HTML document for a given URL. */
+    renderPage: RenderPageFn
+    /** Like `renderPage` but with a result tuned for an HTTP response. */
+    servePage: ServePageFn
+    /** Files produced by a renderer and cached by a `servePage` call. */
+    servedFiles: Record<string, RenderedFile>
+    moduleMap: ModuleMap
+    linkedModules: Record<string, LinkedModule>
+    require: RequireAsync
+    ssrRequire: RequireAsync
   }
 }
 

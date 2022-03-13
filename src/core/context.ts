@@ -1,13 +1,12 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
 import type { RenderedPage } from '../pages/types'
-import type { ServedPage } from '../plugins/serve'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { ModuleMap, RequireAsync } from '../vm/types'
+import { RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { getSausPlugins } from './getSausPlugins'
@@ -35,16 +34,6 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
     command: 'build' | 'serve',
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
-  /** Only exists in dev mode */
-  server?: vite.ViteDevServer
-  /** Only exists in dev mode */
-  servePage?: (url: string) => Promise<ServedPage | undefined>
-  /** Only exists in dev mode */
-  moduleMap?: ModuleMap
-  /** Only exists in dev mode */
-  require?: RequireAsync
-  /** Only exists in dev mode */
-  ssrRequire?: RequireAsync
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
   /** The URL prefix for all pages */
@@ -66,6 +55,10 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
+  /** Exists in dev mode only */
+  server?: vite.ViteDevServer
+  /** Used by the `generateRoute` function in dev mode */
+  ssrRequire?: RequireAsync
 }
 
 type InlinePlugin = (

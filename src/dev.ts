@@ -6,7 +6,12 @@ import path from 'path'
 import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import { getPageFilename, SausContext } from './core'
+import {
+  extractClientFunctions,
+  getPageFilename,
+  RuntimeConfig,
+  SausContext,
+} from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
 import { getRequireFunctions } from './core/getRequireFunctions'
@@ -14,7 +19,9 @@ import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
-import { clientDir, runtimeDir } from './core/paths'
+import { clientDir, globalCachePath, runtimeDir } from './core/paths'
+import { createRenderPageFn } from './pages/renderPage'
+import { createServePageFn } from './pages/servePage'
 import { clientPlugin, getClientUrl } from './plugins/client'
 import { transformClientState } from './plugins/clientState'
 import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
@@ -148,22 +155,23 @@ async function startServer(
   events: SausDevServer.EventEmitter,
   isRestart?: boolean
 ) {
-  const server = await vite.createServer(context.config)
-  const watcher = server.watcher!
+  const { config, logger } = context
+  const server = await vite.createServer(config)
 
   // Listen immediately to ensure `buildStart` hook is called.
   if (server.httpServer) {
     await listen(server, events, isRestart)
 
-    if (context.logger.isLogged('info')) {
-      context.logger.info('')
+    if (logger.isLogged('info')) {
+      logger.info('')
       server.printUrls()
       server.bindShortcuts()
-      context.logger.info('')
+      logger.info('')
     }
   }
 
   // Ensure the Vite config is watched.
+  const watcher = server.watcher!
   if (context.configPath) {
     watcher.add(context.configPath)
   }
@@ -174,8 +182,10 @@ async function startServer(
       .then(resolved => resolved?.id)
 
   context.server = server
-  context.moduleMap = moduleMap
-  Object.assign(context, getRequireFunctions(context, resolveId))
+  server.moduleMap = moduleMap
+  server.linkedModules = {}
+  Object.assign(server, getRequireFunctions(context, resolveId))
+  context.ssrRequire = server.ssrRequire
 
   try {
     await loadRoutes(context, resolveId)
@@ -194,8 +204,33 @@ async function startServer(
     throw error
   }
 
-  // In dev mode, Saus plugins are recreated when routes/renderers are updated.
-  context.plugins = await getSausPlugins(context)
+  // This runs on server startup and whenever the routes and/or
+  // renderers are reloaded.
+  async function onContextUpdate() {
+    const runtimeConfig: RuntimeConfig = {
+      assetsDir: config.build.assetsDir,
+      base: context.basePath,
+      command: 'dev',
+      defaultPath: context.defaultPath,
+      htmlTimeout: config.saus.htmlTimeout,
+      minify: false,
+      mode: config.mode,
+      publicDir: config.publicDir,
+      ssrRoutesId: '/@fs/' + context.routesPath,
+      stateCacheId: '/@fs/' + globalCachePath,
+    }
+    server.renderPage = createRenderPageFn(
+      context,
+      extractClientFunctions(context.renderPath),
+      runtimeConfig,
+      undefined,
+      e => events.emit('error', e)
+    )
+    server.servePage = createServePageFn(context, runtimeConfig)
+    context.plugins = await getSausPlugins(context)
+  }
+
+  await onContextUpdate()
 
   const changedFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
@@ -257,7 +292,7 @@ async function startServer(
         renderersChanged = true
 
         const oldConfigHooks = context.configHooks
-        const newConfigHooks = await loadConfigHooks(context.config)
+        const newConfigHooks = await loadConfigHooks(config)
 
         const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
         const newConfigPaths = newConfigHooks.map(ref => ref.path)
@@ -285,7 +320,7 @@ async function startServer(
 
     if (routesChanged || renderersChanged) {
       context.clearCachedPages()
-      context.plugins = await getSausPlugins(context)
+      await onContextUpdate()
     }
 
     for (const file of changesToEmit) {
@@ -316,7 +351,7 @@ async function startServer(
     // Restart the server when Vite config is changed.
     else if (file == context.configPath) {
       // Prevent handling by Vite.
-      context.config.server.hmr = false
+      config.server.hmr = false
       // Skip SSR reloading by Saus.
       changedFiles.clear()
 

@@ -1,30 +1,13 @@
 import getBody from 'raw-body'
-import {
-  applyHtmlProcessors,
-  extractClientFunctions,
-  matchRoute,
-  Plugin,
-  renderStateModule,
-  RuntimeConfig,
-  SausContext,
-} from '../core'
-import { loadRenderers } from '../core/loadRenderers'
+import { Plugin, renderStateModule, SausContext, vite } from '../core'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
-import { createPageFactory, PageFactory } from '../pages'
-import { RenderedFile, RenderPageOptions } from '../pages/types'
-import { stateModulesById } from '../runtime/stateModules'
+import { ServedPage } from '../pages/servePage'
+import { RenderedFile } from '../pages/types'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
-import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { resetModule } from '../vm/moduleMap'
+import { stateModulesById } from '../runtime/stateModules'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
-
-export type ServedPage = {
-  error?: any
-  body?: any
-  headers?: [string, string | number][]
-}
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
@@ -33,9 +16,8 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   let didInit: () => void
   init = new Promise(resolve => (didInit = resolve))
 
-  let pageFactory: PageFactory
-  let servePage: (url: string) => Promise<ServedPage | undefined>
   let context: SausContext
+  let server: vite.ViteDevServer
 
   function isPageStateRequest(url: string) {
     return url.endsWith('.html.js')
@@ -53,7 +35,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       if (isPageStateRequest(id)) {
         await init
         const url = id.replace(/(\/index)?\.html\.js$/, '') || '/'
-        const page = await pageFactory.render(url)
+        const page = await server.renderPage(url)
         if (page) {
           return renderPageState(
             page,
@@ -104,7 +86,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         } catch (error: any) {
           formatAsyncStack(
             error,
-            context.moduleMap!,
+            server.moduleMap,
             [],
             context.config.filterStack
           )
@@ -116,41 +98,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     },
   }
 
-  let runtimeConfig: RuntimeConfig
   let fileCache: Record<string, RenderedFile> = {}
 
   const servePages: Plugin = {
     name: 'saus:servePages',
     saus(c) {
       context = c
-
-      const { config } = c
-      runtimeConfig = {
-        assetsDir: config.build.assetsDir,
-        base: context.basePath,
-        command: 'dev',
-        defaultPath: context.defaultPath,
-        htmlTimeout: config.saus.htmlTimeout,
-        minify: false,
-        mode: context.config.mode,
-        publicDir: config.publicDir,
-        ssrRoutesId: '/@fs/' + context.routesPath,
-        stateCacheId: '/@fs/' + globalCachePath,
-      }
-      pageFactory = createPageFactory(
-        context,
-        extractClientFunctions(context.renderPath),
-        runtimeConfig,
-        undefined,
-        onError
-      )
-      servePage = context.servePage = createServePageFn(
-        context,
-        runtimeConfig,
-        pageFactory,
-        fileCache
-      )
-
+      server = c.server!
       init = {
         // Defer to the reload promise after the context is initialized.
         then: (...args) => (c.reloading || Promise.resolve()).then(...args),
@@ -180,12 +134,12 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         }
 
         let { reloadId } = context
-        await servePage(url).then(respond)
+        await server.servePage(url).then(respond)
 
         function respond({ error, body, headers }: ServedPage = {}): any {
           if (reloadId !== (reloadId = context.reloadId)) {
             return (context.reloading || Promise.resolve()).then(() => {
-              return servePage(url).then(respond)
+              return server.servePage(url).then(respond)
             })
           }
           if (error) {
@@ -205,88 +159,4 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   }
 
   return [serveState, servePages]
-}
-
-function createServePageFn(
-  context: SausContext,
-  runtimeConfig: RuntimeConfig,
-  pageFactory: PageFactory,
-  fileCache: Record<string, RenderedFile>
-) {
-  const { config } = context
-  const moduleMap = context.moduleMap!
-
-  const routeModuleIds = new Set(context.routes.map(route => route.moduleId))
-  if (context.defaultRoute) {
-    routeModuleIds.add(context.defaultRoute.moduleId)
-  }
-
-  const entryPaths = Array.from(routeModuleIds, moduleId => {
-    return resolveEntryUrl(moduleId, config)
-  })
-  entryPaths.push(context.renderPath)
-
-  const renderOpts: RenderPageOptions = {
-    async setup(pageContext, pageUrl) {
-      const route =
-        context.routes.find(route => matchRoute(pageUrl.path, route)) ||
-        context.defaultRoute
-      if (!route) return
-
-      // Reset all modules used by every route or renderer, because we can't know
-      // which modules have side effects and are also used by the route matched
-      // for the currently rendering page.
-      for (const entryPath of entryPaths) {
-        const entryModule = moduleMap[entryPath]
-        if (entryModule) {
-          for (const module of entryModule.package || [entryModule]) {
-            resetModule(module)
-          }
-        }
-      }
-
-      // Load the route module and its dependencies now, since the
-      // setup function is guaranteed to run serially, which lets us
-      // ensure no local modules are shared between page renders.
-      await route.load()
-
-      context.renderers = []
-      context.defaultRenderer = undefined
-      context.beforeRenderHooks = []
-      await loadRenderers(context)
-      Object.assign(pageContext, context)
-    },
-  }
-
-  return async (url: string): Promise<ServedPage | undefined> => {
-    try {
-      let page = await pageFactory.render(url, renderOpts)
-      if (!page && !/\.[^./]+$/.test(url)) {
-        page = await pageFactory.render(context.defaultPath, renderOpts)
-      }
-      if (page) {
-        for (const file of page.files) {
-          fileCache[file.id] = file
-        }
-        let html = await context.server!.transformIndexHtml(url, page.html)
-        if (context.htmlProcessors?.post.length) {
-          html = await applyHtmlProcessors(
-            html,
-            context.htmlProcessors.post,
-            { page, config: runtimeConfig },
-            runtimeConfig.htmlTimeout
-          )
-        }
-        return {
-          body: html,
-          headers: [
-            ['Content-Type', 'text/html; charset=utf-8'],
-            ['Content-Length', Buffer.byteLength(html)],
-          ],
-        }
-      }
-    } catch (error) {
-      return { error }
-    }
-  }
 }

@@ -9,9 +9,10 @@ import { SausContext } from './context'
 export function getRequireFunctions(
   context: SausContext,
   resolveId: ResolveIdHook,
-  moduleMap = context.moduleMap || {}
+  moduleMap = context.server?.moduleMap || {}
 ) {
   const { root, config, compileCache } = context
+  const linkedModules = context.server?.linkedModules
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -23,6 +24,7 @@ export function getRequireFunctions(
     ssrRequire: createAsyncRequire({
       resolveId,
       moduleMap,
+      linkedModules,
       nodeResolve,
       isCompiledModule,
       compileModule(id) {
@@ -32,6 +34,7 @@ export function getRequireFunctions(
     require: createAsyncRequire({
       resolveId,
       moduleMap,
+      linkedModules,
       nodeResolve,
       isCompiledModule,
       async compileModule(id, require, virtualId) {

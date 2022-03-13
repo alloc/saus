@@ -1,9 +1,8 @@
-import type { Buffer, HeadDescription, RouteModule } from '../client'
+import type { Buffer, HeadDescription } from '../client'
 import type {
   Client,
   ClientState,
   RenderModule,
-  Route,
   RoutesModule,
   SausContext,
   WrappedNode,

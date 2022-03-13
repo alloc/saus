@@ -10,7 +10,7 @@ import { setRenderModule } from './global'
 
 export async function loadRenderers(context: SausContext) {
   const time = Date.now()
-  const moduleMap = context.moduleMap || {}
+  const moduleMap = context.server?.moduleMap || {}
 
   context.compileCache.locked = true
   const renderModule =

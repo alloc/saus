@@ -22,10 +22,9 @@ export async function loadRoutes(
   resolveId: ResolveIdHook
 ) {
   const time = Date.now()
-  const moduleMap = context.moduleMap || {}
-  const { require, ssrRequire } = !context.require
-    ? getRequireFunctions(context, resolveId, moduleMap)
-    : (context as Required<SausContext>)
+  const moduleMap = context.server?.moduleMap || {}
+  const { require, ssrRequire } =
+    context.server || getRequireFunctions(context, resolveId, moduleMap)
 
   context.compileCache.locked = true
   const routesModule =

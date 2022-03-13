@@ -14,12 +14,23 @@ import type {
   RouteModule,
   RouteParams,
   RuntimeConfig,
-} from './core'
-import { setRoutesModule } from './core/global'
-import { mergeHtmlProcessors } from './core/html'
-import { matchRoute } from './core/routes'
-import { handleNestedState } from './pages/handleNestedState'
-import { createStateModuleMap } from './pages/stateModules'
+} from '../core'
+import { setRoutesModule } from '../core/global'
+import { mergeHtmlProcessors } from '../core/html'
+import { matchRoute } from '../core/routes'
+import { globalCache } from '../runtime/cache'
+import { getCachedState } from '../runtime/getCachedState'
+import { controlExecution } from '../utils/controlExecution'
+import { getPageFilename } from '../utils/getPageFilename'
+import { serializeImports } from '../utils/imports'
+import { limitConcurrency } from '../utils/limitConcurrency'
+import { limitTime } from '../utils/limitTime'
+import { noop } from '../utils/noop'
+import { parseHead } from '../utils/parseHead'
+import { plural } from '../utils/plural'
+import { ParsedUrl, parseUrl } from '../utils/url'
+import { handleNestedState } from './handleNestedState'
+import { createStateModuleMap } from './stateModules'
 import {
   ClientFunction,
   ClientFunctions,
@@ -28,32 +39,24 @@ import {
   RenderedPage,
   RenderFunction,
   RenderPageOptions,
-} from './pages/types'
-import { globalCache } from './runtime/cache'
-import { getCachedState } from './runtime/getCachedState'
-import { controlExecution } from './utils/controlExecution'
-import { getPageFilename } from './utils/getPageFilename'
-import { serializeImports } from './utils/imports'
-import { limitConcurrency } from './utils/limitConcurrency'
-import { limitTime } from './utils/limitTime'
-import { noop } from './utils/noop'
-import { parseHead } from './utils/parseHead'
-import { plural } from './utils/plural'
-import { ParsedUrl, parseUrl } from './utils/url'
+} from './types'
 
 const debug = createDebug('saus:pages')
 
 const stateModulesMap = new WeakMap<ClientState, string[]>()
 
-export type PageFactory = ReturnType<typeof createPageFactory>
+export type RenderPageFn = (
+  url: string | ParsedUrl,
+  options?: RenderPageOptions
+) => Promise<RenderedPage | null>
 
-export function createPageFactory(
+export function createRenderPageFn(
   context: PageFactoryContext,
   functions: ClientFunctions,
   config: RuntimeConfig,
   setup?: () => Promise<any>,
   onError: (error: any) => void = context.logger.error
-) {
+): RenderPageFn {
   let {
     basePath,
     beforeRenderHooks,
@@ -108,8 +111,8 @@ export function createPageFactory(
     )
   })()
 
-  // The main logic for rendering a page.
-  async function renderPage(
+  // The main logic for HTML document generation.
+  async function generateDocument(
     url: ParsedUrl,
     state: ClientState,
     route: Route,
@@ -297,7 +300,7 @@ export function createPageFactory(
     const [state, routeModule, renderer, beforeRenderHooks] =
       await contextPromise
 
-    return renderPage(
+    return generateDocument(
       url,
       state,
       route,
@@ -348,7 +351,7 @@ export function createPageFactory(
         renderers,
         error,
         (renderer: Renderer) =>
-          renderPage(
+          generateDocument(
             url,
             state,
             route,
@@ -363,18 +366,20 @@ export function createPageFactory(
     return contextPromise
   }
 
-  async function loadPage(
+  /**
+   * Load the page context for the given URL, find a suitable renderer,
+   * and render the page with it. The catch route will be used if an
+   * error if thrown by a renderer. If no catch route is defined, the
+   * error is rethrown.
+   */
+  async function renderPageOrThrow(
     url: ParsedUrl,
     route: Route,
     options: RenderPageOptions,
     statePromise: Promise<ClientState>
   ) {
-    let [defaultRenderer, renderers, error, render] = await loadPageContext(
-      url,
-      route,
-      options,
-      statePromise
-    )
+    let [defaultRenderer, renderers, error, useRenderer] =
+      await loadPageContext(url, route, options, statePromise)
 
     let page: RenderedPage | null
     let renderer: Renderer | undefined
@@ -385,7 +390,7 @@ export function createPageFactory(
           continue
         }
         try {
-          if ((page = await render(renderer))) {
+          if ((page = await useRenderer(renderer))) {
             return page
           }
         } catch (e) {
@@ -405,7 +410,7 @@ export function createPageFactory(
         return null
       }
       try {
-        if ((page = await render(renderer))) {
+        if ((page = await useRenderer(renderer))) {
           return page
         }
         return null
@@ -427,66 +432,64 @@ export function createPageFactory(
     throw error
   }
 
-  return {
-    async render(url: string | ParsedUrl, options: RenderPageOptions = {}) {
-      await setupPromise
+  return async function renderPage(url, options = {}) {
+    await setupPromise
 
-      if (typeof url == 'string') {
-        url = parseUrl(url)
+    if (typeof url == 'string') {
+      url = parseUrl(url)
+    }
+
+    const cachedPage = await getCachedPage<RenderedPage | null | void>(
+      url.path,
+      cacheControl => {
+        // The cached page is expired or non-existent.
+        // Skip caching of this call.
+        cacheControl.maxAge = 0
       }
+    )
+    if (cachedPage !== undefined) {
+      return cachedPage
+    }
 
-      const cachedPage = await getCachedPage<RenderedPage | null | void>(
-        url.path,
-        cacheControl => {
-          // The cached page is expired or non-existent.
-          // Skip caching of this call.
-          cacheControl.maxAge = 0
-        }
-      )
-      if (cachedPage !== undefined) {
-        return cachedPage
-      }
+    const [route, params] = resolveRoute(url)
+    if (!route) {
+      return null
+    }
 
-      const [route, params] = resolveRoute(url)
-      if (!route) {
-        return null
-      }
+    const pagePath = url.path
+    const pageUrl = url
 
-      const pagePath = url.path
-      const pageUrl = url
+    // State modules can be loaded in parallel, since the global state
+    // cache is reused by all pages.
+    const statePromise = limitTime(
+      loadClientState(url, params || {}, route),
+      options.timeout || 0,
+      `Page "${pagePath}" state loading took too long`
+    )
 
-      // State modules can be loaded in parallel, since the global state
-      // cache is reused by all pages.
-      const statePromise = limitTime(
-        loadClientState(url, params || {}, route),
+    return queuePage(pagePath, statePromise, cacheControl => {
+      debug(`Page in progress: %s`, pagePath)
+
+      options.renderStart?.(pagePath)
+      const rendering = renderPageOrThrow(pageUrl, route, options, statePromise)
+      if (options.renderFinish)
+        rendering.then(
+          options.renderFinish.bind(null, pagePath, null),
+          options.renderFinish.bind(null, pagePath)
+        )
+
+      // Rerender the page on every request.
+      cacheControl.maxAge = 1
+
+      return limitTime(
+        rendering,
         options.timeout || 0,
-        `Page "${pagePath}" state loading took too long`
-      )
-
-      return queuePage(pagePath, statePromise, cacheControl => {
-        debug(`Page in progress: %s`, pagePath)
-
-        options.renderStart?.(pagePath)
-        const rendering = loadPage(pageUrl, route, options, statePromise)
-        if (options.renderFinish)
-          rendering.then(
-            options.renderFinish.bind(null, pagePath, null),
-            options.renderFinish.bind(null, pagePath)
-          )
-
-        // Rerender the page on every request.
-        cacheControl.maxAge = 1
-
-        return limitTime(
-          rendering,
-          options.timeout || 0,
-          `Page "${pagePath}" rendering took too long`
-        ).catch(error => {
-          onError(error)
-          return null
-        })
+        `Page "${pagePath}" rendering took too long`
+      ).catch(error => {
+        onError(error)
+        return null
       })
-    },
+    })
   }
 }
 
