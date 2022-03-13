@@ -6,13 +6,21 @@ export type Script = { code: string; map?: SourceMap }
 /** This property exists on linked Node.js module instances */
 export const kLinkedModule = Symbol.for('saus.LinkedModule')
 
+export function isLinkedModule(
+  module: CompiledModule | LinkedModule
+): module is LinkedModule {
+  return module[kLinkedModule] == true
+}
+
 /**
  * A Node.js-compatible module that's been linked into the
  * `node_modules` of the project.
  */
 export interface LinkedModule {
   id: string
-  importers: Set<string>
+  imports: Set<LinkedModule>
+  importers: Set<CompiledModule | LinkedModule>
+  [kLinkedModule]: true
 }
 
 export interface CompiledModule extends Script {
@@ -29,6 +37,7 @@ export interface CompiledModule extends Script {
    * by another module) using a relative path.
    */
   package?: Set<CompiledModule>
+  [kLinkedModule]?: undefined
 }
 
 export type ModuleMap = Record<string, CompiledModule> & {

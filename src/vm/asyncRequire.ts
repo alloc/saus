@@ -22,6 +22,8 @@ import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
   CompileModuleHook,
+  isLinkedModule,
+  kLinkedModule,
   LinkedModule,
   ModuleMap,
   RequireAsync,
@@ -106,7 +108,40 @@ export function createAsyncRequire({
 }: RequireAsyncConfig = {}): RequireAsync {
   let callStack: (StackFrame | undefined)[] = []
 
-  const addLinkedModule = (
+  const trackImport = (
+    importerId: string,
+    imported: CompiledModule | LinkedModule,
+    isDynamic?: boolean,
+    isConnected?: boolean
+  ) => {
+    const importer = moduleMap[importerId] || linkedModules[importerId]
+    if (isLinkedModule(importer)) {
+      if (!isLinkedModule(imported)) {
+        throw Error('Linked module cannot import a compiled module')
+      }
+      importer.imports.add(imported)
+      imported.importers.add(importer)
+    } else {
+      importer.imports.add(imported)
+      imported.importers.add(importer, isDynamic)
+      if (isConnected) {
+        connectModules(imported as CompiledModule, importer)
+      }
+    }
+  }
+
+  /**
+   * Linked modules exist outside any `node_modules` directory, so there's
+   * a possibility they'll need to be reloaded, while no such affordance
+   * is made for normally installed dependencies (even though upgrading
+   * a module with `npm install` is certainly possible, there ends up
+   * being too many modules if we watch everything).
+   *
+   * To allow for linked modules to be reloaded, we have to track them
+   * as well as their importers, since those will need to be reloaded
+   * at the same time. Linked modules are assumed to use CommonJS.
+   */
+  const trackLinkedModule = (
     file: string,
     importer: string | null | undefined
   ) => {
@@ -115,14 +150,21 @@ export function createAsyncRequire({
       watchFile(file)
       linkedModule = linkedModules[file] = {
         id: file,
+        imports: new Set(),
         importers: new Set(),
+        [kLinkedModule]: true,
       }
     }
     if (importer) {
-      linkedModule.importers.add(importer)
+      trackImport(importer, linkedModule)
     }
   }
 
+  /**
+   * When the importer is a linked module, wrap the `nodeResolve` hook so we
+   * can intercept Node.js module resolution to track the graph of linked
+   * modules being used.
+   */
   const trackLinkedModules = (
     nodeResolve: NodeResolveHook | undefined,
     isImporterLinked: boolean
@@ -135,7 +177,7 @@ export function createAsyncRequire({
             resolve(id, importer)
 
           if (!resolvedId.includes('/node_modules/')) {
-            addLinkedModule(resolvedId, importer)
+            trackLinkedModule(resolvedId, importer)
           }
 
           return resolvedId
@@ -224,25 +266,16 @@ export function createAsyncRequire({
       throw error
     }
 
-    let isCached: boolean
+    let isCached = false
     let exports: any
     let module: CompiledModule | undefined
-    let importerModule: CompiledModule | undefined
 
     loadStep: try {
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 
         module = moduleMap[resolvedId]
-        if (importer) {
-          importerModule = moduleMap[importer]
-        }
-
-        isCached = !!module?.exports && !shouldReload(resolvedId)
-        if (isCached) {
-          if (importerModule && internalPathRE.test(id)) {
-            connectModules(module, importerModule)
-          }
+        if (module?.exports && !shouldReload(resolvedId)) {
           const circularIndex = asyncStack.findIndex(
             frame => frame?.file == resolvedId
           )
@@ -259,6 +292,7 @@ export function createAsyncRequire({
               importLoop.map(toDebugPath).join(' → ')
             )
           }
+          isCached = true
           exports = circularIndex >= 0 ? module.env[exportsId] : module.exports
           break loadStep
         }
@@ -278,10 +312,6 @@ export function createAsyncRequire({
           })
         )
 
-        if (importerModule && internalPathRE.test(id)) {
-          connectModules(module, importerModule)
-        }
-
         exports = await executeModule(module)
       } else {
         resolvedId = nodeResolvedId!
@@ -297,9 +327,10 @@ export function createAsyncRequire({
           externalExports.delete(resolvedId)
         }
 
-        const cached = isReloading ? null : getCachedModule(resolvedId)
-        if ((isCached = !!cached)) {
-          exports = cached.exports
+        const cachedModule = !isReloading && getCachedModule(resolvedId)
+        if (cachedModule) {
+          isCached = true
+          exports = cachedModule.exports
           externalExports.set(resolvedId, exports)
           break loadStep
         }
@@ -342,12 +373,11 @@ export function createAsyncRequire({
     }
 
     if (module) {
-      if (importerModule) {
-        importerModule.imports.add(module)
-        module.importers.add(importerModule, isDynamic)
+      if (importer) {
+        trackImport(importer, module, isDynamic, internalPathRE.test(id))
       }
     } else if (!resolvedId.includes('/node_modules/')) {
-      addLinkedModule(resolvedId, importer)
+      trackLinkedModule(resolvedId, importer)
     }
 
     if (!isCached && isDebug) {
