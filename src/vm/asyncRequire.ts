@@ -178,7 +178,7 @@ export function createAsyncRequire({
             (nodeResolve && nodeResolve(id, importer, resolve)) ||
             resolve(id, importer)
 
-          if (!resolvedId.includes('/node_modules/')) {
+          if (isLinkedModuleId(resolvedId)) {
             trackLinkedModule(resolvedId, importer)
           }
 
@@ -344,10 +344,10 @@ export function createAsyncRequire({
         const restoreModuleCache =
           shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
 
-        const isLinkedModule = !resolvedId.includes('/node_modules/')
+        const isModuleLinked = isLinkedModuleId(resolvedId)
         const restoreNodeResolve =
-          nodeResolve || isLinkedModule
-            ? hookNodeResolve(trackLinkedModules(nodeResolve, isLinkedModule))
+          nodeResolve || isModuleLinked
+            ? hookNodeResolve(trackLinkedModules(nodeResolve, isModuleLinked))
             : noop
 
         const stopTracing = traceNodeRequire(
@@ -382,7 +382,7 @@ export function createAsyncRequire({
       if (importer) {
         trackImport(importer, module, isDynamic, internalPathRE.test(id))
       }
-    } else if (!resolvedId.includes('/node_modules/')) {
+    } else if (isLinkedModuleId(resolvedId)) {
       trackLinkedModule(resolvedId, importer)
     }
 
@@ -425,6 +425,10 @@ function createRequire(importer: string) {
   return Module.createRequire(
     path.isAbsolute(importer) ? importer : path.resolve('index.js')
   )
+}
+
+function isLinkedModuleId(id: string) {
+  return path.isAbsolute(id) && !id.includes('/node_modules/')
 }
 
 const nodeExtensions = Module.createRequire(__filename).extensions
