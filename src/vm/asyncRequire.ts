@@ -25,6 +25,7 @@ import {
   isLinkedModule,
   kLinkedModule,
   LinkedModule,
+  LinkedModuleMap,
   ModuleMap,
   RequireAsync,
   ResolveIdHook,
@@ -40,7 +41,7 @@ export type RequireAsyncConfig = {
    * Any modules whose packages have been linked into the project's
    * `node_modules` directory will be tracked in here.
    */
-  linkedModules?: Record<string, LinkedModule>
+  linkedModules?: LinkedModuleMap
   /**
    * Modules loaded with Node's module loader (instead of Vite-based compilation)
    * have their exports cached in here.
@@ -115,6 +116,7 @@ export function createAsyncRequire({
     isConnected?: boolean
   ) => {
     const importer = moduleMap[importerId] || linkedModules[importerId]
+    if (!importer) return
     if (isLinkedModule(importer)) {
       if (!isLinkedModule(imported)) {
         throw Error('Linked module cannot import a compiled module')
