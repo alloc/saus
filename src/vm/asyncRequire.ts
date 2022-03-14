@@ -17,7 +17,7 @@ import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
 import { registerModuleOnceCompiled } from './moduleMap'
-import { getCachedModule } from './nodeModuleCache'
+import { getNodeModule, invalidateNodeModule } from './nodeModules'
 import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
@@ -330,7 +330,7 @@ export function createAsyncRequire({
           externalExports.delete(resolvedId)
         }
 
-        const cachedModule = getCachedModule(resolvedId)
+        const cachedModule = getNodeModule(resolvedId)
         if (cachedModule) {
           isReloading ??= shouldReload(resolvedId)
           if (!isReloading) {
@@ -339,6 +339,7 @@ export function createAsyncRequire({
             externalExports.set(resolvedId, exports)
             break loadStep
           }
+          invalidateNodeModule(resolvedId)
         }
 
         const restoreModuleCache =

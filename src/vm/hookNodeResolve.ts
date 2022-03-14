@@ -1,7 +1,7 @@
 import kleur from 'kleur'
 import { Module } from 'module'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { getCachedModule } from './nodeModuleCache'
+import { getNodeModule } from './nodeModules'
 import { debug } from './debug'
 
 export type NodeResolveHook = (
@@ -26,7 +26,7 @@ export function hookNodeResolve(resolve: NodeResolveHook) {
       // support relative paths. Instead, we have to use the Module
       // instance of the importer.
       if (importer && importer !== parent.id) {
-        const importerModule = getCachedModule(importer)
+        const importerModule = getNodeModule(importer)
         return (
           importerModule
             ? importerModule.require

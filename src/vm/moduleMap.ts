@@ -1,8 +1,8 @@
 import { noop } from '../utils/noop'
+import { invalidateNodeModule } from './nodeModules'
 import {
   CompiledModule,
   isLinkedModule,
-  kLinkedModule,
   LinkedModule,
   ModuleMap,
 } from './types'
@@ -90,7 +90,7 @@ export function resetModuleAndImporters(
       resetModuleAndImporters(importer, visited, onModule as any)
     }
     if (isLinkedModule(module)) {
-      delete require.cache[module.id]
+      invalidateNodeModule(module.id)
     } else {
       resetExports(module)
     }
