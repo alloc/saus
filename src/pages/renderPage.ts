@@ -439,14 +439,7 @@ export function createRenderPageFn(
       url = parseUrl(url)
     }
 
-    const cachedPage = await getCachedPage<RenderedPage | null | void>(
-      url.path,
-      cacheControl => {
-        // The cached page is expired or non-existent.
-        // Skip caching of this call.
-        cacheControl.maxAge = 0
-      }
-    )
+    const cachedPage = getCachedPage(url.path)
     if (cachedPage !== undefined) {
       return cachedPage
     }

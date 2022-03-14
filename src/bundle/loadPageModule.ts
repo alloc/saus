@@ -16,7 +16,7 @@ export async function loadPageModule(
   const routeModule = await ssrImport(routeModuleUrl)
   if (unwrapModule) {
     const pagePath = getPagePath(routePath, routeParams)
-    const pageState = await getCachedState(pagePath)
+    const pageState = await getCachedState(pagePath, cache => cache.oldValue)
     return unwrapModule(routeModule, pageState)
   }
   return routeModule

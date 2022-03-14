@@ -11,7 +11,7 @@ export async function loadPageModule(
     const pagePath = getPagePath(routePath, routeParams)
     const routeModule = await load()
     if (unwrapModule) {
-      const pageState = await getCachedState(pagePath)
+      const pageState = await getCachedState(pagePath, cache => cache.oldValue)
       return unwrapModule(routeModule, pageState)
     }
     return routeModule

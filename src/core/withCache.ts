@@ -14,8 +14,13 @@ export type CacheControl = {
   /** The string used to identify this entry */
   readonly key: string
   /**
+   * The last loaded value that is now expired.
+   */
+  oldValue?: any
+  /**
    * Number of seconds until this entry is reloaded on next request.
-   * Note that loaderless requests may be given expired data.
+   * Once expired, the loaded value remains in the cache until another
+   * value is loaded.
    */
   maxAge: number
   /**
@@ -52,12 +57,7 @@ export function withCache(
     const entry = cache.loaded[cacheKey]
     if (entry) {
       const expiresAt = entry[1] ?? Infinity
-      const useCachedValue =
-        expiresAt - Date.now() > 0 ||
-        // Use expired state if no loader is given.
-        !(loader ||= getDefaultLoader(cacheKey))
-
-      if (useCachedValue) {
+      if (expiresAt - Date.now() > 0) {
         return Promise.resolve(entry[0])
       }
     }
@@ -70,6 +70,7 @@ export function withCache(
     const promise = new Promise((resolve, reject) => {
       const entryConfig: CacheControl = {
         key: cacheKey,
+        oldValue: entry?.[0],
         maxAge: Infinity,
         setTimeout: secs => {
           const ctrl = new AbortController()
