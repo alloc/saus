@@ -20,12 +20,16 @@ export function getRequireFunctions(
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
+  const watcher = context.config.command == 'serve' && context.server!.watcher
+  const watchFile = watcher ? watcher.add.bind(watcher) : undefined
+
   return {
     ssrRequire: createAsyncRequire({
       resolveId,
       moduleMap,
       linkedModules,
       nodeResolve,
+      watchFile,
       isCompiledModule,
       compileModule(id) {
         return compileSsrModule(id, context)
@@ -36,6 +40,7 @@ export function getRequireFunctions(
       moduleMap,
       linkedModules,
       nodeResolve,
+      watchFile,
       isCompiledModule,
       async compileModule(id, require, virtualId) {
         if (virtualId) {

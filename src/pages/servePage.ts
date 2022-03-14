@@ -2,7 +2,7 @@ import { matchRoute, RuntimeConfig, SausContext } from '../core'
 import { applyHtmlProcessors } from '../core/html'
 import { loadRenderers } from '../core/loadRenderers'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { resetModule } from '../vm/moduleMap'
+import { resetExports } from '../vm/moduleMap'
 import { RenderPageOptions } from './types'
 
 export type ServePageFn = (url: string) => Promise<ServedPage | undefined>
@@ -48,7 +48,7 @@ export function createServePageFn(
         const entryModule = server.moduleMap[entryPath]
         if (entryModule) {
           for (const module of entryModule.package || [entryModule]) {
-            resetModule(module)
+            resetExports(module)
           }
         }
       }

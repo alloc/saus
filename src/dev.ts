@@ -31,8 +31,14 @@ import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { purgeModule } from './vm/moduleMap'
-import { CompiledModule, ModuleMap, ResolveIdHook } from './vm/types'
+import { purgeModule, resetModuleAndImporters } from './vm/moduleMap'
+import {
+  CompiledModule,
+  isLinkedModule,
+  LinkedModule,
+  ModuleMap,
+  ResolveIdHook,
+} from './vm/types'
 
 export interface SausDevServer {
   (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void): void
@@ -232,7 +238,7 @@ async function startServer(
 
   await onContextUpdate()
 
-  const changedFiles = new Set<string>()
+  const dirtyFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
 
   const scheduleReload = debounce(async () => {
@@ -244,11 +250,9 @@ async function startServer(
     context.reloadId++
     context.reloading = defer()
 
-    let routesChanged = false
-    let renderersChanged = false
-
-    const files = Array.from(changedFiles)
-    changedFiles.clear()
+    let routesChanged = dirtyFiles.has(context.routesPath)
+    let renderersChanged = dirtyFiles.has(context.renderPath)
+    dirtyFiles.clear()
 
     // Track which virtual modules need change events.
     const changesToEmit = new Set<string>()
@@ -266,10 +270,9 @@ async function startServer(
       })
     }
 
-    if (files.includes(context.routesPath)) {
+    if (routesChanged) {
       try {
         await loadRoutes(context, resolveId)
-        routesChanged = true
 
         // Reload the client-side routes map.
         changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
@@ -280,16 +283,16 @@ async function startServer(
             '/' + getPageFilename(page.path, context.basePath) + '.js'
           )
       } catch (error: any) {
+        routesChanged = false
         events.emit('error', error)
       }
     }
 
     // Reload the renderers immediately, so the dev server is up-to-date
     // when new HTTP requests come in.
-    if (files.includes(context.renderPath)) {
+    if (renderersChanged) {
       try {
         await loadRenderers(context)
-        renderersChanged = true
 
         const oldConfigHooks = context.configHooks
         const newConfigHooks = await loadConfigHooks(config)
@@ -314,6 +317,7 @@ async function startServer(
           }
         }
       } catch (error: any) {
+        renderersChanged = false
         events.emit('error', error)
       }
     }
@@ -332,20 +336,38 @@ async function startServer(
   }, 50)
 
   watcher.prependListener('change', async file => {
-    const module = moduleMap[file]
-    if (module) {
+    if (dirtyFiles.has(file)) {
+      return
+    }
+    const changedModule = moduleMap[file] || server.linkedModules[file]
+    if (changedModule) {
       await moduleMap.__compileQueue
       const stateModules = new Set(
-        Object.keys(context.stateModulesByFile).map(file => moduleMap[file])
+        Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
       )
-      purgeModule(module, changedFiles, ({ importers }) => {
+      const resetStateModule = (module: CompiledModule | LinkedModule) => {
+        if (isLinkedModule(module)) return
+
+        // Invalidate any cached state when a state module is reset.
+        if (stateModules.has(module)) {
+          dirtyStateModules.add(module)
+          stateModules.delete(module)
+        }
+
+        // Any state module that dynamically imported this module
+        // needs to invalidate any cached state it produced.
         for (const stateModule of stateModules) {
-          if (module == stateModule || importers.hasDynamic(stateModule)) {
+          if (module.importers.hasDynamic(stateModule)) {
             dirtyStateModules.add(stateModule)
             stateModules.delete(stateModule)
           }
         }
-      })
+      }
+      if (isLinkedModule(changedModule)) {
+        resetModuleAndImporters(changedModule, dirtyFiles, resetStateModule)
+      } else {
+        purgeModule(changedModule, dirtyFiles, resetStateModule)
+      }
       scheduleReload()
     }
     // Restart the server when Vite config is changed.
@@ -353,7 +375,7 @@ async function startServer(
       // Prevent handling by Vite.
       config.server.hmr = false
       // Skip SSR reloading by Saus.
-      changedFiles.clear()
+      dirtyFiles.clear()
 
       debug(`Vite config changed. Restarting server.`)
       events.emit('restart')
