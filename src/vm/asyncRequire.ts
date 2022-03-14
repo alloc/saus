@@ -316,9 +316,10 @@ export function createAsyncRequire({
       } else {
         resolvedId = nodeResolvedId!
 
-        let isReloading = false
+        let isReloading: boolean
         if (externalExports.has(resolvedId)) {
-          if (!(isReloading = shouldReload(resolvedId))) {
+          isReloading = shouldReload(resolvedId)
+          if (!isReloading) {
             isCached = true
             exports = externalExports.get(resolvedId)
             break loadStep
@@ -327,12 +328,15 @@ export function createAsyncRequire({
           externalExports.delete(resolvedId)
         }
 
-        const cachedModule = !isReloading && getCachedModule(resolvedId)
+        const cachedModule = getCachedModule(resolvedId)
         if (cachedModule) {
-          isCached = true
-          exports = cachedModule.exports
-          externalExports.set(resolvedId, exports)
-          break loadStep
+          isReloading ??= shouldReload(resolvedId)
+          if (!isReloading) {
+            isCached = true
+            exports = cachedModule.exports
+            externalExports.set(resolvedId, exports)
+            break loadStep
+          }
         }
 
         const restoreModuleCache =
