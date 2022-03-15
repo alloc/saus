@@ -1,11 +1,11 @@
 import { plural } from '../utils/plural'
 import { compileSsrModule } from '../vm/compileSsrModule'
+import { debug } from '../vm/debug'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from '../vm/moduleMap'
 import { ModuleMap } from '../vm/types'
 import { SausContext } from './context'
-import { debug } from './debug'
 import { setRenderModule } from './global'
 
 export async function loadRenderers(context: SausContext) {

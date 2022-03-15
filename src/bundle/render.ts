@@ -1,6 +1,6 @@
 import { ParsedRoute, RegexParam } from '../core/routes'
 import { plural } from '../utils/plural'
-import { debug } from '../core/debug'
+import { debug } from '../vm/debug'
 
 type RendererInit = () => Promise<any>
 
