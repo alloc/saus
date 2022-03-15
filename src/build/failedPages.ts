@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 
 const failedPagesId = 'node_modules/.saus/failed-pages.json'
 
@@ -11,5 +12,6 @@ export function getFailedPages(): string[] {
 }
 
 export function setFailedPages(pagePaths: string[]) {
+  fs.mkdirSync(path.dirname(failedPagesId), { recursive: true })
   fs.writeFileSync(failedPagesId, JSON.stringify(pagePaths))
 }
