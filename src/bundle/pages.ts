@@ -190,24 +190,17 @@ export async function renderPage(
       isDebug
     )
 
+    // The helpers module is used by every page's state module.
+    addModule(moduleMap.helpers)
+
     // The "page state module" initializes the global state cache with any
     // state modules used by the route module or entry module. It also
     // provides the top-level state of the `RenderRequest` object.
     const pageStateId = filename + '.js'
     modules.add({
       id: pageStateId,
-      text: renderPageState(
-        page,
-        config.base,
-        inlinedModules.helpers.id,
-        preloadList
-      ),
+      text: renderPageState(page, config.base, moduleMap.helpers, preloadList),
       exports: ['default'],
-      get imports() {
-        return parseImports(this.text).map(
-          importDecl => importDecl.source.value
-        )
-      },
     })
 
     // State modules are not renamed for debug view.
