@@ -9,7 +9,7 @@ import md5Hex from 'md5-hex'
 import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
 import * as rollup from 'rollup'
-import { babel, resolveReferences, t } from '../../babel'
+import { babel } from '../../babel'
 import {
   createModuleProvider,
   ModuleProvider,
@@ -27,12 +27,7 @@ import { toDevPath } from '../../utils/toDevPath'
 import { compileEsm, exportsId, requireAsyncId } from '../../vm/compileEsm'
 import { ForceLazyBindingHook } from '../../vm/types'
 import { debug } from '../debug'
-import {
-  ClientFunction,
-  extractClientFunctions,
-  SausContext,
-  vite,
-} from '../index'
+import { extractClientFunctions, SausContext, vite } from '../index'
 import { getViteTransform } from '../viteTransform'
 import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
 import { createRendererChunk } from './rendererChunk'
