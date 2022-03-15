@@ -80,6 +80,11 @@ export async function build(options: BuildOptions) {
       (await dynamicImport('tinypool')) as typeof import('tinypool')
     ).default
 
+    // https://github.com/debug-js/debug/issues/739#issuecomment-573442834
+    if (process.env.DEBUG) {
+      process.env.DEBUG_COLORS = 'true'
+    }
+
     worker = new WorkerPool({
       filename: path.resolve(__dirname, 'build/worker.js'),
       workerData,
