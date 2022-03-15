@@ -67,6 +67,9 @@ export async function build(options: BuildOptions) {
   let render: (pagePath: string) => Promise<RenderedPage | null>
   let worker: BuildWorker | undefined
 
+  // Default to serial rendering until #48 is fixed.
+  options.maxWorkers ??= 1
+
   const workerData = { root: context.root, code, filename }
   if (options.maxWorkers === 0) {
     render = runBundle(workerData)
