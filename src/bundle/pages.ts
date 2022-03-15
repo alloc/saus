@@ -310,7 +310,7 @@ async function rewriteImports(
   imported: Set<string>,
   resolvedBase: string
 ): Promise<string> {
-  const importerText = await loadModule(importer.id)
+  const importerText = importer.text ?? (await loadModule(importer.id))
   const isBaseReplaced = config.base !== resolvedBase
   const splices: Splice[] = []
   for (const importStmt of parseImports(importerText)) {
@@ -354,7 +354,7 @@ async function rewriteImports(
       const text = removeSourceMapUrls(
         module.imports
           ? await rewriteImports(module, imported, resolvedBase)
-          : await loadModule(module.id)
+          : module.text ?? (await loadModule(module.id))
       )
 
       splices.push([importStmt.start, importStmt.end, text])
