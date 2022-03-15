@@ -45,7 +45,6 @@ import { callPlugins } from './utils/callPlugins'
 import { parseImports, serializeImports } from './utils/imports'
 import { relativeToCwd } from './utils/relativeToCwd'
 import { resolveMapSources, SourceMap } from './utils/sourceMap'
-import { textExtensions } from './utils/textExtensions'
 import { toDevPath } from './utils/toDevPath'
 
 export interface BundleOptions {
@@ -125,20 +124,21 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
         context.config.root,
         context.config.build.outDir
       )
+      let file: string
       for (const module of Object.values(moduleMap)) {
-        let file = path.join(outDir, module.id)
+        file = path.join(outDir, module.id)
         fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(
-          file,
-          textExtensions.test(module.id)
-            ? module.text
-            : Buffer.from(module.text, 'base64')
-        )
+        fs.writeFileSync(file, module.text)
         if (runtimeConfig.debugBase && module.debugText) {
           file = path.join(outDir, runtimeConfig.debugBase, module.id)
           fs.mkdirSync(path.dirname(file), { recursive: true })
           fs.writeFileSync(file, module.debugText)
         }
+      }
+      for (const assetId in assetMap) {
+        file = path.join(outDir, assetId)
+        fs.mkdirSync(path.dirname(file), { recursive: true })
+        fs.writeFileSync(file, assetMap[assetId])
       }
     }
   }
