@@ -353,14 +353,22 @@ async function generateSsrBundle(
     code: serializeClientFunctions(functions),
   })
 
+  const inlinedAssets = Object.entries(assetMap).map(
+    ([id, data]) => [id, data.toString('base64')] as const
+  )
+
   modules.addModule({
     id: path.join(bundleDir, 'inlinedModules.ts'),
     code: dataToEsm(
       Object.values(moduleMap).reduce(
         (moduleMap, { id, text, debugText, ...props }) => {
-          moduleMap[id] = props as any
-          if (bundleConfig.moduleMap !== 'external') {
-            Object.assign(props, { text, debugText })
+          if (id.endsWith('.js')) {
+            moduleMap[id] = props as any
+            if (bundleConfig.moduleMap !== 'external') {
+              Object.assign(props, { text, debugText })
+            }
+          } else {
+            inlinedAssets.push([id, text])
           }
           return moduleMap
         },
@@ -371,12 +379,7 @@ async function generateSsrBundle(
 
   modules.addModule({
     id: path.join(bundleDir, 'inlinedAssets.ts'),
-    code: dataToEsm(
-      Object.entries(assetMap).reduce((assetMap, [id, data]) => {
-        assetMap[id] = data.toString('base64')
-        return assetMap
-      }, {} as typeof import('./bundle/inlinedAssets').default)
-    ),
+    code: dataToEsm(Object.fromEntries(inlinedAssets)),
   })
 
   modules.addModule({
