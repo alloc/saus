@@ -20,6 +20,7 @@ import { mapSerial } from '../../utils/mapSerial'
 import { resolveEntryUrl } from '../../utils/resolveEntryUrl'
 import { toInlineSourceMap } from '../../utils/sourceMap'
 import { textExtensions } from '../../utils/textExtensions'
+import { debug } from '../debug'
 import {
   ClientFunctions,
   mapClientFunctions,
@@ -152,6 +153,7 @@ export async function generateClientModules(
 
   const { onwarn: userOnWarn } = context.config.build.rollupOptions
 
+  debug('Resolving "build" config for client bundle')
   config = await context.resolveConfig('build', {
     plugins: [
       debugForbiddenImports([

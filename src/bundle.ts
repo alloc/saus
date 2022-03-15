@@ -455,6 +455,7 @@ async function generateSsrBundle(
   const preferExternalPlugin =
     (options.preferExternal || undefined) && preferExternal(context)
 
+  debug('Resolving "build" config for SSR bundle')
   const config = await context.resolveConfig('build', {
     plugins: [
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
