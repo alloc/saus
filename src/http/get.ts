@@ -5,7 +5,7 @@ import type { CacheControl } from '../core/withCache'
 import { getCachedState } from '../runtime/getCachedState'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
-import { loadResponseCache } from './responseCache'
+import { responseCache } from './responseCache'
 import { Response } from './response'
 import { HttpOptions } from './types'
 import { requestHook, responseHook } from './hooks'
@@ -18,8 +18,6 @@ export type GetOptions = {
   timeout?: number
 }
 
-const responseCache = loadResponseCache(process.cwd())
-
 /**
  * Do one thing, do it well.
  *
@@ -31,7 +29,7 @@ export function get(url: string | URL, opts?: GetOptions) {
     opts?.headers
   )
   return getCachedState(cacheKey, cacheControl => {
-    const cached = responseCache.read(cacheKey)
+    const cached = responseCache?.read(cacheKey)
     if (cached) {
       debug('Using cached GET request: %O', url)
       return Promise.resolve(cached)
@@ -72,7 +70,7 @@ function resolvedGet(
       Promise.resolve(responseHook.current(req, resp)).then(() => {
         if (resp.status == 200) {
           useCacheControl(cacheControl, resp.headers['cache-control'] as string)
-          if (isFinite(cacheControl.maxAge)) {
+          if (responseCache && isFinite(cacheControl.maxAge)) {
             responseCache.write(cacheControl.key, resp, cacheControl.maxAge)
           }
         }

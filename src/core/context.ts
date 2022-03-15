@@ -1,5 +1,6 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
+import { loadResponseCache, setResponseCache } from '../http/responseCache'
 import type { RenderedPage } from '../pages/types'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
@@ -128,6 +129,8 @@ export async function loadContext(
   )
 
   await resolveConfig(command)
+
+  setResponseCache(loadResponseCache(context!.root))
   return context!
 }
 

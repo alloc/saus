@@ -7,6 +7,11 @@ import { Response } from './response'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}
 
+export let responseCache: ResponseCache | null = null
+
+export const setResponseCache = (cache: ResponseCache | null) =>
+  (responseCache = cache)
+
 export function loadResponseCache(root: string) {
   const cacheDir = resolve(root, 'node_modules/.saus/http-cache')
   const metadataFile = resolve(cacheDir, 'metadata.json')
