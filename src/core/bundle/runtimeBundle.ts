@@ -25,10 +25,12 @@ const sausVersion = sausRoot.includes('/node_modules/')
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
-  'bundle/clientModules.ts',
   'bundle/config.ts',
   'bundle/debugBase.ts',
   'bundle/functions.ts',
+  'bundle/inlinedAssets.ts',
+  'bundle/inlinedModules.ts',
+  'bundle/moduleMap.ts',
   'bundle/routes.ts',
   'client/routes.ts',
   'client/baseUrl.ts',
