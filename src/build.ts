@@ -30,7 +30,7 @@ export async function build(options: BuildOptions) {
   ]
 
   const context = await loadBundleContext(
-    { write: false, entry: null, format: 'cjs' },
+    { write: false, entry: null, format: 'cjs', moduleMap: 'inline' },
     { plugins: buildPlugins }
   )
 
