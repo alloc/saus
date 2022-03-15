@@ -67,8 +67,9 @@ export async function build(options: BuildOptions) {
   let render: (pagePath: string) => Promise<RenderedPage | null>
   let worker: BuildWorker | undefined
 
+  const workerData = { root: context.root, code, filename }
   if (options.maxWorkers === 0) {
-    render = runBundle({ code, filename })
+    render = runBundle(workerData)
   } else {
     // Tinypool is ESM only, so use dynamic import to load it.
     const dynamicImport = (0, eval)('id => import(id)')
@@ -78,7 +79,7 @@ export async function build(options: BuildOptions) {
 
     worker = new WorkerPool({
       filename: path.resolve(__dirname, 'build/worker.js'),
-      workerData: { code, filename },
+      workerData,
       maxThreads: options.maxWorkers,
       idleTimeout: 2000,
     }) as BuildWorker
