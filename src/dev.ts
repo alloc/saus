@@ -22,6 +22,7 @@ import { loadRoutes } from './core/loadRoutes'
 import { clientDir, globalCachePath, runtimeDir } from './core/paths'
 import { createRenderPageFn } from './pages/renderPage'
 import { createServePageFn } from './pages/servePage'
+import { defineClientContext } from './plugins/clientContext'
 import { serveClientEntries, getClientUrl } from './plugins/clientEntries'
 import { transformClientState } from './plugins/clientState'
 import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
@@ -71,6 +72,7 @@ export async function createServer(
       serveClientEntries,
       routesPlugin(),
       renderPlugin,
+      defineClientContext,
       transformClientState,
       () =>
         moduleRedirection([

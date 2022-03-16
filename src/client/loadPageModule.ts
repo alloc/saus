@@ -20,7 +20,7 @@ export async function loadPageModule<PageModule = RouteModule>(
   const pagePath =
     routePath !== 'default'
       ? getPagePath(routePath, routeParams)
-      : import.meta.env.DEFAULT_PATH
+      : saus.defaultPath
 
   try {
     const pageState = await loadPageState(pagePath)

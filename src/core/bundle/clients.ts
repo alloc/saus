@@ -4,6 +4,7 @@ import path from 'path'
 import stripComments from 'strip-comments'
 import terser from 'terser'
 import { ClientModule, ClientModuleMap } from '../../bundle/types'
+import { defineClientContext } from '../../plugins/clientContext'
 import { transformClientState } from '../../plugins/clientState'
 import { debugForbiddenImports } from '../../plugins/debug'
 import { rewriteHttpImports } from '../../plugins/httpImport'
@@ -184,6 +185,7 @@ export async function generateClientModules(
       ]),
       routesPlugin(clientRouteMap)(),
       rewriteHttpImports(context.logger, true),
+      defineClientContext(),
       transformClientState(),
       collectCjsModules(cjsModuleList),
     ],

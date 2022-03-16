@@ -96,7 +96,7 @@ function createContext(
     resolveConfig,
     compileCache: new CompileCache('node_modules/.saus', config.root),
     basePath: config.base,
-    defaultPath: config.saus.defaultPath || '/404',
+    defaultPath: config.saus.defaultPath!,
     routesPath: config.saus.routes,
     routes: [],
     runtimeHooks: [],
@@ -203,6 +203,7 @@ function getConfigResolver(
     assertSausConfig(sausConfig, 'routes')
     sausConfig.render = resolve(root, sausConfig.render)
     sausConfig.routes = resolve(root, sausConfig.routes)
+    sausConfig.defaultPath ||= '/404'
 
     if (inlinePlugins) {
       userConfig.plugins ??= []
@@ -252,8 +253,6 @@ function getConfigResolver(
     ]
 
     const context = getContext(config)
-
-    config.env.DEFAULT_PATH = context.defaultPath
 
     // In build mode, we create Saus plugins *before* routes load,
     // whereas, in dev mode, they're created *after* that.

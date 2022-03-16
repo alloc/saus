@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
-declare interface ImportMetaEnv {
-  DEFAULT_PATH: string
+declare const saus: {
+  /**
+   * The `saus.defaultPath` option set in Vite config.
+   * @default "/404"
+   */
+  defaultPath: string
 }
