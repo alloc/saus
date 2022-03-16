@@ -14,6 +14,4 @@ route(() => import('../routes/NotFound'))
 
 configureHtml({
   cacheAssets: false,
-  minify: true,
-  prependBase: true,
 })

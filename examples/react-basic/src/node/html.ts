@@ -1,12 +1,8 @@
-import { downloadRemoteAssets, minifyHtml } from '@saus/html'
+import { downloadRemoteAssets } from '@saus/html'
 import { MistyTask, startTask } from 'misty/task'
 import { success } from 'misty'
 
-export default (options: {
-  cacheAssets: boolean
-  minify: boolean
-  prependBase: boolean
-}) => {
+export default (options: { cacheAssets: boolean }) => {
   if (options.cacheAssets) {
     const tasks = new Map<string, MistyTask>()
     downloadRemoteAssets({
@@ -21,8 +17,5 @@ export default (options: {
         success(`Saved asset: ${file}`)
       },
     })
-  }
-  if (options.minify) {
-    minifyHtml()
   }
 }
