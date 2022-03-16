@@ -10,4 +10,8 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   bundle: false,
   sourcemap: true,
+  minifySyntax: true,
+  define: {
+    'import.meta.vitest': 'false',
+  },
 })
