@@ -7,10 +7,13 @@ import { Plugin } from '../core'
 export function defineClientContext(): Plugin {
   return {
     name: 'saus:client-context',
-    config(config) {
-      const define: Record<string, string> = {
-        'typeof saus': '"object"',
+    config(config, env) {
+      const define: Record<string, string> = {}
+
+      if (env.command == 'build') {
+        define['typeof saus'] = '"object"'
       }
+
       const sausConfig = config.saus!
       const clientContext = {
         defaultPath: sausConfig.defaultPath,
@@ -18,6 +21,7 @@ export function defineClientContext(): Plugin {
       for (const [key, value] of Object.entries(clientContext)) {
         define['saus.' + key] = JSON.stringify(value)
       }
+
       return {
         define,
       }
