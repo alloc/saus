@@ -225,11 +225,17 @@ async function prepareFunctions(context: BundleContext) {
     ].join('\n')
 
     const functionModule = functionModules.addModule({
-      id: `function.${md5Hex(functionCode).slice(0, 8)}${functionExt}`,
+      // The function module must be within the project root
+      // for some transform plugins to work correctly.
+      id: path.join(
+        root,
+        '.saus/functions',
+        md5Hex(functionCode).slice(0, 8) + functionExt
+      ),
       code: functionCode,
     })
 
-    const transformResult = await transform(functionModule.id)
+    const transformResult = await transform('/@fs' + functionModule.id)
     if (transformResult?.code) {
       const [prelude, transformedFn] =
         transformResult.code.split('\nexport default ')
