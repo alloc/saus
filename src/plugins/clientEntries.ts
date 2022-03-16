@@ -21,7 +21,7 @@ export function getClientUrl(id: string, base: string) {
  * This plugin is responsible for serving the generated client
  * modules in serve mode.
  */
-export function clientPlugin(
+export function serveClientEntries(
   { render: renderPath }: SausConfig,
   configEnv: vite.ConfigEnv
 ): Plugin {

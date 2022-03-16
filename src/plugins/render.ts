@@ -2,7 +2,7 @@ import * as vite from 'vite'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
 import { babel, transformSync, t, NodePath } from '../babel'
 import { SausConfig } from '../core'
-import { isClientId } from './client'
+import { isClientId } from './clientEntries'
 
 export function renderPlugin(
   { render: renderPath }: SausConfig,
