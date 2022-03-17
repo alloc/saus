@@ -1,43 +1,63 @@
-import type { HeadDescription } from '../client/head'
+export type ParsedHeadTag<T = any> = { value: T; start: number; end: number }
+export type ParsedHead = {
+  title?: ParsedHeadTag<string>
+  stylesheet: ParsedHeadTag<string>[]
+  prefetch: ParsedHeadTag<string>[]
+  preload: { [as: string]: ParsedHeadTag<string>[] }
+}
 
-const linkTypes = ['stylesheet', 'prefetch', 'preload']
-
-export function parseHead(html: string): HeadDescription | undefined {
-  let match = /<head\b[^>]*>([\s\S]*)?<\/head>/.exec(html)
-  if (!match) {
-    return
+export function parseHead(html: string): ParsedHead {
+  const head: ParsedHead = {
+    title: undefined,
+    stylesheet: [],
+    prefetch: [],
+    preload: {},
   }
 
-  let title: string | undefined
-  const linkTags: Record<string, string[]> = {}
+  let match = /<head\b[^>]*>[\s\S]*<\/head>/.exec(html)
+  if (match) {
+    const headStart = match.index
+    const headHtml = match[0]
+    const headTagRE = /<(title|link)\b([\s\S]*?)\/?>/g
+    while ((match = headTagRE.exec(headHtml))) {
+      const start = headStart + match.index
+      if (match[1] == 'title') {
+        match = /^([\s\S]*?)<\/title>/.exec(headHtml.slice(headTagRE.lastIndex))
+        if (match) {
+          const end = headStart + headTagRE.lastIndex + match[0].length
+          head.title = { value: match[1], start, end }
+        }
+      } else {
+        const props: Record<string, string> = {}
 
-  const headHtml = match[1]
-  const headTagRE = /<(title|link)\b([\s\S]*?)\/?>/g
-  while ((match = headTagRE.exec(headHtml))) {
-    if (match[1] == 'title') {
-      match = /^([\s\S]*?)<\/title>/.exec(headHtml.slice(headTagRE.lastIndex))
-      if (match) {
-        title = match[1]
-      }
-    } else {
-      const props: Record<string, string> = {}
+        const linkTag = match[2]
+        const attributeRE = /\b(rel|href|as)=["']([^"']+)["']/g
+        while ((match = attributeRE.exec(linkTag))) {
+          props[match[1]] = match[2]
+        }
 
-      const linkTag = match[2]
-      const attributeRE = /\b(rel|href|as)=["']([^"']+)["']/g
-      while ((match = attributeRE.exec(linkTag))) {
-        props[match[1]] = match[2]
-      }
+        if (!shouldParseLink(props.rel)) {
+          continue
+        }
 
-      if (linkTypes.includes(props.rel)) {
-        const tags = (linkTags[props.rel] ||= [])
-        tags.push(props.href + (props.as ? '\t' + props.as : ''))
+        const linkTags =
+          props.rel == 'preload'
+            ? (head.preload[props.as] ||= [])
+            : head[props.rel]
+
+        const end = headStart + headTagRE.lastIndex
+        linkTags.push({ value: props.href, start, end })
       }
     }
   }
 
-  if (title !== undefined || Object.keys(linkTags).length)
-    return {
-      title,
-      ...linkTags,
-    }
+  return head
+}
+
+const parsedLinkTypes = ['stylesheet', 'prefetch', 'preload'] as const
+
+type ParsedLinkType = typeof parsedLinkTypes[number]
+
+function shouldParseLink(rel: string): rel is ParsedLinkType {
+  return parsedLinkTypes.includes(rel as any)
 }

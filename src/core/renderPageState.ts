@@ -1,5 +1,6 @@
 import type { RenderedPage } from '../pages/types'
 import { dataToEsm } from '../utils/dataToEsm'
+import { ParsedHeadTag } from '../utils/parseHead'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 /**
@@ -57,9 +58,29 @@ export function renderPageState(
       `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` + code
   }
 
-  if (head) {
+  if (
+    head.title ||
+    head.stylesheet.length ||
+    head.prefetch.length ||
+    Object.keys(head.preload).length
+  ) {
+    const description = dataToEsm(head, '', (key, value) => {
+      if (!value) return
+      if (Array.isArray(value)) {
+        // Omit empty arrays.
+        return value.length ? undefined : ''
+      }
+      if ('value' in value) {
+        // Convert head tag to its string value.
+        return dataToEsm((value as ParsedHeadTag).value, '')
+      }
+      if (value.constructor == Object) {
+        // Omit empty objects.
+        return Object.keys(value).length ? undefined : ''
+      }
+    })
     helpers.push('describeHead')
-    code = `describeHead("${path}",${SPACE}${dataToEsm(head, '')})\n` + code
+    code = `describeHead("${path}",${SPACE}${description})\n` + code
   }
 
   if (preloadUrls?.length) {

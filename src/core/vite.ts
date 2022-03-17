@@ -94,6 +94,14 @@ export interface SausConfig {
    */
   renderConcurrency?: number
   /**
+   * Any `<link>` tags produced by renderers are stripped in favor of injecting
+   * them through the page's state module via the `applyHead` client API. This
+   * can drastically reduce the elapsed time before `<script>` tags are executed.
+   * Always measure performance with and without this option, to see if you
+   * actually need it.
+   */
+  stripLinkTags?: boolean
+  /**
    * Assume this page path when using the default route in build mode
    * and SSR mode.
    * @default "/404"

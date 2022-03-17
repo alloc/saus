@@ -51,4 +51,5 @@ export interface RuntimeConfig {
   renderConcurrency?: number
   ssrRoutesId: string
   stateCacheId: string
+  stripLinkTags?: boolean
 }

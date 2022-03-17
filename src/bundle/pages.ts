@@ -118,6 +118,7 @@ export async function renderPage(
   // Preserve the debug base, but not the base base. Ha!
   const pagePath = pagePublicPath.replace(config.base, '/')
   const filename = getPageFilename(pagePath)
+  const pageStateId = filename + '.js'
 
   if (!page.html) {
     const finishedPage: RenderedPage = {
@@ -174,6 +175,8 @@ export async function renderPage(
     text: page.client.code,
   }
 
+  let preloadList: string[] | undefined
+
   // No point in loading any JS if no entry module exists.
   if (entryModule) {
     const entryImports = new Set<string>()
@@ -184,23 +187,7 @@ export async function renderPage(
 
     // Anything imported by either the route module or the entry module is
     // pre-loaded by the page state module to speed up page navigation.
-    const preloadList = await getPreloadList(
-      [routeModule, entryModule],
-      isDebug
-    )
-
-    // The helpers module is used by every page's state module.
-    addModule(moduleMap.helpers)
-
-    // The "page state module" initializes the global state cache with any
-    // state modules used by the route module or entry module. It also
-    // provides the top-level state of the `RenderRequest` object.
-    const pageStateId = filename + '.js'
-    modules.add({
-      id: pageStateId,
-      text: renderPageState(page, config.base, moduleMap.helpers, preloadList),
-      exports: ['default'],
-    })
+    preloadList = await getPreloadList([routeModule, entryModule], isDebug)
 
     // State modules are not renamed for debug view.
     for (const stateId of [...page.stateModules].reverse()) {
@@ -225,10 +212,11 @@ export async function renderPage(
     )
     hydrateModule.imports?.forEach(addModule)
 
-    // Hydrate the page. The route module is imported dynamically to ensure
-    // it's executed *after* the page state module is.
     const routeModuleUrl = getModuleUrl(routeModule)
     const entryModuleUrl = getModuleUrl(entryModule)
+
+    // Hydrate the page. The route module is imported dynamically to ensure
+    // it's executed *after* the page state module is.
     bodyTags.push({
       tag: 'script',
       attrs: { type: 'module' },
@@ -247,6 +235,15 @@ export async function renderPage(
   }
 
   let html = page.html
+
+  if (config.stripLinkTags)
+    page.head.stylesheet
+      .concat(page.head.prefetch, ...Object.values(page.head.preload))
+      .sort((a, b) => b.start - a.start)
+      .forEach(tag => {
+        html = html.slice(0, tag.start) + html.slice(tag.end)
+      })
+
   if (bodyTags.length) {
     html = injectToBody(html, bodyTags)
   }
@@ -282,11 +279,50 @@ export async function renderPage(
 
     const [styleUrls, assetUrls] = generateAssetUrls(assets)
 
-    const headTags: HtmlTagDescriptor[] = []
-    getTagsForStyles(styleUrls, headTags)
-    getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
-    getTagsForAssets(assetUrls, headTags)
-    html = injectToHead(html, headTags, true)
+    if (page && entryModule) {
+      const existingLinks = new Set(
+        page.head.stylesheet
+          .concat(page.head.prefetch, ...Object.values(page.head.preload))
+          .map(tag => tag.value)
+      )
+
+      for (const styleUrl of styleUrls) {
+        if (!existingLinks.has(styleUrl)) {
+          page.head.stylesheet.push({ value: styleUrl, start: -1, end: -1 })
+        }
+      }
+      for (const assetUrl of assetUrls) {
+        if (!existingLinks.has(assetUrl)) {
+          page.head.prefetch.push({ value: assetUrl, start: -1, end: -1 })
+        }
+      }
+
+      // The page's state module is rendered after HTML post processors
+      // run to ensure all <link> tags are included.
+      modules.add({
+        id: pageStateId,
+        text: renderPageState(
+          page,
+          config.base,
+          moduleMap.helpers,
+          preloadList
+        ),
+        exports: ['default'],
+      })
+
+      // The helpers module is used by every page's state module.
+      addModule(moduleMap.helpers)
+    }
+
+    if (!config.stripLinkTags) {
+      const headTags: HtmlTagDescriptor[] = []
+      getTagsForStyles(styleUrls, headTags)
+      getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
+      getTagsForAssets(assetUrls, headTags)
+      if (headTags.length) {
+        html = injectToHead(html, headTags, true)
+      }
+    }
 
     const finishedPage: RenderedPage = {
       id: filename,

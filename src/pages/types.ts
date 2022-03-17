@@ -1,4 +1,4 @@
-import type { Buffer, HeadDescription } from '../client'
+import type { Buffer } from '../client'
 import type {
   Client,
   ClientState,
@@ -7,6 +7,7 @@ import type {
   SausContext,
   WrappedNode,
 } from '../core'
+import { ParsedHead } from '../utils/parseHead'
 import { ParsedUrl } from '../utils/url'
 
 export type BufferLike = string | Buffer | globalThis.Buffer
@@ -20,7 +21,7 @@ export type RenderedFile = {
 export type RenderedPage = {
   path: string
   html: string
-  head?: HeadDescription
+  head: ParsedHead
   state: ClientState
   files: RenderedFile[]
   stateModules: string[]

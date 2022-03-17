@@ -302,6 +302,7 @@ async function prepareFunctions(context: BundleContext) {
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
     ssrRoutesId: toDevPath(context.routesPath, config.root, true),
+    stripLinkTags: config.saus.stripLinkTags,
     // These are set by the `generateClientModules` function.
     minify: false,
     stateCacheId: '',

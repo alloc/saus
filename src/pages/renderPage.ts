@@ -147,7 +147,7 @@ export function createRenderPageFn(
     const page: RenderedPage = {
       path,
       html: '',
-      head: undefined,
+      head: undefined!,
       state,
       files: [],
       stateModules: stateModulesMap.get(state)!,
