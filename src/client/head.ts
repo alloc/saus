@@ -27,7 +27,10 @@ export function applyHead(pagePath: string) {
 }
 
 export function injectLinkTag(input: string, rel?: string) {
-  const [url, asAttr] = input.split('\t')
+  let [url, asAttr] = input.split('\t')
+
+  // Convert "&amp;" to "&" etc
+  url = htmlDecode(url)
 
   let selector = `link[href="${url}"]`
   if (rel) {
@@ -44,4 +47,10 @@ export function injectLinkTag(input: string, rel?: string) {
     link.href = url
     document.head.appendChild(link)
   }
+}
+
+const htmlDecoder = document.createElement('textarea')
+const htmlDecode = (text: string) => {
+  htmlDecoder.innerHTML = text
+  return htmlDecoder.value
 }
