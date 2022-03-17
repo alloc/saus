@@ -4,6 +4,7 @@ import { red, gray } from 'kleur/colors'
 import { fatal, success } from 'misty'
 import log from 'shared-log'
 import { BuildOptions, vite } from './core'
+import { InlinePreviewConfig, startPreviewServer } from './preview'
 
 declare const globalThis: any
 if (inspector.url()) {
@@ -120,6 +121,18 @@ cli
       }
       throw e
     }
+  })
+
+cli
+  .command('preview')
+  .option('--host [host]', `[string] specify hostname`)
+  .option('--port <port>', `[number] specify port`)
+  .option('--strictPort', `[boolean] exit if specified port is already in use`)
+  .option('--https', `[boolean] use TLS + HTTP/2`)
+  .option('--open [path]', `[boolean | string] open browser on startup`)
+  .action(async (options: InlinePreviewConfig) => {
+    const server = await startPreviewServer(options)
+    server.printUrls()
   })
 
 cli.command('test').action(async () => {
