@@ -26,22 +26,22 @@ export function applyHead(pagePath: string) {
   }
 }
 
-export function injectLinkTag(url: string, rel?: string) {
+export function injectLinkTag(input: string, rel?: string) {
+  const [url, asAttr] = input.split('\t')
+
   let selector = `link[href="${url}"]`
   if (rel) {
     selector += `[rel="${rel}"]`
   }
+
   if (!document.head.querySelector(selector)) {
     const link = document.createElement('link')
+    if (asAttr) {
+      link.as = asAttr
+    }
     // TODO: do feature detection for modulepreload?
     link.rel = rel || 'modulepreload'
-    const asIndex = url.indexOf('\t')
-    if (~asIndex) {
-      link.href = url.slice(0, asIndex)
-      link.as = url.slice(asIndex + 1)
-    } else {
-      link.href = url
-    }
+    link.href = url
     document.head.appendChild(link)
   }
 }
