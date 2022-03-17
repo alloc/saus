@@ -160,7 +160,6 @@ export async function renderPage(
     return module
   }
 
-  const headTags: HtmlTagDescriptor[] = []
   const bodyTags: HtmlTagDescriptor[] = []
 
   const routeModule = addModule(moduleMap[page.routeModuleId])!
@@ -281,9 +280,13 @@ export async function renderPage(
       )
     )
 
+    const [styleUrls, assetUrls] = generateAssetUrls(assets)
+
+    const headTags: HtmlTagDescriptor[] = []
+    getTagsForStyles(styleUrls, headTags)
     getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
-    getTagsForAssets(assets, headTags)
-    html = injectToHead(html, headTags)
+    getTagsForAssets(assetUrls, headTags)
+    html = injectToHead(html, headTags, true)
 
     const finishedPage: RenderedPage = {
       id: filename,
@@ -389,28 +392,40 @@ async function getPreloadList(
   return preloadList
 }
 
-function getTagsForAssets(
-  assetIds: Iterable<string>,
-  headTags: HtmlTagDescriptor[]
-) {
+function generateAssetUrls(assetIds: Iterable<string>) {
+  const styleUrls: string[] = []
+  const assetUrls: string[] = []
   for (const assetId of assetIds) {
     const url = isExternalUrl(assetId) ? assetId : config.base + assetId
     if (isCSSRequest(url)) {
-      headTags.push({
-        tag: 'link',
-        attrs: {
-          rel: 'stylesheet',
-          href: url,
-        },
-      })
+      styleUrls.push(url)
     } else {
-      headTags.push({
-        tag: 'link',
-        attrs: {
-          rel: 'prefetch',
-          href: url,
-        },
-      })
+      assetUrls.push(url)
     }
+  }
+  return [styleUrls, assetUrls] as const
+}
+
+function getTagsForStyles(styleUrls: string[], headTags: HtmlTagDescriptor[]) {
+  for (const url of styleUrls) {
+    headTags.push({
+      tag: 'link',
+      attrs: {
+        rel: 'stylesheet',
+        href: url,
+      },
+    })
+  }
+}
+
+function getTagsForAssets(assetUrls: string[], headTags: HtmlTagDescriptor[]) {
+  for (const url of assetUrls) {
+    headTags.push({
+      tag: 'link',
+      attrs: {
+        rel: 'prefetch',
+        href: url,
+      },
+    })
   }
 }
