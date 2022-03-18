@@ -6,4 +6,8 @@ declare const saus: {
    * @default "/404"
    */
   defaultPath: string
+  /**
+   * Equals `true` after the page is fully hydrated.
+   */
+  hydrated: boolean
 }

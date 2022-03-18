@@ -28,6 +28,7 @@ export function hydrate(
     module: routeModule,
     state,
   })
+  saus.hydrated = true
 }
 
 // TODO: support multiple hydration handlers
