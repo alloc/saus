@@ -1,7 +1,11 @@
 import path from 'path'
 import vm from 'vm'
 import { RenderPageOptions } from '../bundle/types'
-import { loadSourceMap, removeSourceMapUrls } from '../core'
+import {
+  loadSourceMap,
+  MutableRuntimeConfig,
+  removeSourceMapUrls,
+} from '../core'
 import { loadResponseCache, responseCache } from '../http/responseCache'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
 
@@ -9,6 +13,7 @@ export interface BundleDescriptor {
   root: string
   code: string
   filename: string
+  runtimeConfig?: Partial<MutableRuntimeConfig> | false
 }
 
 export function runBundle(bundle: BundleDescriptor) {
@@ -25,8 +30,15 @@ export function runBundle(bundle: BundleDescriptor) {
   const exports: any = {}
   initialize(exports, require)
 
-  const { default: renderPage, setResponseCache } =
-    exports as typeof import('../bundle/main')
+  const {
+    default: renderPage,
+    configureBundle,
+    setResponseCache,
+  } = exports as typeof import('../bundle/main')
+
+  if (bundle.runtimeConfig) {
+    configureBundle(bundle.runtimeConfig)
+  }
 
   // If a response cache already exists, the bundle will use it.
   setResponseCache(responseCache || loadResponseCache(root))

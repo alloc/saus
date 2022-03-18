@@ -13,6 +13,7 @@ import {
   generateRoutePaths,
   RouteParams,
   SausContext,
+  SourceMap,
   vite,
 } from './core'
 import { loadBundleContext } from './core/bundle'
@@ -39,9 +40,11 @@ export async function build(options: BuildOptions) {
     options.bundlePath = path.join(context.compileCache.path, bundleFile)
   }
 
-  let { code, map } =
+  type Bundle = { code: string; map?: SourceMap; cached?: boolean }
+
+  let { code, map, cached }: Bundle =
     options.bundlePath && fs.existsSync(options.bundlePath)
-      ? { code: fs.readFileSync(options.bundlePath, 'utf8'), map: undefined }
+      ? { code: fs.readFileSync(options.bundlePath, 'utf8'), cached: true }
       : await bundle(
           { isBuild: true, absoluteSources: true, preferExternal: true },
           context
@@ -70,7 +73,17 @@ export async function build(options: BuildOptions) {
   // Default to serial rendering until #48 is fixed.
   options.maxWorkers ??= 1
 
-  const workerData = { root: context.root, code, filename }
+  const runtimeConfig = cached && {
+    ...pickDefined(context.config, ['publicDir']),
+    ...pickDefined(context.config.build, ['assetsDir']),
+    ...pickDefined(context.config.saus, [
+      'htmlTimeout',
+      'renderConcurrency',
+      'stripLinkTags',
+    ]),
+  }
+
+  const workerData = { root: context.root, code, filename, runtimeConfig }
   if (options.maxWorkers === 0) {
     render = runBundle(workerData)
   } else {
@@ -227,4 +240,17 @@ function collectRollupAssets(assets: Map<string, OutputAsset>): vite.Plugin {
       }
     },
   }
+}
+
+function pickDefined<T, P extends (keyof T)[]>(
+  obj: T,
+  keys: P
+): Pick<T, P[number]> {
+  const picked: any = {}
+  for (const key of keys) {
+    if (obj[key] !== undefined) {
+      picked[key] = obj[key]
+    }
+  }
+  return picked
 }
