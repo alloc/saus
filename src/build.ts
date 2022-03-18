@@ -74,9 +74,9 @@ export async function build(options: BuildOptions) {
   options.maxWorkers ??= 1
 
   const runtimeConfig = cached && {
-    ...pickDefined(context.config, ['publicDir']),
-    ...pickDefined(context.config.build, ['assetsDir']),
-    ...pickDefined(context.config.saus, [
+    publicDir: path.relative(outDir, context.config.publicDir),
+    ...pick(context.config.build, ['assetsDir']),
+    ...pick(context.config.saus, [
       'delayModulePreload',
       'htmlTimeout',
       'renderConcurrency',
@@ -243,14 +243,16 @@ function collectRollupAssets(assets: Map<string, OutputAsset>): vite.Plugin {
   }
 }
 
-function pickDefined<T, P extends (keyof T)[]>(
+function pick<T, P extends (keyof T)[]>(
   obj: T,
-  keys: P
+  keys: P,
+  filter: (value: any, key: P[number]) => boolean = () => true
 ): Pick<T, P[number]> {
   const picked: any = {}
   for (const key of keys) {
-    if (obj[key] !== undefined) {
-      picked[key] = obj[key]
+    const value = obj[key]
+    if (filter(value, key)) {
+      picked[key] = value
     }
   }
   return picked
