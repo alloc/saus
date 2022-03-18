@@ -53,3 +53,16 @@ export interface RuntimeConfig {
   stateCacheId: string
   stripLinkTags?: boolean
 }
+
+// These properties are baked into the client modules, and so they
+// cannot be updated at runtime.
+type RuntimeConstants =
+  | 'base'
+  | 'command'
+  | 'debugBase'
+  | 'defaultPath'
+  | 'mode'
+  | 'ssrRoutesId'
+  | 'stateCacheId'
+
+export type MutableRuntimeConfig = Omit<RuntimeConfig, RuntimeConstants>
