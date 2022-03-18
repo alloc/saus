@@ -44,6 +44,7 @@ export interface RuntimeConfig {
   command: 'dev' | 'bundle'
   debugBase?: string
   defaultPath: string
+  delayModulePreload?: boolean
   htmlTimeout?: number
   minify: boolean
   mode: string

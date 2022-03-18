@@ -77,6 +77,7 @@ export async function build(options: BuildOptions) {
     ...pickDefined(context.config, ['publicDir']),
     ...pickDefined(context.config.build, ['assetsDir']),
     ...pickDefined(context.config.saus, [
+      'delayModulePreload',
       'htmlTimeout',
       'renderConcurrency',
       'stripLinkTags',

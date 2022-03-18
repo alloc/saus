@@ -297,6 +297,7 @@ async function prepareFunctions(context: BundleContext) {
     command: 'bundle',
     debugBase: context.bundle.debugBase,
     defaultPath: context.defaultPath,
+    delayModulePreload: config.saus.delayModulePreload,
     htmlTimeout: config.saus.htmlTimeout,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),

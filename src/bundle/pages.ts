@@ -317,7 +317,9 @@ export async function renderPage(
     if (!config.stripLinkTags) {
       const headTags: HtmlTagDescriptor[] = []
       getTagsForStyles(styleUrls, headTags)
-      getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
+      if (!config.delayModulePreload) {
+        getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
+      }
       getTagsForAssets(assetUrls, headTags)
       if (headTags.length) {
         html = injectToHead(html, headTags, true)
