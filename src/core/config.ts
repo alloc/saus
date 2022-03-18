@@ -2,6 +2,7 @@ import assert from 'assert'
 import callerPath from 'caller-path'
 import path from 'path'
 import type { ConfigEnv, UserConfig } from 'vite'
+import type { ProfiledEventHandler } from '../pages/types'
 import { renderModule } from './global'
 
 export type ConfigHook = (
@@ -66,4 +67,7 @@ type RuntimeConstants =
   | 'ssrRoutesId'
   | 'stateCacheId'
 
-export type MutableRuntimeConfig = Omit<RuntimeConfig, RuntimeConstants>
+export interface MutableRuntimeConfig
+  extends Omit<RuntimeConfig, RuntimeConstants> {
+  profile?: ProfiledEventHandler
+}

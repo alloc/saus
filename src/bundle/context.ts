@@ -24,5 +24,10 @@ export const context: PageFactoryContext = {
 /**
  * Update the bundle's runtime config.
  */
-export const configureBundle = (update: Partial<MutableRuntimeConfig>): void =>
-  void Object.assign(config, update)
+export function configureBundle(update: Partial<MutableRuntimeConfig>): void {
+  if ('profile' in update) {
+    context.profile = update.profile
+    delete update.profile
+  }
+  Object.assign(config, update)
+}

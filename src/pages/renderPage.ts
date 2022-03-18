@@ -66,6 +66,7 @@ export function createRenderPageFn(
     defaultState,
     getCachedPage,
     processHtml,
+    profile,
     renderers,
     routes,
   } = context
@@ -94,6 +95,7 @@ export function createRenderPageFn(
       )
     }
 
+    profile = context.profile
     defaultRoute = context.defaultRoute
     defaultState = context.defaultState
 
@@ -130,6 +132,8 @@ export function createRenderPageFn(
       state,
     }
 
+    let timestamp = Date.now()
+
     const usedHooks: BeforeRenderHook[] = []
     for (const hook of beforeRenderHooks) {
       const params = hook.match ? hook.match(path) : {}
@@ -144,6 +148,12 @@ export function createRenderPageFn(
       return null
     }
 
+    profile?.('render html', {
+      url,
+      timestamp,
+      duration: Date.now() - timestamp,
+    })
+
     const page: RenderedPage = {
       path,
       html: '',
@@ -156,7 +166,13 @@ export function createRenderPageFn(
     }
 
     if (processHtml) {
+      timestamp = Date.now()
       html = await processHtml(html, page, config.htmlTimeout)
+      profile?.('process html', {
+        url,
+        timestamp,
+        duration: Date.now() - timestamp,
+      })
     }
 
     await renderer.onDocument.call(
@@ -175,9 +191,15 @@ export function createRenderPageFn(
     )
 
     if (page.html) {
+      timestamp = Date.now()
       page.client = await getClient(functions, renderer, usedHooks)
       if (page.client) {
         globalCache.loaded[page.client.id] = [page.client]
+        profile?.('render client', {
+          url,
+          timestamp,
+          duration: Date.now() - timestamp,
+        })
       }
       page.head = parseHead(page.html)
     }
@@ -213,7 +235,7 @@ export function createRenderPageFn(
 
   const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
     getCachedState(url.path, async cacheControl => {
-      const time = Date.now()
+      const timestamp = Date.now()
       const stateModules = createStateModuleMap()
 
       // Start loading state modules before the route state is awaited.
@@ -240,6 +262,12 @@ export function createRenderPageFn(
       await Promise.all(stateModules.values())
       stateModulesMap.set(state, Array.from(stateModules.keys()))
 
+      profile?.('load state', {
+        url,
+        timestamp,
+        duration: Date.now() - timestamp,
+      })
+
       if (config.command == 'dev')
         Object.defineProperty(state, '_ts', {
           value: Date.now(),
@@ -249,7 +277,6 @@ export function createRenderPageFn(
       // cached for `getCachedState` calls that have no loader.
       cacheControl.maxAge = 1
 
-      debug(`Loaded page state in ${Date.now() - time}ms`)
       return state
     })
 

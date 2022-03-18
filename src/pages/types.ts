@@ -36,7 +36,25 @@ export interface PageFactoryContext
     RoutesModule,
     RenderModule {
   logger: { error(msg: string): void }
+  profile?: ProfiledEventHandler
 }
+
+export type ProfiledEvent = {
+  url: ParsedUrl
+  timestamp: number
+  duration: number
+}
+
+export type ProfiledEventType =
+  | 'load state'
+  | 'render html'
+  | 'process html'
+  | 'render client'
+
+export type ProfiledEventHandler = (
+  type: ProfiledEventType,
+  event: ProfiledEvent
+) => void
 
 // Each page has its own render module in SSR mode.
 export interface PageContext extends RenderModule {}
