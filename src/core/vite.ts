@@ -7,12 +7,7 @@ import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
 import type { SourceMap } from '../utils/sourceMap'
-import type {
-  LinkedModule,
-  LinkedModuleMap,
-  ModuleMap,
-  RequireAsync,
-} from '../vm/types'
+import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
 import './viteRequire'
