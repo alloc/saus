@@ -73,7 +73,7 @@ export class HtmlTagPath<
   }
 
   get attributes(): Record<string, true | string | undefined> {
-    return new Proxy(this.node.attributeMap, {
+    const attributes = new Proxy(this.node.attributeMap, {
       get(target, key: string) {
         const attribute = target[key]
         if (attribute) {
@@ -87,7 +87,10 @@ export class HtmlTagPath<
         this.setAttribute(key, value)
         return true
       },
-    }) as any
+    })
+
+    Object.defineProperty(this, 'attributes', { value: attributes })
+    return attributes as any
   }
 
   get innerHTML() {
