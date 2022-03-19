@@ -1,6 +1,6 @@
 import { EnforcementPhase, findHtmlProcessor } from 'saus/core'
 import { kVisitorsArray } from './symbols'
-import { traverseHtml } from './traversal'
+import { findTraverseVisitor, traverseHtml } from './traversal'
 import {
   HtmlResolver,
   HtmlResolverState,
@@ -42,13 +42,9 @@ export function resolveHtmlImports(
     assertType<HtmlResolver>(resolver)
   }
 
-  const traverseFn = findHtmlProcessor<TraverseVisitor>(
-    enforce,
-    p => kVisitorsArray in p
-  )
-
-  if (traverseFn) {
-    visitor = traverseFn[kVisitorsArray].find(
+  const traversePlugin = findTraverseVisitor(enforce)
+  if (traversePlugin) {
+    visitor = traversePlugin.process[kVisitorsArray].find(
       visitor => kResolverList in visitor
     )
     if (visitor) {

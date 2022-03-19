@@ -24,12 +24,10 @@ export const traverseHtml = ((arg, arg2) => {
     enforce = arg
     arg = arg2!
   }
-  const traverseFn = findHtmlProcessor<TraverseVisitor>(
-    enforce,
-    p => kVisitorsArray in p
-  )
-  if (traverseFn) {
-    const visitors = traverseFn[kVisitorsArray]
+
+  const traversePlugin = findTraverseVisitor(enforce)
+  if (traversePlugin) {
+    const visitors = traversePlugin.process[kVisitorsArray]
     if (Array.isArray(arg)) {
       arg.forEach(visitor => visitors.push(visitor))
     } else {
@@ -42,3 +40,13 @@ export const traverseHtml = ((arg, arg2) => {
     })
   }
 }) as TraverseHtmlHook
+
+/**
+ * Used by the `traverseHtml` hook to share an AST for traversal among
+ * multiple visitors.
+ */
+export const findTraverseVisitor = (enforce: EnforcementPhase | undefined) =>
+  findHtmlProcessor(
+    enforce,
+    p => typeof p !== 'function' && kVisitorsArray in p.process
+  ) as { process: TraverseVisitor } | undefined

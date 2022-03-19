@@ -105,7 +105,7 @@ export interface EnforcedHandler<Args extends any[]> {
   (enforce: EnforcementPhase | undefined, ...args: Args): void
 }
 
-export const findHtmlProcessor = <P extends HtmlProcessor>(
+export const findHtmlProcessor = <P extends HtmlProcessor | HtmlPlugin>(
   enforce: EnforcementPhase | undefined,
   match: (processor: P) => boolean
 ): P | undefined =>
