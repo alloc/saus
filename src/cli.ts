@@ -1,6 +1,7 @@
+import arrify from 'arrify'
 import cac from 'cac'
 import * as inspector from 'inspector'
-import { red, gray } from 'kleur/colors'
+import { gray, red } from 'kleur/colors'
 import { fatal, success } from 'misty'
 import log from 'shared-log'
 import { BuildOptions, vite } from './core'
@@ -30,6 +31,7 @@ cli
 
 type BuildFlags = BuildOptions & {
   debug?: boolean
+  filter?: string | string[]
 }
 
 cli
@@ -37,6 +39,7 @@ cli
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
   .option('--cached', `[boolean] use the most recent build`)
   .option('--debug', `[boolean] rebuild pages that failed the last run`)
+  .option('--filter <glob>', `[string] control which pages are rendered`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--outDir <dir>', `[string] output directory (default: dist)`)
   .option(
@@ -52,6 +55,12 @@ cli
       if (options.debug) {
         const failedPages = getFailedPages()
         options.skip = pagePath => !failedPages.includes(pagePath)
+      } else if (options.filter) {
+        const filters = arrify(options.filter).map(
+          pattern => new RegExp('^' + pattern + '$')
+        )
+        options.skip = pagePath =>
+          !filters.some(filter => filter.test(pagePath))
       }
       options.bundlePath = bundlePath
       const { pages, errors } = await build(options)
