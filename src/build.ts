@@ -1,9 +1,11 @@
 import fs from 'fs'
+import { gray, yellow } from 'kleur/colors'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
 import type { OutputAsset } from 'rollup'
-import { runBundle } from './build/runBundle'
+import { Multicast } from './build/multicast'
+import { BundleDescriptor, PageEvents, runBundle } from './build/runBundle'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle } from './bundle'
@@ -11,13 +13,16 @@ import type { RenderedPage } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
+  MutableRuntimeConfig,
   RouteParams,
   SausContext,
   SourceMap,
   vite,
 } from './core'
 import { loadBundleContext } from './core/bundle'
+import { ProfiledEventHandler } from './pages/types'
 import { callPlugins } from './utils/callPlugins'
+import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 
@@ -40,7 +45,7 @@ export async function build(options: BuildOptions) {
     options.bundlePath = path.join(context.compileCache.path, bundleFile)
   }
 
-  type Bundle = { code: string; map?: SourceMap; cached?: boolean }
+  type Bundle = { code: string; map?: SourceMap; cached?: true }
 
   let { code, map, cached }: Bundle =
     options.bundlePath && fs.existsSync(options.bundlePath)
@@ -67,13 +72,17 @@ export async function build(options: BuildOptions) {
   prepareOutDir(outDir, buildOptions.emptyOutDir, context)
   process.chdir(outDir)
 
-  let render: (pagePath: string) => Promise<RenderedPage | null>
-  let worker: BuildWorker | undefined
+  const profile: ProfiledEventHandler = (type, event) => {
+    const duration =
+      event.duration >= 1e3
+        ? event.duration.toFixed(2) + 's'
+        : event.duration + 'ms'
 
-  // Default to serial rendering until #48 is fixed.
-  options.maxWorkers ??= 1
+    console.log(yellow('» ' + type), event.url, gray(duration))
+  }
 
-  const runtimeConfig = cached && {
+  const runtimeConfig: Partial<MutableRuntimeConfig> | undefined = cached && {
+    profile: options.maxWorkers === 0 ? profile : undefined,
     publicDir: path.relative(outDir, context.config.publicDir),
     ...pick(context.config.build, ['assetsDir']),
     ...pick(context.config.saus, [
@@ -84,9 +93,25 @@ export async function build(options: BuildOptions) {
     ]),
   }
 
-  const workerData = { root: context.root, code, filename, runtimeConfig }
+  const workerEvents = new Multicast<PageEvents>()
+  const workerData: BundleDescriptor = {
+    root: context.root,
+    code,
+    filename,
+    eventPort: undefined!,
+    runtimeConfig,
+    isProfiling: true,
+  }
+
+  // Default to serial rendering until #48 is fixed.
+  options.maxWorkers ??= 1
+
+  let worker: BuildWorker
   if (options.maxWorkers === 0) {
-    render = runBundle(workerData)
+    workerData.eventPort = workerEvents.newChannel()
+    worker = {
+      renderPage: runBundle(workerData),
+    }
   } else {
     // Tinypool is ESM only, so use dynamic import to load it.
     const dynamicImport = (0, eval)('id => import(id)')
@@ -99,73 +124,95 @@ export async function build(options: BuildOptions) {
       process.env.DEBUG_COLORS = 'true'
     }
 
-    worker = new WorkerPool({
+    // Create a new channel every time this is accessed.
+    Object.defineProperty(workerData, 'eventPort', {
+      enumerable: true,
+      configurable: true,
+      get() {
+        return WorkerPool.move(workerEvents.newChannel())
+      },
+    })
+
+    const pool = new WorkerPool({
       filename: path.resolve(__dirname, 'build/worker.js'),
       workerData,
       maxThreads: options.maxWorkers,
-      idleTimeout: 2000,
-    }) as BuildWorker
+      idleTimeout: Infinity,
+      useAtomics: false,
+    })
 
-    render = worker.run.bind(worker)
+    pool.on('error', console.error)
+
+    worker = {
+      renderPage: pool.run.bind(pool),
+      destroy: pool.destroy.bind(pool),
+    }
   }
 
   let pageCount = 0
   let renderCount = 0
 
-  const progress = startTask('0 of 0 pages rendered')
-  const updateProgress = () => {
-    progress.update(`${renderCount} of ${pageCount} pages rendered`)
-    // Wait for console to update.
-    return new Promise(next => process.nextTick(next))
-  }
+  const progress = startTask(
+    () => `${renderCount} of ${pageCount} pages rendered`
+  )
 
   const pages: RenderedPage[] = []
   const errors: FailedPage[] = []
   const failedRoutes = new Set<string>()
+  const pendingPages: Record<string, Deferred<void>> = {}
+  const pageToRouteMap: Record<string, string> = {}
 
-  const renderPage = async (routePath: string, params?: RouteParams) => {
+  const renderPage = (routePath: string, params?: RouteParams) => {
     const pagePath = getPagePath(routePath, params)
     if (options.skip && options.skip(pagePath)) {
       return
     }
-    pageCount++
-    await updateProgress()
+    pendingPages[pagePath] = defer()
+    pageToRouteMap[pagePath] = routePath
     try {
-      const page = await render(context.basePath + pagePath.slice(1))
+      worker.renderPage(context.basePath + pagePath.slice(1))
+      pageCount++
+      progress.update()
+    } catch (e: any) {
+      pendingPages[pagePath].reject(e)
+    }
+  }
+
+  workerEvents
+    .on('profile', profile)
+    .on('page', (pagePath, page) => {
       if (page) {
         pages.push(page)
         renderCount++
       } else {
         pageCount--
       }
-      await updateProgress()
-    } catch (e: any) {
+      progress.update()
+      pendingPages[pagePath].resolve()
+    })
+    .on('error', (pagePath, error) => {
+      const routePath = pageToRouteMap[pagePath]
       if (!failedRoutes.has(routePath)) {
         failedRoutes.add(routePath)
         errors.push({
           path: routePath,
-          reason: e.stack,
+          reason: error.stack,
         })
       }
       pageCount--
-      await updateProgress()
-    }
-  }
+      progress.update()
+      pendingPages[pagePath].resolve()
+    })
 
-  const promises: Promise<void>[] = []
   await generateRoutePaths(context, {
-    path: (routePath, params) => {
-      promises.push(renderPage(routePath, params))
-    },
-    error: e => {
-      errors.push(e)
-    },
+    path: renderPage,
+    error: e => errors.push(e),
   })
 
-  await Promise.all(promises)
+  await Promise.all(Object.values(pendingPages))
   progress.finish()
 
-  if (worker) {
+  if (worker.destroy) {
     await worker.destroy()
   }
 
