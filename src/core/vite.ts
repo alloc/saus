@@ -14,6 +14,8 @@ import './viteRequire'
 
 export { vite }
 
+export type Plugin = vite.Plugin
+
 export type ResolvedConfig = Omit<vite.ResolvedConfig, 'saus'> & {
   readonly saus: Readonly<SausConfig>
 }
@@ -158,6 +160,19 @@ declare module 'vite' {
     require: RequireAsync
     ssrRequire: RequireAsync
   }
+
+  interface Plugin {
+    /**
+     * Provide plugin hooks specific to Saus.
+     *
+     * If a function is given, it gets called whenever the Saus context
+     * is created or replaced. When `saus dev` is used, it's also called
+     * when the routes/renderers are updated.
+     */
+    saus?:
+      | SausPlugin
+      | ((context: SausContext) => Promisable<SausPlugin | void>)
+  }
 }
 
 export interface UserConfig extends Omit<vite.UserConfig, 'build'> {
@@ -221,18 +236,4 @@ export interface SausPlugin {
    * This is only called when `saus build` is used.
    */
   onWritePages?: (pages: RenderedPage[]) => void
-}
-
-/**
- * Vite plugin with Saus extensions
- */
-export interface Plugin extends vite.Plugin {
-  /**
-   * Provide plugin hooks specific to Saus.
-   *
-   * If a function is given, it gets called whenever the Saus context
-   * is created or replaced. When `saus dev` is used, it's also called
-   * when the routes/renderers are updated.
-   */
-  saus?: SausPlugin | ((context: SausContext) => Promisable<SausPlugin | void>)
 }
