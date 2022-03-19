@@ -1,23 +1,35 @@
 import path from 'path'
 import vm from 'vm'
-import { RenderPageOptions } from '../bundle/types'
+import { MessagePort } from 'worker_threads'
+import { RenderedPage } from '../bundle/types'
 import {
   loadSourceMap,
   MutableRuntimeConfig,
   removeSourceMapUrls,
 } from '../core'
 import { loadResponseCache, responseCache } from '../http/responseCache'
+import { ProfiledEvent, ProfiledEventType } from '../pages/types'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
+import { Multicast } from './multicast'
 
 export interface BundleDescriptor {
   root: string
   code: string
   filename: string
-  runtimeConfig?: Partial<MutableRuntimeConfig> | false
+  eventPort: MessagePort
+  runtimeConfig?: Partial<MutableRuntimeConfig>
+  isProfiling?: boolean
 }
 
 export function runBundle(bundle: BundleDescriptor) {
-  const { root, code, filename } = bundle
+  const {
+    root,
+    code,
+    filename,
+    eventPort,
+    runtimeConfig = {},
+    isProfiling,
+  } = bundle
 
   const initialize: (exports: any, require: Function) => void =
     vm.runInThisContext(
@@ -36,24 +48,40 @@ export function runBundle(bundle: BundleDescriptor) {
     setResponseCache,
   } = exports as typeof import('../bundle/main')
 
-  if (bundle.runtimeConfig) {
-    configureBundle(bundle.runtimeConfig)
+  const events = new Multicast<PageEvents>(eventPort)
+
+  if (isProfiling)
+    runtimeConfig.profile = (type, event) => {
+      event.url = event.url.toString() as any
+      events.emit('profile', type, event)
+    }
+
+  if (runtimeConfig) {
+    configureBundle(runtimeConfig)
   }
 
   // If a response cache already exists, the bundle will use it.
   setResponseCache(responseCache || loadResponseCache(root))
 
-  return async (pagePath: string, options?: RenderPageOptions) => {
-    try {
-      return await renderPage(pagePath, options)
-    } catch (e: any) {
-      const map = loadSourceMap(code, filename)
-      if (map) {
-        e.stack = resolveStackTrace(e.stack, source => {
-          return source == filename ? map : null
-        })
+  return (pagePath: string): void =>
+    void renderPage(pagePath).then(
+      page => {
+        events.emit('page', pagePath, page)
+      },
+      error => {
+        const map = loadSourceMap(code, filename)
+        if (map) {
+          error.stack = resolveStackTrace(error.stack, source => {
+            return source == filename ? map : null
+          })
+        }
+        events.emit('error', pagePath, error)
       }
-      throw e
-    }
-  }
+    )
+}
+
+export type PageEvents = {
+  page(pagePath: string, page: RenderedPage | null): void
+  error(pagePath: string, error: any): void
+  profile(type: ProfiledEventType, event: ProfiledEvent): void
 }
