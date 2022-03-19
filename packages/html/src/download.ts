@@ -114,7 +114,7 @@ function installHtmlHook({
         async close(tag, state) {
           const { config } = state
           const files = filesByDocument.get(tag.document)
-          if (!files) {
+          if (!files || !files.size) {
             return
           }
 
