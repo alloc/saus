@@ -1,4 +1,5 @@
 import path from 'path'
+import { isMainThread } from 'worker_threads'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import { createRenderPageFn } from '../pages/renderPage'
@@ -276,11 +277,20 @@ export async function renderPage(
         Array.from(assets)
           .filter(assetId => !isExternalUrl(assetId))
           .map(async assetId => {
-            const data = await loadAsset(assetId)
-            return [
-              assetId,
-              Buffer.isBuffer(data) ? data.buffer : data,
-            ] as const
+            let data: ClientAsset = await loadAsset(assetId)
+
+            // When `data` is a Node buffer, we cannot be sure if it can
+            // be safely copied between threads, since it may have been
+            // allocated with `Buffer.from` (which uses object pooling).
+            // An explicit copy into a non-pooled buffer is the only
+            // way to make sure the data won't get corrupted.
+            if (!isMainThread && Buffer.isBuffer(data)) {
+              const nonPooled = Buffer.alloc(data.byteLength)
+              data.copy(nonPooled)
+              data = nonPooled.buffer
+            }
+
+            return [assetId, data] as const
           })
       )
     )
