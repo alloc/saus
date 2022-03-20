@@ -1,3 +1,4 @@
+import escapeStringRegExp from 'escape-string-regexp'
 import fs from 'fs'
 import { gray, yellow } from 'kleur/colors'
 import { warn } from 'misty'
@@ -148,6 +149,13 @@ export async function build(options: BuildOptions) {
     }
   }
 
+  const debugBaseRE = new RegExp(
+    '^' +
+      (context.bundle.debugBase
+        ? escapeStringRegExp(context.bundle.debugBase)
+        : '')
+  )
+
   let pageCount = 0
   let renderCount = 0
 
@@ -163,7 +171,7 @@ export async function build(options: BuildOptions) {
 
   const renderPage = (routePath: string, params?: RouteParams) => {
     const pagePath = getPagePath(routePath, params)
-    if (options.skip && options.skip(pagePath)) {
+    if (options.skip && options.skip(pagePath.replace(debugBaseRE, ''))) {
       return
     }
     pendingPages[pagePath] = defer()
