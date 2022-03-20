@@ -23,7 +23,12 @@ import { injectToBody, injectToHead } from './html/inject'
 import { HtmlTagDescriptor } from './html/types'
 import { loadRenderers } from './render'
 import { ssrClearCache, ssrImport } from './ssrModules'
-import { ClientModule, RenderedPage, RenderPageOptions } from './types'
+import {
+  ClientAsset,
+  ClientModule,
+  RenderedPage,
+  RenderPageOptions,
+} from './types'
 import getModuleLoader from './moduleLoader'
 import getAssetLoader from './assetLoader'
 
@@ -266,13 +271,16 @@ export async function renderPage(
     { page, config, assets },
     config.htmlTimeout
   ).then(async html => {
-    const assetMap = new Map(
+    const assetMap = new Map<string, ClientAsset>(
       await Promise.all(
         Array.from(assets)
           .filter(assetId => !isExternalUrl(assetId))
           .map(async assetId => {
             const data = await loadAsset(assetId)
-            return [assetId, data] as const
+            return [
+              assetId,
+              Buffer.isBuffer(data) ? data.buffer : data,
+            ] as const
           })
       )
     )

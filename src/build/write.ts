@@ -4,6 +4,7 @@ import path from 'path'
 import type { OutputAsset } from 'rollup'
 import type { RenderedPage } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
+import { HttpRedirect } from '../http'
 
 /**
  * Write an array of rendered pages to disk. Shared modules are deduplicated.
@@ -34,8 +35,8 @@ export function writePages(
         writeFile(path.join(outDir, module.id), module.text)
       }
       for (const [assetId, content] of page.assets) {
-        if (Buffer.isBuffer(content)) {
-          writeFile(path.join(outDir, assetId), content)
+        if (!(content instanceof HttpRedirect)) {
+          writeFile(path.join(outDir, assetId), Buffer.from(content))
         }
       }
     }

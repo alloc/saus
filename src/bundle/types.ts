@@ -17,7 +17,7 @@ export interface RenderedPage {
   assets: Map<string, ClientAsset>
 }
 
-export type ClientAsset = Buffer | HttpRedirect
+export type ClientAsset = ArrayBufferLike | HttpRedirect
 
 export interface ClientModule {
   id: string
