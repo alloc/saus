@@ -28,11 +28,7 @@ export const serveCachedFiles =
         ETag: etag(file, { weak: true }),
         'Content-Type': mime.lookup(req.url)!,
       })
-      res.write(
-        !textExtensions.test(req.url)
-          ? Buffer.from(file.text, 'base64')
-          : file.text
-      )
+      res.write(file)
     }
     return res.end()
   }
