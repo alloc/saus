@@ -1,5 +1,6 @@
 import fs from 'fs'
 import { HttpRedirect } from '../http'
+import { textExtensions } from '../utils/textExtensions'
 import inlinedAssets from './inlinedAssets'
 
 type Promisable<T> = T | PromiseLike<T>
@@ -18,9 +19,9 @@ export namespace AssetLoader {
 // or it loads from the filesystem.
 export default (): AssetLoader => ({
   loadAsset(id) {
-    let asset: string | Buffer = inlinedAssets[id]
+    const asset = inlinedAssets[id]
     if (asset) {
-      return Buffer.from(asset, 'base64')
+      return Buffer.from(asset, textExtensions.test(id) ? 'utf8' : 'base64')
     }
     // Assume the working directory is the `build.outDir` option.
     return fs.readFileSync(id)
