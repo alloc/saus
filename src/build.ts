@@ -3,13 +3,13 @@ import { gray, yellow } from 'kleur/colors'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
-import type { OutputAsset } from 'rollup'
 import { Multicast } from './build/multicast'
 import {
   BundleDescriptor,
   loadPageFactory,
   PageEvents,
 } from './build/pageFactory'
+import { runBundle } from './build/runBundle'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle } from './bundle'
@@ -33,11 +33,7 @@ import { getPagePath } from './utils/getPagePath'
 export type FailedPage = { path: string; reason: string }
 
 export async function build(options: BuildOptions) {
-  const rollupAssets = new Map<string, OutputAsset>()
-  const buildPlugins = [
-    setSourcesContent(options),
-    collectRollupAssets(rollupAssets),
-  ]
+  const buildPlugins = [setSourcesContent(options)]
 
   const context = await loadBundleContext(
     { write: false, entry: null, format: 'cjs', moduleMap: 'inline' },
@@ -222,7 +218,8 @@ export async function build(options: BuildOptions) {
 
   if (buildOptions.write !== false) {
     await callPlugins(context.plugins, 'onWritePages', pages)
-    const files = writePages(pages, outDir, rollupAssets)
+    const { inlinedAssets } = runBundle(workerData)
+    const files = writePages(pages, outDir, inlinedAssets)
     printFiles(
       context.logger,
       files,
@@ -277,18 +274,6 @@ function setSourcesContent(options: BuildOptions): vite.Plugin {
             })
           }
         }
-      }
-    },
-  }
-}
-
-function collectRollupAssets(assets: Map<string, OutputAsset>): vite.Plugin {
-  return {
-    name: 'saus:build:collectRollupAssets',
-    generateBundle(_, bundle) {
-      for (const asset of Object.values(bundle)) {
-        if (asset.type !== 'asset') continue
-        assets.set(asset.fileName, asset)
       }
     },
   }
