@@ -324,13 +324,24 @@ export async function renderPage(
 
     if (!config.stripLinkTags) {
       const headTags: HtmlTagDescriptor[] = []
+
       getTagsForStyles(styleUrls, headTags)
-      if (!config.delayModulePreload) {
-        getPreloadTagsForModules(Array.from(modules, getModuleUrl), headTags)
-      }
       getTagsForAssets(assetUrls, headTags)
+
       if (headTags.length) {
         html = injectToHead(html, headTags, true)
+        headTags.length = 0
+      }
+
+      const moduleUrls = !config.delayModulePreload
+        ? Array.from(modules, getModuleUrl)
+        : entryModule
+        ? [getModuleUrl(pageStateId)]
+        : null
+
+      if (moduleUrls) {
+        getPreloadTagsForModules(moduleUrls, headTags)
+        html = injectToHead(html, headTags)
       }
     }
 
