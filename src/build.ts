@@ -5,7 +5,11 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import type { OutputAsset } from 'rollup'
 import { Multicast } from './build/multicast'
-import { BundleDescriptor, PageEvents, runBundle } from './build/runBundle'
+import {
+  BundleDescriptor,
+  loadPageFactory,
+  PageEvents,
+} from './build/pageFactory'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle } from './bundle'
@@ -110,7 +114,7 @@ export async function build(options: BuildOptions) {
   if (options.maxWorkers === 0) {
     workerData.eventPort = workerEvents.newChannel()
     worker = {
-      renderPage: runBundle(workerData),
+      renderPage: loadPageFactory(workerData),
     }
   } else {
     // Tinypool is ESM only, so use dynamic import to load it.
