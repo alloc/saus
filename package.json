@@ -54,6 +54,7 @@
     "endent": "^2.1.0",
     "es-module-lexer": "^0.9.3",
     "esbuild": "^0.14.15",
+    "escape-string-regexp": "^5.0.0",
     "etag": "^1.8.1",
     "magic-string": "^0.25.7",
     "md5-hex": "^3.0.0",
