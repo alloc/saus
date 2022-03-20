@@ -41,7 +41,7 @@ importers:
       kleur: ^4.1.4
       magic-string: ^0.25.7
       md5-hex: ^3.0.0
-      misty: ^1.6.2
+      misty: ^1.6.4
       mrmime: ^1.0.0
       node-abort-controller: ^3.0.1
       prettier: ^2.0.5
@@ -78,7 +78,7 @@ importers:
       etag: 1.8.1
       magic-string: 0.25.7
       md5-hex: 3.0.1
-      misty: 1.6.2
+      misty: 1.6.4
       mrmime: 1.0.0
       node-abort-controller: 3.0.1
       raw-body: 2.5.1
@@ -3020,6 +3020,13 @@ packages:
 
   /misty/1.6.2:
     resolution: {integrity: sha512-mqDd2bdkfwltUNDBGEB/z+edSIORat37hHgMIElwX+0bHScmVU/J8ZKw1GQcPZVjsh6OHgQO5TlGIJuvYNIyZw==}
+    dependencies:
+      kleur: 4.1.4
+      shared-log: 1.2.7
+    dev: false
+
+  /misty/1.6.4:
+    resolution: {integrity: sha512-PTJk4fnrOl23WuKZ6GQEMFj7tmNftC1h3UbmzxfCimTJoy7atBvAGb619r3TUC9WPqTK7ieK7MbBzQTxNh8BWA==}
     dependencies:
       kleur: 4.1.4
       shared-log: 1.2.7
