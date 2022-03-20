@@ -185,6 +185,8 @@ export interface BuildOptions extends vite.BuildOptions {
   skip?: (pagePath: string) => boolean
   /** Use the bundle from last `saus build` run. */
   cached?: boolean
+  /** The bundle's mode (usually `development` or `production`) */
+  mode?: string
   /**
    * Limit the number of worker threads.  \
    * Use `0` to run on the main thread only.

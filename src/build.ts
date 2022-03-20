@@ -38,10 +38,10 @@ export async function build(options: BuildOptions) {
 
   const context = await loadBundleContext(
     { write: false, entry: null, format: 'cjs', moduleMap: 'inline' },
-    { plugins: buildPlugins }
+    { mode: options.mode, plugins: buildPlugins }
   )
 
-  const bundleFile = 'bundle.js'
+  const bundleFile = `bundle.${options.mode || 'production'}.js`
   if (options.cached) {
     options.bundlePath = path.join(context.compileCache.path, bundleFile)
   }
