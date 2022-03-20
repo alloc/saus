@@ -1,7 +1,6 @@
 import fs from 'fs'
 import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
-import type { OutputAsset } from 'rollup'
 import type { RenderedPage } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
 import { HttpRedirect } from '../http'
@@ -15,7 +14,7 @@ import { HttpRedirect } from '../http'
 export function writePages(
   pages: ReadonlyArray<RenderedPage | null>,
   outDir: string,
-  rollupAssets?: Map<string, OutputAsset>
+  inlinedAssets?: Record<string, string>
 ) {
   const files: Record<string, number> = {}
   const writeFile = (file: string, content: string | Buffer) => {
@@ -48,13 +47,12 @@ export function writePages(
     }
   }
 
-  if (rollupAssets)
-    for (const asset of rollupAssets.values()) {
+  if (inlinedAssets)
+    for (const assetId in inlinedAssets) {
+      if (assetId in files) continue
       writeFile(
-        path.join(outDir, asset.fileName),
-        typeof asset.source == 'string'
-          ? asset.source
-          : Buffer.from(asset.source)
+        path.join(outDir, assetId),
+        Buffer.from(inlinedAssets[assetId], 'base64')
       )
     }
 
