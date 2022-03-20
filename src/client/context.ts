@@ -5,4 +5,4 @@ const context: Omit<typeof saus, Constants> = {
 }
 
 // @ts-ignore
-saus = context
+globalThis.saus = context
