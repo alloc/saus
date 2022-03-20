@@ -1,4 +1,3 @@
-import escapeStringRegExp from 'escape-string-regexp'
 import fs from 'fs'
 import { gray, yellow } from 'kleur/colors'
 import { warn } from 'misty'
@@ -31,6 +30,7 @@ import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { noop } from './utils/noop'
+import { prependBase } from './utils/prependBase'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -149,13 +149,6 @@ export async function build(options: BuildOptions) {
     }
   }
 
-  const debugBaseRE = new RegExp(
-    '^' +
-      (context.bundle.debugBase
-        ? escapeStringRegExp(context.bundle.debugBase)
-        : '')
-  )
-
   let pageCount = 0
   let renderCount = 0
 
@@ -167,15 +160,19 @@ export async function build(options: BuildOptions) {
   const errors: FailedPage[] = []
   const failedRoutes = new Set<string>()
   const pendingPages: Record<string, Deferred<void>> = {}
-  const pageToRouteMap: Record<string, string> = {}
+  const pageToRouteMap: Record<string, [string, RouteParams?]> = {}
 
-  const renderPage = (routePath: string, params?: RouteParams) => {
+  const renderPage = (
+    routePath: string,
+    params?: RouteParams,
+    isDebug?: boolean
+  ) => {
     const pagePath = getPagePath(routePath, params)
-    if (options.skip && options.skip(pagePath.replace(debugBaseRE, ''))) {
+    if (!isDebug && options.skip && options.skip(pagePath)) {
       return
     }
     pendingPages[pagePath] = defer()
-    pageToRouteMap[pagePath] = routePath
+    pageToRouteMap[pagePath] = [routePath, params]
     try {
       worker.renderPage(context.basePath + pagePath.slice(1))
       pageCount++
@@ -191,6 +188,13 @@ export async function build(options: BuildOptions) {
       if (page) {
         pages.push(page)
         renderCount++
+
+        // Render the debug view after the production view.
+        if (context.bundle.debugBase) {
+          let [routePath, params] = pageToRouteMap[pagePath]
+          routePath = prependBase(routePath, context.bundle.debugBase)
+          renderPage(routePath, params, true)
+        }
       } else {
         pageCount--
       }
@@ -198,7 +202,7 @@ export async function build(options: BuildOptions) {
       pendingPages[pagePath].resolve()
     })
     .on('error', (pagePath, error) => {
-      const routePath = pageToRouteMap[pagePath]
+      const [routePath] = pageToRouteMap[pagePath]
       if (!failedRoutes.has(routePath)) {
         failedRoutes.add(routePath)
         errors.push({
