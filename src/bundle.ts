@@ -494,6 +494,9 @@ async function generateSsrBundle(
         : null,
       // debugSymlinkResolver(),
     ],
+    resolve: {
+      conditions: isWorker ? ['worker'] : undefined,
+    },
     build: {
       write: false,
       target: bundleConfig.target || 'node14',
