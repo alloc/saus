@@ -29,6 +29,7 @@ import { callPlugins } from './utils/callPlugins'
 import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
+import { noop } from './utils/noop'
 
 export type FailedPage = { path: string; reason: string }
 
@@ -141,8 +142,6 @@ export async function build(options: BuildOptions) {
       useAtomics: false,
     })
 
-    pool.on('error', console.error)
-
     worker = {
       renderPage: pool.run.bind(pool),
       destroy: pool.destroy.bind(pool),
@@ -213,7 +212,7 @@ export async function build(options: BuildOptions) {
   progress.finish()
 
   if (worker.destroy) {
-    await worker.destroy()
+    await worker.destroy().catch(noop)
   }
 
   if (buildOptions.write !== false) {
