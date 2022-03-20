@@ -29,7 +29,6 @@ import { callPlugins } from './utils/callPlugins'
 import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
-import { noop } from './utils/noop'
 import { prependBase } from './utils/prependBase'
 
 export type FailedPage = { path: string; reason: string }
@@ -224,7 +223,9 @@ export async function build(options: BuildOptions) {
   progress.finish()
 
   if (worker.destroy) {
-    await worker.destroy().catch(noop)
+    try {
+      await worker.destroy()
+    } catch {}
   }
 
   if (buildOptions.write !== false) {
