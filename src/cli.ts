@@ -41,6 +41,10 @@ cli
   .option('--debug', `[boolean] rebuild pages that failed the last run`)
   .option('--filter <glob>', `[string] control which pages are rendered`)
   .option('--minify', `[boolean] minify the client modules`)
+  .option(
+    '--mode <mode>',
+    `[string] override the client mode (eg: development)`
+  )
   .option('--outDir <dir>', `[string] output directory (default: dist)`)
   .option(
     '--emptyOutDir',
