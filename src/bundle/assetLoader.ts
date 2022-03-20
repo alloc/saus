@@ -1,11 +1,11 @@
 import fs from 'fs'
-import { ResponseStream } from '../http'
+import { HttpRedirect } from '../http'
 import inlinedAssets from './inlinedAssets'
 
 type Promisable<T> = T | PromiseLike<T>
 
 export interface AssetLoader {
-  loadAsset(id: string): Promisable<Buffer | ResponseStream>
+  loadAsset(id: string): Promisable<Buffer | HttpRedirect>
 }
 
 export namespace AssetLoader {
