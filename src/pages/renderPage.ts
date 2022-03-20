@@ -35,7 +35,7 @@ import {
   ClientFunction,
   ClientFunctions,
   PageContext,
-  PageFactoryContext,
+  RenderPageContext,
   RenderedPage,
   RenderFunction,
   RenderPageOptions,
@@ -51,7 +51,7 @@ export type RenderPageFn = (
 ) => Promise<RenderedPage | null>
 
 export function createRenderPageFn(
-  context: PageFactoryContext,
+  context: RenderPageContext,
   functions: ClientFunctions,
   config: RuntimeConfig,
   setup?: () => Promise<any>,

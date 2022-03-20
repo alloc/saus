@@ -1,9 +1,9 @@
 import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
-import type { PageFactoryContext } from '../pages/types'
+import type { RenderPageContext } from '../pages/types'
 import config from './config'
 
-export const context: PageFactoryContext = {
+export const context: RenderPageContext = {
   defaultPath: config.defaultPath,
   defaultState: [],
   getCachedPage: withCache({

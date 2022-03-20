@@ -31,7 +31,7 @@ export type RenderedPage = {
 
 type SausContextKeys = 'basePath' | 'defaultPath' | 'getCachedPage'
 
-export interface PageFactoryContext
+export interface RenderPageContext
   extends Pick<SausContext, SausContextKeys>,
     RoutesModule,
     RenderModule {
