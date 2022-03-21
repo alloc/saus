@@ -5,6 +5,7 @@ import { HtmlTagPath } from '../path'
 import { kVisitorsArray } from '../symbols'
 import {
   HtmlDocument,
+  HtmlDocumentState,
   HtmlTag,
   HtmlTextLike,
   HtmlVisitor,
@@ -20,22 +21,24 @@ export function bindVisitors<
 >(arg: HtmlVisitor<State> | HtmlVisitor<State>[]) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
-  async function traverse(html: string, state: State) {
+  async function traverse(html: string, state: HtmlDocumentState<State>) {
     // Ensure an <html> tag exists.
     html = injectHtmlTag(html)
 
     const editor = new MagicString(html)
     const document: HtmlDocument<State> = { editor, state }
 
+    console.time('traverse html')
     for (const tag of parseHtml(html)) {
       if (tag.type == 'Comment') {
         continue
       }
-      const observer = createObserver(tag, editor)
-      const observedTag = onChange(tag, observer)
-      const path = new HtmlTagPath(document, observedTag)
+      // const observer = createObserver(tag, editor)
+      // const observedTag = onChange(tag, observer)
+      const path = new HtmlTagPath(document, tag)
       await path.traverse(visitors)
     }
+    console.timeEnd('traverse html')
 
     return editor.toString()
   }

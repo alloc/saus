@@ -1,7 +1,12 @@
 import { limitTime } from 'saus/core'
 import { HtmlTagPath } from '../path'
 import { kRemovedNode } from '../symbols'
-import { HtmlVisitor, HtmlVisitorState } from '../types'
+import {
+  HtmlTagVisitor,
+  HtmlVisitFn,
+  HtmlVisitor,
+  HtmlVisitorState,
+} from '../types'
 
 export function mergeVisitors<
   State extends HtmlVisitor.BaseState = HtmlVisitorState
@@ -29,19 +34,51 @@ export function mergeVisitors<
   // Use a smaller timeout than configured to ensure ours triggers first.
   const timeout = (state?.config.htmlTimeout ?? 10) - 0.1
 
-  const visit = async (
+  const visit = (
     path: TagPath,
-    visitor: Visitor,
-    handler: (path: TagPath, state: State) => void | Promise<void>,
-    name: string
-  ) => {
-    currentVisitor = visitor
-    await limitTime(
-      handler(path, state!),
-      timeout,
-      `HTML visitor "${name}" took too long`
-    )
-    currentVisitor = null
+    phase: 'open' | 'close',
+    tagName: string | null,
+    visitors: HtmlVisitor<State>[],
+    done: (removed: boolean) => Promise<void> | void
+  ): Promise<void> | void => {
+    let visitorIndex = -1
+    const isOpen = phase == 'open'
+    return (function nextVisitor(): Promise<void> | void {
+      if (path[kRemovedNode]) {
+        return done(true)
+      }
+      while (++visitorIndex < visitors.length) {
+        const visitor = visitors[visitorIndex]
+
+        const tagVisitor = visitor[tagName || phase]
+        if (!tagVisitor) {
+          continue
+        }
+
+        const handler =
+          typeof tagVisitor == 'function'
+            ? isOpen || !tagName
+              ? tagVisitor
+              : undefined
+            : tagName
+            ? tagVisitor[phase]
+            : undefined
+
+        if (handler) {
+          currentVisitor = visitor
+          const result = handler(path, state!)
+          if (result) {
+            return result.finally(() => {
+              currentVisitor = null
+              return process.nextTick(nextVisitor)
+            })
+          }
+          currentVisitor = null
+          return process.nextTick(nextVisitor)
+        }
+      }
+      return done(false)
+    })()
   }
 
   const resetVisitors = () => {
@@ -51,32 +88,23 @@ export function mergeVisitors<
     closeVisitors = eligibleVisitors.filter(v => v.close)
   }
 
+  const shouldSkip = () => {
+    // Avoid traversing descendants if no visitors are eligible.
+    return 1 > openVisitors.length + tagVisitors.length + closeVisitors.length
+  }
+
   resetVisitors()
   return {
-    async open(path: TagPath) {
-      for (const visitor of openVisitors) {
-        await visit(path, visitor, visitor.open!, 'open')
-        if (path[kRemovedNode]) {
-          return true
-        }
-      }
-      for (const visitor of tagVisitors) {
-        const handler = visitor[path.node.name]
-        const openHandler =
-          handler && (typeof handler == 'function' ? handler : handler.open)
-
-        if (openHandler) {
-          const name = path.node.name + (handler == openHandler ? '' : '.open')
-          await visit(path, visitor, openHandler, name)
-          if (path[kRemovedNode]) {
-            return true
-          }
-        }
-      }
-      // Avoid traversing descendants if no visitors are eligible.
-      return 1 > openVisitors.length + tagVisitors.length + closeVisitors.length
+    open(path: TagPath, done: (shouldSkip: boolean) => void) {
+      return visit(path, 'open', null, openVisitors, removed =>
+        removed
+          ? done(true)
+          : visit(path, 'open', path.node.name, tagVisitors, removed => {
+              done(removed || shouldSkip())
+            })
+      )
     },
-    async close(path: TagPath) {
+    close(path: TagPath, done: () => void) {
       const skippedVisitors = skippedVisitorsByPath.get(path)
       if (skippedVisitors) {
         skippedVisitors.forEach(visitor => {
@@ -85,24 +113,9 @@ export function mergeVisitors<
         skippedVisitorsByPath.delete(path)
         resetVisitors()
       }
-      for (const visitor of tagVisitors) {
-        const handler = visitor[path.node.name]
-        const closeHandler =
-          handler && typeof handler !== 'function' && handler.close
-
-        if (closeHandler) {
-          await visit(path, visitor, closeHandler, path.node.name + '.close')
-          if (path[kRemovedNode]) {
-            return
-          }
-        }
-      }
-      for (const visitor of closeVisitors) {
-        await visit(path, visitor, visitor.close!, 'close')
-        if (path[kRemovedNode]) {
-          return
-        }
-      }
+      return visit(path, 'close', path.node.name, tagVisitors, removed =>
+        removed ? done() : visit(path, 'close', null, closeVisitors, done)
+      )
     },
     skip(path: TagPath) {
       if (!currentVisitor) {

@@ -149,6 +149,7 @@ function installHtmlHook({
           const queue = Array.from(files)
           schedule = entry => queue.push(entry)
 
+          console.time('download assets')
           while (queue.length) {
             const task = startTask(`Downloading ${queue.length} files...`)
             debug(`${queue.length} remote assets are being replicated`)
@@ -157,6 +158,7 @@ function installHtmlHook({
             await writing
             task.finish()
           }
+          console.timeEnd('download assets')
 
           schedule = undefined
           debug(`${numReplicated} remote assets were saved for rehosting`)

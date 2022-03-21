@@ -70,12 +70,15 @@ export function createHtmlResolver<State extends HtmlResolver.BaseState = {}>(
   resolver: HtmlResolver<State>,
   attrsMap = defaultAttrsMap
 ): HtmlVisitor<State> {
+  let elapsedTime = 0
+
   const resolvers = [resolver]
   const resolve = async (
     path: HtmlTagPath<State>,
     state: Partial<HtmlResolverState<State>>,
     attrs: string[]
   ) => {
+    const time = Date.now()
     const importer = state.page!.path
     for (const attr of attrs) {
       const id = path.attributes[attr]
@@ -94,6 +97,7 @@ export function createHtmlResolver<State extends HtmlResolver.BaseState = {}>(
       delete state.tag
       delete state.attr
     }
+    elapsedTime += Date.now() - time
   }
 
   const skipLinkRel: any[] = ['preconnect', 'dns-prefetch']
@@ -109,6 +113,12 @@ export function createHtmlResolver<State extends HtmlResolver.BaseState = {}>(
           ? resolve(path, state as any, attrs)
           : undefined
       }
+    },
+    html: {
+      close() {
+        console.log('resolve links:', elapsedTime + 'ms')
+        elapsedTime = 0
+      },
     },
   }
 

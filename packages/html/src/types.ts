@@ -109,5 +109,9 @@ export type HtmlDocument<
   State extends HtmlVisitor.BaseState = HtmlVisitorState
 > = {
   editor: MagicString
-  state: Remap<State & HtmlVisitorState>
+  state: HtmlDocumentState<State>
 }
+
+export type HtmlDocumentState<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> = Remap<State & HtmlVisitorState>
