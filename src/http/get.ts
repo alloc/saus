@@ -29,21 +29,21 @@ export function get(url: string | URL, opts?: GetOptions) {
     opts?.headers
   )
   return getCachedState(cacheKey, cacheControl => {
-    const cached = responseCache?.read(cacheKey)
-    if (cached) {
+    const cachedResponse = responseCache?.read(cacheKey)
+    if (cachedResponse && !cachedResponse.expired) {
       debug('Using cached GET request: %O', url)
-      return Promise.resolve(cached)
+      return Promise.resolve(cachedResponse.data)
     }
     debug('Sending GET request: %O', url)
-    return new Promise<Response>(
-      (resolvedGet as Function).bind(
-        null,
-        url,
-        opts || {},
-        Error(),
-        cacheControl,
-        0
-      )
+    const trace = Error()
+    return new Promise<Response>((resolve, reject) =>
+      resolvedGet(url, opts || {}, trace, cacheControl, 0, resolve, error => {
+        if (cachedResponse && error.code == 'ENOTFOUND') {
+          resolve(cachedResponse.data)
+        } else {
+          reject(error)
+        }
+      })
     )
   })
 }
