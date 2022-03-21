@@ -35,8 +35,8 @@ export function loadResponseCache(root: string) {
         return null
       }
       return {
-        expired: expiresAt >= Date.now(),
-        get data() {
+        expired: expiresAt < Date.now(),
+        get object() {
           return decodeResponse(data)
         },
       }

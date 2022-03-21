@@ -32,14 +32,14 @@ export function get(url: string | URL, opts?: GetOptions) {
     const cachedResponse = responseCache?.read(cacheKey)
     if (cachedResponse && !cachedResponse.expired) {
       debug('Using cached GET request: %O', url)
-      return Promise.resolve(cachedResponse.data)
+      return Promise.resolve(cachedResponse.object)
     }
     debug('Sending GET request: %O', url)
     const trace = Error()
     return new Promise<Response>((resolve, reject) =>
       resolvedGet(url, opts || {}, trace, cacheControl, 0, resolve, error => {
         if (cachedResponse && error.code == 'ENOTFOUND') {
-          resolve(cachedResponse.data)
+          resolve(cachedResponse.object)
         } else {
           reject(error)
         }
