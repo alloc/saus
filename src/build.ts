@@ -158,7 +158,7 @@ export async function build(options: BuildOptions) {
   const pages: RenderedPage[] = []
   const errors: FailedPage[] = []
   const failedRoutes = new Set<string>()
-  const pendingPages: Record<string, Deferred<void>> = {}
+  const deferredPages = new Map<string, Deferred<void>>()
   const pageToRouteMap: Record<string, [string, RouteParams?]> = {}
 
   const renderPage = (
@@ -170,14 +170,18 @@ export async function build(options: BuildOptions) {
     if (!isDebug && options.skip && options.skip(pagePath)) {
       return
     }
-    pendingPages[pagePath] = defer()
+    const deferredPage = defer<void>()
+    deferredPages.set(pagePath, deferredPage)
     pageToRouteMap[pagePath] = [routePath, params]
     try {
-      worker.renderPage(context.basePath + pagePath.slice(1))
+      worker
+        .renderPage(context.basePath + pagePath.slice(1))
+        .catch(deferredPage.reject)
       pageCount++
       progress.update()
     } catch (e: any) {
-      pendingPages[pagePath].reject(e)
+      deferredPage.reject(e)
+      deferredPages.delete(pagePath)
     }
   }
 
@@ -189,16 +193,18 @@ export async function build(options: BuildOptions) {
         renderCount++
 
         // Render the debug view after the production view.
-        if (context.bundle.debugBase) {
+        const { debugBase } = context.bundle
+        if (debugBase && !pagePath.startsWith(debugBase)) {
           let [routePath, params] = pageToRouteMap[pagePath]
-          routePath = prependBase(routePath, context.bundle.debugBase)
+          routePath = prependBase(routePath, debugBase)
           renderPage(routePath, params, true)
         }
       } else {
         pageCount--
       }
       progress.update()
-      pendingPages[pagePath].resolve()
+      deferredPages.get(pagePath)!.resolve()
+      deferredPages.delete(pagePath)
     })
     .on('error', (pagePath, error) => {
       const [routePath] = pageToRouteMap[pagePath]
@@ -211,7 +217,8 @@ export async function build(options: BuildOptions) {
       }
       pageCount--
       progress.update()
-      pendingPages[pagePath].resolve()
+      deferredPages.get(pagePath)!.resolve()
+      deferredPages.delete(pagePath)
     })
 
   await generateRoutePaths(context, {
@@ -219,13 +226,13 @@ export async function build(options: BuildOptions) {
     error: e => errors.push(e),
   })
 
-  await Promise.all(Object.values(pendingPages))
-  progress.finish()
+  while (deferredPages.size) {
+    await Promise.all(deferredPages.values())
+  }
 
+  progress.finish()
   if (worker.destroy) {
-    try {
-      await worker.destroy()
-    } catch {}
+    await worker.destroy()
   }
 
   if (buildOptions.write !== false) {
