@@ -34,10 +34,12 @@ export function loadResponseCache(root: string) {
       } catch {
         return null
       }
-      if (expiresAt > Date.now()) {
-        return decodeResponse(data)
+      return {
+        expired: expiresAt < Date.now(),
+        get object() {
+          return decodeResponse(data)
+        },
       }
-      return null
     },
     write(cacheKey: string, resp: Response, maxAge: number) {
       const entry = metadata[cacheKey]
