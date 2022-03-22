@@ -38,7 +38,7 @@ export interface ClientModuleMap {
 
 export type RenderPageOptions = {
   timeout?: number
-  onError?: (error: any) => never | null
+  onError?: (error: Error & { url: string }) => null
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,

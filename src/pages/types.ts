@@ -40,7 +40,7 @@ export interface RenderPageContext
 }
 
 export type ProfiledEvent = {
-  url: ParsedUrl
+  url: string
   timestamp: number
   duration: number
 }
@@ -51,17 +51,20 @@ export type ProfiledEventType =
   | 'process html'
   | 'render client'
 
-export type ProfiledEventHandler = (
-  type: ProfiledEventType,
-  event: ProfiledEvent
-) => void
+type ProfiledEventHandlerArgs =
+  | [type: ProfiledEventType, event: ProfiledEvent]
+  | [type: 'error', error: any]
+
+export interface ProfiledEventHandler {
+  (...args: ProfiledEventHandlerArgs): void
+}
 
 // Each page has its own render module in SSR mode.
 export interface PageContext extends RenderModule {}
 
 export type RenderPageOptions = {
   timeout?: number
-  onError?: (error: PageError) => never | null
+  onError?: (error: Error & { url: string }) => never | null
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,
@@ -74,10 +77,6 @@ export type RenderPageOptions = {
    * each other if desired.
    */
   setup?: (context: PageContext, url: ParsedUrl) => any
-}
-
-export type PageError = Error & {
-  url: ParsedUrl
 }
 
 type BundledFunction = {

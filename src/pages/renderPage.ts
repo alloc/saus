@@ -149,7 +149,7 @@ export function createRenderPageFn(
     }
 
     profile?.('render html', {
-      url,
+      url: url.toString(),
       timestamp,
       duration: Date.now() - timestamp,
     })
@@ -169,7 +169,7 @@ export function createRenderPageFn(
       timestamp = Date.now()
       html = await processHtml(html, page, config.htmlTimeout)
       profile?.('process html', {
-        url,
+        url: url.toString(),
         timestamp,
         duration: Date.now() - timestamp,
       })
@@ -196,7 +196,7 @@ export function createRenderPageFn(
       if (page.client) {
         globalCache.loaded[page.client.id] = [page.client]
         profile?.('render client', {
-          url,
+          url: url.toString(),
           timestamp,
           duration: Date.now() - timestamp,
         })
@@ -263,7 +263,7 @@ export function createRenderPageFn(
       stateModulesMap.set(state, Array.from(stateModules.keys()))
 
       profile?.('load state', {
-        url,
+        url: url.toString(),
         timestamp,
         duration: Date.now() - timestamp,
       })
@@ -457,7 +457,7 @@ export function createRenderPageFn(
       }
     }
 
-    error.url = url
+    error.url = url.toString()
     throw error
   }
 

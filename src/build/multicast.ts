@@ -51,4 +51,4 @@ export class Multicast<Events extends object> {
   }
 }
 
-type VoidFn = (...args: any[]) => void
+type VoidFn = (...args: any) => void

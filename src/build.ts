@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { gray, yellow } from 'kleur/colors'
+import { gray, red, yellow } from 'kleur/colors'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -74,12 +74,16 @@ export async function build(options: BuildOptions) {
   process.chdir(outDir)
 
   const profile: ProfiledEventHandler = (type, event) => {
-    const duration =
-      event.duration >= 1e3
-        ? event.duration.toFixed(2) + 's'
-        : event.duration + 'ms'
+    if (type == 'error') {
+      console.log(red('» ' + type), event.url, gray(event.message))
+    } else {
+      const duration =
+        event.duration >= 1e3
+          ? event.duration.toFixed(2) + 's'
+          : event.duration + 'ms'
 
-    console.log(yellow('» ' + type), event.url, gray(duration))
+      console.log(yellow('» ' + type), event.url, gray(duration))
+    }
   }
 
   const runtimeConfig: Partial<MutableRuntimeConfig> | undefined = cached && {
@@ -206,19 +210,15 @@ export async function build(options: BuildOptions) {
       deferredPages.get(pagePath)!.resolve()
       deferredPages.delete(pagePath)
     })
-    .on('error', (pagePath, error) => {
+    .on('error', (pagePath, stack) => {
       const [routePath] = pageToRouteMap[pagePath]
       if (!failedRoutes.has(routePath)) {
         failedRoutes.add(routePath)
         errors.push({
           path: routePath,
-          reason: error.stack,
+          reason: stack,
         })
       }
-      pageCount--
-      progress.update()
-      deferredPages.get(pagePath)!.resolve()
-      deferredPages.delete(pagePath)
     })
 
   await generateRoutePaths(context, {
