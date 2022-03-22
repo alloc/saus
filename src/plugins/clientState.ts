@@ -30,7 +30,7 @@ export function transformClientState(): Plugin {
         const parsed = await babel.parseAsync(code, getBabelConfig(id))
 
         const stateModuleIds: string[] = (stateModulesByFile[id] = [])
-        const exports: t.Statement[] = []
+        const exports = new Set<t.Statement>()
 
         babel.traverse(parsed, {
           CallExpression(path) {
@@ -38,7 +38,7 @@ export function transformClientState(): Plugin {
             if (callee.isIdentifier({ name: 'defineStateModule' })) {
               const exportPath = path.findParent(p => p.isExportDeclaration())
               if (exportPath) {
-                exports.push(exportPath.node as t.ExportDeclaration)
+                exports.add(exportPath.node as t.ExportDeclaration)
 
                 const args = path.get('arguments')
                 stateModuleIds.push((args[0].node as t.StringLiteral).value)
