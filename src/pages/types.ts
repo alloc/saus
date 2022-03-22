@@ -61,6 +61,7 @@ export interface PageContext extends RenderModule {}
 
 export type RenderPageOptions = {
   timeout?: number
+  onError?: (error: PageError) => never | null
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,
@@ -73,6 +74,10 @@ export type RenderPageOptions = {
    * each other if desired.
    */
   setup?: (context: PageContext, url: ParsedUrl) => any
+}
+
+export type PageError = Error & {
+  url: ParsedUrl
 }
 
 type BundledFunction = {

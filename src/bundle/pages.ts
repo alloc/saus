@@ -66,7 +66,7 @@ type InternalPage = import('../pages/types').RenderedPage
 
 export async function renderPage(
   pageUrl: string | ParsedUrl,
-  { timeout, renderStart, renderFinish }: RenderPageOptions = {}
+  { renderStart, renderFinish, ...renderOptions }: RenderPageOptions = {}
 ): Promise<RenderedPage | null> {
   let base = config.base
   if (!pageUrl.startsWith(base)) {
@@ -94,7 +94,7 @@ export async function renderPage(
       renderStart(pagePublicPath)
     }
     page = await requestPage(pageUrl, {
-      timeout,
+      ...renderOptions,
       renderStart: renderStart && (() => renderStart(pagePublicPath)),
       // Prepare the page context with isolated modules.
       async setup(pageContext) {
