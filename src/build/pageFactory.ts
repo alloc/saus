@@ -1,5 +1,5 @@
 import { MessagePort } from 'worker_threads'
-import { RenderedPage } from '../bundle/types'
+import { RenderedPage, RenderPageOptions } from '../bundle/types'
 import { loadSourceMap, MutableRuntimeConfig } from '../core'
 import { loadResponseCache, responseCache } from '../http/responseCache'
 import { ProfiledEvent, ProfiledEventType } from '../pages/types'
@@ -40,8 +40,16 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   // If a response cache already exists, the bundle will use it.
   setResponseCache(responseCache || loadResponseCache(root))
 
+  const renderOptions: RenderPageOptions = {
+    onError(error) {
+      // By default, errors are logged and null is returned,
+      // but we want to send them back to the main thread instead.
+      throw error
+    },
+  }
+
   return (pagePath: string): void =>
-    void renderPage(pagePath).then(
+    void renderPage(pagePath, renderOptions).then(
       page => {
         events.emit('page', pagePath, page)
       },
