@@ -1,8 +1,9 @@
 import * as babel from '@babel/core'
 import { types as t, NodePath, transformFromAstSync } from '@babel/core'
-import MagicString, { Bundle as MagicBundle } from 'magic-string'
+import MagicString from 'magic-string'
 
-export { babel, t, NodePath, MagicString, MagicBundle }
+export { babel, t, NodePath, MagicString }
+export { Bundle as MagicBundle } from 'magic-string'
 
 const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
   Array.isArray(arg) ? arg : ([arg] as any)

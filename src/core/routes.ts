@@ -1,5 +1,4 @@
 import type { ComponentType } from 'react'
-import type { RouteParams as InferRouteParams } from 'regexparam'
 import type { StateModule } from '../runtime/stateModules'
 import type { ParsedUrl, URLSearchParams } from '../utils/url'
 import { RequireAsync } from '../vm/types'
@@ -8,7 +7,7 @@ import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
 
 export * as RegexParam from 'regexparam'
-export type { InferRouteParams }
+export type { RouteParams as InferRouteParams } from 'regexparam'
 
 export interface RouteModule extends Record<string, any> {}
 

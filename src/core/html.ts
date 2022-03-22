@@ -1,7 +1,6 @@
-import { ClientModule } from '../bundle/types'
 import type { RenderedPage } from '../pages/types'
-import { reduceSerial } from '../utils/reduceSerial'
 import { limitTime } from '../utils/limitTime'
+import { reduceSerial } from '../utils/reduceSerial'
 import type { RuntimeConfig } from './config'
 import { routesModule } from './global'
 

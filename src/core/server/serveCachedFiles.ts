@@ -2,7 +2,6 @@ import etag from 'etag'
 import { gray } from 'kleur/colors'
 import * as mime from 'mrmime'
 import { HttpRedirect } from '../../http/redirect'
-import { textExtensions } from '../../utils/textExtensions'
 import { connect } from './connect'
 import { debug } from './debug'
 import { FileCache } from './fileCache'
@@ -25,7 +24,9 @@ export const serveCachedFiles =
       })
     } else {
       res.writeHead(200, {
-        ETag: etag(file, { weak: true }),
+        ETag: etag(typeof file !== 'string' ? Buffer.from(file) : file, {
+          weak: true,
+        }),
         'Content-Type': mime.lookup(req.url)!,
       })
       res.write(file)

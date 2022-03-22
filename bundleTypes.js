@@ -3,6 +3,7 @@ const { startTask } = require('misty/task')
 const path = require('path')
 const rollup = require('rollup')
 const dts = require('rollup-plugin-dts').default
+const ts = require('typescript')
 
 const outFile = 'bundle/index.d.ts'
 
@@ -10,7 +11,24 @@ async function run() {
   const bundle = await rollup.rollup({
     input: 'src/bundle/main.ts',
     external: id => !/^[./]/.test(id),
-    plugins: [dts(), reporter],
+    plugins: [
+      dts({
+        // compilerOptions: ts.parseJsonConfigFileContent(
+        //   ts.readConfigFile(
+        //     path.resolve('src/client/tsconfig.json'),
+        //     ts.sys.readFile
+        //   ).config,
+        //   ts.sys,
+        //   path.resolve('src/client')
+        // ).options,
+        compilerOptions: {
+          lib: ['lib.dom.d.ts', 'lib.es2019.d.ts'],
+          module: ts.ModuleKind.ESNext,
+          types: [path.resolve('env/client')],
+        },
+      }),
+      reporter,
+    ],
   })
 
   await bundle.write({
