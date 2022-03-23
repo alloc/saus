@@ -96,21 +96,27 @@ export function createHtmlResolver<State extends HtmlResolver.BaseState = {}>(
     }
   }
 
-  const skipLinkRel: any[] = ['preconnect', 'dns-prefetch']
+  const visitor = Object.keys(attrsMap).reduce((visitor, tagName) => {
+    const attrs = attrsMap[tagName]
+    const skipLinkRel: any[] =
+      tagName == 'link' ? ['preconnect', 'dns-prefetch'] : null!
 
-  const visitor: HtmlVisitor<State> = {
-    // Avoid resolving the URL of a removed node by
-    // waiting for the "close" phase.
-    close(path, state) {
-      const attrs = attrsMap[path.tagName]
-      if (attrs) {
-        return path.tagName !== 'link' ||
-          !skipLinkRel.includes(path.attributes.rel)
+    const shouldResolve: (path: HtmlTagPath<State>) => boolean =
+      tagName == 'link'
+        ? path => !skipLinkRel.includes(path.attributes.rel)
+        : () => true
+
+    visitor[tagName] = {
+      // Avoid resolving the URL of a removed node by
+      // waiting for the "close" phase.
+      close(path, state) {
+        return shouldResolve(path)
           ? resolve(path, state as any, attrs)
           : undefined
-      }
-    },
-  }
+      },
+    }
+    return visitor
+  }, {} as HtmlVisitor<State>)
 
   Object.defineProperty(visitor, kResolverList, {
     value: resolvers,

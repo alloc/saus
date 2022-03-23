@@ -126,25 +126,23 @@ export class HtmlTagPath<
 
   traverse(visitors: HtmlVisitor<State> | HtmlVisitor<State>[]) {
     const mergedVisitor = mergeVisitors(visitors, this.document.state)
+
     const traversePath = async (path: HtmlTagPath<State>) => {
       path.skip = () => mergedVisitor.skip(path)
-
-      const shouldSkip = await mergedVisitor.open(path)
-      if (!shouldSkip && path.node.body)
-        for (const childNode of path.node.body) {
-          if (childNode.type == 'Tag') {
-            const childPath = getTagPath(childNode, path)
-            if (!childPath[kRemovedNode]) {
-              await traversePath(childPath)
-            }
-          }
-        }
-
+      await mergedVisitor.open(path, traverseBody)
       path.skip = noop
-
-      // Skip "close" handlers if node was removed.
       if (!path[kRemovedNode]) {
         await mergedVisitor.close(path)
+      }
+    }
+    const traverseBody = async (path: HtmlTagPath<State>) => {
+      for (const childNode of path.node.body!) {
+        if (childNode.type == 'Tag') {
+          const childPath = getTagPath(childNode, path)
+          if (!childPath[kRemovedNode]) {
+            await traversePath(childPath)
+          }
+        }
       }
     }
 
