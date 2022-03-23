@@ -20,7 +20,9 @@ export function bindVisitors<
 >(arg: HtmlVisitor<State> | HtmlVisitor<State>[]) {
   const visitors = Array.isArray(arg) ? arg : [arg]
 
-  async function traverse(html: string, state: State) {
+  type DocumentState = HtmlDocument<State>['state']
+
+  async function traverse(html: string, state: DocumentState) {
     // Ensure an <html> tag exists.
     html = injectHtmlTag(html)
 
@@ -44,9 +46,17 @@ export function bindVisitors<
     value: visitors,
   })
 
+  /**
+   * This `extends` type checks for the following:
+   *   - where State is any or never (the only types that extend `Any`)
+   *   - where State is {} or object (the only types that extend `object` and vice versa)
+   * In those cases, the `state` argument is optional.
+   */
   return traverse as [State] extends [Any]
-    ? (html: string, state?: State) => Promise<string>
-    : (html: string, state: State) => Promise<string>
+    ? (html: string, state?: DocumentState) => Promise<string>
+    : [State, object] extends [object, State]
+    ? (html: string, state?: DocumentState) => Promise<string>
+    : (html: string, state: DocumentState) => Promise<string>
 }
 
 // Used for `any` type detection.
