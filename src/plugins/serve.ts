@@ -5,6 +5,7 @@ import { renderPageState } from '../core/renderPageState'
 import { ServedPage } from '../pages/servePage'
 import { RenderedFile } from '../pages/types'
 import { globalCache } from '../runtime/cache'
+import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
@@ -23,7 +24,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     return url.endsWith('.html.js')
   }
   function isStateModuleRequest(url: string) {
-    return url.startsWith('/state/') && url.endsWith('.js')
+    return url.startsWith(stateModuleBase) && url.endsWith('.js')
   }
 
   const serveState: Plugin = {

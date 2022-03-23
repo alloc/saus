@@ -30,7 +30,9 @@ import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
+import { stateModuleBase } from './runtime/constants'
 import { defer } from './utils/defer'
+import { prependBase } from './utils/prependBase'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule, resetModuleAndImporters } from './vm/moduleMap'
 import {
@@ -266,7 +268,9 @@ async function startServer(
           moduleId => key == moduleId || key.startsWith(moduleId + '.')
         )
         if (isMatch) {
-          changesToEmit.add(context.basePath + 'state/' + key + '.js')
+          changesToEmit.add(
+            prependBase(stateModuleBase + key + '.js', context.basePath)
+          )
         }
         return isMatch
       })

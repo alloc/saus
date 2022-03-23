@@ -1,6 +1,8 @@
 import type { RenderedPage } from '../pages/types'
+import { stateModuleBase } from '../runtime/constants'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
+import { prependBase } from '../utils/prependBase'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 /**
@@ -12,9 +14,10 @@ export function renderPageState(
   helpersId: string,
   preloadUrls?: string[]
 ) {
-  const toStateUrl = (id: string) => base + 'state/' + id + '.js'
-  const stateModuleUrls = new Set(stateModules.map(toStateUrl))
+  const toStateUrl = (id: string) =>
+    prependBase(stateModuleBase + id + '.js', base)
 
+  const stateModuleUrls = new Set(stateModules.map(toStateUrl))
   const inlinedStateUrls: string[] = []
   const inlinedStateIdents: string[] = []
 

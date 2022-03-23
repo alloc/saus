@@ -3,8 +3,10 @@ import { Plugin, RenderedPage, SausConfig, SausContext, vite } from '../core'
 import { debug } from '../core/debug'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
+import { stateModuleBase } from '../runtime/constants'
 import { getPageFilename } from '../utils/getPageFilename'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
+import { prependBase } from '../utils/prependBase'
 
 const clientUrlPrefix = '/@saus/'
 const clientIdPrefix = '\0' + clientUrlPrefix
@@ -82,8 +84,8 @@ export function serveClientEntries(
           pageStateUrl,
           routeModuleUrl,
           sausClientUrl,
-          ...page.stateModules.map(
-            stateModuleId => base + 'state/' + stateModuleId + '.js'
+          ...page.stateModules.map(id =>
+            prependBase(stateModuleBase + id + '.js', base)
           ),
         ]
 
