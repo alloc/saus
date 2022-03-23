@@ -26,7 +26,12 @@ export function defineStateModule<T, Args extends any[]>(
   loadImpl: StateModuleLoader<T, Args>
 ): StateModule<ResolvedState<T>, Args> {
   function toCacheKey(args: any[]) {
-    return id + '.' + md5Hex(JSON.stringify(args, sortObjects)).slice(0, 8)
+    let cacheKey = id
+    if (args.length) {
+      const hash = md5Hex(JSON.stringify(args, sortObjects))
+      cacheKey += '.' + hash.slice(0, 8)
+    }
+    return cacheKey
   }
   const stateModule: StateModule = {
     // @ts-ignore
