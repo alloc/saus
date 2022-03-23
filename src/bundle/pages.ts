@@ -32,6 +32,7 @@ import {
 } from './types'
 import getModuleLoader from './moduleLoader'
 import getAssetLoader from './assetLoader'
+import { stateModuleBase } from '../runtime/constants'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
@@ -169,6 +170,11 @@ export async function renderPage(
 
   const bodyTags: HtmlTagDescriptor[] = []
 
+  // Share the state cache and state modules b/w debug and production views.
+  const preserveBase = (id: string) =>
+    id == config.stateCacheId ||
+    (id.startsWith(stateModuleBase.slice(1)) && id.endsWith('.js'))
+
   const routeModule = addModule(moduleMap[page.routeModuleId])!
   const entryId = page.client
     ? path.join(config.assetsDir, page.client.id)
@@ -186,7 +192,12 @@ export async function renderPage(
   // No point in loading any JS if no entry module exists.
   if (entryModule) {
     const entryImports = new Set<string>()
-    entryModule.text = await rewriteImports(entryModule, entryImports, base)
+    entryModule.text = await rewriteImports(
+      entryModule,
+      entryImports,
+      base,
+      preserveBase
+    )
     entryModule.imports = Array.from(entryImports)
     entryModule.imports.forEach(addModule)
     modules.add(entryModule)
@@ -197,7 +208,7 @@ export async function renderPage(
 
     // State modules are not renamed for debug view.
     for (const stateId of [...page.stateModules].reverse()) {
-      const stateModuleId = 'state/' + stateId + '.js'
+      const stateModuleId = stateModuleBase.slice(1) + stateId + '.js'
       modules.add({
         id: stateModuleId,
         text: renderStateModule(
@@ -213,7 +224,7 @@ export async function renderPage(
     const hydrateModule = inlinedModules[moduleMap[hydrateImport]]
     const hydrateText = removeSourceMapUrls(
       isDebug
-        ? await rewriteImports(hydrateModule, new Set(), base)
+        ? await rewriteImports(hydrateModule, new Set(), base, preserveBase)
         : await loadModule(hydrateModule.id)
     )
     hydrateModule.imports?.forEach(addModule)
@@ -371,7 +382,8 @@ export async function renderPage(
 async function rewriteImports(
   importer: ClientModule,
   imported: Set<string>,
-  resolvedBase: string
+  resolvedBase: string,
+  preserveBase?: (id: string) => boolean
 ): Promise<string> {
   const importerText = importer.text ?? (await loadModule(importer.id))
   const isBaseReplaced = config.base !== resolvedBase
@@ -394,15 +406,18 @@ async function rewriteImports(
       continue
     }
 
+    let hasReplacedBase: boolean | undefined
     if (resolvedId) {
-      resolvedUrl = isBaseReplaced
+      hasReplacedBase =
+        isBaseReplaced && !(preserveBase && preserveBase(module.id))
+      resolvedUrl = hasReplacedBase
         ? source.replace(config.base, resolvedBase)
         : source
     }
 
     if (module.exports) {
       imported.add(module.id)
-      if (!resolvedId || isBaseReplaced) {
+      if (!resolvedId || hasReplacedBase) {
         resolvedId = module.id
         resolvedUrl = resolvedBase + resolvedId
 
@@ -416,7 +431,7 @@ async function rewriteImports(
       // Modules that export nothing are inlined.
       const text = removeSourceMapUrls(
         module.imports
-          ? await rewriteImports(module, imported, resolvedBase)
+          ? await rewriteImports(module, imported, resolvedBase, preserveBase)
           : module.text ?? (await loadModule(module.id))
       )
 
