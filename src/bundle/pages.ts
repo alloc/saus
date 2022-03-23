@@ -172,6 +172,7 @@ export async function renderPage(
 
   // Share the state cache and state modules b/w debug and production views.
   const preserveBase = (id: string) =>
+    id == moduleMap.helpers ||
     id == config.stateCacheId ||
     (id.startsWith(stateModuleBase.slice(1)) && id.endsWith('.js'))
 
