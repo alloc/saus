@@ -73,17 +73,50 @@ export function $(pattern: string, visitor?: HtmlTagVisitor) {
     return (path: HtmlTagPath) => matchers.some(matcher => match(path, matcher))
   }
 
+  // These match any tag.
+  const anyMatchers: Selector[][] = []
+  // These match specific tags.
+  const tagMatchers: Record<string, Selector[][]> = {}
+
+  for (const matcher of matchers) {
+    let foundTag = false
+    for (let i = matcher.length - 1; i >= 0; i--) {
+      const selector = matcher[i]
+      if (selector.type == SelectorType.Tag) {
+        const arr = (tagMatchers[selector.name] ||= [])
+        arr.push(matcher)
+        foundTag = true
+      }
+      if (selector.type !== SelectorType.Attribute) {
+        break
+      }
+    }
+    if (!foundTag) {
+      anyMatchers.push(matcher)
+    }
+  }
+
+  for (const tagName in tagMatchers) {
+    tagMatchers[tagName].push(...anyMatchers)
+  }
+
   if (typeof visitor == 'function') {
     visitor = { open: visitor }
   }
 
+  const { open, close } = visitor
+  const wrapper: HtmlVisitor = {}
+
   let matched: WeakSet<HtmlTagPath>
-  if (visitor.open) {
-    const { open, close } = visitor
+  if (open) {
     if (close) {
       matched = new WeakSet()
     }
-    visitor.open = (path, state) => {
+    const matchedOpen = (
+      matchers: Selector[][],
+      path: HtmlTagPath,
+      state: any
+    ) => {
       for (const matcher of matchers) {
         if (match(path, matcher)) {
           close && matched.add(path)
@@ -91,26 +124,55 @@ export function $(pattern: string, visitor?: HtmlTagVisitor) {
         }
       }
     }
+    for (const tagName in tagMatchers) {
+      const open = matchedOpen.bind(null, tagMatchers[tagName])
+      wrapper[tagName] = close ? { open } : open
+    }
+    if (anyMatchers.length) {
+      wrapper.open = matchedOpen.bind(null, anyMatchers)
+    }
   }
 
-  if (visitor.close) {
-    const { close } = visitor
-    visitor.close = visitor.open
-      ? (path, state) => {
-          if (matched.has(path)) {
-            close(path, state)
-          }
-        }
-      : (path, state) => {
-          for (const matcher of matchers) {
-            if (match(path, matcher)) {
-              return close(path, state)
-            }
-          }
-        }
+  if (!close) {
+    return wrapper
   }
 
-  return visitor
+  if (open) {
+    const matchedClose = (path: HtmlTagPath, state: any) => {
+      if (matched.delete(path)) {
+        return close(path, state)
+      }
+    }
+    for (const tagName in tagMatchers) {
+      // @ts-ignore
+      wrapper[tagName].close = matchedClose
+    }
+    if (anyMatchers.length) {
+      wrapper.close = matchedClose
+    }
+  } else {
+    const matchedClose = (
+      matchers: Selector[][],
+      path: HtmlTagPath,
+      state: any
+    ) => {
+      for (const matcher of matchers) {
+        if (match(path, matcher)) {
+          return close(path, state)
+        }
+      }
+    }
+    for (const tagName in tagMatchers) {
+      wrapper[tagName] = {
+        close: matchedClose.bind(null, tagMatchers[tagName]),
+      }
+    }
+    if (anyMatchers.length) {
+      wrapper.close = matchedClose.bind(null, anyMatchers)
+    }
+  }
+
+  return wrapper
 }
 
 function matchAttribute(
