@@ -12,8 +12,18 @@ export interface ClientContext {
 
 type Constants = 'defaultPath'
 
+let hydrated = false
+
 const context: Omit<ClientContext, Constants> = {
-  hydrated: false,
+  get hydrated() {
+    return hydrated
+  },
+  set hydrated(newValue) {
+    hydrated = newValue
+    if (newValue) {
+      window.dispatchEvent(new Event('hydrate'))
+    }
+  },
 }
 
 // @ts-ignore
