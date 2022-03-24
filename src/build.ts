@@ -32,8 +32,29 @@ import { getPagePath } from './utils/getPagePath'
 import { prependBase } from './utils/prependBase'
 
 export type FailedPage = { path: string; reason: string }
+export type BuildResult = { pages: RenderedPage[]; errors: FailedPage[] }
 
-export async function build(options: BuildOptions) {
+export function build(options: BuildOptions) {
+  const pages: RenderedPage[] = []
+  const errors: FailedPage[] = []
+
+  return new Promise<BuildResult>((resolve, reject) => {
+    buildPages(pages, errors, options).then(
+      () => resolve({ pages, errors }),
+      reject
+    )
+    if (options.abortSignal)
+      options.abortSignal.onabort = () => {
+        resolve({ pages, errors })
+      }
+  })
+}
+
+async function buildPages(
+  pages: RenderedPage[],
+  errors: FailedPage[],
+  options: BuildOptions
+): Promise<void> {
   const buildPlugins = [setSourcesContent(options)]
 
   const context = await loadBundleContext(
@@ -159,8 +180,6 @@ export async function build(options: BuildOptions) {
     () => `${renderCount} of ${pageCount} pages rendered`
   )
 
-  const pages: RenderedPage[] = []
-  const errors: FailedPage[] = []
   const failedRoutes = new Set<string>()
   const deferredPages = new Map<string, Deferred<void>>()
   const pageToRouteMap: Record<string, [string, RouteParams?]> = {}
@@ -178,9 +197,12 @@ export async function build(options: BuildOptions) {
     deferredPages.set(pagePath, deferredPage)
     pageToRouteMap[pagePath] = [routePath, params]
     try {
-      worker
-        .renderPage(context.basePath + pagePath.slice(1))
-        .catch(deferredPage.reject)
+      Promise.resolve(
+        worker.renderPage(context.basePath + pagePath.slice(1))
+      ).catch(e => {
+        deferredPage.reject(e)
+        deferredPages.delete(pagePath)
+      })
       pageCount++
       progress.update()
     } catch (e: any) {
@@ -226,16 +248,22 @@ export async function build(options: BuildOptions) {
     error: e => errors.push(e),
   })
 
-  while (deferredPages.size) {
+  const { abortSignal } = options
+  if (abortSignal)
+    abortSignal.onabort = () => {
+      // Prevent errors from surfacing after we're aborted.
+      deferredPages.forEach(deferredPage => deferredPage.resolve())
+    }
+
+  while (deferredPages.size && !abortSignal?.aborted)
     await Promise.all(deferredPages.values())
-  }
 
   progress.finish()
   if (worker.destroy) {
     await worker.destroy()
   }
 
-  if (buildOptions.write !== false) {
+  if (buildOptions.write !== false && !abortSignal?.aborted) {
     await callPlugins(context.plugins, 'onWritePages', pages)
     const { inlinedAssets } = runBundle(workerData)
     const files = writePages(pages, outDir, inlinedAssets)
@@ -246,11 +274,6 @@ export async function build(options: BuildOptions) {
       buildOptions.chunkSizeWarningLimit,
       context.bundle.debugBase
     )
-  }
-
-  return {
-    pages,
-    errors,
   }
 }
 

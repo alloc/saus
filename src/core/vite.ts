@@ -1,3 +1,4 @@
+import { AbortSignal } from 'node-abort-controller'
 import * as vite from 'vite'
 import type { RenderedPage } from '../bundle/types'
 import type { RenderPageFn } from '../pages/renderPage'
@@ -194,6 +195,8 @@ export interface BuildOptions extends vite.BuildOptions {
   maxWorkers?: number
   /** Use this bundle instead of generating one. */
   bundlePath?: string
+  /** Used to stop rendering the remaining pages. */
+  abortSignal?: AbortSignal
   /** Include `sourcesContent` is cached bundle sourcemap. */
   sourcesContent?: boolean
 }
