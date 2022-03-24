@@ -1,7 +1,9 @@
 import createDebug from 'debug'
+import { klona as deepCopy } from 'klona'
 import type { CacheControl } from '../core/withCache'
 import { unwrapDefault } from '../utils/unwrapDefault'
 import { getCachedState } from './getCachedState'
+import { getLoadedStateOrThrow } from './getLoadedStateOrThrow'
 import type { ResolvedState } from './stateModules'
 
 const debug = createDebug('saus:cache')
@@ -17,10 +19,15 @@ export type StateModuleLoader<T = any, Args extends any[] = any[]> = (
 export function loadStateModule<T, Args extends any[]>(
   _id: string,
   args: Args,
-  loadImpl: StateModuleLoader<T, Args>,
+  loadImpl: StateModuleLoader<T, Args> | false,
   toCacheKey: (args: any[]) => string
 ): Promise<ResolvedState<T>> {
   const cacheKey = toCacheKey(args)
+
+  if (!loadImpl) {
+    const cached = getLoadedStateOrThrow(cacheKey, args)
+    return deepCopy(cached[0])
+  }
 
   async function loadStateModule(cacheControl: CacheControl) {
     debug(`Loading "%s" state`, cacheKey)

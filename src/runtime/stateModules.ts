@@ -1,5 +1,4 @@
 import md5Hex from 'md5-hex'
-import { globalCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 
 export const stateModulesById = new Map<string, StateModule>()
@@ -38,15 +37,7 @@ export function defineStateModule<T, Args extends any[]>(
     [kStateModule]: true,
     id: toCacheKey([]),
     get(...args) {
-      const cacheKey = toCacheKey(args)
-      const cached = globalCache.loaded[cacheKey]
-      if (cached) {
-        return cached[0]
-      }
-      throw Error(
-        `Failed to access "${cacheKey}" state. ` +
-          `This fragment is not included by the route config.`
-      )
+      return loadStateModule(id, args as Args, false, toCacheKey)
     },
     load(...args) {
       return loadStateModule(id, args as Args, loadImpl, toCacheKey)

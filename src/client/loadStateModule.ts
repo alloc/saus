@@ -1,15 +1,22 @@
 // Overrides "src/core/loadStateModule.ts" module in client builds
 import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
+import { getLoadedStateOrThrow } from '../runtime/getLoadedStateOrThrow'
 import { prependBase } from './prependBase'
 
 export function loadStateModule(
   id: string,
   args: any[],
-  loadImpl: undefined,
+  loadImpl: false | undefined,
   toCacheKey: (args: any[]) => string
 ) {
   const cacheKey = toCacheKey(args)
+
+  // Only the `get` method passes a false loadImpl.
+  if (loadImpl === false) {
+    return getLoadedStateOrThrow(cacheKey, args)[0]
+  }
+
   return getCachedState(cacheKey, async () => {
     const stateUrl = prependBase(stateModuleBase + cacheKey + '.js')
     if (import.meta.env.DEV) {
