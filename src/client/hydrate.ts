@@ -4,11 +4,11 @@ import { getPageFilename } from '../utils/getPageFilename'
 import { BASE_URL } from './baseUrl'
 import routes from './routes'
 
-export type HydrateFn = (request: RenderRequest) => void
+export type HydrateFn = (request: RenderRequest) => Promise<void> | void
 
 let runHydration: HydrateFn
 
-export function hydrate(
+export async function hydrate(
   state: ClientState,
   routeModule: object,
   routeModuleUrl: string
@@ -20,7 +20,7 @@ export function hydrate(
   routes[routePath] = routeModuleUrl
   const path = location.pathname
   globalCache.loaded[path] = [state]
-  runHydration({
+  await runHydration({
     path,
     file: getPageFilename(path, import.meta.env.BASE_URL),
     query: location.search.slice(1),
