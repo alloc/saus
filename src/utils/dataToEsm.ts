@@ -6,6 +6,8 @@ const varDeclRE = /^(const|let|var) /
 
 type Replacer = (this: any, key: string, value: any) => string | void
 
+const seen = new Set()
+
 /**
  * Convert almost any kind of data to ESM code.
  *
@@ -66,10 +68,22 @@ function serialize(
     return `new Date(${value.getTime()})`
   }
   if (Array.isArray(value)) {
-    return serializeArray(value, keyPath, replacer)
+    if (seen.has(value)) {
+      return ''
+    }
+    seen.add(value)
+    const serialized = serializeArray(value, keyPath, replacer)
+    seen.delete(value)
+    return serialized
   }
   if (typeof value === 'object') {
-    return serializeObject(value!, keyPath, replacer)
+    if (seen.has(value)) {
+      return ''
+    }
+    seen.add(value)
+    const serialized = serializeObject(value, keyPath, replacer)
+    seen.delete(value)
+    return serialized
   }
   return stringify(value)
 }
