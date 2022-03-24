@@ -1,11 +1,15 @@
 import arrify from 'arrify'
 import cac from 'cac'
+import { addExitCallback } from 'catch-exit'
 import * as inspector from 'inspector'
-import { gray, red } from 'kleur/colors'
+import { cyan, gray, red } from 'kleur/colors'
 import { fatal, success } from 'misty'
+import { startTask } from 'misty/task'
+import { AbortController, AbortSignal } from 'node-abort-controller'
 import log from 'shared-log'
 import { BuildOptions, vite } from './core'
 import { InlinePreviewConfig, startPreviewServer } from './preview'
+import { onShortcut } from './utils/shortcuts'
 
 declare const globalThis: any
 if (inspector.url()) {
@@ -54,6 +58,36 @@ cli
     const { build } = require('./build') as typeof import('./build')
     const { getFailedPages, setFailedPages } =
       require('./build/failedPages') as typeof import('./build/failedPages')
+
+    if (process.stdin.isTTY) {
+      const ctrl = new AbortController()
+      options.abortSignal = ctrl.signal
+
+      ctrl.signal.onabort = () => {
+        // Exit the process if pressing Enter before rendering starts.
+        process.exit()
+      }
+
+      const shortcutFooter = startTask(
+        gray('» ') +
+          `Press ${cyan('Enter')} to stop rendering and print errors.`,
+        { footer: true, elapsed: false }
+      )
+      addExitCallback(() => {
+        shortcutFooter.finish()
+      })
+
+      onShortcut(process.stdin, (key, resume) => {
+        if (key == '\x03') {
+          process.exit()
+        } else if (key == '\r') {
+          ctrl.abort()
+        } else {
+          console.log('%O', key, Buffer.from(key))
+          resume()
+        }
+      })
+    }
 
     try {
       if (options.debug) {

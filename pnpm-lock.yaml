@@ -42,7 +42,7 @@ importers:
       klona: ^2.0.5
       magic-string: ^0.25.7
       md5-hex: ^3.0.0
-      misty: ^1.6.4
+      misty: ^1.6.7
       mrmime: ^1.0.0
       node-abort-controller: ^3.0.1
       prettier: ^2.0.5
@@ -80,7 +80,7 @@ importers:
       klona: 2.0.5
       magic-string: 0.25.7
       md5-hex: 3.0.1
-      misty: 1.6.4
+      misty: 1.6.7
       mrmime: 1.0.0
       node-abort-controller: 3.0.1
       raw-body: 2.5.1
@@ -3032,8 +3032,8 @@ packages:
       shared-log: 1.2.7
     dev: false
 
-  /misty/1.6.4:
-    resolution: {integrity: sha512-PTJk4fnrOl23WuKZ6GQEMFj7tmNftC1h3UbmzxfCimTJoy7atBvAGb619r3TUC9WPqTK7ieK7MbBzQTxNh8BWA==}
+  /misty/1.6.7:
+    resolution: {integrity: sha512-LJazvzaBUGeLRGT8ed7h/HXOB1XxmZyyKy86ncKejrlxdhoEEgG0Ik7h+dghiFBtfPYr6zJMbNBlCCqmhxML4A==}
     dependencies:
       kleur: 4.1.4
       shared-log: 1.2.7
