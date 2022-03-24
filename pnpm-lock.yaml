@@ -39,6 +39,7 @@ importers:
       etag: ^1.8.1
       is-plain-object: ^5.0.0
       kleur: ^4.1.4
+      klona: ^2.0.5
       magic-string: ^0.25.7
       md5-hex: ^3.0.0
       misty: ^1.6.4
@@ -76,6 +77,7 @@ importers:
       es-module-lexer: 0.9.3
       esbuild: 0.14.15
       etag: 1.8.1
+      klona: 2.0.5
       magic-string: 0.25.7
       md5-hex: 3.0.1
       misty: 1.6.4
@@ -115,13 +117,13 @@ importers:
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
       regexparam: 2.0.0
-      rollup-plugin-dts: 4.1.0_09ecfda2292df930b47b4fffbaeb7e2f
+      rollup-plugin-dts: 4.1.0_typescript@4.6.2
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 3.0.0
       tsup: 5.11.13_typescript@4.6.2
       typescript: 4.6.2
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -2814,6 +2816,11 @@ packages:
     resolution: {integrity: sha512-8QADVssbrFjivHWQU7KkMgptGTl6WAcSdlbBPY4uNF+mWr6DGcKrvY2w4FQJoXch7+fKMjj0dRrL75vk3k23OA==}
     engines: {node: '>=6'}
 
+  /klona/2.0.5:
+    resolution: {integrity: sha512-pJiBpiXMbt7dkzXe8Ghj/u4FfXOOa98fPW+bihOJ4SjnoijweJrNThJfd3ifXpXhREjpoF2mZVH1GfS9LV3kHQ==}
+    engines: {node: '>= 8'}
+    dev: false
+
   /lilconfig/2.0.4:
     resolution: {integrity: sha512-bfTIN7lEsiooCocSISTWXkiWJkRqtL9wYtYy+8EK3Y41qh3mpwPU0ycTOgjdY9ErwXCc8QyrQp82bdL0Xkm9yA==}
     engines: {node: '>=10'}
@@ -3683,7 +3690,7 @@ packages:
       glob: 7.1.6
     dev: false
 
-  /rollup-plugin-dts/4.1.0_09ecfda2292df930b47b4fffbaeb7e2f:
+  /rollup-plugin-dts/4.1.0_typescript@4.6.2:
     resolution: {integrity: sha512-rriXIm3jdUiYeiAAd1Fv+x2AxK6Kq6IybB2Z/IdoAW95fb4uRUurYsEYKa8L1seedezDeJhy8cfo8FEL9aZzqg==}
     engines: {node: '>=v12.22.7'}
     peerDependencies:
@@ -3691,7 +3698,6 @@ packages:
       typescript: ~4.1 || ~4.2 || ~4.3 || ~4.4 || ~4.5
     dependencies:
       magic-string: 0.25.7
-      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.6.2
     optionalDependencies:
       '@babel/code-frame': 7.16.7
@@ -4326,7 +4332,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: false
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -4349,7 +4355,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /which/1.3.1:

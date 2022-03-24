@@ -21,7 +21,8 @@ export function loadStateModule<T, Args extends any[]>(
   toCacheKey: (args: any[]) => string
 ): Promise<ResolvedState<T>> {
   const cacheKey = toCacheKey(args)
-  return getCachedState(cacheKey, async function loadStateModule(cacheControl) {
+
+  async function loadStateModule(cacheControl: CacheControl) {
     debug(`Loading "%s" state`, cacheKey)
     try {
       let result: any = loadImpl.apply(cacheControl, args)
@@ -55,5 +56,9 @@ export function loadStateModule<T, Args extends any[]>(
         ? Object.assign(error, { stateModuleKey: cacheKey })
         : error
     }
+  }
+
+  return getCachedState(cacheKey, loadStateModule, {
+    deepCopy: true,
   })
 }

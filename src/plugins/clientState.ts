@@ -43,8 +43,10 @@ export function transformClientState(): Plugin {
                 const args = path.get('arguments')
                 stateModuleIds.push((args[0].node as t.StringLiteral).value)
 
-                // Remove the loader function.
-                args[1].remove()
+                // Remove all arguments except the first.
+                for (let i = 1; i < args.length; i++) {
+                  args[i].remove()
+                }
               } else {
                 warn(`defineStateModule call in "${id}" must be exported`)
               }

@@ -1,3 +1,4 @@
+import { klona } from 'klona'
 import { AbortController, AbortSignal } from 'node-abort-controller'
 import { debug } from './debug'
 
@@ -35,6 +36,16 @@ type StateLoader<State = any> = {
   (cacheControl: CacheControl): Promisable<State>
 }
 
+export interface StateOptions {
+  /**
+   * When this state is accessed in a SSR environment,
+   * it will be deep-copied so it can be mutated in preparation
+   * for page rendering without mutating the serialized data
+   * that goes in the client module.
+   */
+  deepCopy?: boolean
+}
+
 export function withCache<State = any>(
   cache: Cache<State>,
   getDefaultLoader: (cacheKey: string) => StateLoader<State>
@@ -53,18 +64,22 @@ export function withCache(
   getDefaultLoader: (cacheKey: string) => StateLoader | undefined = () =>
     undefined
 ) {
-  return function getCachedState(cacheKey: string, loader?: StateLoader) {
+  return function getCachedState(
+    cacheKey: string,
+    loader?: StateLoader,
+    options?: StateOptions
+  ) {
     const entry = cache.loaded[cacheKey]
     if (entry) {
       const expiresAt = entry[1] ?? Infinity
       if (expiresAt - Date.now() > 0) {
-        return Promise.resolve(entry[0])
+        return deepCopy(Promise.resolve(entry[0]), options?.deepCopy)
       }
     }
 
     const oldPromise = cache.loading[cacheKey] as Promise<any> | undefined
     if (oldPromise || !(loader ||= getDefaultLoader(cacheKey))) {
-      return oldPromise
+      return oldPromise && deepCopy(oldPromise, options?.deepCopy)
     }
 
     const promise = new Promise((resolve, reject) => {
@@ -115,6 +130,10 @@ export function withCache(
 
     cache.loaders[cacheKey] = loader
     cache.loading[cacheKey] = promise
-    return promise
+    return deepCopy(promise, options?.deepCopy)
   }
+}
+
+function deepCopy<T>(promise: Promise<T>, enabled = false): typeof promise {
+  return enabled ? promise.then(klona) : promise
 }
