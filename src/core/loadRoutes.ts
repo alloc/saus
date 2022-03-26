@@ -38,9 +38,12 @@ export async function loadRoutes(
     ))
 
   const routesConfig = setRoutesModule({
+    catchRoute: undefined,
+    defaultRoute: undefined,
+    defaultState: [],
+    htmlProcessors: undefined,
     routes: [],
     runtimeHooks: [],
-    defaultState: [],
     ssrRequire,
   })
   try {
