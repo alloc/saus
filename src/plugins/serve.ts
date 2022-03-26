@@ -1,4 +1,5 @@
 import getBody from 'raw-body'
+import * as http2 from 'http2'
 import { Plugin, renderStateModule, SausContext, vite } from '../core'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
@@ -9,6 +10,8 @@ import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
+
+const { Http2ServerResponse } = http2
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
   // The server starts before Saus is ready, so we stall
@@ -137,7 +140,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         let { reloadId } = context
         await server.servePage(url).then(respond)
 
-        function respond({ error, body, headers }: ServedPage = {}): any {
+        function respond({ error, body, headers, push }: ServedPage = {}): any {
           if (reloadId !== (reloadId = context.reloadId)) {
             return (context.reloading || Promise.resolve()).then(() => {
               return server.servePage(url).then(respond)
@@ -150,6 +153,46 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           } else if (body) {
             headers?.forEach(([key, value]) => res.setHeader(key, value))
             res.writeHead(200)
+            if (push && res instanceof Http2ServerResponse) {
+              const {
+                HTTP2_HEADER_PATH,
+                HTTP2_HEADER_CONTENT_TYPE,
+                HTTP2_HEADER_ETAG,
+              } = http2.constants
+              for (const uri of push) {
+                const headers = { [HTTP2_HEADER_PATH]: uri }
+                const cachedFile = fileCache[uri]
+                if (cachedFile) {
+                  headers[HTTP2_HEADER_CONTENT_TYPE] = cachedFile.mime
+                }
+                res.stream.pushStream(headers, (err, stream, headers) => {
+                  if (err) {
+                    return
+                  }
+
+                  const dataRequest = cachedFile
+                    ? Promise.resolve(cachedFile.data)
+                    : server.transformRequest(uri).then(result => {
+                        if (!result) {
+                          return null
+                        }
+                        headers[HTTP2_HEADER_ETAG] = result.etag
+                        return result.code
+                      })
+
+                  dataRequest
+                    .then(data => {
+                      stream.respond({ ':status': data == null ? 404 : 200 })
+                      stream.end(data)
+                    })
+                    .catch(err => {
+                      onError(err)
+                      stream.respond({ ':status': 500 })
+                      stream.end()
+                    })
+                })
+              }
+            }
             res.write(body)
             res.end()
           } else {

@@ -3,13 +3,14 @@ import { applyHtmlProcessors } from '../core/html'
 import { loadRenderers } from '../core/loadRenderers'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { resetExports } from '../vm/moduleMap'
-import { RenderPageOptions } from './types'
+import { BufferLike, RenderPageOptions } from './types'
 
 export type ServePageFn = (url: string) => Promise<ServedPage | undefined>
 export type ServedPage = {
   error?: any
   body?: any
   headers?: [string, string | number][]
+  push?: string[]
 }
 
 /**
