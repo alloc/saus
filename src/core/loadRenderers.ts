@@ -18,8 +18,9 @@ export async function loadRenderers(context: SausContext) {
     (await compileRenderModule(context, moduleMap))
 
   const renderConfig = setRenderModule({
-    renderers: [],
     beforeRenderHooks: [],
+    defaultRenderer: undefined,
+    renderers: [],
   })
   try {
     await executeModule(renderModule)
