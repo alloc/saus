@@ -112,6 +112,7 @@ export async function createServer(
   }
 
   function onError(error: any) {
+    if (error.code == 'EADDRINUSE') return
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
