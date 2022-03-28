@@ -1,3 +1,5 @@
+import { defer, Deferred } from '../utils/defer'
+import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { debug } from '../vm/debug'
@@ -8,7 +10,15 @@ import { ModuleMap } from '../vm/types'
 import { SausContext } from './context'
 import { setRenderModule } from './global'
 
+let loading: Deferred<void> | null = null
+
 export async function loadRenderers(context: SausContext) {
+  // Both a page request and the file watcher will trigger
+  // this function, so we have to account for parallel calls.
+  if (loading) return loading.promise
+  loading = defer<void>()
+  loading.promise.catch(noop)
+
   const time = Date.now()
   const moduleMap = context.server?.moduleMap || {}
 
@@ -31,11 +41,14 @@ export async function loadRenderers(context: SausContext) {
     debug(
       `Loaded ${plural(rendererCount, 'renderer')} in ${Date.now() - time}ms`
     )
+    loading.resolve()
   } catch (error: any) {
     formatAsyncStack(error, moduleMap, [], context.config.filterStack)
+    loading.reject(error)
     throw error
   } finally {
     setRenderModule(null)
+    loading = null
   }
 }
 
