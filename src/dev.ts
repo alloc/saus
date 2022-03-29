@@ -277,6 +277,8 @@ async function startServer(
       })
     }
 
+    dirtyStateModules.clear()
+
     if (routesChanged) {
       try {
         await loadRoutes(context, resolveId)
