@@ -22,6 +22,7 @@ importers:
       '@types/physical-cpu-count': ^2.0.0
       '@types/source-map-support': ^0.5.4
       '@types/strip-comments': ^2.0.1
+      ansi-to-html: ^0.7.2
       arrify: ^3.0.0
       builtin-modules: ^3.2.0
       cac: ^6.7.3
@@ -70,6 +71,7 @@ importers:
       '@babel/plugin-syntax-typescript': 7.14.5_@babel+core@7.16.7
       '@cush/relative': 1.0.0
       '@saus/html': link:packages/html
+      ansi-to-html: 0.7.2
       cac: 6.7.3
       callsites: 3.1.0
       convert-source-map: 1.8.0
@@ -1035,6 +1037,14 @@ packages:
     dependencies:
       color-convert: 1.9.3
 
+  /ansi-to-html/0.7.2:
+    resolution: {integrity: sha512-v6MqmEpNlxF+POuyhKkidusCHWWkaLcGRURzivcU3I9tv7k4JVhFcnukrM5Rlk2rUywdZuzYAZ+kbZqWCnfN3g==}
+    engines: {node: '>=8.0.0'}
+    hasBin: true
+    dependencies:
+      entities: 2.2.0
+    dev: false
+
   /any-promise/1.3.0:
     resolution: {integrity: sha1-q8av7tzqUugJzcA3au0845Y10X8=}
     dev: true
@@ -1746,6 +1756,10 @@ packages:
       dedent: 0.7.0
       fast-json-parse: 1.0.3
       objectorarray: 1.0.5
+    dev: false
+
+  /entities/2.2.0:
+    resolution: {integrity: sha512-p92if5Nz619I0w+akJrLZH0MX0Pb5DX39XOwQTtXSdQQOaYH03S1uIQp4mhOZtAXrxq4ViO67YTiLBo2638o9A==}
     dev: false
 
   /error-ex/1.3.2:

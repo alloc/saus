@@ -1,3 +1,4 @@
+import AnsiConverter from 'ansi-to-html'
 import { matchRoute, RuntimeConfig, SausContext } from '../core'
 import { applyHtmlProcessors } from '../core/html'
 import { loadRenderers } from '../core/loadRenderers'
@@ -79,12 +80,18 @@ export function createServePageFn(
         // Since no catch route exists, we should render a page with the Vite client
         // attached so it can reload the page on the next update.
         let html: string
+
         for (const plugin of context.plugins) {
           if (!plugin.renderErrorReport) continue
           html = await plugin.renderErrorReport(url, error)
           break
         }
-        html ||= `<body><span style="font-family: sans-serif; font-size: 20px; padding: 100px">${error.message}</span></body>`
+
+        html ||=
+          `<body><main style="font-size: 20px; padding: 100px">` +
+          ansiToHtml(error.message) +
+          `</main></body>`
+
         page = { html, files: [] } as any
       }
       if (page) {
@@ -112,4 +119,9 @@ export function createServePageFn(
       return { error }
     }
   }
+}
+
+function ansiToHtml(input: string) {
+  const convert = new AnsiConverter()
+  return convert.toHtml(input)
 }
