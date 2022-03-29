@@ -194,6 +194,7 @@ async function startServer(
 
   context.server = server
   server.moduleMap = moduleMap
+  server.externalExports = new Map()
   server.linkedModules = {}
   Object.assign(server, getRequireFunctions(context, resolveId))
   context.ssrRequire = server.ssrRequire
@@ -354,9 +355,7 @@ async function startServer(
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
       )
-      const resetStateModule = (module: CompiledModule | LinkedModule) => {
-        if (isLinkedModule(module)) return
-
+      const resetStateModule = (module: CompiledModule) => {
         // Invalidate any cached state when a state module is reset.
         if (stateModules.has(module)) {
           dirtyStateModules.add(module)
@@ -373,7 +372,13 @@ async function startServer(
         }
       }
       if (isLinkedModule(changedModule)) {
-        resetModuleAndImporters(changedModule, dirtyFiles, resetStateModule)
+        resetModuleAndImporters(changedModule, dirtyFiles, module => {
+          if (isLinkedModule(module)) {
+            server.externalExports.delete(module.id)
+          } else {
+            resetStateModule(module)
+          }
+        })
       } else {
         purgeModule(changedModule, dirtyFiles, resetStateModule)
       }

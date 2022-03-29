@@ -13,6 +13,7 @@ export function getRequireFunctions(
 ) {
   const { root, config, compileCache } = context
   const linkedModules = context.server?.linkedModules
+  const externalExports = context.server?.externalExports
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -28,6 +29,7 @@ export function getRequireFunctions(
       resolveId,
       moduleMap,
       linkedModules,
+      externalExports,
       nodeResolve,
       watchFile,
       isCompiledModule,
@@ -39,6 +41,7 @@ export function getRequireFunctions(
       resolveId,
       moduleMap,
       linkedModules,
+      externalExports,
       nodeResolve,
       watchFile,
       isCompiledModule,

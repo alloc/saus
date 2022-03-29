@@ -158,6 +158,7 @@ declare module 'vite' {
     servedFiles: Record<string, RenderedFile>
     moduleMap: ModuleMap
     linkedModules: LinkedModuleMap
+    externalExports: Map<string, any>
     require: RequireAsync
     ssrRequire: RequireAsync
   }
