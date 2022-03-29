@@ -48,7 +48,7 @@ const stateModulesMap = new WeakMap<ClientState, string[]>()
 export type RenderPageFn = (
   url: string | ParsedUrl,
   options?: RenderPageOptions
-) => Promise<RenderedPage | null>
+) => Promise<[page: RenderedPage | null, error?: any]>
 
 export function createRenderPageFn(
   context: RenderPageContext,
@@ -220,7 +220,7 @@ export function createRenderPageFn(
     (
       pagePath: string,
       statePromise: Promise<ClientState>,
-      loader: (cacheControl: CacheControl) => Promise<RenderedPage | null>
+      loader: (cacheControl: CacheControl) => ReturnType<RenderPageFn>
     ) => getCachedPage(pagePath, loader)
   ).with(async (ctx, args, wasQueued) => {
     // The first page to finish loading its state is rendered next…
@@ -470,12 +470,12 @@ export function createRenderPageFn(
 
     const cachedPage = getCachedPage(url.path)
     if (cachedPage !== undefined) {
-      return cachedPage
+      return cachedPage.then(page => [page])
     }
 
     const [route, params] = resolveRoute(url)
     if (!route) {
-      return null
+      return [null]
     }
 
     const pagePath = url.path
@@ -507,12 +507,16 @@ export function createRenderPageFn(
         rendering,
         options.timeout || 0,
         `Page "${pagePath}" rendering took too long`
-      ).catch(
-        options.onError ||
-          (error => {
+      ).then(
+        page => [page],
+        error => {
+          if (options.onError) {
+            options.onError(error)
+          } else {
             onError(error)
-            return null
-          })
+          }
+          return [null, error]
+        }
       )
     })
   }

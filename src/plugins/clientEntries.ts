@@ -72,6 +72,12 @@ export function serveClientEntries(
         if (!page) {
           return debug('Page %s not found, skipping transform', pagePath)
         }
+        if (!page.routeModuleId) {
+          return debug(
+            'Page %s has no route module, skipping transform',
+            pagePath
+          )
+        }
 
         const base = context.basePath
         const pageStateUrl = base + filename + '.js?t=' + page.state._ts

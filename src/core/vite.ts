@@ -242,4 +242,10 @@ export interface SausPlugin {
    * This is only called when `saus build` is used.
    */
   onWritePages?: (pages: RenderedPage[]) => void
+  /**
+   * In development only, SSR errors can be sent to the browser
+   * for a better developer experience. The default behavior is
+   * minimal but overridable via this plugin hook.
+   */
+  renderErrorReport?: (url: string, error: any) => Promisable<string>
 }

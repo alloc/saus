@@ -68,16 +68,31 @@ export function createServePageFn(
 
   return async function servePage(url) {
     try {
-      let page = await server.renderPage(url, renderOpts)
-      if (!page && !/\.[^./]+$/.test(url)) {
-        page = await server.renderPage(context.defaultPath, renderOpts)
+      let [page, error] = await server.renderPage(url, renderOpts)
+      if (!page && !error && !/\.[^./]+$/.test(url)) {
+        ;[page, error] = await server.renderPage(
+          context.defaultPath,
+          renderOpts
+        )
+      }
+      if (error) {
+        // Since no catch route exists, we should render a page with the Vite client
+        // attached so it can reload the page on the next update.
+        let html: string
+        for (const plugin of context.plugins) {
+          if (!plugin.renderErrorReport) continue
+          html = await plugin.renderErrorReport(url, error)
+          break
+        }
+        html ||= `<body><span style="font-family: sans-serif; font-size: 20px; padding: 100px">${error.message}</span></body>`
+        page = { html, files: [] } as any
       }
       if (page) {
         for (const file of page.files) {
           server.servedFiles[file.id] = file
         }
         let html = await server.transformIndexHtml(url, page.html)
-        if (context.htmlProcessors?.post.length) {
+        if (!error && context.htmlProcessors?.post.length) {
           html = await applyHtmlProcessors(
             html,
             context.htmlProcessors.post,

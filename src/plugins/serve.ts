@@ -36,7 +36,11 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       if (isPageStateRequest(id)) {
         await init
         const url = id.replace(/(\/index)?\.html\.js$/, '') || '/'
-        const page = await server.renderPage(url)
+        const [page, error] = await server.renderPage(url)
+        if (error) {
+          const props = { message: error.message, stack: error.stack }
+          return `throw Object.assign(Error(), ${JSON.stringify(props)})`
+        }
         if (page) {
           return renderPageState(
             page,

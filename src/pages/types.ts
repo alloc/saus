@@ -64,7 +64,7 @@ export interface PageContext extends RenderModule {}
 
 export type RenderPageOptions = {
   timeout?: number
-  onError?: (error: Error & { url: string }) => never | null
+  onError?: (error: Error & { url: string }) => void
   renderStart?: (url: string) => void
   renderFinish?: (
     url: string,
