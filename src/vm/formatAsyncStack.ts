@@ -36,12 +36,13 @@ export function formatAsyncStack(
           .filter(frame => !ignoredFrameRE.test(frame.file))
           .concat(asyncStack as StackFrame[])
 
-  if (filterStack) {
+  if (filterStack)
     relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
-  }
-
   relevantFrames = relevantFrames.slice(0, 10)
-  if (!relevantFrames.length) {
+
+  // If no relevant frames exist after filtering, or the only remaining
+  // frames are related to Vite internals, abort the stack rewrite.
+  if (!relevantFrames.filter(f => !isViteInternal(f)).length) {
     return
   }
 
@@ -104,4 +105,8 @@ export function traceDynamicImport(error: any, skip = 0) {
     ignoredFrameRE.test(frame.file)
   )
   return stack.frames.slice(0, ignoredFrameIndex)
+}
+
+function isViteInternal({ file }: StackFrame) {
+  return file.includes('/vite/dist/')
 }
