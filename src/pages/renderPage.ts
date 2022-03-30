@@ -470,7 +470,7 @@ export function createRenderPageFn(
 
     const cachedPage = getCachedPage(url.path)
     if (cachedPage !== undefined) {
-      return cachedPage.then(page => [page])
+      return cachedPage
     }
 
     const [route, params] = resolveRoute(url)

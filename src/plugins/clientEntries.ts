@@ -67,16 +67,15 @@ export function serveClientEntries(
           filename = getPageFilename(path.replace(/\?.*$/, ''))
         }
 
+        type CachedPage = [RenderedPage, any]
+
         const pagePath = '/' + filename.replace(/(index)?\.html$/, '')
-        const page = await context.getCachedPage<RenderedPage>(pagePath)
+        const [page, error] =
+          (await context.getCachedPage<CachedPage>(pagePath)) || []
+
+        if (error) return
         if (!page) {
           return debug('Page %s not found, skipping transform', pagePath)
-        }
-        if (!page.routeModuleId) {
-          return debug(
-            'Page %s has no route module, skipping transform',
-            pagePath
-          )
         }
 
         const base = context.basePath

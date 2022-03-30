@@ -1,0 +1,58 @@
+body {
+  padding: 50px 30px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+h1 {
+  font-size: 30px;
+  color: #150a0a;
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+small {
+  display: flex;
+  font-size: 14px;
+  color: #b78585;
+  margin-bottom: 30px;
+}
+
+svg.waiting {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+
+.error {
+  padding: 20px;
+  border-radius: 8px;
+  background: #1b1b1b;
+  color: white;
+  font-family: monospace;
+  font-size: 15px;
+  overflow-x: scroll;
+}
+
+.error-message {
+  width: 80vw;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  margin-bottom: 20px;
+  line-height: 140%;
+}
+
+.stack-frame {
+  font-size: 13px;
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 150%;
+  margin: 0 30px;
+}
+
+.file-link {
+  color: #4e90a7;
+}
+
+.file-link:hover {
+  color: #92cbe0;
+}

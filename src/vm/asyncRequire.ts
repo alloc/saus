@@ -361,9 +361,6 @@ export function createAsyncRequire({
         try {
           exports = nodeRequire!(resolvedId)
           externalExports.set(resolvedId, exports)
-        } catch (error: any) {
-          formatAsyncStack(error, moduleMap, asyncStack, filterStack)
-          throw error
         } finally {
           restoreModuleCache()
           restoreNodeResolve()
@@ -377,14 +374,15 @@ export function createAsyncRequire({
       if (!isDynamic) {
         callStack = callStack.slice(1)
       }
-    }
-
-    if (module) {
-      if (importer) {
-        trackImport(importer, module, isDynamic, internalPathRE.test(id))
+      // Track importers even when a compile/runtime error is encountered,
+      // so that module reloading still works when a file is changed.
+      if (module) {
+        if (importer) {
+          trackImport(importer, module, isDynamic, internalPathRE.test(id))
+        }
+      } else if (resolvedId && isLinkedModuleId(resolvedId)) {
+        trackLinkedModule(resolvedId, importer)
       }
-    } else if (isLinkedModuleId(resolvedId)) {
-      trackLinkedModule(resolvedId, importer)
     }
 
     if (!isCached && isDebug) {

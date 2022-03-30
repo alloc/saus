@@ -1,9 +1,9 @@
-import AnsiConverter from 'ansi-to-html'
 import { matchRoute, RuntimeConfig, SausContext } from '../core'
 import { applyHtmlProcessors } from '../core/html'
 import { loadRenderers } from '../core/loadRenderers'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { resetExports } from '../vm/moduleMap'
+import { renderErrorFallback } from './errorFallback'
 import { RenderPageOptions } from './types'
 
 export type ServePageFn = (url: string) => Promise<ServedPage | undefined>
@@ -20,7 +20,8 @@ export type ServedPage = {
  */
 export function createServePageFn(
   context: SausContext,
-  runtimeConfig: RuntimeConfig
+  runtimeConfig: RuntimeConfig,
+  onError: (url: string, e: any) => void
 ): ServePageFn {
   const { config } = context
   const server = context.server!
@@ -87,14 +88,15 @@ export function createServePageFn(
           break
         }
 
-        html ||=
-          `<body><main style="font-size: 20px; padding: 100px">` +
-          ansiToHtml(error.message) +
-          `</main></body>`
-
+        html ||= renderErrorFallback(error, context)
         page = { html, files: [] } as any
+
+        onError(url, error)
       }
       if (page) {
+        if (!Array.isArray(page.files)) {
+          debugger
+        }
         for (const file of page.files) {
           server.servedFiles[file.id] = file
         }
@@ -119,9 +121,4 @@ export function createServePageFn(
       return { error }
     }
   }
-}
-
-function ansiToHtml(input: string) {
-  const convert = new AnsiConverter()
-  return convert.toHtml(input)
 }
