@@ -18,27 +18,14 @@ import { ImporterSet } from './ImporterSet'
 import { overwriteScript } from './overwriteScript'
 import { CompiledModule, Script } from './types'
 
-const ssrCaches = new WeakMap<SausContext, CompileCache>()
-
 export async function compileSsrModule(
   id: string,
   context: SausContext
 ): Promise<CompiledModule | null> {
-  let cache = ssrCaches.get(context)
-  if (!cache) {
-    cache = new CompileCache('node_modules/.saus/ssr', context.root)
-    ssrCaches.set(context, cache)
-
-    // TODO: force empty if config or lockfile were modified
-    if (context.config.server.force) {
-      emptyDir(cache.path)
-    }
-  }
-
   const { config, server } = context
   const { pluginContainer } = server!
 
-  let module = await readSsrModule(id, pluginContainer, cache)
+  let module = await readSsrModule(id, pluginContainer, context.compileCache)
 
   const importMeta = {
     url: toDevPath(id, context.root),
@@ -81,7 +68,7 @@ async function readSsrModule(
 
   const cacheKey = cache.key(
     typeof loaded == 'string' ? loaded : loaded.code,
-    basename(filename)
+    'ssr/' + basename(filename)
   )
 
   const cached = await cache.get(cacheKey, filename)
