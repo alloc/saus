@@ -17,18 +17,8 @@ type FileMappings = Record<string, string> & {
  */
 export class CompileCache {
   protected worker: Promise<WorkerPool<Commands>>
-  protected fileMappings: FileMappings
 
   constructor(readonly name: string, private root: string) {
-    const fileMappingsPath = path.join(this.path, '_mappings.json')
-    try {
-      this.fileMappings = JSON.parse(fs.readFileSync(fileMappingsPath, 'utf8'))
-    } catch {
-      this.fileMappings = {} as any
-    }
-    Object.defineProperty(this.fileMappings, '_path', {
-      value: fileMappingsPath,
-    })
     this.worker = loadTinypool().then(Tinypool => {
       return new Tinypool({
         filename: path.resolve(__dirname, 'utils/CompileCache/worker.js'),
@@ -50,16 +40,10 @@ export class CompileCache {
   }
 
   async get(key: string, filename?: string) {
-    const pool = await this.worker
     if (filename) {
-      const oldKey = this.fileMappings[filename]
-      this.fileMappings[filename] = key
-      writeFileMappings(this.fileMappings, this.path)
-      if (oldKey) {
-        pool.run(['forget', oldKey])
-      }
+      filename = path.relative(this.root, filename)
     }
-    return pool.run(['read', key])
+    return (await this.worker).run(['read', key, filename])
   }
 
   async set(key: string, content: string) {
@@ -80,9 +64,3 @@ export class CompileCache {
     return (await this.worker).run(['unlock'])
   }
 }
-
-const writeFileMappings = debounce((fileMappings: any, cacheDir: string) => {
-  const fileMappingsPath = fileMappings._path
-  fs.mkdirSync(path.dirname(fileMappingsPath), { recursive: true })
-  fs.writeFileSync(fileMappingsPath, JSON.stringify(fileMappings, null, 2))
-})

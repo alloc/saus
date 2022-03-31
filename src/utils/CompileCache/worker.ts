@@ -5,8 +5,21 @@ import fs from 'fs'
 import { readFile } from 'fs/promises'
 import { debug } from '../../core/debug'
 import { plural } from '../plural'
+import { debounce } from 'ts-debounce'
 
 const { cacheDir } = workerData as { cacheDir: string }
+const fileMappingsPath = path.join(cacheDir, '_mappings.json')
+
+let fileMappings: Record<string, string>
+try {
+  fileMappings = JSON.parse(fs.readFileSync(fileMappingsPath, 'utf8'))
+} catch {
+  fileMappings = {}
+}
+
+const reverseFileMappings = Object.fromEntries(
+  Object.keys(fileMappings).map(file => [fileMappings[file], file])
+)
 
 /** These files should not be deleted when the process exits. */
 const usedFiles = new Set<string>()
@@ -31,25 +44,45 @@ const commands = {
   keep(file: string) {
     usedFiles.add(file)
   },
-  async read(file: string) {
+  async read(key: string, sourcePath?: string) {
+    if (sourcePath) {
+      const oldKey = fileMappings[sourcePath]
+      if (oldKey) {
+        this.forget(oldKey)
+      }
+      reverseFileMappings[key] = sourcePath
+      writeFileMappings()
+    }
     let content: string | undefined
     try {
-      content = await readFile(path.join(cacheDir, file), 'utf8')
-      usedFiles.add(file)
+      content = await readFile(path.join(cacheDir, key), 'utf8')
+      usedFiles.add(key)
     } catch {}
     return content
   },
-  write(file: string, content: string) {
-    const filePath = path.join(cacheDir, file)
-    fs.mkdirSync(path.dirname(filePath), { recursive: true })
-    fs.writeFileSync(filePath, content)
-    usedFiles.add(file)
+  write(key: string, content: string) {
+    const cachePath = path.join(cacheDir, key)
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true })
+    fs.writeFileSync(cachePath, content)
+    usedFiles.add(key)
+    const sourcePath = reverseFileMappings[key]
+    if (sourcePath) {
+      fileMappings[sourcePath] = key
+    }
   },
-  forget(file: string) {
-    fs.unlinkSync(path.join(cacheDir, file))
-    usedFiles.delete(file)
+  forget(key: string) {
+    fs.unlinkSync(path.join(cacheDir, key))
+    const sourcePath = reverseFileMappings[key]
+    delete fileMappings[sourcePath]
+    delete reverseFileMappings[key]
+    usedFiles.delete(key)
   },
 }
+
+const writeFileMappings = debounce(() => {
+  fs.mkdirSync(path.dirname(fileMappingsPath), { recursive: true })
+  fs.writeFileSync(fileMappingsPath, JSON.stringify(fileMappings, null, 2))
+})
 
 // Remove unused files on exit, but only when exiting without error.
 addExitCallback((_signal, _code, error) => {
@@ -60,8 +93,8 @@ addExitCallback((_signal, _code, error) => {
     const prefix = path.relative(cacheDir, dir)
     for (let file of fs.readdirSync(dir)) {
       file = path.join(prefix, file)
-      if (usedFiles.has(file)) {
-        continue
+      if (reverseFileMappings[file]) {
+        continue // Preserve the cached file if still needed.
       }
       try {
         crawl(path.join(cacheDir, file), onFile)
