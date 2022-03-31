@@ -89,28 +89,28 @@ export async function renderPage(
   const pageRenderPath = pageUrl.path
   const pagePublicPath = base + pageRenderPath.slice(1)
 
-  let page: InternalPage | null = null
-  try {
-    if (renderStart && context.getCachedPage(pageUrl.path)) {
-      renderStart(pagePublicPath)
-    }
-    page = await requestPage(pageUrl, {
-      ...renderOptions,
-      renderStart: renderStart && (() => renderStart(pagePublicPath)),
-      // Prepare the page context with isolated modules.
-      async setup(pageContext) {
-        ssrClearCache()
-        defineClientEntry({
-          BASE_URL: isDebug ? debugBase : base,
-        })
-        context.renderers = []
-        context.defaultRenderer = undefined
-        context.beforeRenderHooks = []
-        await loadRenderers(pageRenderPath)
-        Object.assign(pageContext, context)
-      },
-    })
-  } catch (error: any) {
+  if (renderStart && context.getCachedPage(pageUrl.path)) {
+    renderStart(pagePublicPath)
+  }
+
+  const [page, error] = await requestPage(pageUrl, {
+    ...renderOptions,
+    renderStart: renderStart && (() => renderStart(pagePublicPath)),
+    // Prepare the page context with isolated modules.
+    async setup(pageContext) {
+      ssrClearCache()
+      defineClientEntry({
+        BASE_URL: isDebug ? debugBase : base,
+      })
+      context.renderers = []
+      context.defaultRenderer = undefined
+      context.beforeRenderHooks = []
+      await loadRenderers(pageRenderPath)
+      Object.assign(pageContext, context)
+    },
+  })
+
+  if (error) {
     if (renderFinish) {
       renderFinish(pagePublicPath, error)
       return null
