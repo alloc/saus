@@ -2,7 +2,8 @@ import callsites from 'callsites'
 import { SourceMapConsumer } from 'source-map'
 import { SourceMap } from './sourceMap'
 
-const stackFrameRE = /^ {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?)\)?/
+const stackFrameRE =
+  /^ {4}at (?:(.+?)\s+\()?(?:(?:async )?(.+?):(\d+)(?::(\d+))?)\)?/
 
 export type StackTrace = {
   header: string
