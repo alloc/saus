@@ -84,8 +84,8 @@ async function readSsrModule(
     basename(filename)
   )
 
-  const cached = cache.get(cacheKey)
-  if (cached !== null) {
+  const cached = await cache.get(cacheKey, filename)
+  if (cached !== undefined) {
     loaded = cached
   }
 
@@ -95,7 +95,7 @@ async function readSsrModule(
       : loaded
   ) as Script
 
-  if (cached !== null) {
+  if (cached !== undefined) {
     return script
   }
 
@@ -129,6 +129,6 @@ async function readSsrModule(
     map: editor.generateMap({ hires: true }),
   })
 
-  cache.set(cacheKey, script.code + toInlineSourceMap(script.map!))
+  await cache.set(cacheKey, script.code + toInlineSourceMap(script.map!))
   return script
 }

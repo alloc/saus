@@ -30,6 +30,7 @@ import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
 import { prependBase } from './utils/prependBase'
+import { loadTinypool } from './utils/tinypool'
 
 export type FailedPage = { path: string; reason: string }
 export type BuildResult = { pages: RenderedPage[]; errors: FailedPage[] }
@@ -79,13 +80,13 @@ async function buildPages(
 
   const mapFile = bundleFile + '.map'
   if (map) {
-    context.compileCache.set(mapFile, JSON.stringify(map))
+    await context.compileCache.set(mapFile, JSON.stringify(map))
     code += '\n//# sourceMappingURL=' + mapFile
   }
 
-  const filename = context.compileCache.set(bundleFile, code)
+  const filename = await context.compileCache.set(bundleFile, code)
   if (options.bundlePath == filename) {
-    context.compileCache.used.add(mapFile)
+    await context.compileCache.keep(mapFile)
   }
 
   const buildOptions = context.config.build
@@ -139,11 +140,7 @@ async function buildPages(
       renderPage: loadPageFactory(workerData),
     }
   } else {
-    // Tinypool is ESM only, so use dynamic import to load it.
-    const dynamicImport = (0, eval)('id => import(id)')
-    const WorkerPool = (
-      (await dynamicImport('tinypool')) as typeof import('tinypool')
-    ).default
+    const WorkerPool = await loadTinypool()
 
     // https://github.com/debug-js/debug/issues/739#issuecomment-573442834
     if (process.env.DEBUG) {

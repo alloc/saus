@@ -1,9 +1,13 @@
-import fs from 'fs'
 import md5Hex from 'md5-hex'
+import fs from 'fs'
 import path from 'path'
-import { addExitCallback } from 'catch-exit'
-import { debug } from '../core/debug'
-import { plural } from './plural'
+import { loadTinypool, WorkerPool } from './tinypool'
+import { Commands } from './CompileCache/worker'
+import { debounce } from 'ts-debounce'
+
+type FileMappings = Record<string, string> & {
+  _path: string
+}
 
 /**
  * For caching compiled files on disk by the hash of their
@@ -12,55 +16,73 @@ import { plural } from './plural'
  * prevent clean up in the case of unexpected errors.
  */
 export class CompileCache {
-  used = new Set<string>()
+  protected worker: Promise<WorkerPool<Commands>>
+  protected fileMappings: FileMappings
 
   constructor(readonly name: string, private root: string) {
-    // Remove unused files on exit, but only when exiting without error.
-    addExitCallback((_signal, _code, error) => {
-      if (error || this.locked || !this.used.size) {
-        return
-      }
-      try {
-        const cacheDir = this.path
-        const cacheList = fs.readdirSync(cacheDir)
-        const numPurged = cacheList.reduce((count, key) => {
-          if (!this.used.has(key)) {
-            fs.unlinkSync(path.join(cacheDir, key))
-            count += 1
-          }
-          return count
-        }, 0)
-        debug(`Purged ${plural(numPurged, 'compiled file')} that went unused`)
-      } catch {}
+    const fileMappingsPath = path.join(this.path, '_mappings.json')
+    try {
+      this.fileMappings = JSON.parse(fs.readFileSync(fileMappingsPath, 'utf8'))
+    } catch {
+      this.fileMappings = {} as any
+    }
+    Object.defineProperty(this.fileMappings, '_path', {
+      value: fileMappingsPath,
+    })
+    this.worker = loadTinypool().then(Tinypool => {
+      return new Tinypool({
+        filename: path.resolve(__dirname, 'utils/CompileCache/worker.js'),
+        concurrentTasksPerWorker: Infinity,
+        idleTimeout: Infinity,
+        maxThreads: 1,
+        workerData: { cacheDir: this.path },
+      })
     })
   }
-
-  /** When true, the cache won't delete unused files on process exit. */
-  locked = false
 
   get path() {
     return path.join(this.root, this.name)
   }
 
-  key(code: string, name = '') {
-    const hash = code && md5Hex(code).slice(0, name ? 8 : 16)
-    return name + (code ? (name ? '.' : '') + hash : '') + '.js'
+  key(content: string, name = '') {
+    const hash = content && md5Hex(content).slice(0, name ? 8 : 16)
+    return name + (content ? (name ? '.' : '') + hash : '') + '.js'
   }
 
-  get(key: string) {
-    let content: string | null = null
-    try {
-      content = fs.readFileSync(path.join(this.path, key), 'utf8')
-      this.used.add(key)
-    } catch {}
-    return content
+  async get(key: string, filename?: string) {
+    const pool = await this.worker
+    if (filename) {
+      const oldKey = this.fileMappings[filename]
+      this.fileMappings[filename] = key
+      writeFileMappings(this.fileMappings, this.path)
+      if (oldKey) {
+        pool.run(['forget', oldKey])
+      }
+    }
+    return pool.run(['read', key])
   }
 
-  set(key: string, code: string) {
-    const filename = path.join(this.path, key)
-    fs.mkdirSync(path.dirname(filename), { recursive: true })
-    fs.writeFileSync(filename, code)
-    this.used.add(key)
-    return filename
+  async set(key: string, content: string) {
+    return (await this.worker)
+      .run(['write', key, content])
+      .then(() => path.join(this.path, key))
+  }
+
+  async keep(key: string) {
+    return (await this.worker).run(['keep', key])
+  }
+
+  async lock() {
+    return (await this.worker).run(['lock'])
+  }
+
+  async unlock() {
+    return (await this.worker).run(['unlock'])
   }
 }
+
+const writeFileMappings = debounce((fileMappings: any, cacheDir: string) => {
+  const fileMappingsPath = fileMappings._path
+  fs.mkdirSync(path.dirname(fileMappingsPath), { recursive: true })
+  fs.writeFileSync(fileMappingsPath, JSON.stringify(fileMappings, null, 2))
+})

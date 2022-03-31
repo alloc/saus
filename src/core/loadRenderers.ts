@@ -22,7 +22,7 @@ export async function loadRenderers(context: SausContext) {
   const time = Date.now()
   const moduleMap = context.server?.moduleMap || {}
 
-  context.compileCache.locked = true
+  context.compileCache.lock()
   const renderModule =
     moduleMap[context.renderPath] ||
     (await compileRenderModule(context, moduleMap))
@@ -34,12 +34,13 @@ export async function loadRenderers(context: SausContext) {
   })
   try {
     await executeModule(renderModule)
-    context.compileCache.locked = false
+    context.compileCache.unlock()
     Object.assign(context, renderConfig)
-    const rendererCount =
-      context.renderers.length + (context.defaultRenderer ? 1 : 0)
     debug(
-      `Loaded ${plural(rendererCount, 'renderer')} in ${Date.now() - time}ms`
+      `Loaded ${plural(
+        context.renderers.length + (context.defaultRenderer ? 1 : 0),
+        'renderer'
+      )} in ${Date.now() - time}ms`
     )
     loading.resolve()
   } catch (error: any) {
