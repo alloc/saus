@@ -23,7 +23,7 @@ import { clientDir, globalCachePath, runtimeDir } from './core/paths'
 import { createRenderPageFn } from './pages/renderPage'
 import { createServePageFn } from './pages/servePage'
 import { defineClientContext } from './plugins/clientContext'
-import { serveClientEntries, getClientUrl } from './plugins/clientEntries'
+import { getClientUrl, serveClientEntries } from './plugins/clientEntries'
 import { transformClientState } from './plugins/clientState'
 import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
@@ -38,7 +38,6 @@ import { purgeModule, resetModuleAndImporters } from './vm/moduleMap'
 import {
   CompiledModule,
   isLinkedModule,
-  LinkedModule,
   ModuleMap,
   ResolveIdHook,
 } from './vm/types'
@@ -202,19 +201,9 @@ async function startServer(
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
-  } catch (error: any) {
-    // Babel errors use `.id` and Saus VM uses `.file`
-    const filename = error.id || error.file
-    if (filename) {
-      events.emit('error', error)
-      waitForChanges(filename, server, events, async () => {
-        await server.close().catch(e => events.emit('error', e))
-        events.emit('restart')
-      })
-      return null
-    }
-    throw error
-  }
+  } catch {}
+
+  const failedPages = new Set<string>()
 
   // This runs on server startup and whenever the routes and/or
   // renderers are reloaded.
@@ -238,7 +227,9 @@ async function startServer(
       undefined,
       e => events.emit('error', e)
     )
-    server.servePage = createServePageFn(context, runtimeConfig)
+    server.servePage = createServePageFn(context, runtimeConfig, url =>
+      failedPages.add(url)
+    )
     context.plugins = await getSausPlugins(context)
   }
 
@@ -343,6 +334,15 @@ async function startServer(
 
     context.reloading.resolve()
     context.reloading = undefined
+
+    const reloadedPages = Array.from(failedPages)
+    failedPages.clear()
+    reloadedPages.forEach(pagePath => {
+      server.ws?.send({
+        type: 'full-reload',
+        path: pagePath,
+      })
+    })
   }, 50)
 
   watcher.prependListener('change', async file => {
