@@ -56,15 +56,26 @@ addExitCallback((_signal, _code, error) => {
   if (error || cacheIsLocked || !usedFiles.size) {
     return
   }
-  try {
-    const cacheList = fs.readdirSync(cacheDir)
-    const numPurged = cacheList.reduce((count, key) => {
-      if (!usedFiles.has(key)) {
-        fs.unlinkSync(path.join(cacheDir, key))
-        count += 1
+  const crawl = (dir: string, onFile: (file: string) => void) => {
+    const prefix = path.relative(cacheDir, dir)
+    for (let file of fs.readdirSync(dir)) {
+      file = path.join(prefix, file)
+      if (usedFiles.has(file)) {
+        continue
       }
-      return count
-    }, 0)
+      try {
+        crawl(path.join(cacheDir, file), onFile)
+      } catch {
+        onFile(file)
+      }
+    }
+  }
+  try {
+    let numPurged = 0
+    crawl(cacheDir, file => {
+      fs.unlinkSync(path.join(cacheDir, file))
+      numPurged++
+    })
     debug(`Purged ${plural(numPurged, 'compiled file')} that went unused`)
   } catch {}
 })
