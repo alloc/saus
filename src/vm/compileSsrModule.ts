@@ -95,8 +95,12 @@ async function readSsrModule(
     script = transformed as Script
   }
 
-  if (script.map && !script.map.sources) {
-    script.map = undefined
+  if (script.map) {
+    if (script.map.sources) {
+      script.map.sources[0] = filename
+    } else {
+      script.map = undefined
+    }
   }
 
   const esmHelpers = new Set<Function>()
