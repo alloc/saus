@@ -201,7 +201,9 @@ async function startServer(
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
-  } catch {}
+  } catch (e: any) {
+    events.emit('error', e)
+  }
 
   const failedPages = new Set<string>()
 
