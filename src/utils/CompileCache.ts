@@ -28,7 +28,9 @@ export class CompileCache {
       sourcePath = path.relative(this.root, sourcePath)
       const oldKey = this.fileMappings[sourcePath]
       if (oldKey) {
-        fs.unlinkSync(path.join(this.path, oldKey))
+        try {
+          fs.unlinkSync(path.join(this.path, oldKey))
+        } catch {}
       }
       this.fileMappings[sourcePath] = key
       saveFileMappings(this.fileMappings)
