@@ -18,9 +18,9 @@ export function renderErrorFallback(error: any, context: SausContext) {
   const stack = parseStackTrace(error.stack).frames.map(frame => {
     const file = frame.file + ':' + frame.line + ':' + (frame.column + 1)
     return (
-      `<div class="stack-frame">` +
+      `<div class="stack-frame"><span>` +
       frame.text.replace(file, createFileLink(file, context.root)) +
-      `</div>`
+      `</span></div>`
     )
   })
 

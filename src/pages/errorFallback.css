@@ -43,16 +43,19 @@ svg.waiting {
 
 .stack-frame {
   font-size: 13px;
-  white-space: nowrap;
-  display: inline-block;
   line-height: 150%;
+}
+
+.stack-frame span {
+  display: inline-block;
+  white-space: nowrap;
   margin: 0 30px;
 }
 
-.file-link {
+a {
   color: #4e90a7;
 }
 
-.file-link:hover {
+a:hover {
   color: #92cbe0;
 }
