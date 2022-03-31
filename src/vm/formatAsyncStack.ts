@@ -26,24 +26,28 @@ export function formatAsyncStack(
   })
 
   const stack = parseStackTrace(error.stack)
-  asyncStack = asyncStack.filter(Boolean)
 
-  let relevantFrames =
-    error.code == 'MODULE_NOT_FOUND'
-      ? (asyncStack as StackFrame[])
-      : stack.frames
-          .slice(error.framesToPop || 0)
-          .filter(frame => !ignoredFrameRE.test(frame.file))
-          .concat(asyncStack as StackFrame[])
+  let relevantFrames: StackFrame[]
+  if (process.env.DEBUG) {
+    relevantFrames = stack.frames.concat(getTruthyItems(asyncStack))
+  } else {
+    relevantFrames =
+      error.code == 'MODULE_NOT_FOUND'
+        ? getTruthyItems(asyncStack)
+        : stack.frames
+            .slice(error.framesToPop || 0)
+            .filter(frame => !ignoredFrameRE.test(frame.file))
+            .concat(getTruthyItems(asyncStack))
 
-  if (filterStack)
-    relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
-  relevantFrames = relevantFrames.slice(0, 10)
+    if (filterStack)
+      relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
+    relevantFrames = relevantFrames.slice(0, 10)
 
-  // If no relevant frames exist after filtering, or the only remaining
-  // frames are related to Vite internals, abort the stack rewrite.
-  if (!relevantFrames.filter(f => !isViteInternal(f)).length) {
-    return
+    // If no relevant frames exist after filtering, or the only remaining
+    // frames are related to Vite internals, abort the stack rewrite.
+    if (!relevantFrames.filter(f => !isViteInternal(f)).length) {
+      return
+    }
   }
 
   // Remove the require stack added by Node.
@@ -109,4 +113,8 @@ export function traceDynamicImport(error: any, skip = 0) {
 
 function isViteInternal({ file }: StackFrame) {
   return file.includes('/vite/dist/')
+}
+
+function getTruthyItems<T>(arr: readonly T[]) {
+  return arr.filter(Boolean) as Exclude<T, false | null | undefined>[]
 }
