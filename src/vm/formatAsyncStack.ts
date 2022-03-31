@@ -27,43 +27,64 @@ export function formatAsyncStack(
 
   const stack = parseStackTrace(error.stack)
 
-  let relevantFrames: StackFrame[]
-  if (process.env.DEBUG) {
-    relevantFrames = stack.frames.concat(getTruthyItems(asyncStack))
-  } else {
-    relevantFrames =
-      error.code == 'MODULE_NOT_FOUND'
-        ? getTruthyItems(asyncStack)
-        : stack.frames
-            .slice(error.framesToPop || 0)
-            .filter(frame => !ignoredFrameRE.test(frame.file))
-            .concat(getTruthyItems(asyncStack))
+  let relevantFrames =
+    error.code == 'MODULE_NOT_FOUND'
+      ? []
+      : process.env.DEBUG
+      ? stack.frames
+      : stack.frames
+          .slice(error.framesToPop || 0)
+          .filter(frame => !ignoredFrameRE.test(frame.file))
 
-    if (filterStack)
-      relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
-    relevantFrames = relevantFrames.slice(0, 10)
+  // Async frames are omitted if their file/line pair exists
+  // already in the synchronous stack trace.
+  const syncFrameIds = new Set<string>()
 
-    // If no relevant frames exist after filtering, or the only remaining
-    // frames are related to Vite internals, abort the stack rewrite.
-    if (!relevantFrames.filter(f => !isViteInternal(f)).length) {
-      return
+  for (const frame of relevantFrames) {
+    const module = moduleMap[frame.file]
+    if (module?.map) {
+      traceStackFrame(frame, module.map)
     }
+    syncFrameIds.add(frame.file + ':' + frame.line)
+  }
+
+  for (const frame of asyncStack) {
+    if (!frame) continue
+    const module = moduleMap[frame.file]
+    if (module?.map) {
+      traceStackFrame(frame, module.map)
+    }
+    if (!syncFrameIds.has(frame.file + ':' + frame.line)) {
+      relevantFrames.push(frame)
+    }
+  }
+
+  if (!process.env.DEBUG) {
+    // Allow user-defined stack filtering.
+    if (filterStack) {
+      relevantFrames = relevantFrames.filter(frame => filterStack(frame.file))
+    }
+    // Shorten the stack trace.
+    relevantFrames = relevantFrames.slice(0, 10)
+  }
+
+  // If no relevant frames exist after filtering, or the only remaining
+  // frames are related to Vite internals, abort the stack rewrite.
+  if (relevantFrames.every(isViteInternal)) {
+    return
   }
 
   // Remove the require stack added by Node.
   stack.header = stack.header.replace(/\nRequire stack:\n.+$/, '')
 
+  const omittedScopeRE = /async __compiledModule \((.+?)\)/
   const tracedFrames = relevantFrames
-    .map(frame => {
-      const module = moduleMap[frame.file]
-      if (module?.map) {
-        traceStackFrame(frame, module.map)
-      }
-      return frame.text.replace(/ __compiledModule \((.+?)\)/, ' $1')
-    })
+    .map(frame => frame.text.replace(omittedScopeRE, ' $1'))
     .join('\n')
 
-  if (!relevantFrames[0].file.includes('/vite/')) {
+  // Append a code snippet to the error message, but only if
+  // the first frame is unrelated to Vite internals.
+  if (!isViteInternal(relevantFrames[0])) {
     let file: string | undefined
     let location: SourceLocation | undefined
     if (error instanceof SyntaxError) {
