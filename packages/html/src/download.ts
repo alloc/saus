@@ -17,10 +17,10 @@ import { $ } from './selector'
 import { traverseHtml } from './traversal'
 import { HtmlDocument, HtmlVisitorState } from './types'
 
-type DataPromise = Promise<string | Buffer>
+type ContentPromise = Promise<string | Buffer>
 type ReplicaListener = (replicaUrl: string) => void
-type Replica = [ReplicaListener[], string | null]
-type File = [source: string, dataPromise: DataPromise, replica: Replica]
+type Replica = [ReplicaListener[], string | null, any?]
+type File = [url: string, promise: ContentPromise, replica: Replica]
 
 export type DownloadOptions = {
   timeout?: number
@@ -73,8 +73,8 @@ function installHtmlHook({
   function loadFile(
     url: string,
     document: HtmlDocument,
-    fetch: (url: string, document: HtmlDocument) => DataPromise,
-    onReplicate: (replicaUrl: string) => void
+    fetch: (url: string, document: HtmlDocument) => ContentPromise,
+    onLoad: (replicaUrl: string) => void
   ) {
     if (skip(url)) {
       return debug(`skipped asset: %O`, url)
@@ -88,18 +88,43 @@ function installHtmlHook({
     if (replica) {
       const [listeners, replicaUrl] = replica
       if (replicaUrl) {
-        onReplicate(replicaUrl)
+        onLoad(replicaUrl)
       } else {
-        listeners.push(onReplicate)
+        listeners.push(onLoad)
       }
     } else {
       debug(`loading asset: %O`, url)
-      const dataPromise = fetch(url, document)
+      const contentPromise = limitTime(
+        fetch(url, document),
+        options.timeout ?? 0,
+        `Asset "${url}" is loading too slow`
+      )
 
-      replica = [[onReplicate], null]
+      replica = [[onLoad], null]
       replicasByUrl.set(url, replica)
 
-      const file: File = [url, dataPromise, replica]
+      contentPromise.then(
+        async content => {
+          debug(`loaded asset: %O`, url)
+          const { config } = document.state
+
+          const fileType = path.extname(filePath)
+          const contentHash = md5Hex(content).slice(0, 8)
+          const fileName = path.posix.join(
+            config.assetsDir,
+            filePath.slice(1, -fileType.length) + `.${contentHash}${fileType}`
+          )
+
+          const replicaUrl = config.base + fileName
+          replica![0].forEach(onLoad => onLoad(replicaUrl))
+          replica![1] = fileName
+          replica![2] = content
+        },
+        // Ignore unhandled rejections.
+        () => {}
+      )
+
+      const file: File = [url, contentPromise, replica]
       const filePath = toFilePath(url)
       files.set(filePath, file)
       schedule?.([filePath, file])
@@ -112,7 +137,6 @@ function installHtmlHook({
         // Don't await file promises until the entire document is processed.
         // This allows other HTML manipulation to occur while downloading.
         async close(tag, state) {
-          const { config } = state
           const files = filesByDocument.get(tag.document)
           if (!files || !files.size) {
             return
@@ -120,25 +144,11 @@ function installHtmlHook({
 
           let numReplicated = 0
           async function replicate(entry: [string, File]) {
-            const [filePath, [source, loading, replica]] = entry
-            const ext = path.extname(filePath)
+            const [, loading, replica] = entry[1]
             try {
-              const content = await limitTime(
-                loading,
-                options.timeout ?? 0,
-                `Asset "${source}" is loading too slow`
-              )
-              const contentHash = md5Hex(content).slice(0, 8)
-              const fileName = path.posix.join(
-                config.assetsDir,
-                `${filePath.slice(1, -ext.length)}.${contentHash}${ext}`
-              )
-
-              const replicaUrl = config.base + fileName
-              replica[0].forEach(onReplicate => onReplicate(replicaUrl))
-              replica[1] = replicaUrl
-
-              await writeFile(fileName, content, state)
+              await loading
+              const fileName = replica[1]!
+              await writeFile(fileName, replica[2], state)
               onWriteFile?.(fileName)
               numReplicated += 1
             } catch (err) {
@@ -189,7 +199,6 @@ function installHtmlHook({
       cssUrl,
       assetUrl =>
         new Promise<string>(setAssetUrl => {
-          debug(`asset "%s" imported by %s`, assetUrl, cssUrl)
           loadFile(assetUrl, document, fetch, setAssetUrl)
         })
     )
