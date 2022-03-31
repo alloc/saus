@@ -1,6 +1,7 @@
 import * as babel from '@babel/core'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
+import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import md5Hex from 'md5-hex'
@@ -629,8 +630,8 @@ function wrapAsyncInit(): vite.Plugin {
     renderChunk(code) {
       const editor = new MagicString(code)
 
-      const lastImport = parseImports(code).pop()
-      const lastImportEnd = lastImport?.end || 0
+      const imports = esModuleLexer.parse(code)[0]
+      const lastImportEnd = imports[imports.length - 1]?.se || 0
       const semiPrefix = code[lastImportEnd - 1] == ';' ? '' : ';'
       editor.appendRight(lastImportEnd, `\n${semiPrefix}(async () => {`)
       editor.append(`\n})()`)
