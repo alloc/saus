@@ -1,13 +1,7 @@
 import md5Hex from 'md5-hex'
 import fs from 'fs'
 import path from 'path'
-import { loadTinypool, WorkerPool } from './tinypool'
-import { Commands } from './CompileCache/worker'
-import { debounce } from 'ts-debounce'
-
-type FileMappings = Record<string, string> & {
-  _path: string
-}
+import { loadFileMappings, saveFileMappings } from './CompileCache/fileMappings'
 
 /**
  * For caching compiled files on disk by the hash of their
@@ -16,19 +10,9 @@ type FileMappings = Record<string, string> & {
  * prevent clean up in the case of unexpected errors.
  */
 export class CompileCache {
-  protected worker: Promise<WorkerPool<Commands>>
+  protected fileMappings = loadFileMappings(this.path)
 
-  constructor(readonly name: string, private root: string) {
-    this.worker = loadTinypool().then(Tinypool => {
-      return new Tinypool({
-        filename: path.resolve(__dirname, 'utils/CompileCache/worker.js'),
-        concurrentTasksPerWorker: Infinity,
-        idleTimeout: Infinity,
-        maxThreads: 1,
-        workerData: { cacheDir: this.path },
-      })
-    })
-  }
+  constructor(readonly name: string, private root: string) {}
 
   get path() {
     return path.join(this.root, this.name)
@@ -39,28 +23,25 @@ export class CompileCache {
     return name + (content ? (name ? '.' : '') + hash : '') + '.js'
   }
 
-  async get(key: string, filename?: string) {
-    if (filename) {
-      filename = path.relative(this.root, filename)
+  get(key: string, sourcePath?: string) {
+    if (sourcePath) {
+      sourcePath = path.relative(this.root, sourcePath)
+      const oldKey = this.fileMappings[sourcePath]
+      if (oldKey) {
+        fs.unlinkSync(path.join(this.path, oldKey))
+      }
+      this.fileMappings[sourcePath] = key
+      saveFileMappings(this.fileMappings)
     }
-    return (await this.worker).run(['read', key, filename])
+    try {
+      return fs.readFileSync(path.join(this.path, key), 'utf8')
+    } catch {}
   }
 
-  async set(key: string, content: string) {
-    return (await this.worker)
-      .run(['write', key, content])
-      .then(() => path.join(this.path, key))
-  }
-
-  async keep(key: string) {
-    return (await this.worker).run(['keep', key])
-  }
-
-  async lock() {
-    return (await this.worker).run(['lock'])
-  }
-
-  async unlock() {
-    return (await this.worker).run(['unlock'])
+  set(key: string, content: string) {
+    const filePath = path.join(this.path, key)
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, content)
+    return filePath
   }
 }

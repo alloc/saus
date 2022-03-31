@@ -78,15 +78,14 @@ async function buildPages(
           context
         )
 
-  const mapFile = bundleFile + '.map'
-  if (map) {
-    await context.compileCache.set(mapFile, JSON.stringify(map))
-    code += '\n//# sourceMappingURL=' + mapFile
+  if (!cached) {
+    context.compileCache.set(bundleFile, code)
   }
 
-  const filename = await context.compileCache.set(bundleFile, code)
-  if (options.bundlePath == filename) {
-    await context.compileCache.keep(mapFile)
+  const mapFile = bundleFile + '.map'
+  if (map) {
+    context.compileCache.set(mapFile, JSON.stringify(map))
+    code += '\n//# sourceMappingURL=' + mapFile
   }
 
   const buildOptions = context.config.build

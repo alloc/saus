@@ -26,7 +26,6 @@ export async function loadRoutes(
   const { require, ssrRequire } =
     context.server || getRequireFunctions(context, resolveId, moduleMap)
 
-  context.compileCache.lock()
   const routesModule =
     moduleMap[context.routesPath] ||
     (await compileRoutesModule(
@@ -48,7 +47,6 @@ export async function loadRoutes(
   })
   try {
     await executeModule(routesModule)
-    context.compileCache.unlock()
 
     // Exclude the routes module from its package, or else it
     // will have its modules cleared when it shouldn't.

@@ -11,7 +11,6 @@ export default defineConfig({
     'src/bundle/html.ts',
     'src/babel/index.ts',
     'src/build/worker.ts',
-    'src/utils/CompileCache/worker.ts',
     // Commands
     'src/build.ts',
     'src/bundle.ts',

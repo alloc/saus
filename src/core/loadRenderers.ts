@@ -22,7 +22,6 @@ export async function loadRenderers(context: SausContext) {
   const time = Date.now()
   const moduleMap = context.server?.moduleMap || {}
 
-  context.compileCache.lock()
   const renderModule =
     moduleMap[context.renderPath] ||
     (await compileRenderModule(context, moduleMap))
@@ -34,7 +33,6 @@ export async function loadRenderers(context: SausContext) {
   })
   try {
     await executeModule(renderModule)
-    context.compileCache.unlock()
     Object.assign(context, renderConfig)
     debug(
       `Loaded ${plural(
