@@ -14,6 +14,7 @@ export function getRequireFunctions(
   const { root, config, compileCache } = context
   const linkedModules = context.server?.linkedModules
   const externalExports = context.server?.externalExports
+  const filterStack = context.config.filterStack
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -32,6 +33,7 @@ export function getRequireFunctions(
       externalExports,
       nodeResolve,
       watchFile,
+      filterStack,
       isCompiledModule,
       compileModule(id) {
         return compileSsrModule(id, context)
@@ -44,6 +46,7 @@ export function getRequireFunctions(
       externalExports,
       nodeResolve,
       watchFile,
+      filterStack,
       isCompiledModule,
       async compileModule(id, require, virtualId) {
         if (virtualId) {
