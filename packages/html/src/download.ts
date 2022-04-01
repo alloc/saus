@@ -19,7 +19,7 @@ import { HtmlDocument, HtmlVisitorState } from './types'
 
 type ContentPromise = Promise<string | Buffer>
 type ReplicaListener = (replicaUrl: string) => void
-type Replica = [ReplicaListener[], string | null, any?]
+type Replica = [queue: ReplicaListener[], fileName?: string, content?: any]
 type File = [url: string, promise: ContentPromise, replica: Replica]
 
 export type DownloadOptions = {
@@ -79,16 +79,20 @@ function installHtmlHook({
     if (skip(url)) {
       return debug(`skipped asset: %O`, url)
     }
+
     let files = filesByDocument.get(document)
     if (!files) {
       files = new Map()
       filesByDocument.set(document, files)
     }
-    let replica = replicasByUrl.get(url)
-    if (replica) {
-      const [listeners, replicaUrl] = replica
-      if (replicaUrl) {
-        onLoad(replicaUrl)
+
+    const { config } = document.state
+
+    const cachedReplica = replicasByUrl.get(url)
+    if (cachedReplica) {
+      const [listeners, fileName] = cachedReplica
+      if (fileName) {
+        onLoad(config.base + fileName)
       } else {
         listeners.push(onLoad)
       }
@@ -100,13 +104,12 @@ function installHtmlHook({
         `Asset "${url}" is loading too slow`
       )
 
-      replica = [[onLoad], null]
+      const replica: Replica = [[onLoad]]
       replicasByUrl.set(url, replica)
 
       contentPromise.then(
         async content => {
           debug(`loaded asset: %O`, url)
-          const { config } = document.state
 
           const fileType = path.extname(filePath)
           const contentHash = md5Hex(content).slice(0, 8)
@@ -116,9 +119,9 @@ function installHtmlHook({
           )
 
           const replicaUrl = config.base + fileName
-          replica![0].forEach(onLoad => onLoad(replicaUrl))
-          replica![1] = fileName
-          replica![2] = content
+          replica[0].forEach(onLoad => onLoad(replicaUrl))
+          replica[1] = fileName
+          replica[2] = content
         },
         // Ignore unhandled rejections.
         () => {}
