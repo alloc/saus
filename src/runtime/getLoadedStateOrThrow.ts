@@ -4,8 +4,8 @@ export function getLoadedStateOrThrow(cacheKey: string, args: any[]) {
   const cached = globalCache.loaded[cacheKey]
   if (!cached) {
     const error = Error(
-      `Failed to access "${cacheKey}" state. ` +
-        `This fragment is not included by the route config.`
+      `Failed to access "${cacheKey}" state module. ` +
+        `Are you sure this route is configured to include it?`
     )
     throw Object.assign(error, { args })
   }

@@ -101,7 +101,7 @@ export function matchRoute(path: string, route: ParsedRoute) {
  * in your Vite config.
  */
 export interface RoutesModule extends HtmlContext {
-  /** State fragments that are loaded by default */
+  /** State modules that are loaded by default */
   defaultState: RouteInclude[]
   /** These hooks are called after the routes module is loaded */
   runtimeHooks: RuntimeHook[]
