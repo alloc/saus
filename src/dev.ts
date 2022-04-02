@@ -273,6 +273,9 @@ async function startServer(
 
     dirtyStateModules.clear()
 
+    const cachedPages =
+      routesChanged || renderersChanged ? await context.getCachedPages() : null!
+
     if (routesChanged) {
       try {
         await loadRoutes(context, resolveId)
@@ -281,9 +284,9 @@ async function startServer(
         changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
 
         // Emit change events for page state modules.
-        for (const page of await context.getCachedPages())
+        for (const [pagePath] of cachedPages)
           changesToEmit.add(
-            '/' + getPageFilename(page.path, context.basePath) + '.js'
+            '/' + getPageFilename(pagePath, context.basePath) + '.js'
           )
       } catch (error: any) {
         routesChanged = false
@@ -312,9 +315,8 @@ async function startServer(
           return events.emit('restart')
         }
 
-        const pages = await context.getCachedPages()
-        for (const page of pages) {
-          if (page.client) {
+        for (const [, [page]] of cachedPages) {
+          if (page?.client) {
             // Ensure client entry modules are updated.
             changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
           }

@@ -1,7 +1,7 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
 import { loadResponseCache, setResponseCache } from '../http/responseCache'
-import type { RenderedPage } from '../pages/types'
+import type { RenderPageResult } from '../pages/types'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
@@ -47,7 +47,8 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   stateModulesByFile: Record<string, string[]>
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
-  getCachedPages: () => Promise<RenderedPage[]>
+  /** Get all cached pages. Loading pages are waited for. */
+  getCachedPages: () => Promise<[string, RenderPageResult][]>
   /** Clear any matching pages (loading or loaded) */
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */
@@ -72,17 +73,24 @@ function createContext(
   configHooks: ConfigHookRef[],
   resolveConfig: SausContext['resolveConfig']
 ): SausContext {
-  const pageCache: Cache<RenderedPage> = {
+  const pageCache: Cache<RenderPageResult> = {
     loading: {},
     loaders: {},
     loaded: {},
   }
 
   async function getCachedPages() {
-    return Object.values(pageCache.loaded)
-      .map(entry => entry[0])
-      .concat(await Promise.all(Object.values(pageCache.loading)))
-      .filter(Boolean)
+    const loaded = Object.entries(pageCache.loaded)
+    const loading = Object.entries(pageCache.loading)
+    const justLoaded = await Promise.all(loading.map(e => e[1]))
+    const cachedPages = new Map<string, RenderPageResult>()
+    for (const [pagePath, [pageResult]] of loaded) {
+      cachedPages.set(pagePath, pageResult)
+    }
+    justLoaded.forEach((pageResult, i) => {
+      cachedPages.set(loading[i][0], pageResult)
+    })
+    return cachedPages
   }
 
   return {

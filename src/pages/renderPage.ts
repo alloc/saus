@@ -35,20 +35,16 @@ import {
   ClientFunction,
   ClientFunctions,
   PageContext,
-  RenderPageContext,
   RenderedPage,
   RenderFunction,
+  RenderPageContext,
+  RenderPageFn,
   RenderPageOptions,
 } from './types'
 
 const debug = createDebug('saus:pages')
 
 const stateModulesMap = new WeakMap<ClientState, string[]>()
-
-export type RenderPageFn = (
-  url: string | ParsedUrl,
-  options?: RenderPageOptions
-) => Promise<[page: RenderedPage | null, error?: any]>
 
 export function createRenderPageFn(
   context: RenderPageContext,

@@ -62,6 +62,13 @@ export interface ProfiledEventHandler {
 // Each page has its own render module in SSR mode.
 export interface PageContext extends RenderModule {}
 
+export type RenderPageFn = (
+  url: string | ParsedUrl,
+  options?: RenderPageOptions
+) => Promise<RenderPageResult>
+
+export type RenderPageResult = [page: RenderedPage | null, error?: any]
+
 export type RenderPageOptions = {
   timeout?: number
   onError?: (error: Error & { url: string }) => void
