@@ -48,7 +48,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
   /** Get all cached pages. Loading pages are waited for. */
-  getCachedPages: () => Promise<[string, RenderPageResult][]>
+  getCachedPages: () => Promise<Map<string, RenderPageResult>>
   /** Clear any matching pages (loading or loaded) */
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */

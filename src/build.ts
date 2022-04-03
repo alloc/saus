@@ -123,7 +123,7 @@ async function buildPages(
   const workerData: BundleDescriptor = {
     root: context.root,
     code,
-    filename,
+    filename: path.join(context.compileCache.path, bundleFile),
     eventPort: undefined!,
     runtimeConfig,
     isProfiling: true,

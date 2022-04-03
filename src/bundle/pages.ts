@@ -4,6 +4,7 @@ import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import { createRenderPageFn } from '../pages/renderPage'
 import { globalCache } from '../runtime/cache'
+import { stateModuleBase } from '../runtime/constants'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
@@ -11,17 +12,19 @@ import { isExternalUrl } from '../utils/isExternalUrl'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 import { removeSourceMapUrls } from '../utils/sourceMap'
 import { ParsedUrl, parseUrl } from '../utils/url'
-import moduleMap from './moduleMap'
-import inlinedModules from './inlinedModules'
+import getAssetLoader from './assetLoader'
 import config from './config'
 import { context } from './context'
-import { applyHtmlProcessors, endent, __exportAll } from './core'
+import { applyHtmlProcessors, endent } from './core'
 import { injectDebugBase } from './debugBase'
 import { defineClientEntry } from './defineClientEntry'
 import functions from './functions'
 import { getModuleUrl } from './getModuleUrl'
 import { injectToBody, injectToHead } from './html/inject'
 import { HtmlTagDescriptor } from './html/types'
+import inlinedModules from './inlinedModules'
+import getModuleLoader from './moduleLoader'
+import moduleMap from './moduleMap'
 import { loadRenderers } from './render'
 import { ssrClearCache, ssrImport } from './ssrModules'
 import {
@@ -30,9 +33,6 @@ import {
   RenderedPage,
   RenderPageOptions,
 } from './types'
-import getModuleLoader from './moduleLoader'
-import getAssetLoader from './assetLoader'
-import { stateModuleBase } from '../runtime/constants'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
@@ -62,8 +62,6 @@ const debugBase = config.debugBase
 
 // Prepended to module IDs in debug view.
 const debugDir = (config.debugBase || '').slice(1)
-
-type InternalPage = import('../pages/types').RenderedPage
 
 export async function renderPage(
   pageUrl: string | ParsedUrl,

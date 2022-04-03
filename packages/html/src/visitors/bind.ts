@@ -11,7 +11,13 @@ import {
   HtmlVisitorState,
 } from '../types'
 
-export type TraverseVisitor = ReturnType<typeof bindVisitors> & {
+export type TraverseVisitor<
+  State extends HtmlVisitor.BaseState = HtmlVisitorState
+> = ([State] extends [Any]
+  ? (html: string, state?: HtmlDocument<State>['state']) => Promise<string>
+  : [State, object] extends [object, State]
+  ? (html: string, state?: HtmlDocument<State>['state']) => Promise<string>
+  : (html: string, state: HtmlDocument<State>['state']) => Promise<string>) & {
   [kVisitorsArray]: HtmlVisitor[]
 }
 
@@ -52,11 +58,7 @@ export function bindVisitors<
    *   - where State is {} or object (the only types that extend `object` and vice versa)
    * In those cases, the `state` argument is optional.
    */
-  return traverse as [State] extends [Any]
-    ? (html: string, state?: DocumentState) => Promise<string>
-    : [State, object] extends [object, State]
-    ? (html: string, state?: DocumentState) => Promise<string>
-    : (html: string, state: DocumentState) => Promise<string>
+  return traverse as TraverseVisitor<State>
 }
 
 // Used for `any` type detection.

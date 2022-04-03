@@ -1,11 +1,10 @@
 import type {
-  Program,
-  Node,
+  ExportNamedDeclaration,
   ImportDeclaration,
   ImportSpecifier,
-  ExportNamedDeclaration,
+  Node,
+  Program,
 } from 'estree'
-import { PartialResolvedId } from 'rollup'
 import type { IsolatedModuleMap } from './isolateRoutes'
 
 /**

@@ -43,7 +43,7 @@ import {
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
-import { parseImports, serializeImports } from './utils/imports'
+import { serializeImports } from './utils/imports'
 import { relativeToCwd } from './utils/relativeToCwd'
 import { resolveMapSources, SourceMap } from './utils/sourceMap'
 import { toDevPath } from './utils/toDevPath'

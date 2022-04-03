@@ -135,7 +135,3 @@ export function traceDynamicImport(error: any, skip = 0) {
 function isViteInternal({ file }: StackFrame) {
   return file.includes('/vite/dist/')
 }
-
-function getTruthyItems<T>(arr: readonly T[]) {
-  return arr.filter(Boolean) as Exclude<T, false | null | undefined>[]
-}

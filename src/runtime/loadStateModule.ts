@@ -29,7 +29,7 @@ export function loadStateModule<T, Args extends any[]>(
     return deepCopy(cached[0])
   }
 
-  async function loadStateModule(cacheControl: CacheControl) {
+  const loadStateModule = async (cacheControl: CacheControl) => {
     debug(`Loading "%s" state`, cacheKey)
     try {
       let result: any = loadImpl.apply(cacheControl, args)

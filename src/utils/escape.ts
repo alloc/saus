@@ -1,6 +1,9 @@
 // Adapted from the `escape-goat` package.
 
-export function escape(strings: TemplateStringsArray, ...values: any[]) {
+export function escape(
+  strings: string | TemplateStringsArray,
+  ...values: any[]
+) {
   if (typeof strings === 'string') {
     return escapeHtml(strings)
   }

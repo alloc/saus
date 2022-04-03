@@ -1,4 +1,4 @@
-import { EnforcementPhase, findHtmlProcessor } from 'saus/core'
+import { EnforcementPhase } from 'saus/core'
 import { kVisitorsArray } from './symbols'
 import { findTraverseVisitor, traverseHtml } from './traversal'
 import {
@@ -7,7 +7,6 @@ import {
   HtmlTagPath,
   HtmlVisitor,
 } from './types'
-import { TraverseVisitor } from './visitors/bind'
 
 const kResolverList = Symbol.for('html.ResolverList')
 

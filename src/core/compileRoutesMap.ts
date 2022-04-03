@@ -1,7 +1,6 @@
-import fs from 'fs'
-import path from 'path'
 import { warn } from 'misty'
-import { babel, getBabelConfig, t } from '../babel'
+import path from 'path'
+import { babel, t } from '../babel'
 import { SausContext } from './context'
 
 export const routeMarker = '__sausRoute'
