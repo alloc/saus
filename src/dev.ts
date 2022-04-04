@@ -38,6 +38,7 @@ import { purgeModule, resetModuleAndImporters } from './vm/moduleMap'
 import {
   CompiledModule,
   isLinkedModule,
+  LinkedModule,
   ModuleMap,
   ResolveIdHook,
 } from './vm/types'
@@ -239,6 +240,7 @@ async function startServer(
 
   const dirtyFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
+  const dirtyClientModules = new Set<string>()
 
   const scheduleReload = debounce(async () => {
     // Wait for reloading to finish.
@@ -251,7 +253,9 @@ async function startServer(
 
     let routesChanged = dirtyFiles.has(context.routesPath)
     let renderersChanged = dirtyFiles.has(context.renderPath)
+    let clientEntriesChanged = dirtyClientModules.has(context.renderPath)
     dirtyFiles.clear()
+    dirtyClientModules.clear()
 
     // Track which virtual modules need change events.
     const changesToEmit = new Set<string>()
@@ -315,12 +319,13 @@ async function startServer(
           return events.emit('restart')
         }
 
-        for (const [, [page]] of cachedPages) {
-          if (page?.client) {
-            // Ensure client entry modules are updated.
-            changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
+        if (clientEntriesChanged)
+          for (const [, [page]] of cachedPages) {
+            if (page?.client) {
+              // Ensure client entry modules are updated.
+              changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
+            }
           }
-        }
       } catch (error: any) {
         renderersChanged = false
         events.emit('error', error)
@@ -359,6 +364,22 @@ async function startServer(
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
       )
+      const acceptModule = (
+        module: CompiledModule,
+        dep?: CompiledModule | LinkedModule
+      ) => {
+        const viteModule = server.moduleGraph.getModuleById(module.id)
+        if (viteModule) {
+          if (viteModule.isSelfAccepting) {
+            return true
+          }
+          const viteDep = dep && server.moduleGraph.getModuleById(dep?.id)
+          if (viteDep && viteModule.acceptedHmrDeps.has(viteDep)) {
+            return true
+          }
+        }
+        return false
+      }
       const resetStateModule = (module: CompiledModule) => {
         // Invalidate any cached state when a state module is reset.
         if (stateModules.has(module)) {
@@ -376,15 +397,31 @@ async function startServer(
         }
       }
       if (isLinkedModule(changedModule)) {
-        resetModuleAndImporters(changedModule, dirtyFiles, module => {
-          if (isLinkedModule(module)) {
-            server.externalExports.delete(module.id)
-          } else {
-            resetStateModule(module)
-          }
+        resetModuleAndImporters(changedModule, {
+          purged: dirtyFiles,
+          accept: acceptModule,
+          onPurge(module, isAccepted) {
+            if (isLinkedModule(module)) {
+              server.externalExports.delete(module.id)
+            } else {
+              resetStateModule(module)
+            }
+            if (!isAccepted) {
+              dirtyClientModules.add(module.id)
+            }
+          },
         })
       } else {
-        purgeModule(changedModule, dirtyFiles, resetStateModule)
+        purgeModule(changedModule, {
+          purged: dirtyFiles,
+          accept: acceptModule,
+          onPurge(module, isAccepted) {
+            resetStateModule(module)
+            if (!isAccepted) {
+              dirtyClientModules.add(module.id)
+            }
+          },
+        })
       }
       scheduleReload()
     }

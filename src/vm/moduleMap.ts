@@ -39,6 +39,15 @@ export function registerModuleOnceCompiled(
   return modulePromise
 }
 
+export interface PurgeContext<T extends CompiledModule | LinkedModule> {
+  purged: Set<string>
+  accept: (
+    module: CompiledModule,
+    dep?: CompiledModule | LinkedModule
+  ) => boolean
+  onPurge: (module: T, isAccepted: boolean) => void
+}
+
 /**
  * Remove the given module from its module map, then invalidate any modules
  * that depend on it (directly or through another module). All affected modules
@@ -46,14 +55,15 @@ export function registerModuleOnceCompiled(
  */
 export function purgeModule(
   module: CompiledModule,
-  visited = new Set<string>(),
-  onModule?: (module: CompiledModule) => void
+  context: PurgeContext<CompiledModule>
 ) {
-  if (!visited.has(module.id)) {
-    visited.add(module.id)
-    onModule?.(module)
+  const { purged } = context
+  if (!purged.has(module.id)) {
+    purged.add(module.id)
+    const isAccepted = context.accept(module)
+    context.onPurge(module, isAccepted)
     for (const importer of module.importers) {
-      resetModuleAndImporters(importer, visited, onModule)
+      resetModuleAndImporters(importer, context, isAccepted, module)
     }
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
@@ -65,14 +75,16 @@ export function purgeModule(
 
 export function resetModuleAndImporters(
   module: CompiledModule | LinkedModule,
-  visited?: Set<string>,
-  onModule?: (module: CompiledModule | LinkedModule) => void
+  context: PurgeContext<CompiledModule | LinkedModule>,
+  isAccepted?: boolean,
+  dep?: CompiledModule | LinkedModule
 ): void
 
 export function resetModuleAndImporters(
   module: CompiledModule,
-  visited?: Set<string>,
-  onModule?: (module: CompiledModule) => void
+  context: PurgeContext<CompiledModule>,
+  isAccepted?: boolean,
+  dep?: CompiledModule | LinkedModule
 ): void
 
 /**
@@ -80,14 +92,17 @@ export function resetModuleAndImporters(
  */
 export function resetModuleAndImporters(
   module: CompiledModule | LinkedModule,
-  visited = new Set<string>(),
-  onModule?: Function
+  context: PurgeContext<any>,
+  isAccepted?: boolean,
+  dep?: CompiledModule | LinkedModule
 ) {
-  if (!visited.has(module.id)) {
-    visited.add(module.id)
-    onModule?.(module)
+  const { purged } = context
+  if (!purged.has(module.id)) {
+    purged.add(module.id)
+    isAccepted ||= !isLinkedModule(module) && context.accept(module, dep)
+    context.onPurge(module, isAccepted)
     for (const importer of module.importers) {
-      resetModuleAndImporters(importer, visited, onModule as any)
+      resetModuleAndImporters(importer, context, isAccepted, module)
     }
     if (isLinkedModule(module)) {
       invalidateNodeModule(module.id)
