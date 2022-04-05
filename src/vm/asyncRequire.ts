@@ -95,18 +95,21 @@ export type RequireAsyncConfig = {
 const isDebug = !!process.env.DEBUG
 const neverReload = () => false
 
-export function createAsyncRequire({
-  moduleMap = {},
-  linkedModules = {},
-  externalExports = new Map(),
-  resolveId = () => undefined,
-  shouldReload = neverReload,
-  isCompiledModule = () => true,
-  compileModule,
-  filterStack,
-  nodeResolve,
-  watchFile = noop,
-}: RequireAsyncConfig = {}): RequireAsync {
+export function createAsyncRequire(
+  config: RequireAsyncConfig = {}
+): RequireAsync {
+  const {
+    moduleMap = {},
+    linkedModules = {},
+    externalExports = new Map(),
+    resolveId = () => undefined,
+    isCompiledModule = () => true,
+    compileModule,
+    filterStack,
+    nodeResolve,
+    watchFile = noop,
+  } = config
+
   let callStack: (StackFrame | undefined)[] = []
 
   const trackImport = (
@@ -273,6 +276,8 @@ export function createAsyncRequire({
     let module: CompiledModule | undefined
 
     loadStep: try {
+      const shouldReload = config.shouldReload || neverReload
+
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 

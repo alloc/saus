@@ -14,6 +14,7 @@ import {
 } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
+import { createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
 import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
@@ -199,12 +200,15 @@ async function startServer(
   Object.assign(server, getRequireFunctions(context, resolveId))
   context.ssrRequire = server.ssrRequire
 
+  // Force all node_modules to be reloaded
+  server.ssrForceReload = createFullReload()
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
   } catch (e: any) {
     events.emit('error', e)
   }
+  server.ssrForceReload = undefined
 
   const failedPages = new Set<string>()
 

@@ -160,6 +160,7 @@ declare module 'vite' {
     externalExports: Map<string, any>
     require: RequireAsync
     ssrRequire: RequireAsync
+    ssrForceReload?: (id: string) => boolean
   }
 
   interface Plugin {

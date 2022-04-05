@@ -2,12 +2,13 @@ import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import { Module } from 'module'
 import { dirname } from 'path'
-import { bareImportRE, relativePathRE } from '../utils/importRegex'
 import { findPackage } from '../utils/findPackage'
+import { bareImportRE, relativePathRE } from '../utils/importRegex'
 import { plural } from '../utils/plural'
 import { createAsyncRequire } from '../vm/asyncRequire'
 import { ConfigHookRef, setConfigHooks } from './config'
 import { debug } from './debug'
+import { createFullReload } from './fullReload'
 import { ResolvedConfig } from './vite'
 
 export async function loadConfigHooks(config: ResolvedConfig) {
@@ -26,11 +27,7 @@ export async function loadConfigHooks(config: ResolvedConfig) {
   const configHooks: ConfigHookRef[] = []
   setConfigHooks(configHooks)
 
-  const {
-    resolve,
-    cache: { ...oldCache },
-  } = Module.createRequire(importer)
-
+  const { resolve } = Module.createRequire(importer)
   const nodeResolve = (id: string, importer: string) => {
     if (!bareImportRE.test(id)) {
       return
@@ -55,26 +52,9 @@ export async function loadConfigHooks(config: ResolvedConfig) {
   }
 
   const reloadList = new Set<string>()
-  const skippedInternals = /\/saus\/(?!examples|packages)/
-
   const requireAsync = createAsyncRequire({
     nodeResolve,
-    shouldReload(id) {
-      // Module was possibly cached by this `loadConfigHooks` call.
-      if (!oldCache[id]) {
-        return false
-      }
-      // Module was already reloaded by this `loadConfigHooks` call.
-      if (reloadList.has(id)) {
-        return false
-      }
-      // Internal modules should never be reloaded.
-      if (skippedInternals.test(id)) {
-        return false
-      }
-      reloadList.add(id)
-      return true
-    },
+    shouldReload: createFullReload(reloadList),
   })
 
   for (const imp of imports) {

@@ -3,18 +3,20 @@ import { createAsyncRequire } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
-import { ResolveIdHook } from '../vm/types'
+import { ModuleMap, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 
 export function getRequireFunctions(
   context: SausContext,
   resolveId: ResolveIdHook,
-  moduleMap = context.server?.moduleMap || {}
+  moduleMap?: ModuleMap
 ) {
-  const { root, config, compileCache } = context
-  const linkedModules = context.server?.linkedModules
-  const externalExports = context.server?.externalExports
-  const filterStack = context.config.filterStack
+  const { root, config, compileCache, server } = context
+  const linkedModules = server?.linkedModules
+  const externalExports = server?.externalExports
+  const filterStack = config.filterStack
+
+  moduleMap ||= server?.moduleMap || {}
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -22,7 +24,7 @@ export function getRequireFunctions(
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
-  const watcher = context.config.command == 'serve' && context.server!.watcher
+  const watcher = server?.watcher
   const watchFile = watcher ? watcher.add.bind(watcher) : undefined
 
   return {
@@ -37,6 +39,9 @@ export function getRequireFunctions(
       isCompiledModule,
       compileModule(id) {
         return compileSsrModule(id, context)
+      },
+      get shouldReload() {
+        return server?.ssrForceReload
       },
     }),
     require: createAsyncRequire({
@@ -61,6 +66,9 @@ export function getRequireFunctions(
           compileCache,
           config.env
         )
+      },
+      get shouldReload() {
+        return server?.ssrForceReload
       },
     }),
   }
