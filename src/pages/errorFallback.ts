@@ -1,12 +1,12 @@
 import AnsiConverter from 'ansi-to-html'
 import endent from 'endent'
 import os from 'os'
-import { SausContext } from '../core'
+import { escape, SausContext } from '../core'
 import { parseStackTrace } from '../utils/resolveStackTrace'
 
 export function renderErrorFallback(error: any, context: SausContext) {
   const homeDir = os.homedir()
-  const message = ansiToHtml(error.message).replace(
+  const message = ansiToHtml(escape(error.message)).replace(
     new RegExp('(^|[\\s])(' + homeDir + '/[^\\s:]+)', 'g'),
     (_, space, file) =>
       space +
@@ -19,7 +19,7 @@ export function renderErrorFallback(error: any, context: SausContext) {
     const file = frame.file + ':' + frame.line + ':' + (frame.column + 1)
     return (
       `<div class="stack-frame"><span>` +
-      frame.text.replace(file, createFileLink(file, context.root)) +
+      escape(frame.text).replace(file, createFileLink(file, context.root)) +
       `</span></div>`
     )
   })
