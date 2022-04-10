@@ -38,7 +38,7 @@ type Promisable<T> = T | PromiseLike<T>
 /** A value that defines which state modules are needed by a route. */
 export type RouteInclude =
   | StateModule<any, []>[]
-  | ((url: ParsedUrl, params: RouteParams) => StateModule<any, []>[])
+  | ((url: ParsedUrl) => StateModule<any, []>[])
 
 export interface RouteConfig<
   Module extends object = RouteModule,
@@ -65,6 +65,14 @@ export interface RouteConfig<
    * are expected, pass the state module without calling any method.
    */
   include?: RouteInclude
+  /**
+   * Load or generate state used only when rendering the `<head>` element.
+   * This state is never sent to the client.
+   */
+  headProps?: (
+    url: ParsedUrl,
+    state: InferRouteProps<Module>
+  ) => Promisable<Record<string, any>>
 }
 
 export interface GeneratedRouteConfig<

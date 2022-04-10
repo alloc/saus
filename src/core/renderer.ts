@@ -18,6 +18,14 @@ export type RenderRequest<
   params: Params
 }
 
+export type HeadRequest<
+  Props extends object | undefined = Record<string, any> | undefined,
+  State extends object = ClientState,
+  Params extends RouteParams = RouteParams
+> = RenderRequest<State, Params> & {
+  props: Props
+}
+
 export type DocumentHook = (
   this: RenderApi,
   html: string,
@@ -36,7 +44,7 @@ const emitPage: DocumentHook = function (html, { file }) {
 export class Renderer<T = any> {
   api = new RenderCall<T>(this)
   test: (path: string) => boolean
-  getHead?: (request: RenderRequest) => Promisable<T>
+  getHead?: (request: HeadRequest) => Promisable<T>
   didRender?: (request: RenderRequest) => Promisable<void>
 
   constructor(
@@ -59,7 +67,7 @@ export class Renderer<T = any> {
     }
   }
 
-  async renderDocument(request: RenderRequest) {
+  async renderDocument(request: RenderRequest, headProps?: any) {
     const body = await this.getBody(request.module, request)
     if (body == null) {
       return null
@@ -70,7 +78,11 @@ export class Renderer<T = any> {
         html = `<body>\n${html}\n</body>`
       }
       if (this.getHead) {
-        let head = await this.stringifyHead(await this.getHead(request))
+        const headRequest = headProps
+          ? { ...request, props: headProps }
+          : (request as HeadRequest)
+
+        let head = await this.stringifyHead(await this.getHead(headRequest))
         if (!/^\s*<head( |>)/.test(head)) {
           head = `<head>\n${head}\n</head>`
         }
@@ -102,8 +114,10 @@ export class RenderCall<T = string | null | void> {
    * function only runs in an SSR environment, and it's invoked after
    * the `<body>` is pre-rendered.
    */
-  head(getHead: (request: RenderRequest) => T | Promise<T>) {
-    this._renderer.getHead = getHead
+  head<Props extends object | undefined = Record<string, any> | undefined>(
+    getHead: (request: HeadRequest<Props>) => T | Promise<T>
+  ) {
+    this._renderer.getHead = getHead as any
     return this
   }
 

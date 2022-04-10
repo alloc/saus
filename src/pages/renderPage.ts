@@ -45,6 +45,7 @@ import {
 const debug = createDebug('saus:pages')
 
 const stateModulesMap = new WeakMap<ClientState, string[]>()
+const headPropsCache = new WeakMap<ClientState, Record<string, any>>()
 
 export function createRenderPageFn(
   context: RenderPageContext,
@@ -139,7 +140,7 @@ export function createRenderPageFn(
       }
     }
 
-    let html = await renderer.renderDocument(request)
+    let html = await renderer.renderDocument(request, headPropsCache.get(state))
     if (html == null) {
       return null
     }
@@ -229,24 +230,24 @@ export function createRenderPageFn(
     }
   })
 
-  const loadClientState = (url: ParsedUrl, params: RouteParams, route: Route) =>
+  const loadClientState = (url: ParsedUrl, route: Route) =>
     getCachedState(url.path, async cacheControl => {
       const timestamp = Date.now()
       const stateModules = createStateModuleMap()
 
       // Start loading state modules before the route state is awaited.
       for (const included of defaultState.concat([route.include || []])) {
-        stateModules.include(included, url, params)
+        stateModules.include(included, url)
       }
 
       const clientState: ClientState = (
         route.state
-          ? await route.state(Object.values(params), url.searchParams)
+          ? await route.state(Object.values(url.routeParams), url.searchParams)
           : {}
       ) as any
 
       clientState.routePath = route.path
-      clientState.routeParams = params
+      clientState.routeParams = url.routeParams
 
       // Load any embedded state modules.
       const state = handleNestedState(clientState, stateModules)
@@ -268,6 +269,10 @@ export function createRenderPageFn(
         Object.defineProperty(state, '_ts', {
           value: Date.now(),
         })
+
+      if (route.headProps) {
+        headPropsCache.set(state, await route.headProps(url, state))
+      }
 
       // Reload the page state on almost every request, but keep it
       // cached for `getCachedState` calls that have no loader.
@@ -303,7 +308,10 @@ export function createRenderPageFn(
     route: Route,
     options: RenderPageOptions
   ) {
-    const statePromise = loadClientState(url, { error }, route)
+    // @ts-ignore
+    url.routeParams.error = error
+
+    const statePromise = loadClientState(url, route)
     statePromise.catch(noop)
 
     const contextPromise = pageContextQueue.then(async () => {
@@ -474,13 +482,16 @@ export function createRenderPageFn(
       return [null]
     }
 
+    // @ts-ignore
+    url.routeParams = params || {}
+
     const pagePath = url.path
     const pageUrl = url
 
     // State modules can be loaded in parallel, since the global state
     // cache is reused by all pages.
     const statePromise = limitTime(
-      loadClientState(url, params || {}, route),
+      loadClientState(url, route),
       options.timeout || 0,
       `Page "${pagePath}" state loading took too long`
     )
