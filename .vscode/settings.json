@@ -1,3 +1,4 @@
 {
+  "editor.codeActionsOnSave": ["source.organizeImports"],
   "typescript.tsdk": "node_modules/typescript/lib"
 }
