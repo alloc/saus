@@ -234,16 +234,19 @@ export function createRenderPageFn(
     getCachedState(url.path, async cacheControl => {
       const timestamp = Date.now()
       const stateModules = createStateModuleMap()
+      const routeConfig = route.config ? await route.config(url, route) : route
 
       // Start loading state modules before the route state is awaited.
-      for (const included of defaultState.concat([route.include || []])) {
-        stateModules.include(included, url)
+      const routeInclude = defaultState.concat([routeConfig.include || []])
+      for (const included of routeInclude) {
+        stateModules.include(included, url, route)
       }
 
+      const routeState = routeConfig.state
       const clientState: ClientState = (
-        route.state
-          ? await route.state(Object.values(url.routeParams), url.searchParams)
-          : {}
+        typeof routeState == 'function'
+          ? await routeState(url, route)
+          : { ...routeState }
       ) as any
 
       clientState.routePath = route.path
@@ -270,8 +273,14 @@ export function createRenderPageFn(
           value: Date.now(),
         })
 
-      if (route.headProps) {
-        headPropsCache.set(state, await route.headProps(url, state))
+      const { headProps } = routeConfig
+      if (headProps) {
+        headPropsCache.set(
+          state,
+          typeof headProps == 'function'
+            ? await headProps(url, state)
+            : { ...headProps }
+        )
       }
 
       // Reload the page state on almost every request, but keep it

@@ -1,10 +1,14 @@
-import type { RouteInclude } from '../core/routes'
+import type { BareRoute, RouteIncludeOption } from '../core/routes'
 import type { StateModule } from '../runtime/stateModules'
 import type { ParsedUrl } from '../utils/url'
 
 export interface StateModuleMap extends Map<string, Promise<any>> {
   load(module: StateModule): Promise<any>
-  include(included: RouteInclude, url: ParsedUrl): Promise<any>[]
+  include(
+    included: RouteIncludeOption,
+    url: ParsedUrl,
+    route: BareRoute
+  ): Promise<any>[]
 }
 
 export function createStateModuleMap() {
@@ -17,8 +21,9 @@ export function createStateModuleMap() {
     }
     return loading.catch(() => null)
   }
-  map.include = (include, url) => {
-    const included = typeof include == 'function' ? include(url) : include
+  map.include = (include, url, route) => {
+    const included =
+      typeof include == 'function' ? include(url, route) : include
     return included.map(map.load)
   }
   return map
