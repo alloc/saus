@@ -40,7 +40,7 @@ export function registerModuleOnceCompiled(
 }
 
 export interface PurgeContext<T extends CompiledModule | LinkedModule> {
-  purged: Set<string>
+  touched: Set<string>
   accept: (
     module: CompiledModule,
     dep?: CompiledModule | LinkedModule
@@ -57,13 +57,13 @@ export function purgeModule(
   module: CompiledModule,
   context: PurgeContext<CompiledModule>
 ) {
-  const { purged } = context
-  if (!purged.has(module.id)) {
-    purged.add(module.id)
+  const { touched } = context
+  if (!touched.has(module.id)) {
+    touched.add(module.id)
     const isAccepted = context.accept(module)
     context.onPurge(module, isAccepted)
     for (const importer of module.importers) {
-      resetModuleAndImporters(importer, context, isAccepted, module)
+      unloadModuleAndImporters(importer, context, isAccepted, module)
     }
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
@@ -73,14 +73,14 @@ export function purgeModule(
   }
 }
 
-export function resetModuleAndImporters(
+export function unloadModuleAndImporters(
   module: CompiledModule | LinkedModule,
   context: PurgeContext<CompiledModule | LinkedModule>,
   isAccepted?: boolean,
   dep?: CompiledModule | LinkedModule
 ): void
 
-export function resetModuleAndImporters(
+export function unloadModuleAndImporters(
   module: CompiledModule,
   context: PurgeContext<CompiledModule>,
   isAccepted?: boolean,
@@ -90,37 +90,37 @@ export function resetModuleAndImporters(
 /**
  * Reset the given module and its importers.
  */
-export function resetModuleAndImporters(
+export function unloadModuleAndImporters(
   module: CompiledModule | LinkedModule,
   context: PurgeContext<any>,
   isAccepted?: boolean,
   dep?: CompiledModule | LinkedModule
 ) {
-  const { purged } = context
-  if (!purged.has(module.id)) {
-    purged.add(module.id)
+  const { touched } = context
+  if (!touched.has(module.id)) {
+    touched.add(module.id)
     isAccepted ||= !isLinkedModule(module) && context.accept(module, dep)
     context.onPurge(module, isAccepted)
     for (const importer of module.importers) {
-      resetModuleAndImporters(importer, context, isAccepted, module)
+      unloadModuleAndImporters(importer, context, isAccepted, module)
     }
     if (isLinkedModule(module)) {
       invalidateNodeModule(module.id)
     } else {
-      resetExports(module)
+      clearExports(module)
     }
-    resetImports(module)
+    clearImports(module)
   }
 }
 
-export function resetImports(module: CompiledModule | LinkedModule) {
+export function clearImports(module: CompiledModule | LinkedModule) {
   for (const imported of module.imports) {
     imported.importers.delete(module as any)
   }
   module.imports.clear()
 }
 
-export function resetExports(module: CompiledModule) {
+export function clearExports(module: CompiledModule) {
   module.exports = undefined
   module.package?.delete(module)
   module.package = undefined

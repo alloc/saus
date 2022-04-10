@@ -2,7 +2,7 @@ import { matchRoute, RuntimeConfig, SausContext } from '../core'
 import { applyHtmlProcessors } from '../core/html'
 import { loadRenderers } from '../core/loadRenderers'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { resetExports } from '../vm/moduleMap'
+import { clearExports } from '../vm/moduleMap'
 import { renderErrorFallback } from './errorFallback'
 import { RenderPageOptions } from './types'
 
@@ -50,7 +50,7 @@ export function createServePageFn(
         const entryModule = server.moduleMap[entryPath]
         if (entryModule) {
           for (const module of entryModule.package || [entryModule]) {
-            resetExports(module)
+            clearExports(module)
           }
         }
       }

@@ -35,7 +35,7 @@ import { stateModuleBase } from './runtime/constants'
 import { defer } from './utils/defer'
 import { prependBase } from './utils/prependBase'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { purgeModule, resetModuleAndImporters } from './vm/moduleMap'
+import { purgeModule, unloadModuleAndImporters } from './vm/moduleMap'
 import {
   CompiledModule,
   isLinkedModule,
@@ -401,8 +401,8 @@ async function startServer(
         }
       }
       if (isLinkedModule(changedModule)) {
-        resetModuleAndImporters(changedModule, {
-          purged: dirtyFiles,
+        unloadModuleAndImporters(changedModule, {
+          touched: dirtyFiles,
           accept: acceptModule,
           onPurge(module, isAccepted) {
             if (isLinkedModule(module)) {
@@ -417,7 +417,7 @@ async function startServer(
         })
       } else {
         purgeModule(changedModule, {
-          purged: dirtyFiles,
+          touched: dirtyFiles,
           accept: acceptModule,
           onPurge(module, isAccepted) {
             resetStateModule(module)
