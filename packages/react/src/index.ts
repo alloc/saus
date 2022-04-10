@@ -1,7 +1,8 @@
 import { addConfigHook } from 'saus/core'
 
-export * from './node'
 export { beforeRender } from 'saus/core'
+export * from './node'
+export * from './types'
 
 addConfigHook('./vite.config')
 
