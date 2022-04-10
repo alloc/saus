@@ -97,7 +97,7 @@ export interface GeneratedRouteConfig<
   Module extends object = RouteModule,
   Params extends object = RouteParams
 > extends RouteConfig<Module, Params> {
-  entry: string
+  entry: string | (() => Promise<Module>)
 }
 
 export interface ParsedRoute {

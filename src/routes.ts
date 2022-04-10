@@ -10,7 +10,13 @@ import type {
 import { getStackFrame } from './utils/resolveStackTrace'
 
 const importRE = /\b\(["']([^"']+)["']\)/
-const parseDynamicImport = (fn: Function) => importRE.exec(fn.toString())![1]
+const parseDynamicImport = (fn: Function, path: string) => {
+  try {
+    return importRE.exec(fn.toString())![1]
+  } catch (e: any) {
+    throw Error(`Failed to parse "moduleId" for route: "${path}"\n` + e.message)
+  }
+}
 
 /** Define the default route */
 export function route(load: RouteLoader): void
@@ -37,13 +43,7 @@ export function route(
 ) {
   const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
   const load = maybeLoad || (pathOrLoad as RouteLoader)
-
-  let moduleId: string
-  try {
-    moduleId = parseDynamicImport(load)
-  } catch (e: any) {
-    throw Error(`Failed to parse "moduleId" for route: "${path}"\n` + e.message)
-  }
+  const moduleId = parseDynamicImport(load, path)
 
   const route = {
     path,
@@ -73,12 +73,22 @@ export function generateRoute<RoutePath extends string, Module extends object>(
   const importer = getStackFrame(2)?.file
   const ssrRequire = routesModule.ssrRequire!
 
+  let moduleId: string
+  let load: () => Promise<any>
+  if (typeof entry == 'string') {
+    moduleId = entry
+    load = () => ssrRequire(entry, importer, true)
+  } else {
+    moduleId = parseDynamicImport(entry, path)
+    load = entry
+  }
+
   routesModule.routes.push({
     ...(config as RouteConfig),
     ...RegexParam.parse(path),
     path,
-    load: () => ssrRequire(entry, importer, true),
-    moduleId: entry,
+    load,
+    moduleId,
     generated: true,
   })
 }
