@@ -1,8 +1,8 @@
 import kleur from 'kleur'
 import { Module } from 'module'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { getNodeModule } from './nodeModules'
 import { debug } from './debug'
+import { getNodeModule } from './nodeModules'
 
 export type NodeResolveHook = (
   id: string,
@@ -20,21 +20,23 @@ export function hookNodeResolve(resolve: NodeResolveHook) {
     isMain: boolean,
     options: any
   ) => {
-    const resolved = resolve(id, parent.id, (id, importer) => {
-      // In the case of an explicit importer, we cannot use the
-      // `paths` option of Module._resolveFilename, since it doesn't
-      // support relative paths. Instead, we have to use the Module
-      // instance of the importer.
-      if (importer && importer !== parent.id) {
-        const importerModule = getNodeModule(importer)
-        return (
-          importerModule
-            ? importerModule.require
-            : Module.createRequire(importer)
-        ).resolve(id)
-      }
-      return nodeResolve(id, parent, isMain, options)
-    })
+    const resolved =
+      !(options && options.skipSelf) &&
+      resolve(id, parent.id, (id, importer) => {
+        // In the case of an explicit importer, we cannot use the
+        // `paths` option of Module._resolveFilename, since it doesn't
+        // support relative paths. Instead, we have to use the Module
+        // instance of the importer.
+        if (importer && importer !== parent.id) {
+          const importerModule = getNodeModule(importer)
+          return (
+            importerModule
+              ? importerModule.require
+              : Module.createRequire(importer)
+          ).resolve(id)
+        }
+        return nodeResolve(id, parent, isMain, options)
+      })
 
     process.env.DEBUG &&
       resolved &&

@@ -47,7 +47,11 @@ export async function loadConfigHooks(config: ResolvedConfig) {
       }
     }
     try {
-      return resolve(id, { paths: [config.root] })
+      return resolve(id, {
+        paths: [config.root],
+        // @ts-ignore: Avoid infinite recursion.
+        skipSelf: true,
+      })
     } catch {}
   }
 
