@@ -1,0 +1,30 @@
+{
+  "name": "@saus/astro",
+  "version": "0.1.0",
+  "description": "Astro renderer for saus",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsup",
+    "dev": "tsup --watch",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*"
+  },
+  "dependencies": {
+    "@astrojs/compiler": "^0.14.1",
+    "@types/babel__core": "^7.1.16",
+    "esbuild": "^0.14.34"
+  }
+}

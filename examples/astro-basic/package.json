@@ -1,0 +1,18 @@
+{
+  "name": "astro-basic",
+  "private": true,
+  "scripts": {
+    "dev": "saus dev",
+    "build": "saus build",
+    "serve": "cd dist && node $SERVE_OPTIONS node/server.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^16.10.2"
+  },
+  "dependencies": {
+    "@saus/html": "*",
+    "@saus/astro": "*",
+    "navaid": "^1.2.0",
+    "saus": "*"
+  }
+}
