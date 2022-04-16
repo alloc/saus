@@ -98,6 +98,10 @@ export interface GeneratedRouteConfig<
   Params extends object = RouteParams
 > extends RouteConfig<Module, Params> {
   entry: string | (() => Promise<Module>)
+  /**
+   * Defaults to the caller of `generateRoute`.
+   */
+  importer?: string
 }
 
 export interface ParsedRoute {
@@ -110,6 +114,7 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   load: RouteLoader<T>
   moduleId: string
   generated?: boolean
+  importer?: string
 }
 
 export interface Route extends BareRoute, RouteConfig {}

@@ -29,6 +29,7 @@ import {
 import { preferExternal } from './core/bundle/preferExternal'
 import type { RuntimeConfig } from './core/config'
 import { debug } from './core/debug'
+import { loadRoutes } from './core/loadRoutes'
 import { bundleDir, clientDir, coreDir, httpDir } from './core/paths'
 import { vite } from './core/vite'
 import { getViteTransform } from './core/viteTransform'
@@ -162,6 +163,8 @@ async function prepareFunctions(context: BundleContext) {
     ...config,
     plugins: [functionModules, ...config.plugins],
   })
+
+  await loadRoutes(context, pluginContainer.resolveId)
 
   const babelConfig = getBabelConfig(renderPath)
   const parseFile = (code: string) =>

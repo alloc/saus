@@ -2,6 +2,7 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
+import { callPlugins } from '../utils/callPlugins'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { toDevPath } from '../utils/toDevPath'
 import { injectExports } from '../vm/asyncRequire'
@@ -12,6 +13,7 @@ import { registerModuleOnceCompiled } from '../vm/moduleMap'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
+import { generateRoute } from './generateRoute'
 import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
 import { Route } from './routes'
@@ -27,14 +29,15 @@ export async function loadRoutes(
     context.server || getRequireFunctions(context, resolveId, moduleMap)
 
   const routesModule =
-    moduleMap[context.routesPath] ||
-    (await compileRoutesModule(
-      context,
-      moduleMap,
-      resolveId,
-      (id, importer, isDynamic) =>
-        (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
-    ))
+    context.server &&
+    (moduleMap[context.routesPath] ||
+      (await compileRoutesModule(
+        context,
+        moduleMap,
+        resolveId,
+        (id, importer, isDynamic) =>
+          (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
+      )))
 
   const routesConfig = setRoutesModule({
     catchRoute: undefined,
@@ -46,18 +49,23 @@ export async function loadRoutes(
     ssrRequire,
   })
   try {
-    await executeModule(routesModule)
+    if (routesModule) {
+      await executeModule(routesModule)
 
-    // Exclude the routes module from its package, or else it
-    // will have its modules cleared when it shouldn't.
-    routesModule.package?.delete(routesModule)
-    routesModule.package = undefined
+      // Exclude the routes module from its package, or else it
+      // will have its modules cleared when it shouldn't.
+      routesModule.package?.delete(routesModule)
+      routesModule.package = undefined
+    }
+
+    // Load routes defined by plugins.
+    await callPlugins(context.plugins, 'routes', generateRoute, routesConfig)
 
     for (const route of routesConfig.routes) {
       if (route.generated) {
         const routeModuleId = await resolveId(
           route.moduleId,
-          context.routesPath,
+          route.importer || context.routesPath,
           true
         )
         if (!routeModuleId) {

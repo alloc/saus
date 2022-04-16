@@ -10,6 +10,7 @@ export * from './tokens'
 export * from './vite'
 export * from '../test'
 export * from '../utils/sourceMap'
+export * from '../utils/combineSourceMaps'
 
 export type { ConfigHook, RuntimeConfig } from './config'
 export type { CacheControl } from './withCache'

@@ -10,6 +10,7 @@ import type { SourceMap } from '../utils/sourceMap'
 import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
+import { RoutesModule } from './routes'
 import './viteRequire'
 
 export { vite }
@@ -216,6 +217,16 @@ export const defineConfig = vite.defineConfig as (
 export interface SausPlugin {
   /** Used for debugging. If undefined, the Vite plugin name is used. */
   name?: string
+  /**
+   * Provide generated routes in addition to the user's routes.
+   *
+   * These routes work in development and SSR bundles. In SSR, these routes
+   * are pre-generated, so they're constant between SSR instances.
+   */
+  routes?: (
+    addRoute: typeof import('../routes').generateRoute,
+    routesConfig: RoutesModule
+  ) => Promisable<void>
   /**
    * Transform files from the `publicDir` when the `copyPublicDir`
    * plugin is active in the project.
