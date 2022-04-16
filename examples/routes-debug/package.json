@@ -1,0 +1,23 @@
+{
+  "name": "react-basic",
+  "private": true,
+  "scripts": {
+    "dev": "saus dev",
+    "build": "saus build",
+    "serve": "cd dist && node $SERVE_OPTIONS node/server.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^16.10.2"
+  },
+  "dependencies": {
+    "@saus/html": "*",
+    "@saus/react": "*",
+    "@saus/test": "*",
+    "@saus/webp": "*",
+    "has-flag": "^5.0.1",
+    "kleur": "^4.1.4",
+    "misty": "^1.6.0",
+    "navaid": "^1.2.0",
+    "saus": "*"
+  }
+}

@@ -5,6 +5,7 @@ import type { RuntimeConfig } from './config'
 import { routesModule } from './global'
 
 export type HtmlContext = {
+  addHtmlProcessor?: (enforce: EnforcementPhase, processor: ) => void
   htmlProcessors?: HtmlProcessorMap
   processHtml?: MergedHtmlProcessor
 }

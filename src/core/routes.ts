@@ -1,9 +1,10 @@
 import type { StateModule } from '../runtime/stateModules'
 import type { ParsedUrl } from '../utils/url'
-import { RequireAsync } from '../vm/types'
+import type { RequireAsync } from '../vm/types'
 import type { SausContext } from './context'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
+import type { SausPlugin } from './vite'
 
 export * as RegexParam from 'regexparam'
 export type { RouteParams as InferRouteParams } from 'regexparam'
@@ -102,6 +103,15 @@ export interface GeneratedRouteConfig<
    * Defaults to the caller of `generateRoute`.
    */
   importer?: string
+  /**
+   * If defined, this route is injected as a static declaration when
+   * bundling for SSR. The string value tracks which plugin is responsible
+   * for defining this route.
+   *
+   * Do not set this property if this route is defined from within the
+   * `saus.routes` module (or a module imported by it).
+   */
+  pluginId?: string
 }
 
 export interface ParsedRoute {
@@ -113,8 +123,9 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   path: string
   load: RouteLoader<T>
   moduleId: string
-  generated?: boolean
   importer?: string
+  generated?: boolean
+  pluginId?: string
 }
 
 export interface Route extends BareRoute, RouteConfig {}
@@ -146,6 +157,8 @@ export interface RoutesModule extends HtmlContext {
   catchRoute?: Route
   /** Used by generated routes to import their route module */
   ssrRequire?: RequireAsync
+  /** The current plugin whose `saus.routes` method is being called */
+  activePlugin?: SausPlugin
 }
 
 type RoutePathHandlers = {

@@ -59,6 +59,14 @@ export async function loadRoutes(
     }
 
     // Load routes defined by plugins.
+    for (const plugin of context.plugins) {
+      if (!plugin.routes) continue
+      routesConfig.activePlugin = plugin
+      plugin.routes((path, config) => {
+        config.pluginId = plugin.name
+        // todo
+      })
+    }
     await callPlugins(context.plugins, 'routes', generateRoute, routesConfig)
 
     for (const route of routesConfig.routes) {

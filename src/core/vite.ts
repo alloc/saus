@@ -10,7 +10,6 @@ import type { SourceMap } from '../utils/sourceMap'
 import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
-import { RoutesModule } from './routes'
 import './viteRequire'
 
 export { vite }
@@ -224,8 +223,7 @@ export interface SausPlugin {
    * are pre-generated, so they're constant between SSR instances.
    */
   routes?: (
-    addRoute: typeof import('../routes').generateRoute,
-    routesConfig: RoutesModule
+    addRoute: typeof import('../routes').generateRoute
   ) => Promisable<void>
   /**
    * Transform files from the `publicDir` when the `copyPublicDir`

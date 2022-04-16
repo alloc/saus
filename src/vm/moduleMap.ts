@@ -125,3 +125,28 @@ export function clearExports(module: CompiledModule) {
   module.package?.delete(module)
   module.package = undefined
 }
+
+/**
+ * Check if the given `module` is imported (either directly or indirectly)
+ * by the given `importer` module.
+ */
+export function isImported(
+  module: CompiledModule | LinkedModule,
+  importer: CompiledModule,
+  seen = new Set<CompiledModule | LinkedModule>()
+) {
+  if (seen.has(module)) return false
+  seen.add(module)
+
+  // Note: Dynamic imports are ignored here.
+  for (const possibleMatch of module.importers) {
+    if (possibleMatch == importer) {
+      return true
+    }
+    if (isImported(possibleMatch, importer, seen)) {
+      return true
+    }
+  }
+
+  return false
+}

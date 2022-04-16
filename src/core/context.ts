@@ -7,11 +7,9 @@ import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { getSausPlugins } from './getSausPlugins'
-import { HtmlContext } from './html'
 import { loadConfigHooks } from './loadConfigHooks'
 import { toSausPath } from './paths'
 import { RenderModule } from './render'
@@ -19,7 +17,7 @@ import { RoutesModule } from './routes'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { Cache, withCache } from './withCache'
 
-export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
+export interface SausContext extends RenderModule, RoutesModule {
   root: string
   plugins: readonly SausPlugin[]
   logger: vite.Logger
@@ -59,8 +57,6 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   reloading?: Deferred<void>
   /** Exists in dev mode only */
   server?: vite.ViteDevServer
-  /** Used by the `generateRoute` function in dev mode */
-  ssrRequire?: RequireAsync
 }
 
 type InlinePlugin = (
