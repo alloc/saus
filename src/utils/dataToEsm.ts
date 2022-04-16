@@ -85,6 +85,9 @@ function serialize(
     seen.delete(value)
     return serialized
   }
+  if (typeof value === 'function') {
+    return ''
+  }
   return stringify(value)
 }
 
