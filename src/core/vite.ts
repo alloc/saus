@@ -1,8 +1,8 @@
 import { AbortSignal } from 'node-abort-controller'
 import * as vite from 'vite'
+import { App } from '../app/createApp'
+import type { RenderedFile } from '../app/types'
 import type { RenderedPage } from '../bundle/types'
-import type { ServePageFn } from '../pages/servePage'
-import type { RenderedFile, RenderPageFn } from '../pages/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
@@ -10,6 +10,7 @@ import type { SourceMap } from '../utils/sourceMap'
 import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
+import { Endpoint } from './endpoint'
 import './viteRequire'
 
 export { vite }
@@ -148,12 +149,8 @@ declare module 'vite' {
     filterStack?: (source: string) => boolean
   }
 
-  interface ViteDevServer {
-    /** Produce an HTML document for a given URL. */
-    renderPage: RenderPageFn
-    /** Like `renderPage` but with a result tuned for an HTTP response. */
-    servePage: ServePageFn
-    /** Files produced by a renderer and cached by a `servePage` call. */
+  interface ViteDevServer extends Omit<App, 'config'> {
+    /** Files emitted by a renderer are cached here. */
     servedFiles: Record<string, RenderedFile>
     moduleMap: ModuleMap
     linkedModules: LinkedModuleMap
@@ -247,5 +244,8 @@ export interface SausPlugin {
    * for a better developer experience. The default behavior is
    * minimal but overridable via this plugin hook.
    */
-  renderErrorReport?: (url: string, error: any) => Promisable<string>
+  renderErrorReport?: (
+    req: Endpoint.StaticRequest,
+    error: any
+  ) => Promisable<string>
 }

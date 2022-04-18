@@ -1,24 +1,23 @@
+import type { AppContext } from '../app/types'
 import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
-import type { RenderPageContext } from '../pages/types'
 import config from './config'
+import functions from './functions'
 
-export const context: RenderPageContext = {
-  defaultPath: config.defaultPath,
+export const context: AppContext = {
+  beforeRenderHooks: [],
+  config,
   defaultState: [],
+  functions,
   getCachedPage: withCache({
     loading: {},
     loaders: {},
     loaded: {},
   }),
-  logger: {
-    error: console.error,
-  },
-  basePath: config.base,
-  beforeRenderHooks: [],
-  runtimeHooks: [],
+  onError: console.error,
   renderers: [],
   routes: [],
+  runtimeHooks: [],
 }
 
 /**

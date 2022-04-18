@@ -2,7 +2,7 @@ import assert from 'assert'
 import callerPath from 'caller-path'
 import path from 'path'
 import type { ConfigEnv, UserConfig } from 'vite'
-import type { ProfiledEventHandler } from '../pages/types'
+import type { ProfiledEventHandler } from '../app/types'
 import { renderModule } from './global'
 
 export type ConfigHook = (

@@ -1,4 +1,26 @@
-import { HttpRedirect } from '../http/redirect'
+import type { App } from '../app/createApp'
+import type { Route } from '../core/routes'
+import type { HttpRedirect } from '../http/redirect'
+import type { ParsedUrl } from '../utils/url'
+
+export interface BundledApp extends Omit<App, 'renderPage'> {
+  renderPage: (
+    url: ParsedUrl,
+    route: Route,
+    options?: RenderPageOptions
+  ) => Promise<RenderedPage | null>
+}
+
+export type RenderPageOptions = {
+  timeout?: number
+  onError?: (error: Error & { url: string }) => null
+  renderStart?: (url: ParsedUrl) => void
+  renderFinish?: (
+    url: ParsedUrl,
+    error: Error | null,
+    page?: RenderedPage | null
+  ) => void
+}
 
 export type RenderedFile = {
   id: string
@@ -34,15 +56,4 @@ export interface ClientModule {
  */
 export interface ClientModuleMap {
   [key: string]: ClientModule
-}
-
-export type RenderPageOptions = {
-  timeout?: number
-  onError?: (error: Error & { url: string }) => null
-  renderStart?: (url: string) => void
-  renderFinish?: (
-    url: string,
-    error: Error | null,
-    page?: RenderedPage | null
-  ) => void
 }

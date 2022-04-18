@@ -1,4 +1,4 @@
-import type { RenderedPage } from '../pages/types'
+import type { RenderedPage } from '../app/types'
 import { limitTime } from '../utils/limitTime'
 import { reduceSerial } from '../utils/reduceSerial'
 import type { RuntimeConfig } from './config'

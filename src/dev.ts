@@ -6,23 +6,18 @@ import path from 'path'
 import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
 import * as vite from 'vite'
-import {
-  extractClientFunctions,
-  getPageFilename,
-  RuntimeConfig,
-  SausContext,
-} from './core'
+import { createDevApp } from './app/createDevApp'
+import { getPageFilename, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
+import { Endpoint } from './core/endpoint'
 import { createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
 import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
-import { clientDir, globalCachePath, runtimeDir } from './core/paths'
-import { createRenderPageFn } from './pages/renderPage'
-import { createServePageFn } from './pages/servePage'
+import { clientDir, runtimeDir } from './core/paths'
 import { defineClientContext } from './plugins/clientContext'
 import { getClientUrl, serveClientEntries } from './plugins/clientEntries'
 import { transformClientState } from './plugins/clientState'
@@ -210,32 +205,20 @@ async function startServer(
   }
   server.ssrForceReload = undefined
 
-  const failedPages = new Set<string>()
+  const failedRequests = new Set<Endpoint.StaticRequest>()
 
   // This runs on server startup and whenever the routes and/or
   // renderers are reloaded.
   async function onContextUpdate() {
-    const runtimeConfig: RuntimeConfig = {
-      assetsDir: config.build.assetsDir,
-      base: context.basePath,
-      command: 'dev',
-      defaultPath: context.defaultPath,
-      htmlTimeout: config.saus.htmlTimeout,
-      minify: false,
-      mode: config.mode,
-      publicDir: config.publicDir,
-      ssrRoutesId: '/@fs/' + context.routesPath,
-      stateCacheId: '/@fs/' + globalCachePath,
-    }
-    server.renderPage = createRenderPageFn(
-      context,
-      extractClientFunctions(context.renderPath),
-      runtimeConfig,
-      undefined,
-      e => events.emit('error', e)
-    )
-    server.servePage = createServePageFn(context, runtimeConfig, url =>
-      failedPages.add(url)
+    Object.assign(
+      server,
+      createDevApp(context, error => {
+        if (error.req) {
+          failedRequests.add(error.req)
+        }
+        events.emit('error', error)
+      }),
+      { config: server.config }
     )
     context.plugins = await getSausPlugins(context)
   }
@@ -348,8 +331,8 @@ async function startServer(
     context.reloading.resolve()
     context.reloading = undefined
 
-    const reloadedPages = Array.from(failedPages)
-    failedPages.clear()
+    const reloadedPages = Array.from(failedRequests, req => req.path)
+    failedRequests.clear()
     reloadedPages.forEach(pagePath => {
       server.ws?.send({
         type: 'full-reload',

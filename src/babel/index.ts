@@ -1,12 +1,10 @@
 import * as babel from '@babel/core'
-import { types as t, NodePath, transformFromAstSync } from '@babel/core'
+import { NodePath, transformFromAstSync, types as t } from '@babel/core'
 import MagicString from 'magic-string'
+import { toArray } from '../utils/array'
 
-export { babel, t, NodePath, MagicString }
 export { Bundle as MagicBundle } from 'magic-string'
-
-const toArray = <T>(arg: T): T extends any[] ? T : T[] =>
-  Array.isArray(arg) ? arg : ([arg] as any)
+export { babel, t, NodePath, MagicString }
 
 export function resolveReferences(
   rootPaths: NodePath | NodePath[],

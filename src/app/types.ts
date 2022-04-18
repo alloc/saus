@@ -1,14 +1,28 @@
 import type { Buffer } from '../client'
 import type {
+  BeforeRenderHook,
   Client,
   ClientState,
+  Renderer,
   RenderModule,
+  Route,
+  RouteParams,
   RoutesModule,
+  RuntimeConfig,
   SausContext,
   WrappedNode,
 } from '../core'
-import { ParsedHead } from '../utils/parseHead'
-import { ParsedUrl } from '../utils/url'
+import type { Endpoint } from '../core/endpoint'
+import type { ParsedHead } from '../utils/parseHead'
+import type { ParsedUrl } from '../utils/url'
+
+export interface AppContext extends RoutesModule, RenderModule {
+  config: RuntimeConfig
+  functions: ClientFunctions
+  getCachedPage: SausContext['getCachedPage']
+  onError: (e: any) => void
+  profile?: ProfiledEventHandler
+}
 
 export type BufferLike = string | Buffer | globalThis.Buffer
 
@@ -22,21 +36,11 @@ export type RenderedPage = {
   path: string
   html: string
   head: ParsedHead
-  state: ClientState
   files: RenderedFile[]
+  state: ClientState
   stateModules: string[]
   routeModuleId: string
   client?: Client
-}
-
-type SausContextKeys = 'basePath' | 'defaultPath' | 'getCachedPage'
-
-export interface RenderPageContext
-  extends Pick<SausContext, SausContextKeys>,
-    RoutesModule,
-    RenderModule {
-  logger: { error(msg: string): void }
-  profile?: ProfiledEventHandler
 }
 
 export type ProfiledEvent = {
@@ -63,18 +67,22 @@ export interface ProfiledEventHandler {
 export interface PageContext extends RenderModule {}
 
 export type RenderPageFn = (
-  url: string | ParsedUrl,
+  url: ParsedUrl,
+  route: Route,
   options?: RenderPageOptions
 ) => Promise<RenderPageResult>
 
 export type RenderPageResult = [page: RenderedPage | null, error?: any]
 
 export type RenderPageOptions = {
+  state?: ClientState
+  request?: Endpoint.StaticRequest
+  resolved?: ResolvedRoute
   timeout?: number
   onError?: (error: Error & { url: string }) => void
-  renderStart?: (url: string) => void
+  renderStart?: (url: ParsedUrl) => void
   renderFinish?: (
-    url: string,
+    url: ParsedUrl,
     error: Error | null,
     page?: RenderedPage | null
   ) => void
@@ -83,7 +91,7 @@ export type RenderPageOptions = {
    * allowing for rendered pages to be isolated from
    * each other if desired.
    */
-  setup?: (context: PageContext, url: ParsedUrl) => any
+  setup?: (context: PageContext, route: Route, url: ParsedUrl) => any
 }
 
 type BundledFunction = {
@@ -113,3 +121,19 @@ export interface ClientFunctions {
   beforeRender: ClientFunction[]
   render: RenderFunction[]
 }
+
+export type ResolvedRoute =
+  | [endpoints: readonly Endpoint[], route: Route, params: RouteParams]
+  | [endpoints: readonly Endpoint[], route?: undefined, params?: undefined]
+
+export type RouteResolver = (url: Endpoint.RequestUrl) => ResolvedRoute
+
+export type ClientResolver = (
+  renderer: Renderer,
+  beforeHooks: BeforeRenderHook[]
+) => Promise<Client | undefined>
+
+export type ClientStateLoader = (
+  url: ParsedUrl,
+  route: Route
+) => Promise<ClientState>

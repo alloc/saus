@@ -54,6 +54,7 @@ export async function loadRoutes(
     routesModule.package = undefined
 
     for (const route of routesConfig.routes) {
+      if (!route.moduleId) continue
       if (route.generated) {
         const routeModuleId = await resolveId(
           route.moduleId,
@@ -136,13 +137,15 @@ function injectRoutesMap(context: SausContext) {
 
   let route: Route | undefined
   if ((route = context.defaultRoute)) {
-    routesMap.default = route.moduleId
+    routesMap.default = route.moduleId!
     loaders.default = route.load
   }
   for (let i = context.routes.length; --i >= 0; ) {
     route = context.routes[i]
-    routesMap[route.path] = route.moduleId
-    loaders[route.path] = route.load
+    if (route.moduleId) {
+      routesMap[route.path] = route.moduleId
+      loaders[route.path] = route.load
+    }
   }
 
   const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')

@@ -6,12 +6,12 @@ export type { URLSearchParams }
 
 const emptyParams: any = Object.freeze({})
 
-export class ParsedUrl<RouteParams extends object = Record<string, any>> {
+export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
   readonly path: string
   constructor(
     path: string,
-    readonly searchParams: URLSearchParams,
-    readonly routeParams: Readonly<RouteParams> = emptyParams
+    public searchParams: URLSearchParams,
+    public routeParams: Readonly<RouteParams> = emptyParams
   ) {
     // Remove trailing slash (except for "/" path)
     this.path = path.replace(/(.+)\/$/, '$1')

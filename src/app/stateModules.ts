@@ -1,14 +1,14 @@
+import { Endpoint } from '../core/endpoint'
 import type { BareRoute, RouteIncludeOption } from '../core/routes'
 import type { StateModule } from '../runtime/stateModules'
-import type { ParsedUrl } from '../utils/url'
 
 export interface StateModuleMap extends Map<string, Promise<any>> {
   load(module: StateModule): Promise<any>
   include(
     included: RouteIncludeOption,
-    url: ParsedUrl,
+    url: Endpoint.RequestUrl<any>,
     route: BareRoute
-  ): Promise<any>[]
+  ): Promise<void>
 }
 
 export function createStateModuleMap() {
@@ -21,10 +21,10 @@ export function createStateModuleMap() {
     }
     return loading.catch(() => null)
   }
-  map.include = (include, url, route) => {
+  map.include = async (include, url, route) => {
     const included =
-      typeof include == 'function' ? include(url, route) : include
-    return included.map(map.load)
+      typeof include == 'function' ? await include(url, route) : include
+    await Promise.all(included.map(map.load))
   }
   return map
 }
