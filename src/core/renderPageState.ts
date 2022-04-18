@@ -1,4 +1,4 @@
-import type { RenderedPage } from '../pages/types'
+import type { RenderedPage } from '../app/types'
 import { stateModuleBase } from '../runtime/constants'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'

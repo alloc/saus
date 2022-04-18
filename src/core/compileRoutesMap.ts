@@ -15,13 +15,14 @@ export async function compileRoutesMap(
 ) {
   const unresolvedRoutes: [string, string][] = []
   for (const route of context.routes) {
-    unresolvedRoutes.push([
-      context.basePath + route.path.slice(1),
-      route.moduleId,
-    ])
+    if (route.moduleId)
+      unresolvedRoutes.push([
+        context.basePath + route.path.slice(1),
+        route.moduleId,
+      ])
   }
   if (context.defaultRoute) {
-    unresolvedRoutes.push(['default', context.defaultRoute.moduleId])
+    unresolvedRoutes.push(['default', context.defaultRoute.moduleId!])
   }
 
   const routePaths = new Set<string>()

@@ -1,7 +1,7 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
+import type { RenderPageResult } from '../app/types'
 import { loadResponseCache, setResponseCache } from '../http/responseCache'
-import type { RenderPageResult } from '../pages/types'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'

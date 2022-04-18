@@ -1,9 +1,12 @@
 import { MessagePort } from 'worker_threads'
+import { emptyHeaders } from '../app/global'
+import { ProfiledEventHandler } from '../app/types'
 import { RenderedPage, RenderPageOptions } from '../bundle/types'
 import { loadSourceMap, MutableRuntimeConfig, SourceMap } from '../core'
+import { makeRequestUrl } from '../core/endpoint'
 import { loadResponseCache, responseCache } from '../http/responseCache'
-import { ProfiledEventHandler } from '../pages/types'
 import { resolveStackTrace } from '../utils/resolveStackTrace'
+import { parseUrl } from '../utils/url'
 import { Multicast } from './multicast'
 import { runBundle } from './runBundle'
 
@@ -20,11 +23,7 @@ export interface BundleDescriptor {
 export function loadPageFactory(bundle: BundleDescriptor) {
   const { root, eventPort, runtimeConfig = {}, isProfiling } = bundle
 
-  const {
-    default: renderPage,
-    configureBundle,
-    setResponseCache,
-  } = runBundle(bundle)
+  const { default: init, configureBundle, setResponseCache } = runBundle(bundle)
 
   const events = new Multicast<PageEvents>(eventPort)
 
@@ -71,14 +70,24 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   }
 
   return (pagePath: string): void =>
-    void renderPage(pagePath, renderOptions).then(
-      page => {
-        events.emit('page', pagePath, page)
-      },
-      error => {
-        emitRenderError(pagePath, error)
+    void init.then(app => {
+      const url = parseUrl(pagePath)
+      const [, route, params] = app.resolveRoute(
+        makeRequestUrl(url, 'GET', emptyHeaders)
+      )
+      if (!route) {
+        return
       }
-    )
+      url.routeParams = params
+      app.renderPage(url, route, renderOptions).then(
+        page => {
+          events.emit('page', pagePath, page)
+        },
+        error => {
+          emitRenderError(pagePath, error)
+        }
+      )
+    })
 }
 
 export type PageEvents = {

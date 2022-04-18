@@ -1,5 +1,5 @@
+import type { BufferLike } from '../app/types'
 import type { RouteModule } from '../client'
-import { BufferLike } from '../pages/types'
 import type { ClientDescription, ClientState } from './client'
 import type { RuntimeConfig } from './config'
 import { RegexParam, RouteParams } from './routes'
@@ -14,7 +14,7 @@ export type RenderRequest<
   file: string
   query?: string
   module: RouteModule
-  state: State
+  state: State | undefined
   params: Params
 }
 

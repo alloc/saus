@@ -1,7 +1,7 @@
 import type { StateModule } from '../runtime/stateModules'
-import type { ParsedUrl } from '../utils/url'
-import { RequireAsync } from '../vm/types'
+import type { RequireAsync } from '../vm/types'
 import type { SausContext } from './context'
+import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
 
@@ -43,18 +43,24 @@ export interface RouteConfig<
    * If intermediate state is shared between the `state`, `include`, and/or
    * `headProps` options, define a `config` function to avoid work duplication.
    */
-  config?: (
-    url: ParsedUrl<Params>,
-    route: BareRoute<Module>
-  ) => Promisable<RouteStateConfig<Module, Params>>
+  config?: PageSpecificOption<RouteStateConfig<Module, Params>, Module, Params>
 }
 
-type RouteStateOption<Module extends object> =
+export type PageSpecificOption<
+  T = any,
+  Module extends object = RouteModule,
+  Params extends object = RouteParams
+> = (
+  url: Endpoint.RequestUrl<Params>,
+  route: BareRoute<Module>
+) => Promisable<T>
+
+export type RouteStateOption<
+  Module extends object = any,
+  Params extends object = any
+> =
   | Record<string, any>
-  | ((
-      url: ParsedUrl,
-      route: BareRoute<Module>
-    ) => Promisable<Record<string, any>>)
+  | PageSpecificOption<Record<string, any>, Module, Params>
 
 /** A value that defines which state modules are needed by a route. */
 export type RouteIncludeOption<
@@ -62,10 +68,7 @@ export type RouteIncludeOption<
   Params extends object = any
 > =
   | StateModule<any, []>[]
-  | ((
-      url: ParsedUrl<Params>,
-      route: BareRoute<Module>
-    ) => StateModule<any, []>[])
+  | PageSpecificOption<StateModule<any, []>[], Module, Params>
 
 interface RouteStateConfig<
   Module extends object = RouteModule,
@@ -75,7 +78,7 @@ interface RouteStateConfig<
    * Load the page state for this route. This state exists during hydration
    * and is usually provided to the root component on the page.
    */
-  state?: RouteStateOption<Module>
+  state?: RouteStateOption<Module, Params>
   /**
    * Declare which state modules are required by this route.
    *
@@ -90,7 +93,10 @@ interface RouteStateConfig<
    */
   headProps?:
     | Record<string, any>
-    | ((url: ParsedUrl, state: any) => Promisable<Record<string, any>>)
+    | ((
+        url: Endpoint.RequestUrl<Params>,
+        state: any
+      ) => Promisable<Record<string, any>>)
 }
 
 export interface GeneratedRouteConfig<
@@ -108,11 +114,23 @@ export interface ParsedRoute {
 export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   path: string
   load: RouteLoader<T>
-  moduleId: string
+  moduleId: string | null
   generated?: boolean
+  endpoints?: Endpoint[]
+  /**
+   * This is generated on-demand when the route is matched.
+   */
+  methods?: { [method: string]: RouteEndpointMap }
 }
 
+export interface RouteEndpointMap
+  extends Record<Endpoint.ContentType, Endpoint> {}
+
 export interface Route extends BareRoute, RouteConfig {}
+
+export namespace Route {
+  export interface API extends Endpoint.Declarators<API> {}
+}
 
 export function matchRoute(path: string, route: ParsedRoute) {
   return route.pattern

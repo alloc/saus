@@ -1,13 +1,21 @@
+import { ServerResponse } from 'http'
 import getBody from 'raw-body'
-import { Plugin, renderStateModule, SausContext, vite } from '../core'
+import { RenderedFile } from '../app/types'
+import {
+  Plugin,
+  renderStateModule,
+  SausContext,
+  unwrapBuffer,
+  vite,
+} from '../core'
+import { Endpoint, makeRequestUrl } from '../core/endpoint'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
-import { ServedPage } from '../pages/servePage'
-import { RenderedFile } from '../pages/types'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
+import { parseUrl } from '../utils/url'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
@@ -35,8 +43,17 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     async load(id) {
       if (isPageStateRequest(id)) {
         await init
-        const url = id.replace(/(\/index)?\.html\.js$/, '') || '/'
-        const [page, error] = await server.renderPage(url)
+
+        const url = parseUrl(id.replace(/(\/index)?\.html\.js$/, '') || '/')
+        const [, route, params] = server.resolveRoute(
+          makeRequestUrl(url, 'GET', { accept: 'text/html' })
+        )
+        if (!route) {
+          return
+        }
+        url.routeParams = params
+
+        const [page, error] = await server.renderPage(url, route)
         if (error) {
           const props = { message: error.message, stack: error.stack }
           return `throw Object.assign(Error(), ${JSON.stringify(props)})`
@@ -120,48 +137,66 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
       server.middlewares.use(async (req, res, next) => {
         await init
 
-        let url = req.originalUrl!
-        if (!url.startsWith(context.basePath)) {
+        let path = req.originalUrl!
+        if (!path.startsWith(context.basePath)) {
           return next()
         }
 
         // Remove URL fragment, but keep querystring
-        url = url.replace(/#[^?]*/, '')
+        path = path.replace(/#[^?]*/, '')
         // Remove base path
-        url = url.slice(context.basePath.length - 1) || '/'
+        path = path.slice(context.basePath.length - 1) || '/'
 
-        if (url in fileCache) {
-          const { data, mime } = fileCache[url]
-          return respond({
-            body: typeof data == 'string' ? data : Buffer.from(data.buffer),
-            headers: [['Content-Type', mime]],
-          })
+        if (path in fileCache) {
+          const { data, mime } = fileCache[path]
+          res.setHeader('Content-Type', mime)
+          res.write(typeof data == 'string' ? data : Buffer.from(data.buffer))
+          return res.end()
         }
 
-        let { reloadId } = context
-        await server.servePage(url).then(respond)
-
-        function respond({ error, body, headers }: ServedPage = {}): any {
-          if (reloadId !== (reloadId = context.reloadId)) {
-            return (context.reloading || Promise.resolve()).then(() => {
-              return server.servePage(url).then(respond)
-            })
-          }
-          if (error) {
-            onError(error)
-            res.writeHead(500)
-            res.end()
-          } else if (body) {
-            headers?.forEach(([key, value]) => res.setHeader(key, value))
-            res.writeHead(200)
-            res.write(body)
-            res.end()
-          } else {
-            next()
-          }
-        }
+        const url = makeRequestUrl(parseUrl(path), req.method!, req.headers)
+        await processRequest(context, url, res).catch(error => {
+          onError(error)
+          res.writeHead(500)
+          res.end()
+        })
       }),
   }
 
   return [serveState, servePages]
+}
+
+async function processRequest(
+  context: SausContext,
+  req: Endpoint.RequestUrl,
+  res: ServerResponse
+): Promise<void> {
+  const { server, reloadId } = context
+  const [status, headers, body] = await server!.callEndpoints(req)
+  if (reloadId !== context.reloadId) {
+    return (context.reloading || Promise.resolve()).then(() => {
+      return processRequest(context, req, res)
+    })
+  }
+  res.writeHead(status, undefined, headers || undefined)
+  if (!body) {
+    return res.end()
+  }
+  if ('stream' in body) {
+    body.stream.pipe(res, { end: true })
+  } else {
+    const rawBody =
+      'buffer' in body
+        ? unwrapBuffer(body.buffer)
+        : 'text' in body
+        ? body.text
+        : 'json' in body
+        ? JSON.stringify(body)
+        : null
+
+    if (rawBody !== null) {
+      res.write(rawBody)
+    }
+    res.end()
+  }
 }

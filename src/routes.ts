@@ -1,4 +1,5 @@
 import * as RegexParam from 'regexparam'
+import { Endpoint, httpMethods } from './core/endpoint'
 import { routesModule } from './core/global'
 import type {
   GeneratedRouteConfig,
@@ -31,9 +32,9 @@ export function route<Module extends object>(
 /** Define a route */
 export function route<RoutePath extends string, Module extends object>(
   path: RoutePath,
-  load: RouteLoader<Module>,
+  load?: RouteLoader<Module>,
   config?: RouteConfig<Module, InferRouteParams<RoutePath>>
-): void
+): Route.API
 
 /** @internal */
 export function route(
@@ -42,23 +43,66 @@ export function route(
   config?: RouteConfig<any, any>
 ) {
   const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
-  const load = maybeLoad || (pathOrLoad as RouteLoader)
-  const moduleId = parseDynamicImport(load, path)
+  const load =
+    typeof pathOrLoad == 'string' ? maybeLoad : (pathOrLoad as RouteLoader)
 
-  const route = {
+  const routeDecl = {
     path,
     load,
-    moduleId,
+    moduleId: load ? parseDynamicImport(load, path) : null,
     ...config,
   } as Route
 
   if (path[0] === '/') {
-    Object.assign(route, RegexParam.parse(path))
-    routesModule.routes.push(route)
-  } else if (path === 'default') {
-    routesModule.defaultRoute = route
+    Object.assign(routeDecl, RegexParam.parse(path))
+    routesModule.routes.push(routeDecl)
+
+    const api = {} as Route.API
+    for (const method of httpMethods) {
+      api[method] = (
+        arg1: string | Endpoint.ContentType[] | typeof fn,
+        arg2?: Endpoint.ContentType[] | typeof fn,
+        fn?: Endpoint.Function
+      ) => {
+        let contentTypes: Endpoint.ContentType[]
+        if (typeof arg1 == 'string') {
+          const nestedPath = arg1
+          if (Array.isArray(arg2)) {
+            contentTypes = arg2
+          } else {
+            contentTypes = ['application/json']
+            fn = arg2
+          }
+          const nestedRoute = route(path + nestedPath)
+          nestedRoute[method](contentTypes as Endpoint.ContentTypes, fn!)
+          return api
+        }
+
+        if (Array.isArray(arg1)) {
+          contentTypes = arg1
+          fn = arg2 as Endpoint.Function
+        } else {
+          contentTypes = ['*/*']
+          fn = arg1
+        }
+
+        const endpoint = fn as Endpoint
+        endpoint.method = method
+        endpoint.contentTypes = contentTypes
+
+        routeDecl.endpoints ||= []
+        routeDecl.endpoints.push(endpoint)
+
+        return api
+      }
+    }
+    return api
+  }
+
+  if (path === 'default') {
+    routesModule.defaultRoute = routeDecl
   } else if (path === 'error') {
-    routesModule.catchRoute = route
+    routesModule.catchRoute = routeDecl
   }
 }
 

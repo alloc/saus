@@ -3,6 +3,7 @@ import { gray, red, yellow } from 'kleur/colors'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { ProfiledEventHandler } from './app/types'
 import { Multicast } from './build/multicast'
 import {
   BundleDescriptor,
@@ -24,7 +25,6 @@ import {
   vite,
 } from './core'
 import { loadBundleContext } from './core/bundle'
-import { ProfiledEventHandler } from './pages/types'
 import { callPlugins } from './utils/callPlugins'
 import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
