@@ -248,4 +248,17 @@ export interface SausPlugin {
     req: Endpoint.StaticRequest,
     error: any
   ) => Promisable<string>
+  /**
+   * ⚠︎ You probably don't need this hook! Please read the full
+   * description before thinking otherwise.
+   *
+   * Return anything but `false` to allow a SSR module with the
+   * given `id` to have its exports reloaded, thereby enabling
+   * multiple instances of that SSR module to exist at once.
+   *
+   * By default, reloading is allowed, so you only need to use
+   * this hook when you want to prevent a SSR module from having
+   * multiple instances.
+   */
+  shouldReloadExports?: (id: string) => boolean | null | undefined
 }
