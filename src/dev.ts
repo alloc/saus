@@ -183,10 +183,8 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const resolveId: ResolveIdHook = async (id, importer) =>
-    await server.pluginContainer
-      .resolveId(id, importer!, { ssr: true })
-      .then(resolved => resolved?.id)
+  const resolveId: ResolveIdHook = (id, importer) =>
+    server.pluginContainer.resolveId(id, importer!, { ssr: true })
 
   context.server = server
   server.moduleMap = moduleMap

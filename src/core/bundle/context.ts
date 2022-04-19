@@ -95,11 +95,9 @@ export async function loadBundleContext(
   const { pluginContainer } = await vite.createTransformContext(context.config)
 
   const loading = startTask('Loading routes...')
-  await loadRoutes(context, (id, importer) => {
-    return pluginContainer
-      .resolveId(id, importer!, { ssr: true })
-      .then(resolved => resolved?.id)
-  })
+  await loadRoutes(context, (id, importer) =>
+    pluginContainer.resolveId(id, importer!, { ssr: true })
+  )
 
   const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
   loading.finish(`${plural(routeCount, 'route')} loaded.`)

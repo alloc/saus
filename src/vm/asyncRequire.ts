@@ -204,14 +204,21 @@ export function createAsyncRequire(
     let nodeRequire: NodeRequire
 
     resolveStep: try {
-      resolvedId = await resolveId(id, importer, isDynamic)
-      if (resolvedId) {
-        if (isExternalUrl(resolvedId)) {
-          if (resolvedId.endsWith('.json')) {
-            return jsonImport(resolvedId)
-          }
-          return httpImport(resolvedId)
+      const resolved = await resolveId(id, importer, isDynamic)
+      if (resolved) {
+        const resolvedUrl = isExternalUrl(resolved.id) && resolved.id
+        if (resolved.external && !resolvedUrl) {
+          nodeRequire = createRequire(importer || __filename)
+          nodeResolvedId = resolved.id
+          break resolveStep
         }
+        if (resolvedUrl) {
+          if (resolvedUrl.endsWith('.json')) {
+            return jsonImport(resolvedUrl)
+          }
+          return httpImport(resolvedUrl)
+        }
+        resolvedId = resolved.id
         if (isVirtual(id, resolvedId)) {
           virtualId = id
           break resolveStep
