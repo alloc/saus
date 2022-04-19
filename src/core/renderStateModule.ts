@@ -5,22 +5,27 @@ import type { CacheEntry } from './withCache'
 export function renderStateModule(
   stateModuleId: string,
   [state, ...config]: CacheEntry,
-  stateCacheUrl: string
+  stateCacheUrl: string,
+  inline?: boolean
 ) {
-  const cacheEntry =
-    `[state` + config.map(value => ', ' + dataToEsm(value, '')).join('') + `]`
-
-  const lines = [
-    `import { globalCache } from "${stateCacheUrl}"`,
-    dataToEsm(state, 'state'),
-    `globalCache.loaded["${stateModuleId}"] = ${cacheEntry}`,
-    `export default state`,
-  ]
-
-  const args = stateModuleArguments.get(stateModuleId)
-  if (args) {
-    lines.unshift(`/* ${JSON.stringify(args)} */`)
+  let lines: string[]
+  if (inline) {
+    const cacheEntry = dataToEsm([state, ...config], '')
+    lines = [`"${stateModuleId}": ${cacheEntry},`]
+  } else {
+    const cacheEntry = 'state' + commaDelimited(config)
+    lines = [
+      `import { globalCache } from "${stateCacheUrl}"`,
+      dataToEsm(state, 'state'),
+      `globalCache.loaded["${stateModuleId}"] = [${cacheEntry}]`,
+      `export default state`,
+    ]
   }
+  const args = stateModuleArguments.get(stateModuleId)
+  const argsComment = args ? `/* ${JSON.stringify(args)} */\n` : ``
+  return argsComment + lines.join('\n')
+}
 
-  return lines.join('\n')
+function commaDelimited(arr: any[]) {
+  return arr.map(value => ', ' + dataToEsm(value, '')).join('')
 }

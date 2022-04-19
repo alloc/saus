@@ -1,6 +1,6 @@
 import md5Hex from 'md5-hex'
 import path from 'path'
-import { ClientState } from '../client'
+import { ClientState, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
 import {
@@ -25,13 +25,14 @@ import {
   emptyArray,
   emptyHeaders,
   headPropsCache,
+  inlinedStateMap,
   stateModulesMap,
 } from './global'
 import { handleNestedState } from './handleNestedState'
 import { createNegotiator } from './negotiator'
 import { renderClient } from './renderClient'
 import { createRenderPageFn } from './renderPage'
-import { createStateModuleMap } from './stateModules'
+import { createStateModuleMap, loadIncludedState } from './stateModules'
 import {
   AppContext,
   ClientFunctions,
@@ -256,10 +257,32 @@ function createClientStateLoader(
       ? await route.config(requestUrl, route)
       : route
 
+    // Put the promises returned by route config functions here.
+    const deps: Promise<any>[] = []
+
     // Start loading state modules before the route state is awaited.
     const routeInclude = defaultState.concat([routeConfig.include || []])
     for (const included of routeInclude) {
-      stateModules.include(included, requestUrl, route).catch(onError)
+      deps.push(stateModules.include(included, requestUrl, route, onError))
+    }
+
+    let inlinedState: Set<StateModule>
+    if (routeConfig.inline) {
+      const loadInlinedState = (state: StateModule) => {
+        return state.load().then(loaded => {
+          inlinedState.add(state)
+          return loaded
+        }, onError)
+      }
+      inlinedState = new Set()
+      deps.push(
+        loadIncludedState(
+          routeConfig.inline,
+          requestUrl,
+          route,
+          loadInlinedState
+        ).catch(onError)
+      )
     }
 
     const routeState = routeConfig.state
@@ -279,8 +302,11 @@ function createClientStateLoader(
     })
 
     // Wait for state modules to load.
+    await Promise.all(deps)
     await Promise.all(stateModules.values())
+
     stateModulesMap.set(state, Array.from(stateModules.keys()))
+    inlinedStateMap.set(state, inlinedState!)
 
     profile?.('load state', {
       url: url.toString(),

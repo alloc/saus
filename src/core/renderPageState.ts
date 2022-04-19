@@ -1,9 +1,13 @@
+import { inlinedStateMap } from '../app/global'
 import type { RenderedPage } from '../app/types'
+import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
 import { prependBase } from '../utils/prependBase'
 import { ClientState } from './client'
+import { globalCachePath } from './paths'
+import { renderStateModule } from './renderStateModule'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 export interface ServerState extends ClientState {
@@ -24,29 +28,52 @@ export function renderPageState(
     prependBase(stateModuleBase + id + '.js', base)
 
   const stateModuleUrls = new Set(stateModules.map(toStateUrl))
-  const inlinedStateUrls: string[] = []
-  const inlinedStateIdents: string[] = []
+  const nestedStateUrls: string[] = []
+  const nestedStateIdents: string[] = []
 
   let code = dataToEsm((state as ServerState)._client, null, (_, value) => {
-    const inlinedStateId = value && value['@import']
-    if (inlinedStateId) {
-      let stateUrl = toStateUrl(inlinedStateId)
-      let index = inlinedStateUrls.indexOf(stateUrl)
+    const nestedStateId = value && value['@import']
+    if (nestedStateId) {
+      let stateUrl = toStateUrl(nestedStateId)
+      let index = nestedStateUrls.indexOf(stateUrl)
       if (index < 0) {
-        index = inlinedStateUrls.push(stateUrl) - 1
+        index = nestedStateUrls.push(stateUrl) - 1
         stateModuleUrls.delete(stateUrl)
       }
       const ident = 's' + (index + 1)
-      inlinedStateIdents[index] = ident
+      nestedStateIdents[index] = ident
       return ident
     }
   })
 
+  const imports = new Map<string, string[]>()
+
+  const inlinedState = inlinedStateMap.get(props!)
+  if (inlinedState) {
+    const inlined = Array.from(inlinedState, state => {
+      return renderStateModule(
+        state.id,
+        globalCache.loaded[state.id],
+        globalCachePath,
+        true
+      )
+    })
+      .join(RETURN)
+      .replace(/\n/g, '\n  ')
+
+    imports.set(base + '@fs' + globalCachePath, ['globalCache'])
+    code =
+      `Object.assign(globalCache.loaded, {` +
+      (RETURN + INDENT + inlined + RETURN) +
+      `})\n` +
+      code
+  }
+
   const helpers: string[] = []
 
-  if (inlinedStateUrls.length) {
-    const idents = inlinedStateIdents.join(',' + SPACE)
-    const imports = inlinedStateUrls
+  if (nestedStateUrls.length) {
+    const idents = nestedStateIdents.join(',' + SPACE)
+    const imports = nestedStateUrls
       .concat(Array.from(stateModuleUrls))
       .map(url => INDENT + `import("${url}"),`)
 
@@ -99,10 +126,20 @@ export function renderPageState(
   }
 
   if (helpers.length) {
+    imports.set(base + helpersId, helpers)
+  }
+
+  if (imports.size) {
     code =
-      `import {${SPACE + helpers.join(',' + SPACE) + SPACE}} from "${
-        base + helpersId
-      }"\n` + code
+      Array.from(
+        imports,
+        ([source, specifiers]) =>
+          `import {${
+            SPACE + specifiers.join(',' + SPACE) + SPACE
+          }} from "${source}"`
+      ).join('\n') +
+      '\n' +
+      code
   }
 
   return code
