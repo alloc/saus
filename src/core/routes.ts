@@ -1,4 +1,5 @@
 import type { StateModule } from '../runtime/stateModules'
+import { OneOrMany } from '../utils/types'
 import type { RequireAsync } from '../vm/types'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
@@ -62,13 +63,13 @@ export type RouteStateOption<
   | Record<string, any>
   | PageSpecificOption<Record<string, any>, Module, Params>
 
+type RouteIncludedState = readonly OneOrMany<StateModule<any, []>>[]
+
 /** A value that defines which state modules are needed by a route. */
 export type RouteIncludeOption<
   Module extends object = any,
   Params extends object = any
-> =
-  | StateModule<any, []>[]
-  | PageSpecificOption<StateModule<any, []>[], Module, Params>
+> = RouteIncludedState | PageSpecificOption<RouteIncludedState, Module, Params>
 
 interface RouteStateConfig<
   Module extends object = RouteModule,
@@ -87,6 +88,11 @@ interface RouteStateConfig<
    * are expected, pass the state module without calling any method.
    */
   include?: RouteIncludeOption<Module, Params>
+  /**
+   * Similar to the `include` option, but the state modules' data is declared
+   * inside the "page state module" so no extra HTTP requests are needed.
+   */
+  inline?: RouteIncludeOption<Module, Params>
   /**
    * Load or generate state used only when rendering the `<head>` element.
    * This state is never sent to the client.

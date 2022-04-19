@@ -31,7 +31,7 @@ interface ExistingRawSourceMap {
 }
 
 /** JSON state provided by the renderer and made available to the client */
-export type ClientState = Record<string, any> & {
+export type ClientState = {
   rootId?: string
   routePath: string
   routeParams: RouteParams

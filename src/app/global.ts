@@ -1,4 +1,4 @@
-import type { ClientState } from '../client'
+import type { ClientState, StateModule } from '../client'
 import type { Headers } from '../http'
 
 /**
@@ -8,6 +8,11 @@ import type { Headers } from '../http'
  * sent to the client.
  */
 export const stateModulesMap = new WeakMap<ClientState, string[]>()
+
+/**
+ * These state modules will be inlined with the page state.
+ */
+export const inlinedStateMap = new WeakMap<ClientState, StateModule[]>()
 
 /**
  * The `route.headProps` value is resolved at the same time as the

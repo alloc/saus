@@ -292,19 +292,21 @@ export const createPageFactory: AppWrapper = ({ config, renderPage }) => {
 
           // The page's state module is rendered after HTML post processors
           // run to ensure all <link> tags are included.
-          modules.add({
-            id: pageStateId,
-            text: renderPageState(
-              page,
-              config.base,
-              moduleMap.helpers,
-              preloadList
-            ),
-            exports: ['default'],
-          })
+          if (page.state) {
+            modules.add({
+              id: pageStateId,
+              text: renderPageState(
+                page,
+                config.base,
+                moduleMap.helpers,
+                preloadList
+              ),
+              exports: ['default'],
+            })
 
-          // The helpers module is used by every page's state module.
-          addModule(moduleMap.helpers)
+            // The helpers module is used by every page's state module.
+            addModule(moduleMap.helpers)
+          }
         }
 
         if (!config.stripLinkTags) {
