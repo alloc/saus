@@ -74,6 +74,10 @@ export type ResolvedId = {
    * which means the Node.js module loader will be used (except for HTTP modules).
    */
   external?: boolean | 'absolute' | 'relative'
+  /**
+   * Prevent `shouldReload` hook from being called for this module.
+   */
+  reload?: boolean
 }
 
 export type CompileModuleHook = (

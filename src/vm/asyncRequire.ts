@@ -198,6 +198,7 @@ export function createAsyncRequire(
       ? traceDynamicImport(Error(), 3)
       : (callStack = [getStackFrame(3), ...callStack])
 
+    let shouldReload = config.shouldReload || neverReload
     let virtualId: string | undefined
     let resolvedId: string | undefined
     let nodeResolvedId: string | undefined
@@ -206,6 +207,9 @@ export function createAsyncRequire(
     resolveStep: try {
       const resolved = await resolveId(id, importer, isDynamic)
       if (resolved) {
+        if (resolved.reload == false) {
+          shouldReload = neverReload
+        }
         const resolvedUrl = isExternalUrl(resolved.id) && resolved.id
         if (resolved.external && !resolvedUrl) {
           nodeRequire = createRequire(importer || __filename)
@@ -283,8 +287,6 @@ export function createAsyncRequire(
     let module: CompiledModule | undefined
 
     loadStep: try {
-      const shouldReload = config.shouldReload || neverReload
-
       if (resolvedId && compileModule) {
         await moduleMap.__compileQueue
 
