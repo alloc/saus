@@ -133,6 +133,18 @@ export interface SausConfig {
   clients?: ClientDescription[]
 }
 
+declare module 'rollup' {
+  interface PartialResolvedId {
+    /**
+     * Use `false` to prevent this module from being reloaded.
+     *
+     * Perfect for singleton modules that should be shared between
+     * modules inside and outside the SSR module graph.
+     */
+    reload?: boolean
+  }
+}
+
 declare module 'vite' {
   interface UserConfig {
     saus?: Partial<SausConfig>
