@@ -8,13 +8,10 @@ import { plural } from '../utils/plural'
 import { createAsyncRequire } from '../vm/asyncRequire'
 import { ConfigHookRef, setConfigHooks } from './config'
 import { debug } from './debug'
-import { callReloadHooks, createFullReload } from './fullReload'
-import { ResolvedConfig, SausPlugin } from './vite'
+import { createFullReload } from './fullReload'
+import { ResolvedConfig } from './vite'
 
-export async function loadConfigHooks(
-  config: ResolvedConfig,
-  plugins?: readonly SausPlugin[]
-) {
+export async function loadConfigHooks(config: ResolvedConfig) {
   const time = Date.now()
 
   const importer = config.saus.render
@@ -61,10 +58,7 @@ export async function loadConfigHooks(
   const reloadList = new Set<string>()
   const requireAsync = createAsyncRequire({
     nodeResolve,
-    shouldReload: createFullReload(
-      reloadList,
-      plugins && (id => callReloadHooks(plugins, id))
-    ),
+    shouldReload: createFullReload(reloadList),
   })
 
   for (const imp of imports) {
