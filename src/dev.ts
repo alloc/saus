@@ -122,6 +122,9 @@ export async function createServer(
     if (error) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
     }
+    // In case any plugins have started a long-running process
+    // and want to clean it up.
+    server?.close()
   })
 
   function middleware(
