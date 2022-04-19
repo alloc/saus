@@ -2,6 +2,7 @@
 
 export * from '../runtime/getCachedState'
 export * from '../runtime/clearCachedState'
+export * from '../runtime/mapStateModule'
 export * from '../runtime/stateModules'
 
 export * from '../utils/getPagePath'
