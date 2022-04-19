@@ -11,7 +11,7 @@ import { getPageFilename, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
 import { Endpoint } from './core/endpoint'
-import { createFullReload } from './core/fullReload'
+import { callReloadHooks, createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
 import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
@@ -193,8 +193,12 @@ async function startServer(
   Object.assign(server, getRequireFunctions(context, resolveId))
   context.ssrRequire = server.ssrRequire
 
-  // Force all node_modules to be reloaded
-  server.ssrForceReload = createFullReload()
+  // Reload all modules (even node_modules) except any module
+  // that a plugin doesn't want reloaded.
+  server.ssrForceReload = createFullReload(undefined, id => {
+    return callReloadHooks(context.plugins, id)
+  })
+
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
@@ -290,7 +294,7 @@ async function startServer(
         await loadRenderers(context)
 
         const oldConfigHooks = context.configHooks
-        const newConfigHooks = await loadConfigHooks(config)
+        const newConfigHooks = await loadConfigHooks(config, context.plugins)
 
         const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
         const newConfigPaths = newConfigHooks.map(ref => ref.path)
