@@ -10,22 +10,31 @@ if (ReactDebugCurrentFrame) {
     (ReactDOM.renderToNodeStream(<div />) as any).partialRenderer
   )
 
-  const stackFrameRE = /\n {4}at (?:.+?\s+\()?.+?:\d+(?::\d+)?\)?/
-
   // Ensure the component stack is included in stack traces.
   const { render } = ReactDOMServerRendererPrototype
   ReactDOMServerRendererPrototype.render = function (...args: any[]) {
     try {
       return render.apply(this, args)
     } catch (err: any) {
-      const componentStack = ReactDebugCurrentFrame.getStackAddendum()
-      const firstFrame = stackFrameRE.exec(err.stack)
-      if (firstFrame) {
+      const errorStack = err.stack
+      const componentStack: string = ReactDebugCurrentFrame.getStackAddendum()
+      const hoistedFrames: string[] = []
+      const stackFrameRE = /\n {4}at (?:.+?\s+\()?.+?:\d+(?::\d+)?\)?/g
+      while (stackFrameRE.lastIndex < errorStack.length) {
+        const frame = stackFrameRE.exec(errorStack)
+        if (frame && !frame[0].includes('/react-dom/')) {
+          hoistedFrames.push(frame[0])
+        } else break
+      }
+      if (hoistedFrames.length) {
+        const componentFrames = componentStack.split('\n').map(f => '\n' + f)
+        while (componentFrames.length) {
+          if (hoistedFrames.includes(componentFrames[0])) {
+            componentFrames.shift()
+          } else break
+        }
         err.stack =
-          err.stack.slice(0, firstFrame.index) +
-          (componentStack.startsWith(firstFrame[0]) ? '' : firstFrame[0]) +
-          componentStack +
-          err.stack.slice(firstFrame.index + firstFrame[0].length)
+          err.stack.slice(0, stackFrameRE.lastIndex) + componentFrames.join('')
       } else {
         err.message += componentStack
       }
