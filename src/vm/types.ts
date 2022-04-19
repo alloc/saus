@@ -65,7 +65,16 @@ export type ResolveIdHook = (
   id: string,
   importer?: string | null,
   isDynamic?: boolean
-) => Promisable<string | undefined>
+) => Promisable<ResolvedId | null | undefined>
+
+export type ResolvedId = {
+  id: string
+  /**
+   * Note that `"absolute"` and `"relative"` are (currently) treated the same as `true`,
+   * which means the Node.js module loader will be used (except for HTTP modules).
+   */
+  external?: boolean | 'absolute' | 'relative'
+}
 
 export type CompileModuleHook = (
   id: string,

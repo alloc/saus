@@ -15,7 +15,6 @@ import { debug } from './debug'
 import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
 import { Route } from './routes'
-import { isExternalUrl } from './utils'
 
 export async function loadRoutes(
   context: SausContext,
@@ -56,12 +55,12 @@ export async function loadRoutes(
     for (const route of routesConfig.routes) {
       if (!route.moduleId) continue
       if (route.generated) {
-        const routeModuleId = await resolveId(
+        const resolved = await resolveId(
           route.moduleId,
           context.routesPath,
           true
         )
-        if (!routeModuleId) {
+        if (!resolved) {
           const error = Error(
             `Cannot find module "${
               route.moduleId
@@ -71,7 +70,7 @@ export async function loadRoutes(
             code: 'ERR_MODULE_NOT_FOUND',
           })
         }
-        route.moduleId = toDevPath(routeModuleId, context.root)
+        route.moduleId = toDevPath(resolved.id, context.root)
       }
     }
 
@@ -101,13 +100,13 @@ async function compileRoutesModule(
   const editor = new MagicString(code)
   for (const imp of esModuleLexer.parse(code)[0]) {
     if (imp.d >= 0 && imp.n) {
-      const resolvedId = await resolveId(imp.n, routesPath, true)
-      if (resolvedId) {
-        const resolvedUrl = isExternalUrl(resolvedId)
-          ? resolvedId
-          : resolvedId.startsWith(root + '/')
-          ? resolvedId.slice(root.length)
-          : '/@fs/' + resolvedId
+      const resolved = await resolveId(imp.n, routesPath, true)
+      if (resolved) {
+        const resolvedUrl = resolved.external
+          ? resolved.id
+          : resolved.id.startsWith(root + '/')
+          ? resolved.id.slice(root.length)
+          : '/@fs/' + resolved.id
 
         editor.overwrite(imp.s, imp.e, `"${resolvedUrl}"`)
       }
