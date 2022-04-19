@@ -1,7 +1,6 @@
 import { AbortSignal } from 'node-abort-controller'
 import * as vite from 'vite'
 import { App } from '../app/createApp'
-import type { ServePageFn } from '../app/servePage'
 import type { RenderedFile } from '../app/types'
 import type { RenderedPage } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
@@ -151,9 +150,7 @@ declare module 'vite' {
   }
 
   interface ViteDevServer extends Omit<App, 'config'> {
-    /** Like `renderPage` but with a result tuned for an HTTP response. */
-    servePage: ServePageFn
-    /** Files produced by a renderer and cached by a `servePage` call. */
+    /** Files emitted by a renderer are cached here. */
     servedFiles: Record<string, RenderedFile>
     moduleMap: ModuleMap
     linkedModules: LinkedModuleMap

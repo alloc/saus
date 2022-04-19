@@ -9,7 +9,7 @@ export function cacheClientState(maxAge: number): AppWrapper {
       loadClientState: (url, route) =>
         getCachedState(url.path, async cacheControl => {
           const state = await loadClientState(url, route)
-          cacheControl.maxAge = 1
+          cacheControl.maxAge = maxAge
           return state
         }),
     }

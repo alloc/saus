@@ -37,9 +37,9 @@ export type RenderedPage = {
   html: string
   head: ParsedHead
   files: RenderedFile[]
+  state: ClientState
   stateModules: string[]
   routeModuleId: string
-  state?: ClientState
   client?: Client
 }
 

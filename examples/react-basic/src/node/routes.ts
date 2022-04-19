@@ -7,7 +7,7 @@ route('/', () => import('../routes/Home'))
 
 route('/pokemon/:name', () => import('../routes/Pokemon'), {
   paths: () => pokemonList.map(name => name.toLowerCase()),
-  include: (_, { name }) => [scrapedText.bind(name)],
+  include: ({ name }) => [scrapedText.bind(name)],
 })
 
 route(() => import('../routes/NotFound'))

@@ -142,7 +142,7 @@ export function createApp(
         for (const endpoint of endpoints) {
           if (!endpoint) continue
           endpoint.method = method
-          for (const type of (endpoint.contentTypes ||= ['*/*;q=0.1'])) {
+          for (const type of (endpoint.contentTypes ||= ['text/html'])) {
             endpointMap[type] = endpoint as Endpoint
           }
         }
@@ -211,7 +211,7 @@ export function createApp(
       }
     }
 
-    return [404]
+    return []
   }
 
   const app = {

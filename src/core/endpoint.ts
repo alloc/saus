@@ -76,7 +76,7 @@ export namespace Endpoint {
   }
 
   export type ResponseTuple = [
-    status: number,
+    status?: number,
     headers?: Headers | null,
     body?: Endpoint.ResponseBody
   ]

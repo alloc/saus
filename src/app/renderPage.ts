@@ -43,7 +43,7 @@ export function createRenderPageFn(
   // The main logic for HTML document generation.
   const generateDocument = async (
     url: ParsedUrl,
-    state: ClientState | undefined,
+    state: ClientState,
     route: Route,
     routeModule: RouteModule,
     renderer: Renderer,
@@ -70,10 +70,7 @@ export function createRenderPageFn(
       }
     }
 
-    let html = await renderer.renderDocument(
-      request,
-      state && headPropsCache.get(state)
-    )
+    let html = await renderer.renderDocument(request, headPropsCache.get(state))
     if (html == null) {
       return null
     }
@@ -90,7 +87,7 @@ export function createRenderPageFn(
       head: undefined!,
       state,
       files: [],
-      stateModules: state ? stateModulesMap.get(state)! : [],
+      stateModules: stateModulesMap.get(state) || [],
       routeModuleId: route.moduleId!,
       client: undefined,
     }
@@ -208,7 +205,7 @@ export function createRenderPageFn(
     // same time, or else they won't be isolated from each other.
     const contextPromise = pageContextQueue.then(async () => {
       const { renderers, defaultRenderer, beforeRenderHooks } =
-        await getPageContext(url, options)
+        await getPageContext(url, route, options)
 
       let routeModule: RouteModule
       let error: any
@@ -225,7 +222,10 @@ export function createRenderPageFn(
         (renderer: Renderer) =>
           generateDocument(
             url,
-            options.state,
+            options.state || {
+              routePath: route.path,
+              routeParams: url.routeParams,
+            },
             route,
             routeModule,
             renderer,

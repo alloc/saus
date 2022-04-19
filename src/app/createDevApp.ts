@@ -38,7 +38,9 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
     reloadModules(context),
     cachePages(1, context.getCachedPage),
     cacheClientState(1),
-    throttleRender,
+    throttleRender(async (app, url, route, options) => {
+      options.state = await app.loadClientState(url, route)
+    }),
   ]
 
   return createApp(

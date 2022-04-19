@@ -25,8 +25,8 @@ export function renderErrorFallback(error: any, context: SausContext) {
   })
 
   return endent`
-    <link rel="stylesheet" href="/@id/saus/src/pages/errorFallback.css?direct">
-    <script type="module" src="/@id/saus/src/pages/errorFallbackClient.js"></script>
+    <link rel="stylesheet" href="/@id/saus/src/app/errorFallback.css?direct">
+    <script type="module" src="/@id/saus/src/app/errorFallbackClient.js"></script>
     <body>
       <h1>An error occurred while the server was rendering.</h1>
       <small>

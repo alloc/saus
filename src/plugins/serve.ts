@@ -155,7 +155,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         }
 
         const url = makeRequestUrl(parseUrl(path), req.method!, req.headers)
-        await processRequest(context, url, res).catch(error => {
+        await processRequest(context, url, res, next).catch(error => {
           onError(error)
           res.writeHead(500)
           res.end()
@@ -169,14 +169,18 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 async function processRequest(
   context: SausContext,
   req: Endpoint.RequestUrl,
-  res: ServerResponse
+  res: ServerResponse,
+  next: () => void
 ): Promise<void> {
   const { server, reloadId } = context
   const [status, headers, body] = await server!.callEndpoints(req)
   if (reloadId !== context.reloadId) {
     return (context.reloading || Promise.resolve()).then(() => {
-      return processRequest(context, req, res)
+      return processRequest(context, req, res, next)
     })
+  }
+  if (status == null) {
+    return next()
   }
   res.writeHead(status, undefined, headers || undefined)
   if (!body) {

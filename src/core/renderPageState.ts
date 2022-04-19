@@ -5,9 +5,15 @@ import { stateModuleBase } from '../runtime/constants'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
 import { prependBase } from '../utils/prependBase'
+import { ClientState } from './client'
 import { globalCachePath } from './paths'
 import { renderStateModule } from './renderStateModule'
 import { INDENT, RETURN, SPACE } from './tokens'
+
+export interface ServerState extends ClientState {
+  _client: ClientState
+  _ts?: number
+}
 
 /**
  * Render a client module for the page state.
@@ -25,7 +31,7 @@ export function renderPageState(
   const nestedStateUrls: string[] = []
   const nestedStateIdents: string[] = []
 
-  let code = dataToEsm(state!._client, null, (_, value) => {
+  let code = dataToEsm((state as ServerState)._client, null, (_, value) => {
     const inlinedStateId = value && value['@import']
     if (inlinedStateId) {
       let stateUrl = toStateUrl(inlinedStateId)

@@ -14,7 +14,7 @@ export type RenderRequest<
   file: string
   query?: string
   module: RouteModule
-  state: State | undefined
+  state: State & ClientState
   params: Params
 }
 
