@@ -1,6 +1,5 @@
 import { stateModuleArguments } from '../runtime/loadStateModule'
 import { dataToEsm } from '../utils/dataToEsm'
-import { RETURN } from './tokens'
 import type { CacheEntry } from './withCache'
 
 export function renderStateModule(
@@ -12,7 +11,7 @@ export function renderStateModule(
   let lines: string[]
   if (inline) {
     const cacheEntry = dataToEsm([state, ...config], '')
-    lines = [`"${stateModuleId}": ${cacheEntry},` + RETURN]
+    lines = [`"${stateModuleId}": ${cacheEntry},`]
   } else {
     const cacheEntry = 'state' + commaDelimited(config)
     lines = [

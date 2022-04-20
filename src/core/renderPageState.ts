@@ -33,9 +33,9 @@ export function renderPageState(
   const nestedStateIdents: string[] = []
 
   let code = dataToEsm(clientProps, null, (_, value) => {
-    const inlinedStateId = value && value['@import']
-    if (inlinedStateId) {
-      let stateUrl = toStateUrl(inlinedStateId)
+    const nestedStateId = value && value['@import']
+    if (nestedStateId) {
+      let stateUrl = toStateUrl(nestedStateId)
       let index = nestedStateUrls.indexOf(stateUrl)
       if (index < 0) {
         index = nestedStateUrls.push(stateUrl) - 1
@@ -46,6 +46,24 @@ export function renderPageState(
       return ident
     }
   })
+
+  const inlinedState = inlinedStateMap.get(props!)
+  if (inlinedState) {
+    const inlined = Array.from(inlinedState, state => {
+      return renderStateModule(
+        state.id,
+        globalCache.loaded[state.id],
+        globalCachePath,
+        true
+      )
+    })
+      .join(RETURN)
+      .replace(/\n/g, '\n  ')
+
+    code =
+      `Object.assign(globalCache.loaded, {${RETURN + INDENT}${inlined}})\n` +
+      code
+  }
 
   const helpers: string[] = []
 
@@ -70,25 +88,6 @@ export function renderPageState(
     )
     code =
       `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` + code
-  }
-
-  const inlinedState = inlinedStateMap.get(props!)
-  if (inlinedState) {
-    const inlined = inlinedState
-      .map(state => {
-        return renderStateModule(
-          state.id,
-          globalCache.loaded[state.id],
-          globalCachePath,
-          true
-        )
-      })
-      .join('')
-      .replace(/\n/g, '\n  ')
-
-    code =
-      `Object.assign(globalCache.loaded, {${RETURN + INDENT}${inlined}})\n` +
-      code
   }
 
   if (
