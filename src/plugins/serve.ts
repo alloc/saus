@@ -1,4 +1,5 @@
 import { ServerResponse } from 'http'
+import { gray, green, red } from 'kleur/colors'
 import getBody from 'raw-body'
 import { RenderedFile } from '../app/types'
 import {
@@ -182,6 +183,13 @@ async function processRequest(
   if (status == null) {
     return next()
   }
+  const statusColor = /^[23]/.test('' + status) ? green : red
+  const contentLength = headers && (headers['content-length'] as string)
+  console.log(
+    statusColor('⨠ ' + status),
+    req.toString(),
+    contentLength ? gray((+contentLength / 1024).toFixed(2) + 'KiB') : ''
+  )
   res.writeHead(status, undefined, headers || undefined)
   if (!body) {
     return res.end()
