@@ -40,7 +40,6 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
     cacheClientProps(1),
     throttleRender(async (app, url, route, options) => {
       options.props = await app.loadClientProps(url, route)
-      console.log('%s ▸ Loaded props:', url, options.props)
     }),
   ]
 
