@@ -13,7 +13,7 @@ export async function collectCss(
       urls.add(mod)
     }
     if (!mod.transformResult) {
-      await server.transformRequest(mod.url)
+      await server.transformRequest(mod.url.replace(/^\/@id\//, ''))
     }
     await Promise.all(
       Array.from(mod.importedModules, dep => {
