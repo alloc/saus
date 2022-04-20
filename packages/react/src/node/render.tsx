@@ -1,7 +1,7 @@
 import {
-  render as renderHtml,
-  ClientState,
+  CommonClientProps,
   InferRouteParams,
+  render as renderHtml,
   RenderCall,
   RenderRequest,
   RouteModule,
@@ -16,23 +16,23 @@ const defineRenderer = renderTo(renderHtml)
 export function render<
   Route extends string,
   Module extends object = RouteModule,
-  State extends object = ClientState
+  Props extends object = CommonClientProps
 >(
   route: Route,
   render: (
     module: Module,
-    request: RenderRequest<State, InferRouteParams<Route>>
+    request: RenderRequest<Props, InferRouteParams<Route>>
   ) => Promisable<JSX.Element | null | void>
 ): RenderCall<JSX.Element>
 
 /** Set the fallback renderer. */
 export function render<
   Module extends object = RouteModule,
-  State extends object = ClientState
+  Props extends object = CommonClientProps
 >(
   render: (
     module: Module,
-    request: RenderRequest<State>
+    request: RenderRequest<Props>
   ) => Promisable<JSX.Element>
 ): RenderCall<JSX.Element>
 

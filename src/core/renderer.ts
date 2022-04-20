@@ -1,29 +1,27 @@
 import type { BufferLike } from '../app/types'
 import type { RouteModule } from '../client'
-import type { ClientDescription, ClientState } from './client'
+import type { ClientDescription, CommonClientProps } from './client'
 import type { RuntimeConfig } from './config'
 import { RegexParam, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
 
-export type RenderRequest<
-  State extends object = ClientState,
-  Params extends RouteParams = RouteParams
-> = {
+export interface RenderRequest<
+  Props extends {} = Record<string, any>,
+  Params extends {} = RouteParams
+> {
+  /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
   path: string
+  /** The `.html` file associated with this page */
   file: string
+  /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
   query?: string
+  /** The entry module imported by the route */
   module: RouteModule
-  state: State & ClientState
+  /** Page props provided by the route */
+  props: Props & CommonClientProps
+  /** Named strings extracted with a route pattern */
   params: Params
-}
-
-export type HeadRequest<
-  Props extends object | undefined = Record<string, any> | undefined,
-  State extends object = ClientState,
-  Params extends RouteParams = RouteParams
-> = RenderRequest<State, Params> & {
-  props: Props
 }
 
 export type DocumentHook = (
@@ -44,7 +42,7 @@ const emitPage: DocumentHook = function (html, { file }) {
 export class Renderer<T = any> {
   api = new RenderCall<T>(this)
   test: (path: string) => boolean
-  getHead?: (request: HeadRequest) => Promisable<T>
+  getHead?: (request: RenderRequest) => Promisable<T>
   didRender?: (request: RenderRequest) => Promisable<void>
 
   constructor(
@@ -79,8 +77,8 @@ export class Renderer<T = any> {
       }
       if (this.getHead) {
         const headRequest = headProps
-          ? { ...request, props: headProps }
-          : (request as HeadRequest)
+          ? { ...request, props: { ...request.props, ...headProps } }
+          : request
 
         let head = await this.stringifyHead(await this.getHead(headRequest))
         if (!/^\s*<head( |>)/.test(head)) {
@@ -114,8 +112,8 @@ export class RenderCall<T = string | null | void> {
    * function only runs in an SSR environment, and it's invoked after
    * the `<body>` is pre-rendered.
    */
-  head<Props extends object | undefined = Record<string, any> | undefined>(
-    getHead: (request: HeadRequest<Props>) => T | Promise<T>
+  head<Props extends {} = Record<string, any>>(
+    getHead: (request: RenderRequest<Props>) => T | Promise<T>
   ) {
     this._renderer.getHead = getHead as any
     return this

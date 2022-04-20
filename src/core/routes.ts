@@ -56,7 +56,7 @@ export type PageSpecificOption<
   route: BareRoute<Module>
 ) => Promisable<T>
 
-export type RouteStateOption<
+export type RoutePropsOption<
   Module extends object = any,
   Params extends object = any
 > =
@@ -76,10 +76,10 @@ interface RouteStateConfig<
   Params extends object = RouteParams
 > {
   /**
-   * Load the page state for this route. This state exists during hydration
-   * and is usually provided to the root component on the page.
+   * Load the page props for this route. These props exist during hydration
+   * and are usually provided to the root component on the page.
    */
-  state?: RouteStateOption<Module, Params>
+  props?: RoutePropsOption<Module, Params>
   /**
    * Declare which state modules are required by this route.
    *

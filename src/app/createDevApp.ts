@@ -10,7 +10,7 @@ import { globalCachePath } from '../core/paths'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { parseUrl } from '../utils/url'
 import { clearExports } from '../vm/moduleMap'
-import { cacheClientState } from './cacheClientState'
+import { cacheClientProps } from './cacheClientProps'
 import { cachePages } from './cachePages'
 import { App, AppWrapper, createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
@@ -37,9 +37,10 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
   const appWrappers = [
     reloadModules(context),
     cachePages(1, context.getCachedPage),
-    cacheClientState(1),
+    cacheClientProps(1),
     throttleRender(async (app, url, route, options) => {
-      options.state = await app.loadClientState(url, route)
+      options.props = await app.loadClientProps(url, route)
+      console.log('%s ▸ Loaded props:', url, options.props)
     }),
   ]
 

@@ -1,8 +1,8 @@
 import type { Buffer } from '../client'
 import type {
+  AnyClientProps,
   BeforeRenderHook,
   Client,
-  ClientState,
   Renderer,
   RenderModule,
   Route,
@@ -37,9 +37,9 @@ export type RenderedPage = {
   html: string
   head: ParsedHead
   files: RenderedFile[]
-  state: ClientState
-  stateModules: string[]
+  props: AnyClientProps
   routeModuleId: string
+  stateModules: string[]
   client?: Client
 }
 
@@ -75,7 +75,7 @@ export type RenderPageFn = (
 export type RenderPageResult = [page: RenderedPage | null, error?: any]
 
 export type RenderPageOptions = {
-  state?: ClientState
+  props?: AnyClientProps
   request?: Endpoint.StaticRequest
   resolved?: ResolvedRoute
   timeout?: number
@@ -133,7 +133,7 @@ export type ClientResolver = (
   beforeHooks: BeforeRenderHook[]
 ) => Promise<Client | undefined>
 
-export type ClientStateLoader = (
+export type ClientPropsLoader = (
   url: ParsedUrl,
   route: Route
-) => Promise<ClientState>
+) => Promise<AnyClientProps>
