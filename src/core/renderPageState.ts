@@ -47,6 +47,8 @@ export function renderPageState(
     }
   })
 
+  const imports = new Map<string, string[]>()
+
   const inlinedState = inlinedStateMap.get(props!)
   if (inlinedState) {
     const inlined = Array.from(inlinedState, state => {
@@ -60,8 +62,11 @@ export function renderPageState(
       .join(RETURN)
       .replace(/\n/g, '\n  ')
 
+    imports.set(base + '@fs' + globalCachePath, ['globalCache'])
     code =
-      `Object.assign(globalCache.loaded, {${RETURN + INDENT}${inlined}})\n` +
+      `Object.assign(globalCache.loaded, {` +
+      (RETURN + INDENT + inlined + RETURN) +
+      `})\n` +
       code
   }
 
@@ -121,15 +126,21 @@ export function renderPageState(
     code = `preloadModules(${dataToEsm(preloadUrls, '')})\n` + code
   }
 
-  if (inlinedState) {
-    code = `import {globalCache} from "/@fs/${globalCachePath}"\n` + code
+  if (helpers.length) {
+    imports.set(base + helpersId, helpers)
   }
 
-  if (helpers.length) {
+  if (imports.size) {
     code =
-      `import {${SPACE + helpers.join(',' + SPACE) + SPACE}} from "${
-        base + helpersId
-      }"\n` + code
+      Array.from(
+        imports,
+        ([source, specifiers]) =>
+          `import {${
+            SPACE + specifiers.join(',' + SPACE) + SPACE
+          }} from "${source}"`
+      ).join('\n') +
+      '\n' +
+      code
   }
 
   return code
