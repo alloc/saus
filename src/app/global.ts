@@ -12,7 +12,10 @@ export const stateModulesMap = new WeakMap<CommonClientProps, string[]>()
 /**
  * These state modules will be inlined with the client props.
  */
-export const inlinedStateMap = new WeakMap<CommonClientProps, StateModule[]>()
+export const inlinedStateMap = new WeakMap<
+  CommonClientProps,
+  Set<StateModule>
+>()
 
 /**
  * Prevent the head-only props from being sent to the client while

@@ -25,6 +25,7 @@ import {
   emptyArray,
   emptyHeaders,
   headPropsCache,
+  inlinedStateMap,
   stateModulesMap,
 } from './global'
 import { handleNestedState } from './handleNestedState'
@@ -265,7 +266,7 @@ function createClientPropsLoader(
       deps.push(stateModules.include(included, requestUrl, route, onError))
     }
 
-    const inlinedState = new Set<StateModule>()
+    let inlinedState: Set<StateModule>
     if (routeConfig.inline) {
       const loadInlinedState = (state: StateModule) => {
         return state.load().then(loaded => {
@@ -273,6 +274,7 @@ function createClientPropsLoader(
           return loaded
         }, onError)
       }
+      inlinedState = new Set()
       deps.push(
         loadIncludedState(
           routeConfig.inline,
@@ -302,7 +304,9 @@ function createClientPropsLoader(
     // Wait for state modules to load.
     await Promise.all(deps)
     await Promise.all(stateModules.values())
+
     stateModulesMap.set(state, Array.from(stateModules.keys()))
+    inlinedStateMap.set(state, inlinedState!)
 
     profile?.('load state', {
       url: url.toString(),
