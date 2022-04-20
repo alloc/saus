@@ -1,5 +1,4 @@
-import { warn } from 'misty'
-import { babel, getBabelConfig, t } from '../babel'
+import { babel, getBabelConfig, NodePath, resolveReferences, t } from '../babel'
 import { Plugin } from '../core/vite'
 
 const includeRE = /\.m?[tj]sx?$/
@@ -30,25 +29,21 @@ export function transformClientState(): Plugin {
         const parsed = await babel.parseAsync(code, getBabelConfig(id))
 
         const stateModuleIds: string[] = (stateModulesByFile[id] = [])
-        const exports = new Set<t.Statement>()
+        const exports = new Set<NodePath<t.Statement>>()
 
         babel.traverse(parsed, {
+          ExportDeclaration(path) {
+            exports.add(path)
+          },
           CallExpression(path) {
             const callee = path.get('callee')
             if (callee.isIdentifier({ name: 'defineStateModule' })) {
-              const exportPath = path.findParent(p => p.isExportDeclaration())
-              if (exportPath) {
-                exports.add(exportPath.node as t.ExportDeclaration)
+              const args = path.get('arguments')
+              stateModuleIds.push((args[0].node as t.StringLiteral).value)
 
-                const args = path.get('arguments')
-                stateModuleIds.push((args[0].node as t.StringLiteral).value)
-
-                // Remove all arguments except the first.
-                for (let i = 1; i < args.length; i++) {
-                  args[i].remove()
-                }
-              } else {
-                warn(`defineStateModule call in "${id}" must be exported`)
+              // Remove all arguments except the first.
+              for (let i = 1; i < args.length; i++) {
+                args[i].remove()
               }
             }
           },
@@ -56,14 +51,22 @@ export function transformClientState(): Plugin {
 
         const transformer: babel.Visitor = {
           Program(path) {
-            path.node.body.push(...exports)
+            const exportStmts = Array.from(exports)
+            const stmts = new Set(
+              exportStmts
+                .concat(resolveReferences(exportStmts))
+                .sort((a, b) => a.node.start! - b.node.start!)
+            )
+
+            for (const stmt of stmts) {
+              path.node.body.push(stmt.node)
+            }
           },
         }
 
-        return babel.transformSync(
-          `import { defineStateModule } from "saus/client"`,
-          { plugins: [{ visitor: transformer }] }
-        ) as { code: string }
+        return babel.transformSync('', {
+          plugins: [{ visitor: transformer }],
+        }) as { code: string }
       }
     },
   }
