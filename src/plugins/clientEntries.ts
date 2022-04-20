@@ -1,7 +1,7 @@
 import endent from 'endent'
 import { Plugin, RenderedPage, SausConfig, SausContext, vite } from '../core'
 import { debug } from '../core/debug'
-import { ServerState } from '../core/renderPageState'
+import { CommonServerProps } from '../core/renderPageState'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
@@ -80,8 +80,8 @@ export function serveClientEntries(
         }
 
         const base = context.basePath
-        const pageStateUrl =
-          base + filename + '.js?t=' + ((page.state as ServerState)._ts || 0)
+        const timestamp = (page.props as CommonServerProps)._ts || 0
+        const pageStateUrl = base + filename + '.js?t=' + timestamp
         const routeModuleId = page.routeModuleId
         const routeModuleUrl = base + routeModuleId.slice(1)
         const sausClientUrl = base + '@id/saus/client'

@@ -5,13 +5,13 @@ import { stateModuleBase } from '../runtime/constants'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
 import { prependBase } from '../utils/prependBase'
-import { ClientState } from './client'
+import { CommonClientProps } from './client'
 import { globalCachePath } from './paths'
 import { renderStateModule } from './renderStateModule'
 import { INDENT, RETURN, SPACE } from './tokens'
 
-export interface ServerState extends ClientState {
-  _client: ClientState
+export interface CommonServerProps extends CommonClientProps {
+  _client: CommonClientProps
   _ts?: number
 }
 
@@ -19,7 +19,7 @@ export interface ServerState extends ClientState {
  * Render a client module for the page state.
  */
 export function renderPageState(
-  { path, state, stateModules, head }: RenderedPage,
+  { path, props, stateModules, head }: RenderedPage,
   base: string,
   helpersId: string,
   preloadUrls?: string[]
@@ -27,11 +27,12 @@ export function renderPageState(
   const toStateUrl = (id: string) =>
     prependBase(stateModuleBase + id + '.js', base)
 
+  const clientProps = (props as CommonServerProps)._client
   const stateModuleUrls = new Set(stateModules.map(toStateUrl))
   const nestedStateUrls: string[] = []
   const nestedStateIdents: string[] = []
 
-  let code = dataToEsm((state as ServerState)._client, null, (_, value) => {
+  let code = dataToEsm(clientProps, null, (_, value) => {
     const inlinedStateId = value && value['@import']
     if (inlinedStateId) {
       let stateUrl = toStateUrl(inlinedStateId)
@@ -71,7 +72,7 @@ export function renderPageState(
       `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` + code
   }
 
-  const inlinedState = inlinedStateMap.get(state!)
+  const inlinedState = inlinedStateMap.get(props!)
   if (inlinedState) {
     const inlined = inlinedState
       .map(state => {

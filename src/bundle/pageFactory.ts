@@ -292,7 +292,7 @@ export const createPageFactory: AppWrapper = ({ config, renderPage }) => {
 
           // The page's state module is rendered after HTML post processors
           // run to ensure all <link> tags are included.
-          if (page.state) {
+          if (page.props) {
             modules.add({
               id: pageStateId,
               text: renderPageState(

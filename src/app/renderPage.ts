@@ -1,7 +1,7 @@
 import createDebug from 'debug'
 import {
   BeforeRenderHook,
-  ClientState,
+  CommonClientProps,
   MergedHtmlProcessor,
   Renderer,
   RenderRequest,
@@ -17,8 +17,8 @@ import { parseHead } from '../utils/parseHead'
 import { ParsedUrl } from '../utils/url'
 import { headPropsCache, stateModulesMap } from './global'
 import {
+  ClientPropsLoader,
   ClientResolver,
-  ClientStateLoader,
   PageContext,
   ProfiledEventHandler,
   RenderedPage,
@@ -33,7 +33,7 @@ export function createRenderPageFn(
   renderers: Renderer[],
   defaultRenderer: Renderer | undefined,
   beforeRenderHooks: BeforeRenderHook[],
-  loadClientState: ClientStateLoader,
+  loadClientProps: ClientPropsLoader,
   resolveClient: ClientResolver,
   processHtml: MergedHtmlProcessor | undefined,
   catchRoute: Route | undefined,
@@ -43,7 +43,7 @@ export function createRenderPageFn(
   // The main logic for HTML document generation.
   const generateDocument = async (
     url: ParsedUrl,
-    state: ClientState,
+    props: CommonClientProps,
     route: Route,
     routeModule: RouteModule,
     renderer: Renderer,
@@ -56,7 +56,7 @@ export function createRenderPageFn(
       query: url.search,
       params: url.routeParams,
       module: routeModule,
-      state,
+      props,
     }
 
     let timestamp = Date.now()
@@ -70,7 +70,7 @@ export function createRenderPageFn(
       }
     }
 
-    let html = await renderer.renderDocument(request, headPropsCache.get(state))
+    let html = await renderer.renderDocument(request, headPropsCache.get(props))
     if (html == null) {
       return null
     }
@@ -85,10 +85,10 @@ export function createRenderPageFn(
       path,
       html: '',
       head: undefined!,
-      state,
       files: [],
-      stateModules: stateModulesMap.get(state) || [],
+      props,
       routeModuleId: route.moduleId!,
+      stateModules: stateModulesMap.get(props) || [],
       client: undefined,
     }
 
@@ -165,7 +165,7 @@ export function createRenderPageFn(
     // @ts-ignore
     url.routeParams.error = error
 
-    const statePromise = loadClientState(url, route)
+    const statePromise = loadClientProps(url, route)
     statePromise.catch(noop)
 
     const contextPromise = pageContextQueue.then(async () => {
@@ -222,7 +222,7 @@ export function createRenderPageFn(
         (renderer: Renderer) =>
           generateDocument(
             url,
-            options.state || {
+            options.props || {
               routePath: route.path,
               routeParams: url.routeParams,
             },

@@ -58,7 +58,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           const props = { message: error.message, stack: error.stack }
           return `throw Object.assign(Error(), ${JSON.stringify(props)})`
         }
-        if (page?.state) {
+        if (page?.props) {
           return renderPageState(
             page,
             context.basePath,

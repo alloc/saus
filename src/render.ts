@@ -1,5 +1,5 @@
 import type {
-  ClientState,
+  CommonClientProps,
   InferRouteParams,
   RenderCall,
   RenderRequest,
@@ -18,21 +18,21 @@ type Promisable<T> = T | PromiseLike<T>
 export function render<
   Route extends string,
   Module extends object = RouteModule,
-  State extends object = ClientState
+  Props extends object = CommonClientProps
 >(
   route: Route,
   render: (
     module: Module,
-    request: RenderRequest<State, InferRouteParams<Route>>
+    request: RenderRequest<Props, InferRouteParams<Route>>
   ) => Promisable<string | null | void>
 ): RenderCall<string>
 
 /** Set the fallback renderer. */
 export function render<
   Module extends object = RouteModule,
-  State extends object = ClientState
+  Props extends object = CommonClientProps
 >(
-  render: (module: Module, request: RenderRequest<State>) => Promisable<string>
+  render: (module: Module, request: RenderRequest<Props>) => Promisable<string>
 ): RenderCall<string>
 
 export function render(...args: [any, ...any[]]) {

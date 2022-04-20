@@ -1,4 +1,4 @@
-import type { ClientState, RenderRequest } from '../core'
+import type { CommonClientProps, RenderRequest } from '../core'
 import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { BASE_URL } from './baseUrl'
@@ -9,7 +9,7 @@ export type HydrateFn = (request: RenderRequest) => Promise<void> | void
 let runHydration: HydrateFn
 
 export async function hydrate(
-  state: ClientState,
+  state: CommonClientProps,
   routeModule: object,
   routeModuleUrl: string
 ) {
@@ -26,7 +26,7 @@ export async function hydrate(
     query: location.search.slice(1),
     params: state.routeParams,
     module: routeModule,
-    state,
+    props: state,
   })
   saus.hydrated = true
 }

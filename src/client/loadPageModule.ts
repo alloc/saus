@@ -1,4 +1,4 @@
-import type { ClientState, RouteModule, RouteParams } from '../core'
+import type { CommonClientProps, RouteModule, RouteParams } from '../core'
 import { getPagePath } from '../utils/getPagePath'
 import { applyHead } from './head'
 import { loadPageState } from './loadPageState'
@@ -9,7 +9,7 @@ export async function loadPageModule<PageModule = RouteModule>(
   routeParams?: RouteParams,
   unwrapModule?: (
     routeModule: RouteModule,
-    pageState: ClientState
+    pageState: CommonClientProps & Record<string, any>
   ) => PageModule | Promise<PageModule>
 ): Promise<PageModule> {
   const routeModuleUrl = routes[routePath]

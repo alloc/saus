@@ -1,6 +1,6 @@
 import md5Hex from 'md5-hex'
 import path from 'path'
-import { ClientState, StateModule } from '../client'
+import { CommonClientProps, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
 import {
@@ -35,8 +35,8 @@ import { createStateModuleMap, loadIncludedState } from './stateModules'
 import {
   AppContext,
   ClientFunctions,
+  ClientPropsLoader,
   ClientResolver,
-  ClientStateLoader,
   ProfiledEventHandler,
   RenderedPage,
   RouteResolver,
@@ -96,7 +96,7 @@ export function createApp(
       ['pre', 'default']
     )
 
-  const loadClientState = createClientStateLoader(
+  const loadClientProps = createClientPropsLoader(
     config,
     defaultState,
     onError,
@@ -108,7 +108,7 @@ export function createApp(
     renderers,
     defaultRenderer,
     beforeRenderHooks,
-    loadClientState,
+    loadClientProps,
     resolveClient,
     preProcessHtml,
     catchRoute,
@@ -218,7 +218,7 @@ export function createApp(
     config,
     resolveRoute,
     callEndpoints,
-    loadClientState,
+    loadClientProps,
     renderPage,
     preProcessHtml,
     postProcessHtml:
@@ -239,12 +239,12 @@ export function createApp(
   return app
 }
 
-function createClientStateLoader(
+function createClientPropsLoader(
   config: RuntimeConfig,
   defaultState: RouteIncludeOption[],
   onError: (e: any) => void,
   profile: ProfiledEventHandler | undefined
-): ClientStateLoader {
+): ClientPropsLoader {
   return async (url, route) => {
     const requestUrl = !isRequestUrl(url)
       ? makeRequestUrl(url, 'GET', emptyHeaders)
@@ -283,8 +283,8 @@ function createClientStateLoader(
       )
     }
 
-    const routeState = routeConfig.state
-    const clientState: ClientState = (
+    const routeState = routeConfig.props
+    const clientState: CommonClientProps = (
       typeof routeState == 'function'
         ? await routeState(requestUrl, route)
         : { ...routeState }

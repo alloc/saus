@@ -30,11 +30,13 @@ interface ExistingRawSourceMap {
   version: number
 }
 
+export type AnyClientProps = CommonClientProps & Record<string, any>
+
 /** JSON state provided by the renderer and made available to the client */
-export type ClientState = {
+export interface CommonClientProps<Params extends {} = RouteParams> {
   rootId?: string
   routePath: string
-  routeParams: RouteParams
+  routeParams: Params
   error?: any
 }
 
