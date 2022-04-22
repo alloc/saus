@@ -71,7 +71,12 @@ export function route(
             contentTypes = arg2
           } else {
             contentTypes = ['application/json']
-            fn = arg2
+            fn = async req => {
+              const result = await arg2!(req)
+              if (result !== undefined) {
+                req.respondWith(200, null, { json: result })
+              }
+            }
           }
           const nestedRoute = route(path + nestedPath)
           nestedRoute[method](contentTypes as Endpoint.ContentTypes, fn!)
