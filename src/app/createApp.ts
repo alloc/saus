@@ -198,7 +198,7 @@ export function createApp(
   ): Promise<Endpoint.ResponseTuple> => {
     let response: Endpoint.ResponseTuple | undefined
     let request = makeRequest(url, (...args) => {
-      response = args
+      response ||= args
     })
 
     if (requestHooks) {
