@@ -75,6 +75,11 @@ export namespace Endpoint {
     readonly headers: Headers
   }
 
+  export type ResponseHook = (
+    request: Request,
+    response: ResponseTuple
+  ) => Promisable<void>
+
   export type ResponseTuple = [
     status?: number,
     headers?: Headers | null,

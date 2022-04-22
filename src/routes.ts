@@ -136,3 +136,13 @@ export function generateRoute<RoutePath extends string, Module extends object>(
     generated: true,
   })
 }
+
+export function onRequest(hook: Endpoint.Function) {
+  routesModule.requestHooks ||= []
+  routesModule.requestHooks.push(hook)
+}
+
+export function onResponse(hook: Endpoint.ResponseHook) {
+  routesModule.responseHooks ||= []
+  routesModule.responseHooks.push(hook)
+}

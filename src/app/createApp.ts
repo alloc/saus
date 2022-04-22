@@ -72,6 +72,8 @@ export function createApp(
     renderers,
     defaultRenderer,
     beforeRenderHooks,
+    requestHooks,
+    responseHooks,
   } = context
 
   // Routes and renderers are matched in reverse order.
@@ -187,27 +189,38 @@ export function createApp(
 
   const callEndpoints = async (
     url: Endpoint.RequestUrl,
-    endpoints = resolveRoute(url)[0]
+    endpoints: readonly Endpoint.Function[] = resolveRoute(url)[0]
   ): Promise<Endpoint.ResponseTuple> => {
     let response: Endpoint.ResponseTuple | undefined
     let request = makeRequest(url, (...args) => {
       response = args
     })
 
+    if (requestHooks) {
+      endpoints = requestHooks.concat(endpoints)
+    }
+
     for (const endpoint of endpoints) {
       const returned = await endpoint(request)
       if (response) {
-        return response
+        break
       }
       if (returned) {
-        if (returned instanceof HttpRedirect) {
-          return [301, { Location: returned.location }]
-        }
-        return [returned.status, returned.headers, { buffer: returned.data }]
+        response =
+          returned instanceof HttpRedirect
+            ? [301, { Location: returned.location }]
+            : [returned.status, returned.headers, { buffer: returned.data }]
+        break
       }
     }
 
-    return []
+    response ||= []
+    if (responseHooks)
+      for (const onResponse of responseHooks) {
+        await onResponse(request, response)
+      }
+
+    return response
   }
 
   const app = {
