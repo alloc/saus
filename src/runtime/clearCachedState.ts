@@ -11,22 +11,28 @@ export function clearCachedState(
   filter: string | ((key: string) => boolean) = () => true,
   cache: Cache = globalCache
 ) {
+  const stores = Object.values(cache)
   if (typeof filter == 'function') {
-    const clear = (cache: Record<string, any>) => {
-      for (const key in cache) {
-        if (filter(key)) {
-          debug('clearCachedState(%O)', key)
-          delete cache[key]
+    let found: string[] = []
+    for (const store of stores) {
+      for (const key in store) {
+        if (filter(key) && delete store[key]) {
+          found.push(key)
         }
       }
     }
-    clear(cache.loading)
-    clear(cache.loaded)
+    for (const key of found) {
+      debug('clearCachedState(%O)', key)
+    }
   } else {
-    if (filter in cache.loaded || filter in cache.loading) {
+    let found = false
+    for (const store of stores) {
+      if (delete store[filter]) {
+        found = true
+      }
+    }
+    if (found) {
       debug('clearCachedState(%O)', filter)
     }
-    delete cache.loading[filter]
-    delete cache.loaded[filter]
   }
 }
