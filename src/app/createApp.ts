@@ -119,7 +119,7 @@ export function createApp(
     method: string,
     negotiate: ContentNegotiater | null
   ): readonly Endpoint[] | undefined => {
-    let endpoints: readonly Endpoint[] | undefined
+    let endpoints: Endpoint[] | undefined
     if (!negotiate) {
       endpoints = route.endpoints?.filter(e => e.method == method)
       return endpoints || emptyArray
@@ -159,6 +159,11 @@ export function createApp(
     endpoints = negotiate(Object.keys(endpointMap)).map(
       type => endpointMap[type as Endpoint.ContentType]
     )
+
+    const wildEndpoints = endpointMap['*/*']
+    if (wildEndpoints) {
+      endpoints.push(...wildEndpoints)
+    }
 
     if (endpoints.length) {
       return endpoints
