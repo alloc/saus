@@ -4,7 +4,7 @@ import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
 import type { Falsy, Promisable } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
-import type { Route } from './routes'
+import type { InferRouteParams, Route, RouteParams } from './routes'
 
 export const httpMethods = [
   'get',
@@ -15,7 +15,8 @@ export const httpMethods = [
   'head',
 ] as const
 
-export interface Endpoint extends Endpoint.Function {
+export interface Endpoint<Params extends {} = {}>
+  extends Endpoint.Function<Params> {
   /** This function responds to this HTTP method. */
   method: string
   /** This function responds to these MIME type requests. */
@@ -23,7 +24,7 @@ export interface Endpoint extends Endpoint.Function {
 }
 
 export namespace Endpoint {
-  export type Generated = Function & Partial<Endpoint>
+  export type Generated = Function<RouteParams> & Partial<Endpoint>
 
   export type Generator = (
     method: string,
@@ -34,12 +35,25 @@ export namespace Endpoint {
   export type ContentType = `${string}/${string}`
   export type ContentTypes = [ContentType, ...ContentType[]]
 
-  export type Declarators<U> = {
+  export type Declarators<Self, Params extends {} = {}> = {
     [T in typeof httpMethods[number]]: {
-      (fn: Function): U
-      (nestedPath: `${string}.json`, fn: JsonFunction): U
-      (contentTypes: ContentTypes, fn: Function): U
-      (nestedPath: string, contentTypes: ContentTypes, fn: Function): U
+      /** Declare an endpoint that responds to any `Accept` header */
+      (fn: Function<Params>): Self
+
+      /** Declare an endpoint that responds to specific `Accept` headers */
+      (contentTypes: ContentTypes, fn: Function<Params>): Self
+
+      /** Declare a JSON endpoint */
+      <RoutePath extends string>(
+        nestedPath: `${RoutePath}.json`,
+        fn: JsonFunction<Params & InferRouteParams<RoutePath>>
+      ): Self
+
+      <RoutePath extends string>(
+        nestedPath: RoutePath,
+        contentTypes: ContentTypes,
+        fn: Function<Params & InferRouteParams<RoutePath>>
+      ): Self
     }
   }
 
@@ -51,8 +65,13 @@ export namespace Endpoint {
    * or a promise that resolves with one. If the result
    * is undefined, the next endpoint handler is tried.
    */
-  export type JsonFunction = (request: Request) => Promisable<any>
-  export type Function = (request: Request) => Promisable<Result>
+  export type JsonFunction<Params extends {} = {}> = (
+    request: Request<Params>
+  ) => Promisable<any>
+
+  export type Function<Params extends {} = {}> = (
+    request: Request<Params>
+  ) => Promisable<Result>
 
   export type Request<RouteParams extends {} = {}> = unknown &
     StaticRequest<RouteParams> &

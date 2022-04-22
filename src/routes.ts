@@ -34,7 +34,7 @@ export function route<RoutePath extends string, Module extends object>(
   path: RoutePath,
   load?: RouteLoader<Module>,
   config?: RouteConfig<Module, InferRouteParams<RoutePath>>
-): Route.API
+): Route.API<InferRouteParams<RoutePath>>
 
 /** @internal */
 export function route(

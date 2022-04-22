@@ -136,7 +136,8 @@ export type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint> & {
 export interface Route extends BareRoute, RouteConfig {}
 
 export namespace Route {
-  export interface API extends Endpoint.Declarators<API> {}
+  export interface API<Params extends {} = {}>
+    extends Endpoint.Declarators<API<Params>, Params> {}
 }
 
 export function matchRoute(path: string, route: ParsedRoute) {
