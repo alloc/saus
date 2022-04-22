@@ -51,8 +51,8 @@ export namespace Endpoint {
    * or a promise that resolves with one. If the result
    * is undefined, the next endpoint handler is tried.
    */
-  export type JsonFunction = (request: StaticRequest) => Promisable<any>
-  export type Function = (request: StaticRequest) => Promisable<Result>
+  export type JsonFunction = (request: Request) => Promisable<any>
+  export type Function = (request: Request) => Promisable<Result>
 
   export type Request<RouteParams extends {} = {}> = unknown &
     StaticRequest<RouteParams> &
