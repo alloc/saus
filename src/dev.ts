@@ -226,13 +226,18 @@ async function startServer(
   const dirtyFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
   const dirtyClientModules = new Set<string>()
+  let isReloadPending = false
 
   const scheduleReload = debounce(async () => {
+    if (isReloadPending) return
+    isReloadPending = true
+
     // Wait for reloading to finish.
     while (context.reloading) {
       await context.reloading
     }
 
+    isReloadPending = false
     context.reloadId++
     context.reloading = defer()
 
