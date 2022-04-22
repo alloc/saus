@@ -45,7 +45,9 @@ export const throttleRender =
     return {
       async renderPage(url, route, options = {}) {
         const loading = preload(app, url, route, options)
-        return queuePage(url, route, options, loading)
+        return queuePage(url, route, options, loading).catch(error => {
+          return [null, error]
+        })
       },
     }
   }
