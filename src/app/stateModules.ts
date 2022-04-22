@@ -7,8 +7,7 @@ export interface StateModuleMap extends Map<string, Promise<any>> {
   include(
     included: RouteIncludeOption,
     url: Endpoint.RequestUrl<any>,
-    route: BareRoute,
-    onError: (e: any) => void
+    route: BareRoute
   ): Promise<void>
 }
 
@@ -24,10 +23,8 @@ export function createStateModuleMap() {
     return loading.catch(() => null)
   }
 
-  map.include = (include, url, route, onError) =>
-    loadIncludedState(include, url, route, state =>
-      map.load(state).catch(onError)
-    ).catch(onError)
+  map.include = (include, url, route) =>
+    loadIncludedState(include, url, route, map.load)
 
   return map
 }

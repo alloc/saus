@@ -97,12 +97,7 @@ export function createApp(
       ['pre', 'default']
     )
 
-  const loadClientProps = createClientPropsLoader(
-    config,
-    defaultState,
-    onError,
-    profile
-  )
+  const loadClientProps = createClientPropsLoader(config, defaultState, profile)
   const resolveClient = createClientResolver(functions)
   const renderPage = createRenderPageFn(
     config,
@@ -243,7 +238,6 @@ export function createApp(
 function createClientPropsLoader(
   config: RuntimeConfig,
   defaultState: RouteIncludeOption[],
-  onError: (e: any) => void,
   profile: ProfiledEventHandler | undefined
 ): ClientPropsLoader {
   return async (url, route) => {
@@ -263,7 +257,7 @@ function createClientPropsLoader(
     // Start loading state modules before the route state is awaited.
     const routeInclude = defaultState.concat([routeConfig.include || []])
     for (const included of routeInclude) {
-      deps.push(stateModules.include(included, requestUrl, route, onError))
+      deps.push(stateModules.include(included, requestUrl, route))
     }
 
     let inlinedState: Set<StateModule>
@@ -272,7 +266,7 @@ function createClientPropsLoader(
         return state.load().then(loaded => {
           inlinedState.add(state)
           return loaded
-        }, onError)
+        })
       }
       inlinedState = new Set()
       deps.push(
@@ -281,7 +275,7 @@ function createClientPropsLoader(
           requestUrl,
           route,
           loadInlinedState
-        ).catch(onError)
+        )
       )
     }
 
