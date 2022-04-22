@@ -1,5 +1,5 @@
 import { routesModule } from './global'
-import { RegexParam, RouteInclude } from './routes'
+import { RegexParam, RouteIncludeOption } from './routes'
 
 /**
  * Include the provided state modules in all routes by default.
@@ -9,7 +9,7 @@ import { RegexParam, RouteInclude } from './routes'
  * begin with `!` to negate any matching pages.
  */
 export function includeState(
-  include: RouteInclude,
+  include: RouteIncludeOption,
   patterns?: (string | RegExp)[]
 ) {
   if (patterns) {
