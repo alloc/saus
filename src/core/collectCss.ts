@@ -1,5 +1,5 @@
 import * as vite from 'vite'
-import { isCSSRequest } from './utils/isCSSRequest'
+import { isCSSRequest } from '../utils/isCSSRequest'
 
 export async function collectCss(
   mod: vite.ModuleNode,

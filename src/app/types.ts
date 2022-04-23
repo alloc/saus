@@ -32,7 +32,7 @@ export type RenderedFile = {
   mime: string
 }
 
-export type RenderedPage = {
+export interface RenderedPage {
   path: string
   html: string
   head: ParsedHead

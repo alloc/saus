@@ -3,6 +3,7 @@ import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
 import config from './config'
 import functions from './functions'
+import { ssrImport } from './ssrModules'
 
 export const context: AppContext = {
   beforeRenderHooks: [],
@@ -18,6 +19,9 @@ export const context: AppContext = {
   renderers: [],
   routes: [],
   runtimeHooks: [],
+  ssrRequire(id, _importer, isDynamic) {
+    return ssrImport(id, !isDynamic)
+  },
 }
 
 /**
