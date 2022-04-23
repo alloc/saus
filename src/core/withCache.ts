@@ -78,12 +78,20 @@ export function withCache(
     }
 
     const oldPromise = cache.loading[cacheKey] as Promise<any> | undefined
-    if (oldPromise || !(loader ||= getDefaultLoader(cacheKey))) {
+    if (!oldPromise && !loader) {
+      loader = getDefaultLoader(cacheKey)
+    }
+    if (oldPromise || !loader) {
       return oldPromise && deepCopy(oldPromise, options?.deepCopy)
     }
 
+    let entryConfig!: CacheControl
+    let loadResult: any
+    let onLoad!: Function
+    let onError: Function
+
     const promise = new Promise((resolve, reject) => {
-      const entryConfig: CacheControl = {
+      entryConfig = {
         key: cacheKey,
         oldValue: entry?.[0],
         maxAge: Infinity,
@@ -100,36 +108,52 @@ export function withCache(
           return ctrl.signal
         },
       }
-
-      Promise.resolve(loader!(entryConfig)).then(
-        state => {
-          // Skip caching if the promise is replaced or deleted
-          // before it resolves.
-          if (promise == cache.loading[cacheKey]) {
-            delete cache.loading[cacheKey]
-
-            const { maxAge } = entryConfig
-            if (maxAge > 0) {
-              cache.loaded[cacheKey] = isFinite(maxAge)
-                ? [state, Date.now() + maxAge * 1e3]
-                : [state]
-            } else {
-              debug('State %s expired while loading, skipping cache', cacheKey)
-            }
-          }
-          resolve(state)
-        },
-        error => {
-          if (promise == cache.loading[cacheKey]) {
-            delete cache.loading[cacheKey]
-          }
-          reject(error)
-        }
-      )
+      loadResult = loader!(entryConfig)
+      onLoad = resolve
+      onError = reject
     })
+
+    // If the loader is synchronous and threw an error,
+    // the `onLoad` variable won't be defined.
+    if (!onLoad) {
+      return promise
+    }
+
+    // Avoid updating the cache if an old value is returned.
+    if (loadResult === entryConfig.oldValue) {
+      onLoad(options?.deepCopy ? klona(loadResult) : loadResult)
+      return promise
+    }
 
     cache.loaders[cacheKey] = loader
     cache.loading[cacheKey] = promise
+
+    Promise.resolve(loadResult).then(
+      state => {
+        // Skip caching if the promise is replaced or deleted
+        // before it resolves.
+        if (promise == cache.loading[cacheKey]) {
+          delete cache.loading[cacheKey]
+
+          const { maxAge } = entryConfig
+          if (maxAge > 0) {
+            cache.loaded[cacheKey] = isFinite(maxAge)
+              ? [state, Date.now() + maxAge * 1e3]
+              : [state]
+          } else {
+            debug('State %s expired while loading, skipping cache', cacheKey)
+          }
+        }
+        onLoad(state)
+      },
+      error => {
+        if (promise == cache.loading[cacheKey]) {
+          delete cache.loading[cacheKey]
+        }
+        onError(error)
+      }
+    )
+
     return deepCopy(promise, options?.deepCopy)
   }
 }
