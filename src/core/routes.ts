@@ -129,9 +129,7 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   methods?: { [method: string]: RouteEndpointMap }
 }
 
-export type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint> & {
-  '*/*'?: Endpoint[]
-}
+export type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint[]>
 
 export interface Route extends BareRoute, RouteConfig {}
 

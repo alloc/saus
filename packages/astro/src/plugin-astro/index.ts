@@ -1,14 +1,18 @@
-import * as astroCompiler from '@astrojs/compiler'
 import * as esbuild from 'esbuild'
 import fs from 'fs'
 import { Plugin } from 'saus'
 import { combineSourceMaps } from 'saus/core'
 
+let astroCompiler: typeof import('@astrojs/compiler')
+
 export function astroVite(): Plugin {
   return {
     name: 'astro',
     enforce: 'pre',
-    saus({ root }) {
+    async saus({ root }) {
+      const dynamicImport = (0, eval)('id => import(id)')
+      astroCompiler = await dynamicImport('@astrojs/compiler')
+
       this.load = async function (id) {
         if (id.endsWith('.astro')) {
           let code = fs.readFileSync(id, 'utf8')
