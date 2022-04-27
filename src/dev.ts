@@ -1,10 +1,11 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import http from 'http'
-import { gray } from 'kleur/colors'
+import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
 import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
+import { inspect } from 'util'
 import * as vite from 'vite'
 import { createDevApp } from './app/createDevApp'
 import { getPageFilename, SausContext } from './core'
@@ -112,7 +113,7 @@ export async function createServer(
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
-      logger.error('\n' + error.stack, { error })
+      logger.error(formatError(error), { error })
     }
   }
 
@@ -508,4 +509,21 @@ function waitForChanges(
   events.on('close', onClose)
 
   logger.info('\n' + gray('Waiting for changes...'))
+}
+
+function formatError(error: any) {
+  let prelude = ''
+  if (error.code == 'STATE_MODULE_404') {
+    const inspectedArgs = inspect(error.args, {
+      depth: 5,
+      colors: true,
+    })
+    prelude =
+      red(bold('Error: ')) +
+      `The ${red(stateModuleBase + error.cacheKey + '.js')} module was ` +
+      `never loaded with the following arguments:\n` +
+      inspectedArgs.replace(/(^|\n)/g, '$1  ') +
+      `\n\n`
+  }
+  return '\n' + prelude + error.stack
 }
