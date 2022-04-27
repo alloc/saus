@@ -8,7 +8,7 @@ import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
 import * as vite from 'vite'
 import { createDevApp } from './app/createDevApp'
-import { getPageFilename, SausContext } from './core'
+import { getPageFilename, ResolvedConfig, SausContext } from './core'
 import { loadContext } from './core/context'
 import { debug } from './core/debug'
 import { Endpoint } from './core/endpoint'
@@ -204,7 +204,102 @@ async function startServer(
   }
   server.ssrForceReload = undefined
 
+  await hotReloadServerModules(context, config, events, resolveId)
+
+  // Use process.nextTick to ensure whoever is awaiting the `createServer`
+  // call can handle this event.
+  process.nextTick(() => {
+    events.emit('listening')
+  })
+
+  return server
+}
+
+function listen(
+  server: vite.ViteDevServer,
+  events: SausDevServer.EventEmitter,
+  isRestart?: boolean
+): Promise<void> {
+  let listening = false
+
+  const { resolve, promise } = defer<void>()
+  events.once('close', () => resolve())
+
+  // When optimizing deps, a syntax error may be hit. If so, we need to
+  // handle it here by waiting for the offending file to be updated, and
+  // try to optimize again once updated.
+  server.httpServer!.on('error', (error: any) => {
+    events.emit('error', error)
+
+    // ESBuild syntax errors have an "errors" array property.
+    if (!listening && Array.isArray(error.errors)) {
+      const files = new Set<string>()
+      error.errors.forEach((e: any) => {
+        const file = e.location?.file
+        if (file && typeof file == 'string') {
+          files.add(path.resolve(server.config.root, file))
+        }
+      })
+      if (files.size) {
+        waitForChanges(files, server, events, listen)
+      }
+    }
+  })
+
+  const listen = async () => {
+    try {
+      if (await server.listen(undefined, isRestart)) {
+        listening = true
+        resolve()
+      }
+    } catch {}
+  }
+
+  listen()
+  return promise
+}
+
+function waitForChanges(
+  input: string | Set<string>,
+  server: vite.ViteDevServer,
+  events: SausDevServer.EventEmitter,
+  callback: () => void
+) {
+  const { logger } = server.config
+  const watcher = server.watcher!
+
+  const files = typeof input === 'string' ? new Set([input]) : input
+  const onChange = (file: string) => {
+    if (files.has(file)) {
+      watcher.off('change', onChange)
+      events.off('close', onClose)
+
+      logger.clearScreen('info')
+      callback()
+    }
+  }
+
+  const onClose = () => {
+    watcher.off('change', onChange)
+  }
+
+  watcher.on('change', onChange)
+  events.on('close', onClose)
+
+  logger.info('\n' + gray('Waiting for changes...'))
+}
+
+async function hotReloadServerModules(
+  context: SausContext,
+  config: ResolvedConfig,
+  events: EventEmitter,
+  resolveId: ResolveIdHook
+) {
+  const server = context.server!
+  const watcher = server.watcher!
   const failedRequests = new Set<Endpoint.StaticRequest>()
+
+  await onContextUpdate()
 
   // This runs on server startup and whenever the routes and/or
   // renderers are reloaded.
@@ -221,8 +316,6 @@ async function startServer(
     )
     context.plugins = await getSausPlugins(context)
   }
-
-  await onContextUpdate()
 
   const dirtyFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
@@ -349,6 +442,7 @@ async function startServer(
     if (dirtyFiles.has(file)) {
       return
     }
+    const moduleMap = server.moduleMap
     const changedModule = moduleMap[file] || server.linkedModules[file]
     if (changedModule) {
       await moduleMap.__compileQueue
@@ -427,88 +521,6 @@ async function startServer(
       events.emit('restart')
     }
   })
-
-  // Use process.nextTick to ensure whoever is awaiting the `createServer`
-  // call can handle this event.
-  process.nextTick(() => {
-    events.emit('listening')
-  })
-
-  return server
-}
-
-function listen(
-  server: vite.ViteDevServer,
-  events: SausDevServer.EventEmitter,
-  isRestart?: boolean
-): Promise<void> {
-  let listening = false
-
-  const { resolve, promise } = defer<void>()
-  events.once('close', () => resolve())
-
-  // When optimizing deps, a syntax error may be hit. If so, we need to
-  // handle it here by waiting for the offending file to be updated, and
-  // try to optimize again once updated.
-  server.httpServer!.on('error', (error: any) => {
-    events.emit('error', error)
-
-    // ESBuild syntax errors have an "errors" array property.
-    if (!listening && Array.isArray(error.errors)) {
-      const files = new Set<string>()
-      error.errors.forEach((e: any) => {
-        const file = e.location?.file
-        if (file && typeof file == 'string') {
-          files.add(path.resolve(server.config.root, file))
-        }
-      })
-      if (files.size) {
-        waitForChanges(files, server, events, listen)
-      }
-    }
-  })
-
-  const listen = async () => {
-    try {
-      if (await server.listen(undefined, isRestart)) {
-        listening = true
-        resolve()
-      }
-    } catch {}
-  }
-
-  listen()
-  return promise
-}
-
-function waitForChanges(
-  input: string | Set<string>,
-  server: vite.ViteDevServer,
-  events: SausDevServer.EventEmitter,
-  callback: () => void
-) {
-  const { logger } = server.config
-  const watcher = server.watcher!
-
-  const files = typeof input === 'string' ? new Set([input]) : input
-  const onChange = (file: string) => {
-    if (files.has(file)) {
-      watcher.off('change', onChange)
-      events.off('close', onClose)
-
-      logger.clearScreen('info')
-      callback()
-    }
-  }
-
-  const onClose = () => {
-    watcher.off('change', onChange)
-  }
-
-  watcher.on('change', onChange)
-  events.on('close', onClose)
-
-  logger.info('\n' + gray('Waiting for changes...'))
 }
 
 function formatError(error: any) {
