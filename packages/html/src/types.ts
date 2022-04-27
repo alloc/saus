@@ -5,7 +5,7 @@ import type { kTagPath } from './symbols'
 
 type Promisable<T> = T | PromiseLike<T>
 
-type HtmlTagState<State = any> = {
+type HtmlTagState<State extends HtmlVisitor.BaseState = any> = {
   /** The tag whose URL attribute is being resolved */
   tag: HtmlTagPath<State>
   /** The URL attribute being resolved */
@@ -21,7 +21,7 @@ export namespace HtmlResolver {
 export type HtmlResolverState<State extends HtmlResolver.BaseState = {}> =
   Remap<State & HtmlVisitorState & HtmlTagState<State>>
 
-export type HtmlResolver<State = {}> = (
+export type HtmlResolver<State extends HtmlVisitor.BaseState = {}> = (
   id: string,
   importer: string,
   state: HtmlResolverState<State>
