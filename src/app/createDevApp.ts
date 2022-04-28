@@ -35,7 +35,7 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
   }
 
   const appWrappers = [
-    reloadModules(context),
+    isolatePages(context),
     cachePages(1, context.getCachedPage),
     // By caching for 1 second, the client props will never go stale
     // while still allowing isomorphic routers and what-not to access
@@ -118,7 +118,11 @@ function createPageEndpoint(
   }
 }
 
-function reloadModules(context: SausContext): AppWrapper {
+/**
+ * Reload SSR modules before a page is rendered, so pages can't share
+ * stateful modules between each other.
+ */
+function isolatePages(context: SausContext): AppWrapper {
   const routeModuleIds = new Set(
     context.routes.map(route => route.moduleId).filter(Boolean) as string[]
   )
