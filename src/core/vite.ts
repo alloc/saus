@@ -256,8 +256,5 @@ export interface SausPlugin {
    * for a better developer experience. The default behavior is
    * minimal but overridable via this plugin hook.
    */
-  renderErrorReport?: (
-    req: Endpoint.StaticRequest,
-    error: any
-  ) => Promisable<string>
+  renderErrorReport?: (req: Endpoint.Request, error: any) => Promisable<string>
 }

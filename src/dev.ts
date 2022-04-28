@@ -297,7 +297,7 @@ async function hotReloadServerModules(
 ) {
   const server = context.server!
   const watcher = server.watcher!
-  const failedRequests = new Set<Endpoint.StaticRequest>()
+  const failedRequests = new Set<Endpoint.Request>()
 
   await onContextUpdate()
 

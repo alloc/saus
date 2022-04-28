@@ -74,22 +74,16 @@ export namespace Endpoint {
   ) => Promisable<Result>
 
   export type Request<RouteParams extends {} = {}> = unknown &
-    StaticRequest<RouteParams> &
-    Omit<RouteParams, keyof StaticRequest>
+    RequestUrl<RouteParams> &
+    RequestMethods &
+    Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>
 
-  export type RequestUrl<RouteParams extends {} = {}> = unknown &
-    StaticRequestUrl<RouteParams> &
-    Omit<RouteParams, keyof StaticRequest>
-
-  export interface StaticRequest<
-    RouteParams extends {} = Record<string, string>
-  > extends StaticRequestUrl<RouteParams> {
+  interface RequestMethods {
     respondWith(...response: ResponseTuple): void
   }
 
-  export interface StaticRequestUrl<
-    RouteParams extends {} = Record<string, string>
-  > extends ParsedUrl<RouteParams> {
+  export interface RequestUrl<RouteParams extends {} = Record<string, string>>
+    extends ParsedUrl<RouteParams> {
     readonly method: string
     readonly headers: Headers
   }
@@ -113,6 +107,9 @@ export namespace Endpoint {
     | {}
 }
 
+/**
+ * Attach `method` and `headers` properties to the given URL.
+ */
 export function makeRequestUrl<Params extends {}>(
   url: ParsedUrl<Params>,
   method: string,
@@ -124,7 +121,7 @@ export function makeRequestUrl<Params extends {}>(
   }
   requestUrl.method = method
   requestUrl.headers = headers
-  return assignDefaults<any>(requestUrl, url.routeParams)
+  return requestUrl
 }
 
 export function isRequestUrl<T extends {} = any>(
@@ -133,13 +130,16 @@ export function isRequestUrl<T extends {} = any>(
   return Boolean(arg && 'method' in arg)
 }
 
+/**
+ * Convert the given `url` into a Saus request.
+ */
 export function makeRequest(
   url: Endpoint.RequestUrl,
   respondWith: (...response: Endpoint.ResponseTuple) => void
-): Endpoint.StaticRequest {
+): Endpoint.Request {
   const request = url as Endpoint.RequestUrl & {
     respondWith: typeof respondWith
   }
   request.respondWith = respondWith
-  return request
+  return assignDefaults<any>(request, url.routeParams)
 }

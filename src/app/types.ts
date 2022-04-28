@@ -75,7 +75,7 @@ export type RenderPageResult = [page: RenderedPage | null, error?: any]
 
 export type RenderPageOptions = {
   props?: AnyClientProps
-  request?: Endpoint.StaticRequest
+  request?: Endpoint.Request
   resolved?: ResolvedRoute
   timeout?: number
   onError?: (error: Error & { url: string }) => void
