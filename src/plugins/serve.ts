@@ -85,12 +85,12 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         if (req.method !== 'POST') {
-          return next()
+          return process.nextTick(next)
         }
 
         const url = req.url!.slice(context.basePath.length - 1) || '/'
         if (!isStateModuleRequest(url)) {
-          return next()
+          return process.nextTick(next)
         }
 
         try {
@@ -100,7 +100,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
           const stateModule = stateModulesById.get(id)
           if (!stateModule) {
-            return next()
+            return process.nextTick(next)
           }
 
           await stateModule.load(...args)
@@ -140,7 +140,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
         let path = req.originalUrl!
         if (!path.startsWith(context.basePath)) {
-          return next()
+          return process.nextTick(next)
         }
 
         // Remove URL fragment, but keep querystring
@@ -181,7 +181,7 @@ async function processRequest(
     })
   }
   if (status == null) {
-    return next()
+    return process.nextTick(next)
   }
   const statusColor = /^[23]/.test('' + status) ? green : red
   const contentLength = headers && (headers['content-length'] as string)
