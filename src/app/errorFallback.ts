@@ -1,34 +1,45 @@
-import AnsiConverter from 'ansi-to-html'
 import endent from 'endent'
-import os from 'os'
-import { escape, SausContext } from '../core'
+import { ansiToHtml } from '../utils/ansiToHtml'
+import { escape } from '../utils/escape'
 import { parseStackTrace } from '../utils/resolveStackTrace'
 
-export function renderErrorFallback(error: any, context: SausContext) {
-  const homeDir = os.homedir()
+interface Options {
+  root: string
+  homeDir?: string
+  ssr?: boolean
+}
+
+export function renderErrorFallback(
+  error: any,
+  { root, homeDir = root, ssr }: Options
+) {
   const message = ansiToHtml(escape(error.message)).replace(
     new RegExp('(^|[\\s])(' + homeDir + '/[^\\s:]+)', 'g'),
     (_, space, file) =>
-      space +
-      (file.startsWith(context.root + '/')
-        ? createFileLink(file, context.root)
-        : file)
+      space + (file.startsWith(root + '/') ? createFileLink(file, root) : file)
   )
 
   const stack = parseStackTrace(error.stack).frames.map(frame => {
     const file = frame.file + ':' + frame.line + ':' + (frame.column + 1)
     return (
       `<div class="stack-frame"><span>` +
-      escape(frame.text).replace(file, createFileLink(file, context.root)) +
+      escape(frame.text).replace(file, createFileLink(file, root)) +
       `</span></div>`
     )
   })
 
+  const errorProps = renderTableValue(
+    omitKeys(error, ['message', 'stack']),
+    'error-props'
+  )
+
   return endent`
     <link rel="stylesheet" href="/@id/saus/src/app/errorFallback.css?direct">
     <script type="module" src="/@id/saus/src/app/errorFallbackClient.js"></script>
-    <body>
-      <h1>An error occurred while the server was rendering.</h1>
+    <body ${ssr ? '' : 'style="display: none"'}>
+      <h1>An error occurred while the ${
+        ssr ? 'server was rendering' : 'client was hydrating'
+      }.</h1>
       <small>
         ${renderLoadingIcon('class="waiting"')}
         This page will refresh itself when you save a file.
@@ -37,51 +48,26 @@ export function renderErrorFallback(error: any, context: SausContext) {
         <div class="error-message">${message}</div>
         ${stack.join('\n')}
       </div>
+      ${errorProps}
     </body>
   `
 }
 
-function createFileLink(file: string, root: string) {
+function createFileLink(file: string, root: string, ssr?: boolean) {
+  const fileParam = encodeURI(
+    ssr ? file : file.replace(new RegExp('^' + root + '/'), '/')
+  )
   return (
-    `<a class="file-link" href="/__open-in-editor?file=${encodeURI(file)}">` +
-    file.replace(new RegExp('^' + root + '/'), '') +
+    `<a class="file-link" href="/__open-in-editor?file=${fileParam}">` +
+    file.replace(new RegExp('^' + root + '/'), ssr ? '' : '/') +
     `</a>`
   )
-}
-
-const ansiTheme = {
-  0: '#000000',
-  1: '#C75646',
-  2: '#8EB33B',
-  3: '#D0B03C',
-  4: '#4E90A7',
-  5: '#C8A0D1',
-  6: '#218693',
-  7: '#B0B0B0',
-  10: '#5D5D5D',
-  11: '#E09690',
-  12: '#CDEE69',
-  13: '#FFE377',
-  14: '#9CD9F0',
-  15: '#FBB1F9',
-  16: '#77DFD8',
-  17: '#F7F7F7',
-}
-
-function ansiToHtml(input: string) {
-  const convert = new AnsiConverter({
-    newline: true,
-    colors: ansiTheme,
-  })
-  return convert
-    .toHtml(input)
-    .replace(/\bhttps:\/\/[^\s]+/, match => `<a href="${match}">${match}</a>`)
 }
 
 function renderLoadingIcon(attrs = '') {
   const spokes: string[] = []
   for (let i = 0; i < 12; i++) {
-    spokes.push(`
+    spokes.push(endent`
       <use href="#spoke" transform="rotate(${30 * i} 50 50)">
         <animate attributeName="opacity" values="0;1;0" dur="1s" 
           begin="${0.08 * i}s" repeatCount="indefinite"></animate>
@@ -93,7 +79,67 @@ function renderLoadingIcon(attrs = '') {
       <defs>
         <rect id="spoke" x="46.5" y="40" width="7" height="20" rx="2" ry="2" transform="translate(0 -30)"></rect>
       </defs>
-      ${spokes}
+      ${spokes.join('\n')}
     </svg>
   `
+}
+
+function renderTableValue(value: any, className?: string) {
+  let rows: string[] | undefined
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      return ''
+    }
+    const maxKeyLength = String(value.length - 1).length
+    const width = maxKeyLength * 9
+    rows = value.map((value, i) => renderTableRow(value, i, width))
+  }
+  if (value && typeof value == 'object') {
+    const entries = Object.entries(value as Record<string, any>)
+    if (!entries.length) {
+      return ''
+    }
+    const maxKeyLength = entries.reduce(
+      (max, [key]) => Math.max(max, key.length),
+      0
+    )
+    const width = maxKeyLength * 9
+    rows = entries.map(([key, value]) => renderTableRow(value, key, width))
+  }
+  if (rows) {
+    return endent`<table${className ? ` class="${className}"` : ''}>
+      ${rows.join('\n')}
+    </table>`
+  }
+  if (value === undefined) {
+    return 'undefined'
+  }
+  return ansiToHtml(JSON.stringify(value))
+}
+
+function renderTableRow(
+  value: any,
+  key: string | number,
+  width: number
+): string {
+  const valueHtml = renderTableValue(value)
+  return endent`
+    <tr>
+      <td class="key" width="${width}px">${key}</td>
+      ${
+        value && typeof value == 'object' && valueHtml
+          ? `<td class="object">${valueHtml}</td>`
+          : `<td>${valueHtml || (Array.isArray(value) ? '[]' : '{}')}</td>`
+      }
+    </tr>
+  `
+}
+
+function omitKeys(obj: any, keys: string[]) {
+  return Object.getOwnPropertyNames(obj).reduce((res, key) => {
+    if (!keys.includes(key)) {
+      res[key] = obj[key]
+    }
+    return res
+  }, {} as any)
 }

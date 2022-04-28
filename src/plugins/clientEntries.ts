@@ -127,6 +127,14 @@ export function serveClientEntries(
 
         getPreloadTagsForModules(modulesToPreload, tags)
 
+        let sausClientImports = ['hydrate']
+        let hydrateCall = `hydrate(pageState, routeModule, "${routeModuleUrl}")`
+
+        if (context.config.mode == 'development') {
+          sausClientImports.push('renderErrorPage')
+          hydrateCall += `.catch(renderErrorPage)`
+        }
+
         // Hydrate the page.
         tags.push({
           injectTo: 'body',
@@ -134,14 +142,14 @@ export function serveClientEntries(
           attrs: { type: 'module' },
           children: endent`
             import pageState from "${pageStateUrl}"
-            import { hydrate } from "${sausClientUrl}"
+            import { ${sausClientImports.join(', ')} } from "${sausClientUrl}"
 
             Promise.all([
               import("${routeModuleUrl}"),${
             clientUrl && `\nimport("${clientUrl}"),`
           }
             ]).then(([routeModule]) =>
-              hydrate(pageState, routeModule, "${routeModuleUrl}")
+              ${hydrateCall}
             )
           `,
         })

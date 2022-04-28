@@ -3,7 +3,7 @@ import { SourceMapConsumer } from 'source-map'
 import { SourceMap } from './sourceMap'
 
 const stackFrameRE =
-  /^ {4}at (?:(.+?)\s+\()?(?:(?:async )?(.+?):(\d+)(?::(\d+))?)\)?/
+  /^ {4}at (?:(.+?)\s+\()?(?:(?:async )?(.+?):(\d+)(?::(\d+))?)(\)|$)/
 
 export type StackTrace = {
   header: string

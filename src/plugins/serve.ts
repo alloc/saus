@@ -1,6 +1,9 @@
 import { ServerResponse } from 'http'
 import { gray, green, red } from 'kleur/colors'
+import os from 'os'
 import getBody from 'raw-body'
+import { renderErrorFallback } from '../app/errorFallback'
+import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
 import {
   Plugin,
@@ -12,6 +15,7 @@ import {
 import { Endpoint, makeRequestUrl } from '../core/endpoint'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
+import { Headers } from '../http'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
@@ -157,8 +161,24 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         const url = makeRequestUrl(parseUrl(path), req.method!, req.headers)
         await processRequest(context, url, res, next).catch(error => {
           onError(error)
-          res.writeHead(500)
-          res.end()
+
+          const negotiate = createNegotiator(req.headers.accept)
+          if (!negotiate) {
+            return writeResponse(res, 500)
+          }
+
+          const [responseType] = negotiate(['text/html', 'application/json'])
+          const headers = { 'Content-Type': responseType }
+          writeResponse(res, 200, headers, {
+            text:
+              responseType == 'text/html'
+                ? renderErrorFallback(error, {
+                    homeDir: os.homedir(),
+                    root: context.root,
+                    ssr: true,
+                  })
+                : { error: error.message },
+          })
         })
       }),
   }
@@ -180,16 +200,32 @@ async function processRequest(
     })
   }
   if (status == null) {
-    return process.nextTick(next)
+    process.nextTick(next)
+  } else {
+    const statusColor = /^[23]/.test('' + status) ? green : red
+    const contentLength = headers && (headers['content-length'] as string)
+    context.logger.info(
+      statusColor('⨠ ' + status) +
+        ` ${req} ${
+          contentLength ? gray((+contentLength / 1024).toFixed(2) + 'KiB') : ''
+        }`
+    )
+    writeResponse(res, status, headers, body)
   }
-  const statusColor = /^[23]/.test('' + status) ? green : red
-  const contentLength = headers && (headers['content-length'] as string)
-  console.log(
-    statusColor('⨠ ' + status),
-    req.toString(),
-    contentLength ? gray((+contentLength / 1024).toFixed(2) + 'KiB') : ''
-  )
-  res.writeHead(status, undefined, headers || undefined)
+}
+
+function writeResponse(
+  res: ServerResponse,
+  status: number,
+  headers?: Headers | null,
+  body?: Endpoint.ResponseBody
+) {
+  if (headers) {
+    for (const name in headers) {
+      res.setHeader(name, headers[name]!)
+    }
+  }
+  res.writeHead(status)
   if (!body) {
     return res.end()
   }

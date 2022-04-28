@@ -1,3 +1,4 @@
+import os from 'os'
 import {
   extractClientFunctions,
   Route,
@@ -93,7 +94,12 @@ function createPageEndpoint(
         break
       }
 
-      html ||= renderErrorFallback(error, context)
+      html ||= renderErrorFallback(error, {
+        homeDir: os.homedir(),
+        root: context.root,
+        ssr: true,
+      })
+
       page = { html, files: [] } as any
 
       error.req = req

@@ -1,6 +1,7 @@
-body {
+body,
+:host {
   padding: 50px 30px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, Arial, Helvetica, sans-serif;
 }
 
 h1 {
@@ -58,4 +59,53 @@ a {
 
 a:hover {
   color: #92cbe0;
+}
+
+table.error-props {
+  width: 40%;
+  min-width: 420px;
+  margin-top: 40px;
+}
+
+table {
+  font-size: 15px;
+  font-family: monospace;
+  line-height: 150%;
+  border-spacing: 6px;
+}
+
+table:not(.error-props) {
+  margin: -6px 0 0 -7px;
+}
+
+table tr {
+  margin: -1px 0 0 -1px;
+}
+
+table td.key {
+  text-align: right;
+  font-weight: bold;
+}
+
+table td {
+  display: inline-block;
+  padding: 0;
+  max-width: min(100%, 30vw);
+  white-space: nowrap;
+  vertical-align: top;
+  overflow-x: scroll;
+}
+
+table td:not(.object) {
+  border: 1px solid #b7dfed;
+  padding: 6px;
+}
+
+table td.object {
+  padding-left: 1px;
+  margin-left: -1px;
+}
+
+table td:not(:first-child) {
+  border-left: 0;
 }
