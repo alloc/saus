@@ -37,7 +37,12 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
   const appWrappers = [
     reloadModules(context),
     cachePages(1, context.getCachedPage),
+    // By caching for 1 second, the client props will never go stale
+    // while still allowing isomorphic routers and what-not to access
+    // them without reloading them.
     cacheClientProps(1),
+    // Limit the number of pages that will be rendered at one time,
+    // and prioritize pages whose client props are loaded.
     throttleRender(async (app, url, route, options) => {
       options.props = await app.loadClientProps(url, route)
     }),
