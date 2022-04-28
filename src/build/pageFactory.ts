@@ -72,13 +72,12 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   return (pagePath: string): void =>
     void init.then(app => {
       const url = parseUrl(pagePath)
-      const [, route, params] = app.resolveRoute(
+      const [, route] = app.resolveRoute(
         makeRequestUrl(url, 'GET', emptyHeaders)
       )
       if (!route) {
         return
       }
-      url.routeParams = params
       app.renderPage(url, route, renderOptions).then(
         page => {
           events.emit('page', pagePath, page)

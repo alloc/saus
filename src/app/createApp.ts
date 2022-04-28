@@ -179,14 +179,15 @@ export function createApp(
       if (params) {
         const endpoints = resolveEndpoints(route, url.method, negotiate)
         if (endpoints) {
-          return [endpoints, route, params]
+          url.routeParams = params
+          return [endpoints, route]
         }
       }
     }
     if ((route = defaultRoute)) {
       const endpoints = resolveEndpoints(route, url.method, negotiate)
       if (endpoints) {
-        return [endpoints, route, url.routeParams]
+        return [endpoints, route]
       }
     }
     return [emptyArray]

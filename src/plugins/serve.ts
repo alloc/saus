@@ -46,13 +46,12 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
         await init
 
         const url = parseUrl(id.replace(/(\/index)?\.html\.js$/, '') || '/')
-        const [, route, params] = server.resolveRoute(
+        const [, route] = server.resolveRoute(
           makeRequestUrl(url, 'GET', { accept: 'text/html' })
         )
         if (!route) {
           return
         }
-        url.routeParams = params
 
         const [page, error] = await server.renderPage(url, route)
         if (error) {

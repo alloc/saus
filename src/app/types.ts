@@ -6,7 +6,6 @@ import type {
   Renderer,
   RenderModule,
   Route,
-  RouteParams,
   RoutesModule,
   RuntimeConfig,
   SausContext,
@@ -123,8 +122,8 @@ export interface ClientFunctions {
 }
 
 export type ResolvedRoute =
-  | [endpoints: readonly Endpoint[], route: Route, params: RouteParams]
-  | [endpoints: readonly Endpoint[], route?: undefined, params?: undefined]
+  | [endpoints: readonly Endpoint[], route: Route]
+  | [endpoints: readonly Endpoint[], route?: undefined]
 
 export type RouteResolver = (url: Endpoint.RequestUrl) => ResolvedRoute
 
