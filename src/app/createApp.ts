@@ -297,28 +297,27 @@ function createClientPropsLoader(
       )
     }
 
-    const routeState = routeConfig.props
-    const clientState: CommonClientProps = (
-      typeof routeState == 'function'
-        ? await routeState(requestUrl, route)
-        : { ...routeState }
+    const clientProps: CommonClientProps = (
+      typeof routeConfig.props == 'function'
+        ? await routeConfig.props(requestUrl, route)
+        : { ...routeConfig.props }
     ) as any
 
-    clientState.routePath = route.path
-    clientState.routeParams = url.routeParams
+    clientProps.routePath = route.path
+    clientProps.routeParams = url.routeParams
 
     // Load any embedded state modules.
-    const state = handleNestedState(clientState, stateModules)
-    Object.defineProperty(state, '_client', {
-      value: clientState,
+    const props = handleNestedState(clientProps, stateModules)
+    Object.defineProperty(props, '_client', {
+      value: clientProps,
     })
 
     // Wait for state modules to load.
     await Promise.all(deps)
     await Promise.all(stateModules.values())
 
-    stateModulesMap.set(state, Array.from(stateModules.keys()))
-    inlinedStateMap.set(state, inlinedState!)
+    stateModulesMap.set(props, Array.from(stateModules.keys()))
+    inlinedStateMap.set(props, inlinedState!)
 
     profile?.('load state', {
       url: url.toString(),
@@ -327,21 +326,21 @@ function createClientPropsLoader(
     })
 
     if (config.command == 'dev')
-      Object.defineProperty(state, '_ts', {
+      Object.defineProperty(props, '_ts', {
         value: Date.now(),
       })
 
     const { headProps } = routeConfig
     if (headProps) {
       headPropsCache.set(
-        state,
+        props,
         typeof headProps == 'function'
-          ? await headProps(requestUrl, state)
+          ? await headProps(requestUrl, props)
           : { ...headProps }
       )
     }
 
-    return state
+    return props
   }
 }
 
