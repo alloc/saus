@@ -6,7 +6,7 @@ export interface StateModuleMap extends Map<string, Promise<any>> {
   load(module: StateModule): Promise<any>
   include(
     included: RouteIncludeOption,
-    url: Endpoint.RequestUrl<any>,
+    request: Endpoint.Request<any>,
     route: BareRoute
   ): Promise<void>
 }
@@ -31,12 +31,12 @@ export function createStateModuleMap() {
 
 export async function loadIncludedState(
   include: RouteIncludeOption,
-  url: Endpoint.RequestUrl<any>,
+  request: Endpoint.Request<any>,
   route: BareRoute,
   load = (state: StateModule) => state.load()
 ) {
   if (typeof include == 'function') {
-    include = await include(url, route)
+    include = await include(request, route)
   }
   const loading: Promise<any>[] = []
   for (const value of include) {

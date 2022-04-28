@@ -133,11 +133,11 @@ export function isRequestUrl<T extends {} = any>(
 /**
  * Convert the given `url` into a Saus request.
  */
-export function makeRequest(
-  url: Endpoint.RequestUrl,
+export function makeRequest<Params extends {}>(
+  url: Endpoint.RequestUrl<Params>,
   respondWith: (...response: Endpoint.ResponseTuple) => void
-): Endpoint.Request {
-  const request = url as Endpoint.RequestUrl & {
+): Endpoint.Request<Params> {
+  const request = url as Endpoint.RequestUrl<Params> & {
     respondWith: typeof respondWith
   }
   request.respondWith = respondWith

@@ -52,7 +52,7 @@ export type PageSpecificOption<
   Module extends object = RouteModule,
   Params extends object = RouteParams
 > = (
-  url: Endpoint.RequestUrl<Params>,
+  request: Endpoint.Request<Params>,
   route: BareRoute<Module>
 ) => Promisable<T>
 
@@ -100,7 +100,7 @@ interface RouteStateConfig<
   headProps?:
     | Record<string, any>
     | ((
-        url: Endpoint.RequestUrl<Params>,
+        request: Endpoint.Request<Params>,
         state: any
       ) => Promisable<Record<string, any>>)
 }

@@ -20,6 +20,7 @@ import {
 import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
 import { toArray } from '../utils/array'
+import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
 import {
   emptyArray,
@@ -260,14 +261,17 @@ function createClientPropsLoader(
   profile: ProfiledEventHandler | undefined
 ): ClientPropsLoader {
   return async (url, route) => {
-    const requestUrl = !isRequestUrl(url)
-      ? makeRequestUrl(url, 'GET', emptyHeaders)
-      : url
+    // At this point, the `respondWith` method does nothing,
+    // but we need to make the route params accessible.
+    const request = makeRequest(
+      isRequestUrl(url) ? url : makeRequestUrl(url, 'GET', emptyHeaders),
+      noop
+    )
 
     const timestamp = Date.now()
     const stateModules = createStateModuleMap()
     const routeConfig = route.config
-      ? await route.config(requestUrl, route)
+      ? await route.config(request, route)
       : route
 
     // Put the promises returned by route config functions here.
@@ -276,7 +280,7 @@ function createClientPropsLoader(
     // Start loading state modules before the route state is awaited.
     const routeInclude = defaultState.concat([routeConfig.include || []])
     for (const included of routeInclude) {
-      deps.push(stateModules.include(included, requestUrl, route))
+      deps.push(stateModules.include(included, request, route))
     }
 
     let inlinedState: Set<StateModule>
@@ -289,18 +293,13 @@ function createClientPropsLoader(
       }
       inlinedState = new Set()
       deps.push(
-        loadIncludedState(
-          routeConfig.inline,
-          requestUrl,
-          route,
-          loadInlinedState
-        )
+        loadIncludedState(routeConfig.inline, request, route, loadInlinedState)
       )
     }
 
     const clientProps: CommonClientProps = (
       typeof routeConfig.props == 'function'
-        ? await routeConfig.props(requestUrl, route)
+        ? await routeConfig.props(request, route)
         : { ...routeConfig.props }
     ) as any
 
@@ -336,7 +335,7 @@ function createClientPropsLoader(
       headPropsCache.set(
         props,
         typeof headProps == 'function'
-          ? await headProps(requestUrl, props)
+          ? await headProps(request, props)
           : { ...headProps }
       )
     }

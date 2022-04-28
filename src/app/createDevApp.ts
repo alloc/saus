@@ -78,7 +78,7 @@ function createPageEndpoint(
     let [page, error] = await app.renderPage(req, route)
 
     if (!(page || error) && !/\.[^./]+$/.test(req.path) && context.defaultRoute)
-      [page, error] = await server.renderPage(
+      [page, error] = await app.renderPage(
         parseUrl(context.defaultPath),
         context.defaultRoute
       )
