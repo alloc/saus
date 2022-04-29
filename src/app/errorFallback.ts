@@ -5,25 +5,29 @@ import { parseStackTrace } from '../utils/resolveStackTrace'
 
 interface Options {
   root: string
+  origin?: string
   homeDir?: string
   ssr?: boolean
 }
 
 export function renderErrorFallback(
   error: any,
-  { root, homeDir = root, ssr }: Options
+  { root, origin, homeDir = origin || root, ssr }: Options
 ) {
   const message = ansiToHtml(escape(error.message)).replace(
     new RegExp('(^|[\\s])(' + homeDir + '/[^\\s:]+)', 'g'),
     (_, space, file) =>
-      space + (file.startsWith(root + '/') ? createFileLink(file, root) : file)
+      space +
+      (!ssr || file.startsWith(root + '/')
+        ? createFileLink(file, root, origin)
+        : file)
   )
 
   const stack = parseStackTrace(error.stack).frames.map(frame => {
     const file = frame.file + ':' + frame.line + ':' + (frame.column + 1)
     return (
       `<div class="stack-frame"><span>` +
-      escape(frame.text).replace(file, createFileLink(file, root)) +
+      escape(frame.text).replace(file, createFileLink(file, root, origin)) +
       `</span></div>`
     )
   })
@@ -48,18 +52,23 @@ export function renderErrorFallback(
         <div class="error-message">${message}</div>
         ${stack.join('\n')}
       </div>
-      ${errorProps}
+      ${errorProps ? `<div class="properties">${errorProps}</div>` : ``}
     </body>
   `
 }
 
-function createFileLink(file: string, root: string, ssr?: boolean) {
-  const fileParam = encodeURI(
-    ssr ? file : file.replace(new RegExp('^' + root + '/'), '/')
-  )
+function createFileLink(file: string, root: string, origin?: string) {
+  if (origin) {
+    file = file.replace(new RegExp('^' + origin + '/'), '/')
+    if (file.startsWith('/@fs/')) {
+      file = file.slice(4)
+    } else {
+      file = root + file
+    }
+  }
   return (
-    `<a class="file-link" href="/__open-in-editor?file=${fileParam}">` +
-    file.replace(new RegExp('^' + root + '/'), ssr ? '' : '/') +
+    `<a class="file-link" href="/__open-in-editor?file=${encodeURI(file)}">` +
+    file.replace(new RegExp('^' + root + '/'), '') +
     `</a>`
   )
 }

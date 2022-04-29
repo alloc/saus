@@ -61,6 +61,11 @@ a:hover {
   color: #92cbe0;
 }
 
+.properties {
+  max-width: 100%;
+  overflow: hidden;
+}
+
 table.error-props {
   width: 40%;
   min-width: 420px;
@@ -72,6 +77,7 @@ table {
   font-family: monospace;
   line-height: 150%;
   border-spacing: 6px;
+  white-space: nowrap;
 }
 
 table:not(.error-props) {
@@ -93,12 +99,12 @@ table td {
   max-width: min(100%, 30vw);
   white-space: nowrap;
   vertical-align: top;
-  overflow-x: scroll;
 }
 
 table td:not(.object) {
   border: 1px solid #b7dfed;
   padding: 6px;
+  overflow-x: scroll;
 }
 
 table td.object {

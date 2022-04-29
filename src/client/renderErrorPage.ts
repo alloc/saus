@@ -14,7 +14,8 @@ export function renderErrorPage(e: any) {
   errorElem.setAttribute('style', style.join(';'))
   const shadowRoot = errorElem.attachShadow({ mode: 'open' })
   shadowRoot.innerHTML = renderErrorFallback(e, {
-    root: location.origin,
+    root: saus.devRoot,
+    origin: location.origin,
   })
   document.body.appendChild(errorElem)
   requestIdleCallback(() => {

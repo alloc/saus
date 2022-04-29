@@ -1,3 +1,5 @@
+import path from 'path'
+import type { ClientConstants } from '../client/context'
 import { Plugin } from '../core'
 
 /**
@@ -15,8 +17,9 @@ export function defineClientContext(): Plugin {
       }
 
       const sausConfig = config.saus!
-      const clientContext = {
-        defaultPath: sausConfig.defaultPath,
+      const clientContext: ClientConstants = {
+        defaultPath: sausConfig.defaultPath!,
+        devRoot: path.resolve(config.root || ''),
       }
       for (const [key, value] of Object.entries(clientContext)) {
         define['saus.' + key] = JSON.stringify(value)
