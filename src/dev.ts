@@ -510,6 +510,12 @@ async function hotReloadServerModules(
       }
       scheduleReload()
     }
+    // In the event of a syntax error, these modules won't exist in the module map,
+    // but they still need to be reloaded on file change.
+    else if (file == context.renderPath || file == context.routesPath) {
+      dirtyFiles.add(file)
+      scheduleReload()
+    }
     // Restart the server when Vite config is changed.
     else if (file == context.configPath) {
       // Prevent handling by Vite.
