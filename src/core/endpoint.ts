@@ -3,7 +3,7 @@ import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
 import type { Falsy, Promisable } from '../utils/types'
-import type { ParsedUrl } from '../utils/url'
+import { ParsedUrl } from '../utils/url'
 import type { InferRouteParams, Route, RouteParams } from './routes'
 
 export const httpMethods = [
@@ -115,6 +115,9 @@ export function makeRequestUrl<Params extends {}>(
   method: string,
   headers: Headers
 ): Endpoint.RequestUrl<Params> {
+  if (isRequestUrl(url)) {
+    return url
+  }
   const requestUrl = url as ParsedUrl<Params> & {
     method: typeof method
     headers: typeof headers
@@ -124,10 +127,10 @@ export function makeRequestUrl<Params extends {}>(
   return requestUrl
 }
 
-export function isRequestUrl<T extends {} = any>(
+function isRequestUrl<T extends {} = any>(
   arg: ParsedUrl
 ): arg is Endpoint.RequestUrl<T> {
-  return Boolean(arg && 'method' in arg)
+  return 'method' in arg
 }
 
 /**
@@ -137,9 +140,10 @@ export function makeRequest<Params extends {}>(
   url: Endpoint.RequestUrl<Params>,
   respondWith: (...response: Endpoint.ResponseTuple) => void
 ): Endpoint.Request<Params> {
-  const request = url as Endpoint.RequestUrl<Params> & {
-    respondWith: typeof respondWith
-  }
+  const request = Object.assign(
+    Object.create(ParsedUrl.prototype),
+    url
+  ) as Endpoint.Request<Params>
   request.respondWith = respondWith
   return assignDefaults<any>(request, url.routeParams)
 }

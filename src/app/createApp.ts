@@ -3,12 +3,7 @@ import path from 'path'
 import { CommonClientProps, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
-import {
-  Endpoint,
-  isRequestUrl,
-  makeRequest,
-  makeRequestUrl,
-} from '../core/endpoint'
+import { Endpoint, makeRequest, makeRequestUrl } from '../core/endpoint'
 import { setRoutesModule } from '../core/global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../core/html'
 import {
@@ -261,12 +256,8 @@ function createClientPropsLoader(
   profile: ProfiledEventHandler | undefined
 ): ClientPropsLoader {
   return async (url, route) => {
-    // At this point, the `respondWith` method does nothing,
-    // but we need to make the route params accessible.
-    const request = makeRequest(
-      isRequestUrl(url) ? url : makeRequestUrl(url, 'GET', emptyHeaders),
-      noop
-    )
+    const requestUrl = makeRequestUrl(url, 'GET', emptyHeaders)
+    const request = makeRequest(requestUrl, noop)
 
     const timestamp = Date.now()
     const stateModules = createStateModuleMap()
