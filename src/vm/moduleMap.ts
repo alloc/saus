@@ -1,4 +1,3 @@
-import { noop } from '../utils/noop'
 import { invalidateNodeModule } from './nodeModules'
 import {
   CompiledModule,
@@ -29,12 +28,13 @@ export function registerModuleOnceCompiled(
     })
   }
 
-  moduleMap.__compileQueue = modulePromise
-    .then(module => {
+  moduleMap.__compileQueue = modulePromise.then(
+    module => {
       registerModule(module, moduleMap)
       return compileQueue
-    })
-    .catch(noop)
+    },
+    () => compileQueue
+  )
 
   return modulePromise
 }
