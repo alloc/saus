@@ -7,8 +7,8 @@ import {
   __importAll,
   __importDefault
 } from '../utils/esmInterop'
-import { ForceLazyBindingHook, ResolveIdHook } from './types'
 import { combineSourceMaps, SourceMap } from '../utils/sourceMap'
+import { ForceLazyBindingHook } from './types'
 
 type Binding = { path: NodePath; referencePaths: NodePath[] }
 type BindingMap = Map<Binding, string>
@@ -35,7 +35,11 @@ export async function compileEsm({
   keepImportCalls?: boolean
   keepImportMeta?: boolean
   forceLazyBinding?: ForceLazyBindingHook
-  resolveId?: ResolveIdHook
+  resolveId?: (
+    id: string,
+    importer?: string,
+    isDynamic?: boolean
+  ) => Promise<string>
 }) {
   const ast = getBabelProgram(code, filename)
   let editor = new MagicString(code)
