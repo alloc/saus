@@ -19,7 +19,7 @@ import { findPackage } from '../../utils/findPackage'
 import { parseImports } from '../../utils/imports'
 import { mapSerial } from '../../utils/mapSerial'
 import { resolveEntryUrl } from '../../utils/resolveEntryUrl'
-import { toInlineSourceMap } from '../../utils/sourceMap'
+import { combineSourceMaps, toInlineSourceMap } from '../../utils/sourceMap'
 import { textExtensions } from '../../utils/textExtensions'
 import { debug } from '../debug'
 import {
@@ -394,9 +394,9 @@ export async function generateClientModules(
         sourceMap: !!sourceMaps,
       })
       if (chunk.map && minified.map) {
-        chunk.map = vite.combineSourcemaps(chunk.fileName, [
-          minified.map as any,
-          chunk.map as any,
+        chunk.map = combineSourceMaps(chunk.fileName, [
+          minified.map,
+          chunk.map,
         ]) as any
       }
       chunk.code = minified.code!

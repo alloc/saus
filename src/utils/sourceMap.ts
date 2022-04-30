@@ -1,5 +1,6 @@
 import * as convertSourceMap from 'convert-source-map'
 import { dirname, resolve } from 'path'
+import { vite } from '../core'
 import { debug } from '../core/debug'
 
 export interface SourceMap {
@@ -40,4 +41,18 @@ const sourceMappingUrlRE = new RegExp('\\n//# sourceMappingURL=\\S+', 'g')
 
 export function removeSourceMapUrls(code: string) {
   return code.replace(sourceMappingUrlRE, '')
+}
+
+export function combineSourceMaps(
+  id: string,
+  maps: readonly (SourceMap | string | undefined)[]
+): SourceMap {
+  return vite.combineSourcemaps(
+    id,
+    maps.filter(Boolean).map(parseSourceMap) as any
+  ) as any
+}
+
+function parseSourceMap(map: string | SourceMap | undefined) {
+  return typeof map == 'string' ? JSON.parse(map) : map
 }

@@ -1,15 +1,14 @@
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
 import { getBabelProgram, MagicString, NodePath, t } from '../babel'
-import { vite } from '../core'
 import {
   __exportAll,
   __exportLet,
-  __importDefault,
   __importAll,
+  __importDefault
 } from '../utils/esmInterop'
-import { SourceMap } from '../utils/sourceMap'
 import { ForceLazyBindingHook, ResolveIdHook } from './types'
+import { combineSourceMaps, SourceMap } from '../utils/sourceMap'
 
 type Binding = { path: NodePath; referencePaths: NodePath[] }
 type BindingMap = Map<Binding, string>
@@ -226,7 +225,7 @@ function attachInputSourcemap(
   const { generateMap } = editor
   editor.generateMap = function (options) {
     const map = generateMap.call(editor, options)
-    return vite.combineSourcemaps(filename, [map as any, inMap as any]) as any
+    return combineSourceMaps(filename, [map, inMap]) as any
   }
   return editor
 }

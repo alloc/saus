@@ -19,6 +19,7 @@ import { bareImportRE, relativePathRE } from '../../utils/importRegex'
 import { plural } from '../../utils/plural'
 import { relativeToCwd } from '../../utils/relativeToCwd'
 import {
+  combineSourceMaps,
   loadSourceMap,
   resolveMapSources,
   SourceMap,
@@ -674,11 +675,9 @@ function isolateRenderers(
       const editor = new MagicString(renderModule.code)
       const chunk = createRendererChunk(type, func, editor)
 
-      if (renderModule.map)
-        chunk.map = vite.combineSourcemaps(renderPath, [
-          chunk.map as any,
-          renderModule.map as any,
-        ]) as any
+      if (renderModule.map) {
+        chunk.map = combineSourceMaps(renderPath, [chunk.map, renderModule.map])
+      }
 
       const hash = md5Hex(chunk.code).slice(0, 8)
       const chunkPath = renderPath.replace(/\.[^.]+$/, `.${hash}.js`)
