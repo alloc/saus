@@ -1,7 +1,7 @@
 import { copyPublicDir, defineConfig } from 'saus'
 
 export default defineConfig({
-  base: '/staging/',
+  // base: '/staging/',
   saus: {
     routes: './src/node/routes.ts',
     render: './src/render.tsx',

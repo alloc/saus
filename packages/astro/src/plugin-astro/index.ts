@@ -5,10 +5,19 @@ import { combineSourceMaps } from 'saus/core'
 
 let astroCompiler: typeof import('@astrojs/compiler')
 
+const ssrRuntimeId = '@saus/astro-runtime'
+
 export function astroVite(): Plugin {
   return {
     name: 'astro',
     enforce: 'pre',
+    config: () => ({
+      resolve: {
+        alias: {
+          [ssrRuntimeId]: require.resolve(ssrRuntimeId),
+        },
+      },
+    }),
     async saus({ root }) {
       const dynamicImport = (0, eval)('id => import(id)')
       astroCompiler = await dynamicImport('@astrojs/compiler')
@@ -21,6 +30,7 @@ export function astroVite(): Plugin {
             projectRoot: root,
             sourcemap: 'external',
             sourcefile: id,
+            internalURL: ssrRuntimeId,
           })
 
           const jsResult = await esbuild.transform(tsResult.code, {
