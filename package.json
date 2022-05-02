@@ -1,0 +1,24 @@
+{
+  "name": "astro",
+  "version": "1.0.0-beta.20",
+  "description": "Astro is a modern site builder with web best practices, performance, and DX front-of-mind.",
+  "license": "MIT",
+  "author": "withastro",
+  "engines": {
+    "node": "^14.15.0 || >=16.0.0",
+    "npm": ">=6.14.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.17.9",
+    "html-escaper": "^3.0.3",
+    "serialize-javascript": "^6.0.0",
+    "shorthash": "^0.0.2"
+  },
+  "devDependencies": {
+    "@cush/exec": "^1.7.1",
+    "@cush/shell": "^1.0.0",
+    "@types/babel__core": "^7.1.19",
+    "@types/html-escaper": "^3.0.0",
+    "module-extractor": "^0.1.1"
+  }
+}
