@@ -1,5 +1,5 @@
 {
-  "name": "astro",
+  "name": "@saus/astro-runtime",
   "version": "1.0.0-beta.20",
   "description": "Astro is a modern site builder with web best practices, performance, and DX front-of-mind.",
   "license": "MIT",
