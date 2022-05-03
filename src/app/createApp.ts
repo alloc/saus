@@ -115,12 +115,6 @@ export function createApp(
     method: string,
     negotiate: ContentNegotiater | null
   ): readonly Endpoint[] | undefined => {
-    let endpoints: Endpoint[] | undefined
-    if (!negotiate) {
-      endpoints = route.endpoints?.filter(e => e.method == method)
-      return endpoints || emptyArray
-    }
-
     let endpointMap!: RouteEndpointMap
     if (route.methods) {
       endpointMap = route.methods[method]
@@ -132,13 +126,15 @@ export function createApp(
       endpointMap = route.methods[method] = {}
 
       if (route.moduleId) {
+        route.endpoints ||= []
         const endpoints = toArray(generateEndpoint(method, route, app))
         for (const endpoint of endpoints) {
           if (!endpoint) continue
           endpoint.method = method
-          for (const type of (endpoint.contentTypes ||= ['text/html'])) {
-            endpointMap[type] = endpoint as Endpoint
+          for (const type of (endpoint.contentTypes ||= ['*/*'])) {
+            endpointMap[type] = [endpoint as Endpoint]
           }
+          route.endpoints.push(endpoint as Endpoint)
         }
       }
 
@@ -146,20 +142,28 @@ export function createApp(
         for (const endpoint of route.endpoints) {
           if (endpoint.method !== method) continue
           for (const type of endpoint.contentTypes) {
-            endpointMap[type] ||= endpoint
+            const endpointsForType = endpointMap[type]
+            if (endpointsForType) {
+              endpointsForType.push(endpoint)
+            } else {
+              endpointMap[type] = [endpoint]
+            }
           }
         }
       }
     }
 
-    endpoints = negotiate(Object.keys(endpointMap)).map(
-      type => endpointMap[type as Endpoint.ContentType]
-    )
+    let endpoints: Endpoint[] | undefined
 
-    const wildEndpoints = endpointMap['*/*']
-    if (wildEndpoints) {
-      endpoints.push(...wildEndpoints)
+    if (!negotiate) {
+      endpoints = route.endpoints?.filter(e => e.method == method)
+      return endpoints || emptyArray
     }
+
+    endpoints = negotiate(Object.keys(endpointMap))
+      .concat('*/*')
+      .map(type => endpointMap[type as Endpoint.ContentType] || emptyArray)
+      .flat()
 
     if (endpoints.length) {
       return endpoints
