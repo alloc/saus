@@ -1,7 +1,7 @@
 /**
  * Unsupported patterns:
- *   - first-class elements
  *   - dynamic element types
+ *   - storing elements in a variable with mixed type
  */
 
 interface SourceFile {
@@ -42,13 +42,8 @@ interface Statement extends Node {
   statement: string
 }
 
-interface Text extends Node {
-  text: string | Expression
-  escape?: boolean
-}
-
 /** Bodies have their own variable scope. */
-type Body = (Statement | Element | Text)[]
+type Body = (Statement | Renderable | ElementDef)[]
 
 /** Used for the render-props pattern */
 interface CallableBody extends Node {
@@ -139,15 +134,63 @@ interface SlotElement extends Node {
   fallback?: Body
 }
 
+type Renderable =
+  | AsyncBoundary
+  | ClientBoundary
+  | ContextConsumer
+  | ContextProvider
+  | Element
+  | ElementCopy
+  | ErrorBoundary
+  | ForIn
+  | ForOf
+  | Return
+  | RouteBoundary
+  | Switch
+  | Text
+
+/**
+ * Only rendered when used by an `ElementCopy` node.
+ * Allows for element hoisting.
+ */
+interface ElementDef extends Node {
+  id: string
+  init: Element | Body
+}
+
+/** Copy an `ElementDef` into an element tree. */
+interface ElementCopy extends Node {
+  use: ElementDef
+}
+
+interface Text extends Node {
+  text: string | Expression
+  escape?: boolean
+}
+
 interface ErrorBoundary extends Node {
   try: Body
   catch: Body | CallableBody
 }
 
-/** Enables HTML streaming and render-driven data loading */
+/** Enables render-driven data loading and progressive rendering */
 interface AsyncBoundary extends Node {
   async: Body
   catch?: Body | CallableBody
+}
+
+/** This subtree is rendered for a specific route */
+interface RouteBoundary extends Node {
+  route: string
+  body: Body
+}
+
+/** This subtree is rendered on the client only */
+interface ClientBoundary extends Node {
+  client: 'visible' | 'load' | 'idle'
+  body: Body
+  /** CSS media query that must match to apply this subtree */
+  media?: string
 }
 
 interface ContextProvider extends Node {
@@ -174,14 +217,14 @@ interface Return extends Node {
   return: Expression
 }
 
-/** Used for conditional rendering */
+/** Render just one of the given cases or default body. */
 interface Switch extends Node {
-  switch: SwitchCase[]
+  switch: Case[]
   else?: Body
 }
 
 /** Render the body if `case` is truthy */
-interface SwitchCase extends Node {
+interface Case extends Node {
   case: RawExpression
   body: Body
 }
