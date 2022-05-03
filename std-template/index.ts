@@ -2,7 +2,6 @@
  * Unsupported patterns:
  *   - first-class elements
  *   - dynamic element types
- *   - higher-order components
  */
 
 interface SourceFile {
@@ -86,6 +85,14 @@ interface ComponentRef extends Node {
   source: SourceFile
 }
 
+/**
+ * Some template compilers may be able to infer the effective props/body
+ * of a higher-order component, so SSR optimizations are still possible.
+ */
+interface ComponentExpression extends Component {
+  init: Expression
+}
+
 type Element = PrimitiveElement | CompositeElement | SlotElement
 
 interface PrimitiveElement extends UnknownElement {
@@ -95,6 +102,11 @@ interface PrimitiveElement extends UnknownElement {
 
 interface CompositeElement extends UnknownElement {
   type: Component | ComponentRef
+  /**
+   * If the component uses a `Return` node, this is the
+   * local identifier in this element's scope.
+   */
+  ref?: Name
 }
 
 interface UnknownElement extends Node {
@@ -127,18 +139,18 @@ interface SlotElement extends Node {
   fallback?: Body
 }
 
-interface ErrorBoundary {
+interface ErrorBoundary extends Node {
   try: Body
   catch: Body | CallableBody
 }
 
 /** Enables HTML streaming and render-driven data loading */
-interface AsyncBoundary {
+interface AsyncBoundary extends Node {
   async: Body
   catch?: Body | CallableBody
 }
 
-interface ContextProvider {
+interface ContextProvider extends Node {
   provide: Context[]
   /** If undefined, the context is accessible to all elements declared in the nearest scope. */
   body?: Body
@@ -150,15 +162,20 @@ interface Context extends Node {
   namespace?: string
 }
 
-interface ContextConsumer {
+interface ContextConsumer extends Node {
   consume: Context[]
   local: Name
   /** If undefined, the context is accessible to the nearest scope. */
   body?: Body
 }
 
+/** Expose a value to the caller */
+interface Return extends Node {
+  return: Expression
+}
+
 /** Used for conditional rendering */
-interface Switch {
+interface Switch extends Node {
   switch: SwitchCase[]
   else?: Body
 }
@@ -173,7 +190,7 @@ interface SwitchCase extends Node {
  * Used for mapping an object `Expression` into a list
  * of `Element` objects.
  */
-interface ForIn {
+interface ForIn extends Node {
   forIn: Expression
   key?: Name
   value: Name
@@ -184,7 +201,7 @@ interface ForIn {
  * Used for mapping an iterable `Expression` into a list
  * of `Element` objects.
  */
-interface ForOf {
+interface ForOf extends Node {
   forOf: Expression
   index?: Name
   value: Name
