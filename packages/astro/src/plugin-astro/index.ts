@@ -5,9 +5,9 @@ import { combineSourceMaps } from 'saus/core'
 
 let astroCompiler: typeof import('@astrojs/compiler')
 
-const ssrRuntimeId = '@saus/astro-runtime'
+export const ssrRuntimeId = '@saus/astro-runtime'
 
-export function astroVite(): Plugin {
+export function astroVite(options: any): Plugin {
   return {
     name: 'astro',
     enforce: 'pre',

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@astrojs/compiler": "^0.14.1",
+    "@saus/astro-runtime": "*",
     "@types/babel__core": "^7.1.16",
     "esbuild": "^0.14.34"
   }
