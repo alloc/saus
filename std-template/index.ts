@@ -28,13 +28,44 @@ interface Name extends Node {
   name: string
 }
 
-interface ComponentProp extends Node {
+/** JavaScript expression */
+type RawExpression = string
+
+/** Evaluated as a JavaScript expression. */
+interface Expression extends Node {
+  /** JavaScript expression */
+  expression: RawExpression
+}
+
+/** One or more JavaScript statements. */
+interface Statement extends Node {
+  /** JavaScript statements separated by `\n` or `;` */
+  statement: string
+}
+
+interface Text extends Node {
+  text: string | Expression
+  escape?: boolean
+}
+
+/** Bodies have their own variable scope. */
+type Body = (Statement | Element | Text)[]
+
+/** Used for the render-props pattern */
+interface CallableBody extends Node {
+  params?: ParameterList
+  body: Body
+}
+
+type ParameterList = (Parameter | RestParameter)[]
+
+interface Parameter extends Node {
   id: string
   alias?: Name
   defaultValue?: Expression
 }
 
-interface ComponentRestProp extends Node {
+interface RestParameter extends Node {
   rest: string
 }
 
@@ -42,11 +73,9 @@ interface ComponentRestProp extends Node {
 interface Component extends Node {
   name: string
   /** Either the identifier of the props object, or a list of destructured props. */
-  props?: Name | (ComponentProp | ComponentRestProp)[]
+  props?: Name | ParameterList
   body: Body
 }
-
-type Body = (Statement | Element)[]
 
 /**
  * Component from another file.  \
@@ -57,11 +86,25 @@ interface ComponentRef extends Node {
   source: SourceFile
 }
 
-type Element = PrimitiveElement | CompositeElement
-type ElementProps = Record<string, ElementProp>
+type Element = PrimitiveElement | CompositeElement | SlotElement
+
+interface PrimitiveElement extends UnknownElement {
+  type: string
+  body?: Body
+}
+
+interface CompositeElement extends UnknownElement {
+  type: Component | ComponentRef
+}
+
+interface UnknownElement extends Node {
+  props?: (ElementProp | ElementSpreadProp)[]
+  slots?: Slot[]
+  body?: Body | CallableBody
+}
 
 interface ElementProp extends Node {
-  name: string | Expression
+  name: string
   value: true | string | Expression
 }
 
@@ -69,29 +112,30 @@ interface ElementSpreadProp extends Node {
   spread: RawExpression
 }
 
-interface UnknownElement extends Node {
-  props: (ElementProp | ElementSpreadProp)[]
-  body?: Body
+/** How a caller defines the contents of a named slot. */
+interface Slot extends Node {
+  /** Cannot be an empty string. */
+  slot: string
+  body: Body
 }
 
-interface PrimitiveElement extends UnknownElement {
-  type: string
-}
-
-interface CompositeElement extends UnknownElement {
-  type: Component | ComponentRef
-  params?: Name[]
+/** The body of an element is placed here within the component. */
+interface SlotElement extends Node {
+  /** Use empty string for default slot. */
+  slot: string
+  /** If component receives empty body, this is used. */
+  fallback?: Body
 }
 
 interface ErrorBoundary {
   try: Body
-  catch: Body
+  catch: Body | CallableBody
 }
 
 /** Enables HTML streaming and render-driven data loading */
 interface AsyncBoundary {
   async: Body
-  catch?: Body
+  catch?: Body | CallableBody
 }
 
 interface ContextProvider {
@@ -108,6 +152,7 @@ interface Context extends Node {
 
 interface ContextConsumer {
   consume: Context[]
+  local: Name
   /** If undefined, the context is accessible to the nearest scope. */
   body?: Body
 }
@@ -118,7 +163,7 @@ interface Switch {
   else?: Body
 }
 
-/** Render this element if `match` is truthy */
+/** Render the body if `case` is truthy */
 interface SwitchCase extends Node {
   case: RawExpression
   body: Body
@@ -144,19 +189,4 @@ interface ForOf {
   index?: Name
   value: Name
   body: Body
-}
-
-/** JavaScript expression */
-type RawExpression = string
-
-/** Evaluated as a JavaScript expression. */
-interface Expression extends Node {
-  /** JavaScript expression */
-  expression: RawExpression
-}
-
-/** One or more JavaScript statements. */
-interface Statement extends Node {
-  /** JavaScript statements separated by `\n` or `;` */
-  statement: string
 }
