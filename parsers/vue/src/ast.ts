@@ -1,11 +1,16 @@
 import { ForParseResult } from './transforms/vFor';
 import { RENDER_SLOT, CREATE_SLOTS, RENDER_LIST, FRAGMENT, WITH_MEMO } from './runtimeHelpers';
 import { PropsExpression } from './transforms/transformElement';
+import { ImportItem } from './transform';
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
 // compilers.
 export type Namespace = number
+
+export const enum Namespaces {
+  HTML
+}
 
 export const enum NodeTypes {
   ROOT,
@@ -67,6 +72,8 @@ export interface Position {
   column: number
 }
 
+export type ParentNode = RootNode | ElementNode | IfBranchNode | ForNode
+
 export type ExpressionNode = SimpleExpressionNode | CompoundExpressionNode
 
 export type TemplateChildNode =
@@ -79,6 +86,23 @@ export type TemplateChildNode =
   | IfBranchNode
   | ForNode
   | TextCallNode
+
+export interface RootNode extends Node {
+  type: NodeTypes.ROOT
+  children: TemplateChildNode[]
+  helpers: symbol[]
+  components: string[]
+  directives: string[]
+  hoists: (JSChildNode | null)[]
+  imports: ImportItem[]
+  cached: number
+  temps: number
+  ssrHelpers?: symbol[]
+  codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
+
+  // v2 compat only
+  filters?: string[]
+}
 
 export type ElementNode =
   | PlainElementNode
@@ -501,4 +525,34 @@ export interface ForRenderListExpression extends CallExpression {
 
 export interface ForIteratorExpression extends FunctionExpression {
   returns: BlockCodegenNode
+}
+
+// AST Utilities ---------------------------------------------------------------
+
+// Some expressions, e.g. sequence and conditional expressions, are never
+// associated with template nodes, so their source locations are just a stub.
+// Container types like CompoundExpression also don't need a real location.
+export const locStub: SourceLocation = {
+  source: '',
+  start: { line: 1, column: 1, offset: 0 },
+  end: { line: 1, column: 1, offset: 0 }
+}
+
+export function createRoot(
+  children: TemplateChildNode[],
+  loc = locStub
+): RootNode {
+  return {
+    type: NodeTypes.ROOT,
+    children,
+    helpers: [],
+    components: [],
+    directives: [],
+    hoists: [],
+    imports: [],
+    cached: 0,
+    temps: 0,
+    codegenNode: undefined,
+    loc
+  }
 }

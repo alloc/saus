@@ -1,6 +1,7 @@
 const { extractModules } = require('module-extractor')
 
 const extraction = extractModules({
+  debug: true,
   entries: ['parser/astro-parser/parse.ts'],
   pkgRoot: './vendor/astro-eslint-parser',
   outPkgRoot: './',

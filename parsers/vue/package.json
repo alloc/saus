@@ -11,5 +11,8 @@
     "@vue/shared": "3.2.33",
     "@babel/parser": "^7.16.4"
   },
+  "devDependencies": {
+    "@babel/types": "^7.16.0"
+  },
   "main": "src/parse.ts"
 }

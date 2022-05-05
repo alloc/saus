@@ -19,8 +19,8 @@
   },
   "devDependencies": {
     "eslint": "^8.14.0",
-    "@types/eslint-visitor-keys": "^1.0.0",
     "@types/eslint": "^8.0.0",
+    "@types/eslint-visitor-keys": "^1.0.0",
     "@typescript-eslint/types": "^5.4.0"
   },
   "main": "src/parser/astro-parser/parse.ts"
