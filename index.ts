@@ -136,6 +136,7 @@ interface SlotElement extends Node {
 
 type Renderable =
   | AsyncBoundary
+  | Case
   | ClientBoundary
   | ContextConsumer
   | ContextProvider
