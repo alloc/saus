@@ -93,9 +93,6 @@ export async function compileEsm({
   for (const path of ast.get('body')) {
     if (path.isImportDeclaration()) {
       const imported = (await resolveStaticImport(path.node, filename))!
-      if (filename.includes('foo')) {
-        debugger
-      }
       if (imported.skip) {
         hasPreservedImports = true
       } else {
