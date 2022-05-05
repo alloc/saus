@@ -1,10 +1,11 @@
 /* eslint-disable no-import-assign */
-import * as babelTypes from "@babel/types";
 import builder from "@babel/types/lib/builders/builder";
 import defineType from "@babel/types/lib/definitions/utils";
-import * as generatedValidators from "@babel/types/lib/validators/generated";
-import * as referencedValidators from "@babel/types/lib/validators/isReferenced";
 import definitions, { MARKO_TYPES, MARKO_ALIAS_TYPES } from "./definitions";
+
+const babelTypes = require("@babel/types");
+const generatedValidators = require("@babel/types/lib/validators/generated");
+const referencedValidators = require("@babel/types/lib/validators/isReferenced");
 
 const {
   TYPES,
