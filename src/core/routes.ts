@@ -135,7 +135,15 @@ export interface Route extends BareRoute, RouteConfig {}
 
 export namespace Route {
   export interface API<Params extends {} = {}>
-    extends Endpoint.Declarators<API<Params>, Params> {}
+    extends Endpoint.Declarators<API<Params>, Params> {
+    /**
+     * In the given callback, you can add routes that have this
+     * route's path automatically prepended to theirs.
+     */
+    extend: (
+      cb: (route: typeof import('../routes').route) => Promisable<void>
+    ) => API<Params>
+  }
 }
 
 export function matchRoute(path: string, route: ParsedRoute) {

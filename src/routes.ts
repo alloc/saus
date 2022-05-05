@@ -19,6 +19,8 @@ const parseDynamicImport = (fn: Function, path: string) => {
   }
 }
 
+const routeStack: Route[] = []
+
 /** Define the default route */
 export function route(load: RouteLoader): void
 
@@ -42,8 +44,8 @@ export function route(
   maybeLoad?: RouteLoader<any>,
   config?: RouteConfig<any, any>
 ) {
-  const path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
-  const load =
+  let path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
+  let load =
     typeof pathOrLoad == 'string' ? maybeLoad : (pathOrLoad as RouteLoader)
 
   const routeDecl = {
@@ -54,10 +56,34 @@ export function route(
   } as Route
 
   if (path[0] === '/') {
+    if (routeStack.length) {
+      routeDecl.path = path =
+        Array.from(routeStack, route => route.path).join('') + path
+    }
+
     Object.assign(routeDecl, RegexParam.parse(path))
     routesModule.routes.push(routeDecl)
 
-    const api = {} as Route.API
+    const api = {
+      extend(cb) {
+        const addRoute = ((...args: Parameters<typeof route>) => {
+          routeStack.push(routeDecl)
+          route(...args)
+          routeStack.pop()
+        }) as typeof route
+
+        routeStack.push(routeDecl)
+        try {
+          const result = cb(addRoute)
+          if (result instanceof Promise) {
+            result.catch(console.error)
+          }
+        } finally {
+          routeStack.pop()
+        }
+      },
+    } as Route.API
+
     for (const method of httpMethods) {
       api[method] = (
         arg1: string | Endpoint.ContentType[] | typeof fn,
@@ -101,8 +127,14 @@ export function route(
         return api
       }
     }
+
     return api
   }
+
+  if (routeStack.length)
+    throw Error(
+      'Cannot set "default" or "error" route within `extend` callback'
+    )
 
   if (path === 'default') {
     routesModule.defaultRoute = routeDecl
