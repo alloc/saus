@@ -1,0 +1,16 @@
+{
+  "0 debug pnpm:scope": {
+    "selected": 1,
+    "workspacePrefix": "/Users/alec/dev/oss/saus/std-template"
+  },
+  "1 error pnpm": {
+    "code": "ERR_PNPM_CANNOT_REMOVE_MISSING_DEPS",
+    "hint": "Available dependencies: @vue/shared, @babel/parser",
+    "err": {
+      "name": "pnpm",
+      "message": "Cannot remove 'prettier-plugin-marko': no such dependency found",
+      "code": "ERR_PNPM_CANNOT_REMOVE_MISSING_DEPS",
+      "stack": "pnpm: Cannot remove 'prettier-plugin-marko': no such dependency found\n    at Object.handler (/usr/local/lib/node_modules/pnpm/dist/pnpm.cjs:118593:15)\n    at async /usr/local/lib/node_modules/pnpm/dist/pnpm.cjs:182688:21\n    at async run (/usr/local/lib/node_modules/pnpm/dist/pnpm.cjs:182662:34)\n    at async runPnpm (/usr/local/lib/node_modules/pnpm/dist/pnpm.cjs:182874:5)\n    at async /usr/local/lib/node_modules/pnpm/dist/pnpm.cjs:182866:7"
+    }
+  }
+}

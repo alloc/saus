@@ -1,0 +1,24 @@
+{
+  "name": "@saus/svelte-parser",
+  "version": "3.48.0",
+  "description": "Cybernetically enhanced web apps",
+  "license": "MIT",
+  "author": "Rich Harris",
+  "keywords": [
+    "UI",
+    "framework",
+    "templates",
+    "templating"
+  ],
+  "engines": {
+    "node": ">= 8"
+  },
+  "devDependencies": {
+    "acorn": "^8.4.1",
+    "locate-character": "^2.0.5",
+    "code-red": "^0.2.5",
+    "css-tree": "^1.1.2",
+    "estree-walker": "^3.0.0"
+  },
+  "main": "src/compiler/parse/index.ts"
+}

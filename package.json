@@ -1,0 +1,10 @@
+{
+  "name": "@saus/std-template",
+  "private": true,
+  "devDependencies": {
+    "module-extractor": "^0.1.1",
+    "prettier-plugin-astro": "^0.0.12",
+    "prettier-plugin-marko": "^1.2.0",
+    "vitest": "link:../node_modules/vitest"
+  }
+}

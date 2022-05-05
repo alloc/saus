@@ -1,0 +1,27 @@
+{
+  "name": "@saus/astro-parser",
+  "version": "0.0.7",
+  "description": "Astro parser for ESLint",
+  "license": "MIT",
+  "author": "Yosuke Ota",
+  "keywords": [
+    "astro",
+    "astrojs",
+    "eslint",
+    "parser"
+  ],
+  "engines": {
+    "node": "^14.17.0 || >=16.0.0"
+  },
+  "dependencies": {
+    "@astrojs/compiler": "^0.14.2",
+    "eslint-visitor-keys": "^3.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.14.0",
+    "@types/eslint-visitor-keys": "^1.0.0",
+    "@types/eslint": "^8.0.0",
+    "@typescript-eslint/types": "^5.4.0"
+  },
+  "main": "src/parser/astro-parser/parse.ts"
+}
