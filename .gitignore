@@ -1,2 +1,7 @@
+packages/imagetools
+packages/repng
+packages/test
 node_modules
+starters
 vendor
+dist

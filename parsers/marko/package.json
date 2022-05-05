@@ -20,5 +20,6 @@
     "self-closing-tags": "^1.0.1",
     "@babel/generator": "^7.16.0"
   },
-  "main": "src/babel-plugin/parser.js"
+  "main": "src/babel-plugin/parser.js",
+  "type": "module"
 }
