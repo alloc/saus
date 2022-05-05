@@ -150,16 +150,25 @@ export async function compileEsm({
 
       // Convert super class identifier.
       else if (parent.isClassDeclaration() && path.parentKey == 'superClass') {
-        const blockParent = parent.findParent(parent =>
-          parent.isBlockStatement()
+        // Find the nearest child of a block statement where we
+        // can declare a new variable.
+        const blockChild =
+          parent.findParent(parent => {
+            const ancestor = parent.parentPath
+            return ancestor
+              ? ancestor.isBlockStatement() || ancestor.isProgram()
+              : false
+          }) || parent
+
+        const tempId = parent.scope.generateDeclaredUidIdentifier(
+          (path.node as t.Identifier).name
+        ).name
+
+        editor.overwrite(path.node.start!, path.node.end!, binding)
+        editor.prependRight(
+          blockChild.node.start!,
+          `const ${tempId} = ${binding};\n`
         )
-        if (blockParent) {
-          const tempId = parent.scope.generateDeclaredUidIdentifier(
-            (path.node as t.Identifier).name
-          ).name
-          const { body } = blockParent.node as t.BlockStatement
-          editor.prependRight(body[0].start!, `const ${tempId} = ${binding};\n`)
-        }
       }
 
       // Convert simple identifier.
