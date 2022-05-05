@@ -408,11 +408,15 @@ function rewriteExport(
     editor.overwrite(start, end, `__exportAll(${exportsId}, ${fromExpr})`)
     esmHelpers.add(__exportAll)
   } else if (path.isExportDefaultDeclaration()) {
-    editor.overwrite(
-      start,
-      start + `export default`.length,
-      `${exportsId}.default =`
-    )
+    const replaced = 'export default'
+    const replacement = `${exportsId}.default =`
+    const defaultDecl = path.get('declaration')
+    if (defaultDecl.isFunctionDeclaration() && defaultDecl.node.id) {
+      editor.remove(start, start + replaced.length + 1)
+      editor.appendLeft(end, `\n${replacement} ${defaultDecl.node.id.name};`)
+    } else {
+      editor.overwrite(start, start + replaced.length, replacement)
+    }
   }
 }
 
