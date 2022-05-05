@@ -148,29 +148,6 @@ export async function compileEsm({
         editor.appendLeft(path.node.end!, `: ${binding}`)
       }
 
-      // Convert super class identifier.
-      else if (parent.isClassDeclaration() && path.parentKey == 'superClass') {
-        // Find the nearest child of a block statement where we
-        // can declare a new variable.
-        const blockChild =
-          parent.findParent(parent => {
-            const ancestor = parent.parentPath
-            return ancestor
-              ? ancestor.isBlockStatement() || ancestor.isProgram()
-              : false
-          }) || parent
-
-        const tempId = parent.scope.generateDeclaredUidIdentifier(
-          (path.node as t.Identifier).name
-        ).name
-
-        editor.overwrite(path.node.start!, path.node.end!, binding)
-        editor.prependRight(
-          blockChild.node.start!,
-          `const ${tempId} = ${binding};\n`
-        )
-      }
-
       // Convert simple identifier.
       else {
         editor.overwrite(path.node.start!, path.node.end!, binding)
