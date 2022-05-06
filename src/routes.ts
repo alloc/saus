@@ -118,7 +118,7 @@ export function route(
         }
 
         const endpoint = fn as Endpoint
-        endpoint.method = method
+        endpoint.method = method.toUpperCase()
         endpoint.contentTypes = contentTypes
 
         routeDecl.endpoints ||= []
