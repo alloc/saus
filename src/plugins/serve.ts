@@ -238,7 +238,7 @@ function writeResponse(
         : 'text' in body
         ? body.text
         : 'json' in body
-        ? JSON.stringify(body)
+        ? JSON.stringify(body.json)
         : null
 
     if (rawBody !== null) {
