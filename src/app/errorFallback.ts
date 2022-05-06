@@ -123,7 +123,10 @@ function renderTableValue(value: any, className?: string) {
   if (value === undefined) {
     return 'undefined'
   }
-  return ansiToHtml(JSON.stringify(value))
+  const jsonValue = JSON.stringify(value)
+  return jsonValue !== undefined
+    ? ansiToHtml(jsonValue)
+    : Object.prototype.toString.call(value)
 }
 
 function renderTableRow(
