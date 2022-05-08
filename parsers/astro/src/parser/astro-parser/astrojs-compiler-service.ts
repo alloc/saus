@@ -1,9 +1,12 @@
 import fs from "fs"
+import * as resolve from "resolve"
 import Go from "./wasm_exec"
 import type { ParseOptions, ParseResult } from "@astrojs/compiler"
 const go = new Go()
 const wasmBuffer = fs.readFileSync(
-    require.resolve("@astrojs/compiler/astro.wasm"),
+    resolve.sync("@astrojs/compiler/astro.wasm", {
+        basedir: import.meta.url,
+    }),
 )
 const mod = new WebAssembly.Module(wasmBuffer)
 const instance = new WebAssembly.Instance(mod, go.importObject)

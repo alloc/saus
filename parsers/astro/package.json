@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@astrojs/compiler": "^0.14.2",
-    "eslint-visitor-keys": "^3.0.0"
+    "eslint-visitor-keys": "^3.0.0",
+    "resolve": "*"
   },
   "devDependencies": {
     "eslint": "^8.14.0",

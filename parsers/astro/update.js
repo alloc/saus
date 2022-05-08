@@ -13,4 +13,5 @@ extraction.on('packageCreated', pkg => {
   pkg.name = '@saus/astro-parser'
   pkg.main = 'src/parser/astro-parser/parse.ts'
   pkg.devDependencies['@typescript-eslint/types'] = '^5.4.0'
+  pkg.dependencies.resolve = '*'
 })
