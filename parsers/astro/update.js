@@ -5,7 +5,8 @@ const extraction = extractModules({
   entries: ['parser/astro-parser/parse.ts'],
   pkgRoot: './vendor/astro-eslint-parser',
   outPkgRoot: './',
-  // copyDeps: ['@types/eslint-scope'],
+  copyFiles: ['tsconfig.json'],
+  copyDeps: ['typescript'],
 })
 
 extraction.on('packageCreated', pkg => {
