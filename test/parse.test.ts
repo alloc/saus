@@ -11,6 +11,7 @@ const parsers = fs.readdirSync('./parsers')
 const fixtures = fs.readdirSync('./fixtures')
 
 for (const parser of parsers) {
+  if (parser !== 'astro') continue
   const parse = await import('../parsers/' + parser)
 
   for (const fixture of fixtures) {
