@@ -92,7 +92,10 @@ export async function loadBundleContext(
     debugBase,
   }
 
-  const { pluginContainer } = await vite.createTransformContext(context.config)
+  const { pluginContainer } = await vite.createTransformContext(
+    context.config,
+    false
+  )
 
   const loading = startTask('Loading routes...')
   await loadRoutes(context, (id, importer) =>

@@ -83,7 +83,7 @@ export async function preBundleSsrRuntime(
     bundleInfo = JSON.parse(cache.get('_bundle.json')!)
   } else {
     const config = await context.resolveConfig('build', { plugins })
-    const { pluginContainer } = await vite.createTransformContext(config)
+    const { pluginContainer } = await vite.createTransformContext(config, false)
 
     const markSausExternals: esbuild.Plugin = {
       name: 'markSausExternals',
