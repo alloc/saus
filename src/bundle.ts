@@ -535,6 +535,11 @@ async function generateSsrBundle(
     },
   })
 
+  if (!options.preferExternal) {
+    config.ssr!.noExternal = /./
+    config.ssr!.external = bundleConfig.external
+  }
+
   const buildResult = (await vite.build(config)) as vite.ViteBuild
   const bundle = buildResult.output[0].output[0]
 

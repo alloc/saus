@@ -75,6 +75,10 @@ export interface SausBundleConfig {
    * @default "inline"
    */
   moduleMap?: 'external' | 'inline'
+  /**
+   * Define which modules should never be bundled.
+   */
+  external?: string[]
 }
 
 export interface SausConfig {
