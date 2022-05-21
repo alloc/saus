@@ -16,6 +16,9 @@ export function ssrClearCache() {
 
 const importerStack: string[] = []
 
+export const getCurrentModule = (): string | undefined =>
+  importerStack[importerStack.length - 1]
+
 export function ssrImport<T = ModuleExports>(
   id: string,
   isRequire?: boolean

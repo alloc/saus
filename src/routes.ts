@@ -1,4 +1,6 @@
+import { relative } from '@cush/relative'
 import * as RegexParam from 'regexparam'
+import { getCurrentModule, ssrImport } from './bundle/ssrModules'
 import { Endpoint } from './core/endpoint'
 import { routesModule } from './core/global'
 import type {
@@ -8,7 +10,6 @@ import type {
   RouteConfig,
   RouteLoader,
 } from './core/routes'
-import { getStackFrame } from './utils/resolveStackTrace'
 import { httpMethods } from './utils/httpMethods'
 
 const importRE = /\b\(["']([^"']+)["']\)/
@@ -152,14 +153,25 @@ export function generateRoute<RoutePath extends string, Module extends object>(
     ...config
   }: GeneratedRouteConfig<Module, InferRouteParams<RoutePath>>
 ): void {
-  const importer = getStackFrame(2)?.file
-  const ssrRequire = routesModule.ssrRequire!
-
   let moduleId: string
   let load: () => Promise<any>
+
   if (typeof entry == 'string') {
+    const { ssrRequire } = routesModule
+    const importer = getCurrentModule()
+
     moduleId = entry
-    load = () => ssrRequire(entry, importer, true)
+    load = ssrRequire
+      ? () => ssrRequire(entry, importer, true)
+      : () => {
+          const resolvedId =
+            (importer &&
+              /^\.\.?\//.test(moduleId) &&
+              relative(importer, moduleId)) ||
+            moduleId
+
+          return ssrImport(resolvedId)
+        }
   } else {
     moduleId = parseDynamicImport(entry, path)
     load = entry

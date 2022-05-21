@@ -341,6 +341,10 @@ const internalRedirects = [
     path.join(clientDir, 'node/loadPageModule.ts'),
     path.join(bundleDir, 'loadPageModule.ts')
   ),
+  redirectModule(
+    path.join(coreDir, 'getCurrentModule.ts'),
+    path.join(bundleDir, 'ssrModules.ts')
+  ),
 ]
 
 async function generateSsrBundle(
