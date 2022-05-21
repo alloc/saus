@@ -1,5 +1,5 @@
 import { CacheControl } from '../core/withCache'
-import { AppWrapper } from './createApp'
+import { App } from './createApp'
 import { RenderPageResult } from './types'
 
 export function cachePages(
@@ -8,7 +8,7 @@ export function cachePages(
     key: string,
     loader: (cacheControl: CacheControl) => Promise<RenderPageResult | null>
   ) => Promise<RenderPageResult>
-): AppWrapper {
+): App.Plugin {
   return app => {
     const { renderPage } = app
 

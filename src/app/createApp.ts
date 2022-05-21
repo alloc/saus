@@ -40,7 +40,10 @@ import {
 } from './types'
 
 export type App = ReturnType<typeof createApp>
-export type AppWrapper = (app: App) => Omit<Partial<App>, 'config'>
+
+export namespace App {
+  export type Plugin = (app: App) => Omit<Partial<App>, 'config'>
+}
 
 /**
  * Create a Saus application that can run anywhere. It can render pages
@@ -51,7 +54,7 @@ export type AppWrapper = (app: App) => Omit<Partial<App>, 'config'>
 export function createApp(
   context: AppContext,
   generateEndpoint: Endpoint.Generator,
-  wrappers: AppWrapper[] = []
+  plugins: App.Plugin[] = []
 ) {
   const { config, onError, profile, functions } = context
 
@@ -247,8 +250,8 @@ export function createApp(
         )),
   }
 
-  for (const wrap of wrappers) {
-    Object.assign(app, wrap(app))
+  for (const plugin of plugins) {
+    Object.assign(app, plugin(app))
   }
 
   return app

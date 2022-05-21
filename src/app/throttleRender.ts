@@ -2,7 +2,7 @@ import type { Route } from '../core/routes'
 import { controlExecution } from '../utils/controlExecution'
 import { limitConcurrency } from '../utils/limitConcurrency'
 import { ParsedUrl } from '../utils/url'
-import { App, AppWrapper } from './createApp'
+import { App } from './createApp'
 import { RenderPageOptions, RenderPageResult } from './types'
 
 type PreloadFn = (
@@ -13,7 +13,7 @@ type PreloadFn = (
 ) => Promise<void>
 
 export const throttleRender =
-  (preload: PreloadFn): AppWrapper =>
+  (preload: PreloadFn): App.Plugin =>
   app => {
     const { config, renderPage } = app
 

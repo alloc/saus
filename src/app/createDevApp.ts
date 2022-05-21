@@ -13,7 +13,7 @@ import { parseUrl } from '../utils/url'
 import { clearExports } from '../vm/moduleMap'
 import { cacheClientProps } from './cacheClientProps'
 import { cachePages } from './cachePages'
-import { App, AppWrapper, createApp } from './createApp'
+import { App, createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
 import { throttleRender } from './throttleRender'
 import { RenderPageOptions } from './types'
@@ -35,7 +35,7 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
     stateCacheId: '/@fs/' + globalCachePath,
   }
 
-  const appWrappers = [
+  const plugins = [
     isolatePages(context),
     cachePages(1, context.getCachedPage),
     // By caching for 1 second, the client props will never go stale
@@ -62,7 +62,7 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
         return createPageEndpoint(context, route, app, onError)
       }
     },
-    appWrappers
+    plugins
   )
 }
 
@@ -128,7 +128,7 @@ function createPageEndpoint(
  * Reload SSR modules before a page is rendered, so pages can't share
  * stateful modules between each other.
  */
-function isolatePages(context: SausContext): AppWrapper {
+function isolatePages(context: SausContext): App.Plugin {
   const routeModuleIds = new Set(
     context.routes.map(route => route.moduleId).filter(Boolean) as string[]
   )

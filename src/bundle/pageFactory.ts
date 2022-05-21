@@ -1,5 +1,5 @@
 import path from 'path'
-import { AppWrapper } from '../app/createApp'
+import { App } from '../app/createApp'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import { globalCache } from '../runtime/cache'
@@ -38,7 +38,7 @@ for (const id in inlinedModules) {
   inlinedModules[id].id = id
 }
 
-export const createPageFactory: AppWrapper = ({ config, renderPage }) => {
+export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''
   // Prepended to module IDs in debug view.
