@@ -2,6 +2,8 @@
 
 Helpers for client code generation
 
+⚠️ Avoid using this in your SSR bundle! It's intended for Saus plugins.
+
 ## Exports
 
 - `babel`  
