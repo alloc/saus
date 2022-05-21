@@ -1,6 +1,13 @@
 import type { Buffer } from '../client/buffer'
 
-export type Headers = Record<string, string | string[] | undefined>
+export interface CommonHeaders {
+  'Cache-Control'?: string
+  'Content-Length'?: string
+  'Content-Type'?: string
+}
+
+export type Headers = CommonHeaders &
+  Record<string, string | string[] | undefined>
 
 export class Response {
   constructor(
