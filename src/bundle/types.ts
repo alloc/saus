@@ -11,6 +11,10 @@ export interface BundledApp extends Omit<App, 'renderPage'> {
   ) => Promise<RenderedPage | null>
 }
 
+export namespace BundledApp {
+  export type Plugin = (app: BundledApp) => Omit<Partial<BundledApp>, 'config'>
+}
+
 export type RenderPageOptions = {
   timeout?: number
   onError?: (error: Error & { url: string }) => null

@@ -66,6 +66,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
       }
 
       const [page, error] = await renderPage(url, route, {
+        defaultRoute: !/\.[^./]+$/.test(url.path) && context.defaultRoute,
         ...options,
         renderStart: renderStart && (() => renderStart(url)),
         renderFinish: undefined,

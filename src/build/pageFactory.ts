@@ -23,8 +23,13 @@ export interface BundleDescriptor {
 export function loadPageFactory(bundle: BundleDescriptor) {
   const { root, eventPort, runtimeConfig = {}, isProfiling } = bundle
 
-  const { default: init, configureBundle, setResponseCache } = runBundle(bundle)
+  const {
+    default: createApp,
+    configureBundle,
+    setResponseCache,
+  } = runBundle(bundle)
 
+  const init = createApp()
   const events = new Multicast<PageEvents>(eventPort)
 
   if (isProfiling) {

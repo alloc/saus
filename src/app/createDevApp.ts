@@ -1,15 +1,8 @@
 import os from 'os'
-import {
-  extractClientFunctions,
-  Route,
-  RuntimeConfig,
-  SausContext,
-} from '../core'
-import { Endpoint } from '../core/endpoint'
+import { extractClientFunctions, RuntimeConfig, SausContext } from '../core'
 import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { parseUrl } from '../utils/url'
 import { clearExports } from '../vm/moduleMap'
 import { cacheClientProps } from './cacheClientProps'
 import { cachePages } from './cachePages'
@@ -18,7 +11,10 @@ import { renderErrorFallback } from './errorFallback'
 import { throttleRender } from './throttleRender'
 import { RenderPageOptions } from './types'
 
-export function createDevApp(context: SausContext, onError: (e: any) => void) {
+export function createDevApp(
+  context: SausContext,
+  onError: (e: any) => void
+): App {
   const functions = extractClientFunctions(context.renderPath)
 
   const viteConfig = context.config
@@ -36,6 +32,7 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
   }
 
   const plugins = [
+    createPageEndpoint(context, onError),
     isolatePages(context),
     cachePages(1, context.getCachedPage),
     // By caching for 1 second, the client props will never go stale
@@ -56,73 +53,65 @@ export function createDevApp(context: SausContext, onError: (e: any) => void) {
       functions,
       onError,
     },
-    // TODO: let plugins generate endpoints
-    (method, route, app) => {
-      if (method == 'GET') {
-        return createPageEndpoint(context, route, app, onError)
-      }
-    },
     plugins
   )
 }
 
-function createPageEndpoint(
-  context: SausContext,
-  route: Route,
-  app: App,
-  onError: (e: any) => void
-): Endpoint.Generated {
-  const server = context.server!
+const createPageEndpoint =
+  (context: SausContext, onError: (e: any) => void): App.Plugin =>
+  app => {
+    const server = context.server!
+    return {
+      getEndpoints: (method, route) =>
+        method == 'GET' &&
+        route.moduleId !== null &&
+        (async req => {
+          let [page, error] = await app.renderPage(req, route, {
+            defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,
+          })
 
-  return async req => {
-    let [page, error] = await app.renderPage(req, route)
+          if (error) {
+            // Since no catch route exists, we should render a page with the Vite client
+            // attached so it can reload the page on the next update.
+            let html: string
 
-    if (!(page || error) && !/\.[^./]+$/.test(req.path) && context.defaultRoute)
-      [page, error] = await app.renderPage(
-        parseUrl(context.defaultPath),
-        context.defaultRoute
-      )
+            for (const plugin of context.plugins) {
+              if (!plugin.renderErrorReport) continue
+              html = await plugin.renderErrorReport(req, error)
+              break
+            }
 
-    if (error) {
-      // Since no catch route exists, we should render a page with the Vite client
-      // attached so it can reload the page on the next update.
-      let html: string
+            html ||= renderErrorFallback(error, {
+              homeDir: os.homedir(),
+              root: context.root,
+              ssr: true,
+            })
 
-      for (const plugin of context.plugins) {
-        if (!plugin.renderErrorReport) continue
-        html = await plugin.renderErrorReport(req, error)
-        break
-      }
+            page = { html, files: [] } as any
 
-      html ||= renderErrorFallback(error, {
-        homeDir: os.homedir(),
-        root: context.root,
-        ssr: true,
-      })
+            error.req = req
+            onError(error)
+          }
 
-      page = { html, files: [] } as any
-
-      error.req = req
-      onError(error)
-    }
-    if (page) {
-      for (const file of page.files) {
-        server.servedFiles[file.id] = file
-      }
-      page.html = await server.transformIndexHtml(req.path, page.html)
-      if (!error && server.postProcessHtml) {
-        page.html = await server.postProcessHtml(page)
-      }
-      const headers = {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Length': '' + Buffer.byteLength(page.html),
-      }
-      req.respondWith(200, headers, {
-        text: page.html,
-      })
+          if (page) {
+            for (const file of page.files) {
+              server.servedFiles[file.id] = file
+            }
+            page.html = await server.transformIndexHtml(req.path, page.html)
+            if (!error && server.postProcessHtml) {
+              page.html = await server.postProcessHtml(page)
+            }
+            const headers = {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Content-Length': '' + Buffer.byteLength(page.html),
+            }
+            req.respondWith(200, headers, {
+              text: page.html,
+            })
+          }
+        }),
     }
   }
-}
 
 /**
  * Reload SSR modules before a page is rendered, so pages can't share

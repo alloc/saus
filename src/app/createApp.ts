@@ -51,11 +51,7 @@ export namespace App {
  *
  * Note: This function does not use Vite for anything.
  */
-export function createApp(
-  context: AppContext,
-  generateEndpoint: Endpoint.Generator,
-  plugins: App.Plugin[] = []
-) {
+export function createApp(context: AppContext, plugins: App.Plugin[] = []) {
   const { config, onError, profile, functions } = context
 
   // Let runtime hooks inject routes, HTML processors, and page state.
@@ -128,9 +124,9 @@ export function createApp(
     if (!endpointMap) {
       endpointMap = route.methods[method] = {}
 
-      if (route.moduleId) {
+      if (route.moduleId && app.getEndpoints) {
         route.endpoints ||= []
-        const endpoints = toArray(generateEndpoint(method, route, app))
+        const endpoints = toArray(app.getEndpoints(method, route))
         for (const endpoint of endpoints) {
           if (!endpoint) continue
           endpoint.method = method
@@ -235,6 +231,7 @@ export function createApp(
   const app = {
     config,
     resolveRoute,
+    getEndpoints: null as Endpoint.Generator | null,
     callEndpoints,
     loadClientProps,
     renderPage,

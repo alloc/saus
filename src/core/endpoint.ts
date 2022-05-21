@@ -1,4 +1,3 @@
-import type { App } from '../app/createApp'
 import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
@@ -25,11 +24,9 @@ export interface Endpoint<Params extends {} = {}>
 
 export namespace Endpoint {
   export type Generated = Function<RouteParams> & Partial<Endpoint>
-
   export type Generator = (
     method: string,
-    route: Route,
-    app: App
+    route: Route
   ) => Generated | (Generated | Falsy)[] | Falsy
 
   export type ContentType = `${string}/${string}`
