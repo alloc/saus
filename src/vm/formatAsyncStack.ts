@@ -1,11 +1,7 @@
 import { codeFrameColumns, SourceLocation } from '@babel/code-frame'
 import fs from 'fs'
-import {
-  parseStackTrace,
-  StackFrame,
-  traceStackFrame,
-} from '../utils/resolveStackTrace'
 import { removeSourceMapUrls } from '../utils/sourceMap'
+import { parseStackTrace, StackFrame, traceStackFrame } from '../utils/stack'
 import { ModuleMap } from './types'
 
 const ignoredFrameRE = /(^node:|\/saus\/(?!examples|packages))/

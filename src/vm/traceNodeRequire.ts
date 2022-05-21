@@ -1,4 +1,4 @@
-import { getStackFrame, StackFrame } from '../utils/resolveStackTrace'
+import { getStackFrame, StackFrame } from '../utils/stack'
 import { formatAsyncStack } from './formatAsyncStack'
 import { ModuleMap } from './types'
 
