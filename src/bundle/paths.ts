@@ -4,16 +4,20 @@ import config from './config'
 import { context } from './context'
 import { ssrImport } from './ssrModules'
 
-const { logger } = context
+const { onError } = context
 const debugBase =
   config.debugBase && config.base.replace(/\/$/, config.debugBase)
 
 export async function getKnownPaths(options: { noDebug?: boolean } = {}) {
-  const paths: string[] = []
-  const errors: { reason: string; path: string }[] = []
-
   await ssrImport(config.ssrRoutesId)
-  await generateRoutePaths(context, {
+  const loaded = {
+    routes: context.routes,
+    defaultRoute: context.defaultRoute,
+    defaultPath: context.config.defaultPath,
+  }
+
+  const paths: string[] = []
+  await generateRoutePaths(loaded, {
     path(path, params) {
       const pageId = getPagePath(path, params).slice(1)
       paths.push(config.base + pageId)
@@ -22,18 +26,9 @@ export async function getKnownPaths(options: { noDebug?: boolean } = {}) {
       }
     },
     error(e) {
-      errors.push(e)
+      onError(Error(`Found issue with "${e.path}" route: ` + e.reason))
     },
   })
-
-  if (errors.length) {
-    logger.error(``)
-    for (const error of errors) {
-      logger.error(`Failed to render ${error.path}`)
-      logger.error(`  ${error.reason}`)
-      logger.error(``)
-    }
-  }
 
   return paths
 }
