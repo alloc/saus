@@ -1,8 +1,5 @@
-import createDebug from 'debug'
-import { SourceMap } from '../utils/sourceMap'
 import { vite } from '../core/vite'
-
-const debug = createDebug('saus:moduleProvider')
+import { SourceMap } from '../utils/sourceMap'
 
 export interface VirtualModule {
   id: string
@@ -28,7 +25,6 @@ export function createModuleProvider(): ModuleProvider & vite.Plugin {
     async load(id) {
       const module = modules.get(id)
       if (module) {
-        debug(`load: ${id}`)
         return { ...module, code: await module.code }
       }
     },
@@ -36,7 +32,6 @@ export function createModuleProvider(): ModuleProvider & vite.Plugin {
       return new Map(modules)
     },
     addModule(module) {
-      debug(`addModule: ${module.id}`)
       modules.set(module.id, module)
       return module
     },
