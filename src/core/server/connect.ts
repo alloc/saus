@@ -1,10 +1,13 @@
-import http from 'http'
 import EventEmitter from 'events'
+import http from 'http'
+import { Promisable } from '../../utils/types'
 
 /**
  * A tiny implementation of the `connect` package.
  */
-export function connect() {
+export function connect<RequestProps extends object = {}>(
+  extendRequest?: (req: http.IncomingMessage) => Promisable<RequestProps>
+): connect.App<RequestProps> {
   const stack: connect.Middleware[] = []
   const events = new EventEmitter()
 
@@ -17,6 +20,9 @@ export function connect() {
 
     let resolve: () => void
     try {
+      if (extendRequest) {
+        Object.assign(req, await extendRequest(req))
+      }
       for (const handler of stack) {
         const promise = new Promise<void>(r => (resolve = r))
         const result = handler(req as any, res, resolve!)
@@ -37,17 +43,16 @@ export function connect() {
   }
 
   app.use = (handler: connect.Middleware) => (stack.push(handler), app)
-  app.on = ((name, listener) => (events.on(name, listener), app)) as {
-    (name: 'error', listener: connect.ErrorListener): connect.App
-  }
+  app.on = (name: string, listener: any) => (events.on(name, listener), app)
 
-  return app
+  return app as any
 }
 
 export namespace connect {
-  export type Request = http.IncomingMessage & { url: string }
+  export type Request<Props extends object = {}> = Props &
+    http.IncomingMessage & { url: string }
   export type Response = http.ServerResponse
-  export type NextFunction = () => void
+  export type NextFunction = (error?: any) => void
 
   export type ErrorListener = (
     e: any,
@@ -56,11 +61,20 @@ export namespace connect {
     next: NextFunction
   ) => void
 
-  export type Middleware = (
-    req: Request,
+  export type Middleware<RequestProps extends object = {}> = (
+    req: Request<RequestProps>,
     res: Response,
     next: NextFunction
   ) => void | Promise<void>
 
-  export type App = ReturnType<typeof connect>
+  export interface App<RequestProps extends object = {}> {
+    (
+      req: http.IncomingMessage,
+      res: http.ServerResponse,
+      next?: connect.NextFunction
+    ): Promise<void>
+
+    use(handler: connect.Middleware<RequestProps>): this
+    on(name: 'error', listener: connect.ErrorListener): this
+  }
 }
