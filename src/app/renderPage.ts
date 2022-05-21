@@ -24,6 +24,7 @@ import {
   RenderedPage,
   RenderPageFn,
   RenderPageOptions,
+  RenderPageResult,
 } from './types'
 
 const debug = createDebug('saus:pages')
@@ -305,24 +306,28 @@ export function createRenderPageFn(
     throw error
   }
 
-  return async function renderPage(url, route, options = {}) {
+  return async function renderPage(
+    url,
+    route,
+    options = {}
+  ): Promise<RenderPageResult> {
     debug(`Page in progress: %s`, url)
-
     options.renderStart?.(url)
-    const rendering = renderPageOrThrow(url, route, options)
-    if (options.renderFinish)
-      rendering.then(
-        options.renderFinish.bind(null, url, null),
-        options.renderFinish.bind(null, url)
-      )
-
     return limitTime(
-      rendering,
+      renderPageOrThrow(url, route, options),
       options.timeout || 0,
       `Page "${url}" rendering took too long`
     ).then(
-      page => [page],
+      page => {
+        if (!page && options.defaultRoute) {
+          const { defaultRoute, ...rest } = options
+          return renderPage(url, defaultRoute, rest)
+        }
+        options.renderFinish?.(url, null, page)
+        return [page]
+      },
       error => {
+        options.renderFinish?.(url, error)
         if (options.onError) {
           options.onError(error)
         } else {

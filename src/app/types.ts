@@ -13,6 +13,7 @@ import type {
 } from '../core'
 import type { Endpoint } from '../core/endpoint'
 import type { ParsedHead } from '../utils/parseHead'
+import { Falsy } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
 
 export interface AppContext extends RoutesModule, RenderModule {
@@ -78,6 +79,7 @@ export type RenderPageOptions = {
   request?: Endpoint.Request
   resolved?: ResolvedRoute
   timeout?: number
+  defaultRoute?: Route | Falsy
   onError?: (error: Error & { url: string }) => void
   renderStart?: (url: ParsedUrl) => void
   renderFinish?: (
