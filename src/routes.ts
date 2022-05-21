@@ -1,5 +1,5 @@
 import * as RegexParam from 'regexparam'
-import { Endpoint, httpMethods } from './core/endpoint'
+import { Endpoint } from './core/endpoint'
 import { routesModule } from './core/global'
 import type {
   GeneratedRouteConfig,
@@ -9,6 +9,7 @@ import type {
   RouteLoader,
 } from './core/routes'
 import { getStackFrame } from './utils/resolveStackTrace'
+import { httpMethods } from './utils/httpMethods'
 
 const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function, path: string) => {

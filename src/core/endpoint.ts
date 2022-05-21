@@ -1,18 +1,10 @@
 import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
+import type { httpMethods } from '../utils/httpMethods'
 import type { Falsy, Promisable } from '../utils/types'
 import { ParsedUrl } from '../utils/url'
 import type { InferRouteParams, Route, RouteParams } from './routes'
-
-export const httpMethods = [
-  'get',
-  'post',
-  'put',
-  'patch',
-  'delete',
-  'head',
-] as const
 
 export interface Endpoint<Params extends {} = {}>
   extends Endpoint.Function<Params> {
