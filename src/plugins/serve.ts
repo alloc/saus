@@ -5,17 +5,11 @@ import getBody from 'raw-body'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
-import {
-  Plugin,
-  renderStateModule,
-  SausContext,
-  unwrapBuffer,
-  vite,
-} from '../core'
+import { Plugin, renderStateModule, SausContext, vite } from '../core'
 import { Endpoint, makeRequestUrl } from '../core/endpoint'
 import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
-import { Headers } from '../http'
+import { writeResponse } from '../core/server/writeResponse'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
@@ -211,39 +205,5 @@ async function processRequest(
         }`
     )
     writeResponse(res, status, headers, body)
-  }
-}
-
-function writeResponse(
-  res: ServerResponse,
-  status: number,
-  headers?: Headers | null,
-  body?: Endpoint.ResponseBody
-) {
-  if (headers) {
-    for (const name in headers) {
-      res.setHeader(name, headers[name]!)
-    }
-  }
-  res.writeHead(status)
-  if (!body) {
-    return res.end()
-  }
-  if ('stream' in body) {
-    body.stream.pipe(res, { end: true })
-  } else {
-    const rawBody =
-      'buffer' in body
-        ? unwrapBuffer(body.buffer)
-        : 'text' in body
-        ? body.text
-        : 'json' in body
-        ? JSON.stringify(body.json)
-        : null
-
-    if (rawBody !== null) {
-      res.write(rawBody)
-    }
-    res.end()
   }
 }
