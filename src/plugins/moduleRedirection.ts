@@ -9,11 +9,13 @@ declare module 'vite' {
   export interface Plugin {
     /** Redirect an absolute module path to another. */
     redirectModule?(
+      this: vite.RollupPluginContext,
       id: string,
       importer: string | undefined
     ): Promisable<string | null | undefined>
     /** Resolve a bare import to an absolute module path. */
     resolveBareImport?(
+      this: vite.RollupPluginContext,
       id: string,
       importer: string | undefined
     ): Promisable<string | null | undefined>
@@ -42,7 +44,11 @@ export function moduleRedirection(
       if (bareImportRE.test(id))
         for (const plugin of plugins) {
           if (plugin.resolveBareImport) {
-            const resolvedId = await plugin.resolveBareImport(id, importer)
+            const resolvedId = await plugin.resolveBareImport.call(
+              this,
+              id,
+              importer
+            )
             if (resolvedId != null) {
               return resolvedId
             }
@@ -62,7 +68,11 @@ export function moduleRedirection(
       }
       for (const plugin of plugins) {
         if (plugin.redirectModule) {
-          const replacementId = await plugin.redirectModule(id, importer)
+          const replacementId = await plugin.redirectModule.call(
+            this,
+            id,
+            importer
+          )
           if (replacementId != null) {
             return { id: replacementId, meta: resolved?.meta }
           }
