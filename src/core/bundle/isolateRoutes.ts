@@ -1,5 +1,6 @@
 import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
+import builtinModules from 'builtin-modules'
 import endent from 'endent'
 import escalade from 'escalade/sync'
 import fs from 'fs'
@@ -150,7 +151,7 @@ export async function isolateRoutes(
       if (!importer) {
         return id
       }
-      if (sausExternalRE.test(id)) {
+      if (sausExternalRE.test(id) || builtinModules.includes(id)) {
         return { id, external: true }
       }
       let forceIsolate = false
