@@ -163,29 +163,22 @@ export async function preBundleSsrRuntime(
   return {
     name: 'saus:runtimeBundle',
     enforce: 'pre',
-    async resolveId(id, importer) {
-      if (!importer) {
-        return
+    async redirectModule(id, importer) {
+      if (!importer) return
+      if (id.startsWith(cacheDir)) return
+      if (entryPaths.includes(id)) return
+      if (bundleInfo.files.includes(importer)) return
+      if (bundleInfo.files.includes(id)) {
+        this.warn(
+          `"${relativeToCwd(id)}" is bundled ahead-of-time, ` +
+            `so it shouldn't be imported by "${relativeToCwd(importer)}"`
+        )
       }
-      if (entryPaths.includes(importer)) {
-        if (id[0] == '.') {
-          return path.resolve(cacheDir, id)
-        }
-      } else if (!bundleInfo.files.includes(importer)) {
-        const resolved = await this.resolve(id, importer, { skipSelf: true })
-        if (
-          !resolved ||
-          entryPaths.includes(resolved.id) ||
-          resolved.id.startsWith(cacheDir)
-        ) {
-          return resolved
-        }
-        if (bundleInfo.files.includes(resolved.id)) {
-          this.warn(
-            `"${relativeToCwd(resolved.id)}" is bundled ahead-of-time, ` +
-              `so it shouldn't be imported by "${relativeToCwd(importer)}"`
-          )
-        }
+      return null
+    },
+    async resolveId(id, importer) {
+      if (importer && entryPaths.includes(importer) && id[0] == '.') {
+        return path.resolve(cacheDir, id)
       }
     },
     load(id) {
