@@ -1,5 +1,5 @@
 import { MagicBundle, MagicString } from '../babel'
-import { ClientDescription } from '../core'
+import { ClientDescription, SourceMap } from '../core'
 import { serializeImports } from '../utils/imports'
 import { ClientFunction, RenderFunction } from './types'
 
@@ -58,6 +58,6 @@ export function renderClient(
 
   return {
     code: script.toString(),
-    map: script.generateMap(),
+    map: script.generateMap() as SourceMap,
   }
 }

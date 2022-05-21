@@ -37,7 +37,7 @@ async function run() {
   })
 }
 
-const task = startTask(`bundling types...`)
+const task = startTask(`bundling types...`, { spinner: false })
 const reporter = {
   async load(id) {
     console.log(gray(`load`), path.relative(process.cwd(), id))

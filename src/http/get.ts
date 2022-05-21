@@ -51,16 +51,6 @@ export function get(url: string | URL, opts?: GetOptions) {
   })
 }
 
-function resolvedGet(
-  url: string | URL,
-  opts: GetOptions,
-  trace: Error,
-  cacheControl: CacheControl,
-  redirectCount: number,
-  resolve: (response: Response) => void,
-  reject: (e: any) => void
-) {}
-
 const noCacheDirective = 'no-cache'
 const maxAgeDirective = 'max-age'
 

@@ -9,7 +9,7 @@ export function loadPageState(pagePath: string) {
     const stateUrl =
       '/' + getPageFilename(pagePath, import.meta.env.BASE_URL) + '.js'
 
-    return unwrapDefault<CommonClientProps>(
+    return unwrapDefault<CommonClientProps<any>>(
       await import(/* @vite-ignore */ stateUrl).catch(error => {
         const reason = error.message
         if (/^Failed to fetch/.test(reason) && reason.includes(stateUrl)) {
