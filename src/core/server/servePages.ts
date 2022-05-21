@@ -1,31 +1,19 @@
-import { gray } from 'kleur/colors'
-import type { default as RenderPage } from '../../bundle/main'
+import type { BundledApp } from '../../bundle/types'
+import { parseUrl } from '../../utils/url'
+import { makeRequestUrl } from '../endpoint'
 import { connect } from './connect'
-import { debug } from './debug'
-import { FileCache } from './fileCache'
+import { writeResponse } from './writeResponse'
 
-export const servePages = (
-  renderPage: typeof RenderPage,
-  cache: FileCache
-): connect.Middleware =>
+interface RequestProps {
+  app: BundledApp
+}
+
+export const servePages: connect.Middleware<RequestProps> =
   async function servePage(req, res, next) {
-    try {
-      const page = await renderPage(req.url)
-      if (!page) {
-        return next()
-      }
-      debug(gray('rendered'), req.url)
-      cache.addModules(page.modules)
-      cache.addAssets(page.assets)
-      res.writeHead(200, {
-        'Content-Type': 'text/html',
-      })
-      res.write(page.html)
-      return res.end()
-    } catch (error) {
-      // Renderer threw an unexpected error.
-      console.error(error)
-      res.writeHead(500)
-      res.end()
+    const url = makeRequestUrl(parseUrl(req.url), req.method!, req.headers)
+    const [status, headers, body] = await req.app.callEndpoints(url)
+    if (status == null) {
+      return next()
     }
+    writeResponse(res, status, headers, body)
   }
