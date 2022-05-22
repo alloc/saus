@@ -166,6 +166,10 @@ export async function generateClientModules(
       moduleRedirection([
         overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
         overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
+        overrideBareImport(
+          'node-abort-controller',
+          path.join(clientDir, 'AbortController.ts')
+        ),
         redirectModule(
           path.join(httpDir, 'httpImport.ts'),
           path.join(runtimeDir, 'emptyModule.ts')
