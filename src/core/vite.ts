@@ -252,7 +252,7 @@ export interface SausPlugin {
    * Called before the SSR bundle is written to disk.
    * This is only called when `saus bundle` is used.
    */
-  receiveBundle?: (bundle: OutputBundle) => void
+  receiveBundle?: (bundle: OutputBundle) => Promisable<void>
   /**
    * Called before rendered pages are written to disk.
    * This is only called when `saus build` is used.
