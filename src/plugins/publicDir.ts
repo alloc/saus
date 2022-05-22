@@ -72,11 +72,8 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
       plugins = config.plugins
     },
     async saus(context) {
-      outDir = path.resolve(
-        context.root,
-        context.config.build.outDir,
-        options.prefix || ''
-      )
+      const baseOutDir = path.resolve(context.root, context.config.build.outDir)
+      outDir = path.resolve(baseOutDir, options.prefix || '')
       publicDir = context.config.publicDir
       if (publicDir) {
         publicDir = path.resolve(context.root, publicDir)
@@ -157,6 +154,9 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
       }
 
       return {
+        onRuntimeConfig(config) {
+          config.publicDir = path.relative(baseOutDir, outDir) || './'
+        },
         async fetchBundleImports(modules) {
           if (renamedFiles.size) {
             // Rewrite HTML references of public files.
