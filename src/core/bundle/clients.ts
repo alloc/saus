@@ -214,6 +214,11 @@ export async function generateClientModules(
             return splitVendor(id, api)
           },
         },
+        external: (id, importer, isResolved) => {
+          if (!isResolved && importer?.includes('/saus/')) {
+            return ['source-map', 'callsites', 'ansi-to-html'].includes(id)
+          }
+        },
         preserveEntrySignatures: 'allow-extension',
         onwarn(warning, warn) {
           if (warning.plugin === 'rollup-plugin-dynamic-import-variables') {
