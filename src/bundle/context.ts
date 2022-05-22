@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/types'
 import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
-import config from './config'
+import config from './core/runtimeConfig'
 import functions from './functions'
 
 export const context: AppContext = {

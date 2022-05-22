@@ -1,7 +1,7 @@
 import { createApp as create } from '../app/createApp'
 import type { AppContext } from '../app/types'
-import config from './config'
 import { context } from './context'
+import config from './core/runtimeConfig'
 import { defineClientEntry } from './defineClientEntry'
 import { createPageFactory } from './pageFactory'
 import { ssrImport } from './ssrModules'
