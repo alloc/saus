@@ -518,7 +518,9 @@ async function generateSsrBundle(
       moduleRedirection([
         debugForbiddenImports([
           'vite',
+          './babel/index.js',
           './client/index.js',
+          './src/babel/index.ts',
           './src/client/index.ts',
           './src/core/index.ts',
           './src/core/context.ts',

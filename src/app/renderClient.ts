@@ -1,4 +1,4 @@
-import { MagicBundle, MagicString } from '../babel'
+import MagicString, { Bundle as MagicBundle } from 'magic-string'
 import { ClientDescription, SourceMap } from '../core'
 import { serializeImports } from '../utils/imports'
 import { ClientFunction, RenderFunction } from './types'
