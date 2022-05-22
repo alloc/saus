@@ -2,6 +2,7 @@ import os from 'os'
 import { extractClientFunctions, RuntimeConfig, SausContext } from '../core'
 import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
+import { callPlugins } from '../utils/callPlugins'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { clearExports } from '../vm/moduleMap'
 import { cacheClientProps } from './cacheClientProps'
@@ -11,10 +12,10 @@ import { renderErrorFallback } from './errorFallback'
 import { throttleRender } from './throttleRender'
 import { RenderPageOptions } from './types'
 
-export function createDevApp(
+export async function createDevApp(
   context: SausContext,
   onError: (e: any) => void
-): App {
+): Promise<App> {
   const functions = extractClientFunctions(context.renderPath)
 
   const viteConfig = context.config
@@ -30,6 +31,8 @@ export function createDevApp(
     ssrRoutesId: '/@fs/' + context.routesPath,
     stateCacheId: '/@fs/' + globalCachePath,
   }
+
+  await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
 
   const plugins = [
     createPageEndpoint(context, onError),

@@ -37,7 +37,7 @@ import {
   isLinkedModule,
   LinkedModule,
   ModuleMap,
-  ResolveIdHook,
+  ResolveIdHook
 } from './vm/types'
 
 export interface SausDevServer {
@@ -306,7 +306,7 @@ async function hotReloadServerModules(
   async function onContextUpdate() {
     Object.assign(
       server,
-      createDevApp(context, error => {
+      await createDevApp(context, error => {
         if (error.req) {
           failedRequests.add(error.req)
         }

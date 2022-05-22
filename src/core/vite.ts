@@ -9,6 +9,7 @@ import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
 import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
+import type { RuntimeConfig } from './config'
 import type { SausContext } from './context'
 import { Endpoint } from './endpoint'
 import './viteRequire'
@@ -241,6 +242,12 @@ export interface SausPlugin {
   fetchBundleImports?: (
     modules: ModuleProvider
   ) => Promisable<string[] | null | void>
+  /**
+   * Inspect or mutate the `RuntimeConfig` object, which is serialized to
+   * JSON and used by the SSR bundle. The runtime config is also used
+   * in development.
+   */
+  onRuntimeConfig?: (config: RuntimeConfig) => Promisable<void>
   /**
    * Called before the SSR bundle is written to disk.
    * This is only called when `saus bundle` is used.

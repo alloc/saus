@@ -105,6 +105,10 @@ export async function bundle(
     options.minify
   )
 
+  // The runtime config isn't ready for plugins until after
+  // the `generateClientModules` function promise is fulfilled.
+  await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
+
   Profiling.mark('generate ssr bundle')
   const { code, map } = await generateSsrBundle(
     context,

@@ -20,6 +20,7 @@ import {
   generateRoutePaths,
   MutableRuntimeConfig,
   RouteParams,
+  RuntimeConfig,
   SausContext,
   SourceMap,
   vite,
@@ -118,6 +119,12 @@ async function buildPages(
       'stripLinkTags',
     ]),
   }
+
+  await callPlugins(
+    context.plugins,
+    'onRuntimeConfig',
+    runtimeConfig as RuntimeConfig
+  )
 
   const workerEvents = new Multicast<PageEvents>()
   const workerData: BundleDescriptor = {
