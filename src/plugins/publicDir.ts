@@ -12,6 +12,10 @@ const debug = createDebug('saus:publicDir')
 export type PublicFileTransform = (file: PublicFile) => Promise<void> | void
 
 export type CopyPublicOptions = {
+  /**
+   * Prefix a directory to the output path of every public file.
+   */
+  prefix?: string
   transform?: PublicFileTransform
   exclude?: string | RegExp | (string | RegExp)[]
 }
@@ -68,7 +72,11 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
       plugins = config.plugins
     },
     async saus(context) {
-      outDir = path.resolve(context.root, context.config.build.outDir)
+      outDir = path.resolve(
+        context.root,
+        context.config.build.outDir,
+        options.prefix || ''
+      )
       publicDir = context.config.publicDir
       if (publicDir) {
         publicDir = path.resolve(context.root, publicDir)
