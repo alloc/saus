@@ -1,7 +1,7 @@
 import endent from 'endent'
 import { ansiToHtml } from '../utils/ansiToHtml'
 import { escape } from '../utils/escape'
-import { parseStackTrace } from '../utils/stack'
+import { parseStackTrace } from '../utils/stack/parser'
 
 interface Options {
   root: string

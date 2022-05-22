@@ -1,5 +1,5 @@
 import { SourceMap } from '../sourceMap'
-import { parseStackTrace } from './parseStackTrace'
+import { parseStackTrace } from './parser'
 import { traceStackFrame } from './traceStackFrame'
 
 export function resolveStackTrace(
