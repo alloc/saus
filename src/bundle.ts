@@ -15,6 +15,7 @@ import {
   dataToEsm,
   endent,
   extractClientFunctions,
+  unwrapBuffer,
 } from './core'
 import {
   BundleConfig,
@@ -32,6 +33,7 @@ import { debug } from './core/debug'
 import { bundleDir, clientDir, coreDir, httpDir } from './core/paths'
 import { vite } from './core/vite'
 import { getViteTransform } from './core/viteTransform'
+import { BufferLike } from './http/types'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
 import { createModuleProvider } from './plugins/moduleProvider'
@@ -55,7 +57,34 @@ export interface BundleOptions {
   preferExternal?: boolean
 }
 
-export async function bundle(options: BundleOptions, context: BundleContext) {
+export interface OutputBundle {
+  /** Where the bundle is saved to disk. */
+  path: string | undefined
+  /** This code generates and serves the application. */
+  code: string
+  /** The collapsed sourcemap for this bundle. */
+  map: SourceMap | undefined
+  /**
+   * These files are written to the `build.outDir` directory, but
+   * only if the bundle has a defined `path`. More files can be
+   * added by plugins in the `saus.receiveBundle` hook.
+   */
+  files: Record<string, BufferLike>
+  /**
+   * The client runtime and any user code; split into "chunks"
+   * so that routes only load what they use.
+   */
+  clientModules: ClientModuleMap
+  /**
+   * Assets loaded by the client.
+   */
+  clientAssets: Record<string, Buffer>
+}
+
+export async function bundle(
+  options: BundleOptions,
+  context: BundleContext
+): Promise<OutputBundle> {
   const { functions, functionImports, routeImports, runtimeConfig } =
     await prepareFunctions(context)
 
@@ -89,17 +118,18 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
     await bundlePlugins
   )
 
-  const bundle = {
+  const bundle: OutputBundle = {
     path: context.bundle.outFile,
     code,
     map: map as SourceMap | undefined,
-    modules: moduleMap,
-    assets: assetMap,
+    files: {},
+    clientModules: moduleMap,
+    clientAssets: assetMap,
   }
 
-  if (bundle.path) {
-    await callPlugins(context.plugins, 'onWriteBundle', bundle as any)
+  await callPlugins(context.plugins, 'receiveBundle', bundle)
 
+  if (bundle.path) {
     context.logger.info(
       kleur.bold('[saus]') +
         ` Saving bundle as ${kleur.green(relativeToCwd(bundle.path))}`
@@ -120,11 +150,17 @@ export async function bundle(options: BundleOptions, context: BundleContext) {
       )
     }
 
+    const outDir = path.resolve(
+      context.config.root,
+      context.config.build.outDir
+    )
+
+    for (let [file, buffer] of Object.entries(bundle.files)) {
+      file = path.resolve(outDir, file)
+      fs.writeFileSync(file, unwrapBuffer(buffer))
+    }
+
     if (context.bundle.moduleMap == 'external') {
-      const outDir = path.resolve(
-        context.config.root,
-        context.config.build.outDir
-      )
       let file: string
       for (const module of Object.values(moduleMap)) {
         file = path.join(outDir, module.id)

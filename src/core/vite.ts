@@ -2,11 +2,11 @@ import { AbortSignal } from 'node-abort-controller'
 import * as vite from 'vite'
 import { App } from '../app/createApp'
 import type { RenderedFile } from '../app/types'
+import type { OutputBundle } from '../bundle'
 import type { RenderedPage } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
-import type { SourceMap } from '../utils/sourceMap'
 import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { SausContext } from './context'
@@ -245,11 +245,7 @@ export interface SausPlugin {
    * Called before the SSR bundle is written to disk.
    * This is only called when `saus bundle` is used.
    */
-  onWriteBundle?: (bundle: {
-    path: string
-    code: string
-    map?: SourceMap
-  }) => void
+  receiveBundle?: (bundle: OutputBundle) => void
   /**
    * Called before rendered pages are written to disk.
    * This is only called when `saus build` is used.

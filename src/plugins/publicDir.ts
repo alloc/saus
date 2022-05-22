@@ -164,7 +164,7 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
             return [renamer.id]
           }
         },
-        onWriteBundle: commitFiles,
+        receiveBundle: bundle => bundle.path && commitFiles(),
         onWritePages: commitFiles,
       }
     },
