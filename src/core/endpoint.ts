@@ -1,6 +1,6 @@
 import type { App } from '../app/createApp'
 import { emptyHeaders } from '../app/global'
-import { Buffer } from '../client'
+import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
 import type { httpMethods } from '../utils/httpMethods'
