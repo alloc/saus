@@ -5,15 +5,17 @@ import { ParsedUrl } from '../utils/url'
 import { App } from './createApp'
 import { RenderPageOptions, RenderPageResult } from './types'
 
-type PreloadFn = (
-  app: App,
+type PreloadFn<Required extends App.Method> = (
+  app: Pick<App, Required>,
   url: ParsedUrl,
   route: Route,
   options: RenderPageOptions
 ) => Promise<void>
 
 export const throttleRender =
-  (preload: PreloadFn): App.Plugin<'renderPage'> =>
+  <Required extends App.Method>(
+    preload: PreloadFn<Required>
+  ): App.Plugin<'renderPage', Required | 'renderPage'> =>
   app => {
     const { config, renderPage } = app
 

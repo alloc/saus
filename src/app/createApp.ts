@@ -59,14 +59,14 @@ export interface App {
 }
 
 export namespace App {
-  type AppProperty = 'config'
-  type AppMethod = Exclude<keyof App, AppProperty>
+  export type Property = 'config'
+  export type Method = Exclude<keyof App, Property>
 
   export type Plugin<
-    Declared extends AppMethod = never,
-    Required extends AppMethod = Declared
+    Declared extends Method = never,
+    Required extends Method = Declared
   > = (
-    app: [Required] extends [never] ? App : Pick<App, Required | AppProperty>
+    app: [Required] extends [never] ? App : Pick<App, Required | Property>
   ) => [Declared] extends [never] ? Partial<App> : Pick<App, Declared>
 }
 
