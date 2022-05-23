@@ -226,7 +226,7 @@ export function createApp(
     }
 
     for (const endpoint of endpoints) {
-      const returned = await endpoint(request)
+      const returned = await endpoint(request, app)
       if (response) {
         break
       }
@@ -242,7 +242,7 @@ export function createApp(
     response ||= []
     if (responseHooks)
       for (const onResponse of responseHooks) {
-        await onResponse(request, response)
+        await onResponse(request, response, app)
       }
 
     return response

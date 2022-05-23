@@ -1,3 +1,4 @@
+import type { App } from '../app/createApp'
 import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
@@ -55,11 +56,13 @@ export namespace Endpoint {
    * is undefined, the next endpoint handler is tried.
    */
   export type JsonFunction<Params extends {} = {}> = (
-    request: Request<Params>
+    request: Request<Params>,
+    app: App
   ) => Promisable<any>
 
   export type Function<Params extends {} = {}> = (
-    request: Request<Params>
+    request: Request<Params>,
+    app: App
   ) => Promisable<Result>
 
   export type Request<RouteParams extends {} = {}> = unknown &
@@ -77,9 +80,10 @@ export namespace Endpoint {
     readonly headers: Headers
   }
 
-  export type ResponseHook = (
+  export type ResponseHook<App = any> = (
     request: Request,
-    response: ResponseTuple
+    response: ResponseTuple,
+    app: App
   ) => Promisable<void>
 
   export type ResponseTuple = [
