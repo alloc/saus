@@ -1,6 +1,6 @@
-import { URLSearchParams } from 'url';
 import { AbortSignal } from 'node-abort-controller';
 import * as vite from 'vite';
+import { URLSearchParams } from 'url';
 import { RouteParams as RouteParams$1 } from 'regexparam';
 
 declare type HtmlContext = {
@@ -8,7 +8,7 @@ declare type HtmlContext = {
     processHtml?: MergedHtmlProcessor;
 };
 declare type HtmlProcessorState = {
-    page: RenderedPage$1;
+    page: RenderedPage;
     config: RuntimeConfig;
     /**
      * Only exists in SSR bundle environment.
@@ -30,11 +30,133 @@ declare type HtmlProcessorMap<State = HtmlProcessorState> = {
     default: HtmlProcessorArray<State>;
     post: HtmlProcessorArray<State>;
 };
-declare type MergedHtmlProcessor = (html: string, page: RenderedPage$1, timeout?: number) => Promise<string>;
+declare type MergedHtmlProcessor = (html: string, page: RenderedPage, timeout?: number) => Promise<string>;
 
 declare type ImportDescriptorMap = {
     [source: string]: string | (string | [name: string, alias: string])[];
 };
+
+/** A generated client module */
+interface Client {
+    id: string;
+    code: string;
+    map?: ExistingRawSourceMap | null;
+}
+interface ExistingRawSourceMap {
+    file?: string;
+    mappings: string;
+    names: string[];
+    sourceRoot?: string;
+    sources: string[];
+    sourcesContent?: string[];
+    version: number;
+}
+declare type AnyClientProps = CommonClientProps & Record<string, any>;
+/** JSON state provided by the renderer and made available to the client */
+interface CommonClientProps<Params extends {} = RouteParams> {
+    rootId?: string;
+    routePath: string;
+    routeParams: Params;
+    error?: any;
+}
+interface ClientDescription {
+    /**
+     * Define `import` statements to be included.
+     *
+     * The keys are modules to import from, and the values are either the
+     * identifier used for the default export or an array of identifiers
+     * used for named exports.
+     */
+    imports: ImportDescriptorMap;
+    /**
+     * Hydration code to run on the client.
+     *
+     * Executed inside a function with this type signature:
+     *
+     *     async (content: unknown, request: RenderRequest) => void
+     *
+     * Custom imports are available as well.
+     */
+    onHydrate: string;
+}
+
+declare type Promisable$6<T> = T | PromiseLike<T>;
+interface RenderRequest<Props extends {} = Record<string, any>, Params extends {} = RouteParams> {
+    /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
+    path: string;
+    /** The `.html` file associated with this page */
+    file: string;
+    /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
+    query?: string;
+    /** The entry module imported by the route */
+    module: RouteModule;
+    /** Page props provided by the route */
+    props: Props & CommonClientProps;
+    /** Named strings extracted with a route pattern */
+    params: Params;
+}
+declare type DocumentHook = (this: RenderApi, html: string, request: RenderRequest, config: RuntimeConfig) => Promisable$6<void>;
+declare type RenderApi = {
+    emitFile(id: string, mime: string, data: BufferLike): void;
+};
+declare class Renderer<T = any> {
+    readonly getBody: (module: RouteModule, request: RenderRequest) => Promisable$6<T | null | void>;
+    readonly stringifyBody: (body: T) => Promisable$6<string>;
+    readonly stringifyHead: (head: T) => Promisable$6<string>;
+    readonly onDocument: DocumentHook;
+    readonly client?: ClientDescription | undefined;
+    readonly start?: number | undefined;
+    api: RenderCall<T>;
+    test: (path: string) => boolean;
+    getHead?: (request: RenderRequest) => Promisable$6<T>;
+    didRender?: (request: RenderRequest) => Promisable$6<void>;
+    constructor(route: string, getBody: (module: RouteModule, request: RenderRequest) => Promisable$6<T | null | void>, stringifyBody: (body: T) => Promisable$6<string>, stringifyHead: (head: T) => Promisable$6<string>, onDocument?: DocumentHook, client?: ClientDescription | undefined, start?: number | undefined);
+    renderDocument(request: RenderRequest, headProps?: any): Promise<string | null>;
+}
+/**
+ * The public API returned by `render` call.
+ *
+ * It lets the user define an optional `<head>` element
+ * and/or post-render isomorphic side effect.
+ */
+declare class RenderCall<T = string | null | void> {
+    protected _renderer: Renderer<T>;
+    constructor(_renderer: Renderer<T>);
+    /**
+     * Render the `<head>` subtree of the HTML document. The given render
+     * function only runs in an SSR environment, and it's invoked after
+     * the `<body>` is pre-rendered.
+     */
+    head<Props extends {} = Record<string, any>>(getHead: (request: RenderRequest<Props>) => T | Promise<T>): this;
+    /**
+     * Run an isomorphic function after render. In SSR, it runs after the
+     * HTML string is rendered. On the client, it runs post-hydration.
+     */
+    then(didRender: (request: RenderRequest) => Promisable$6<void>): void;
+}
+
+declare type Promisable$5<T> = T | PromiseLike<T>;
+/**
+ * Values configurable from the `saus.render` module defined in
+ * your Vite config.
+ */
+declare type RenderModule = {
+    /** Hooks that run before the renderer */
+    beforeRenderHooks: BeforeRenderHook[];
+    /** The renderers for specific routes */
+    renderers: Renderer[];
+    /** The renderer used when no route is matched */
+    defaultRenderer?: Renderer;
+};
+declare type BeforeRenderHook = {
+    (request: RenderRequest<any, any>): Promisable$5<void>;
+    match?: (path: string) => RouteParams | undefined;
+    start?: number;
+};
+
+declare type Promisable$4<T> = T | PromiseLike<T>;
+declare type Falsy = false | null | undefined;
+declare type OneOrMany<T> = T | readonly T[];
 
 declare class Buffer$1 {
     readonly buffer: ArrayBuffer;
@@ -65,86 +187,11 @@ declare class HttpRedirect {
     constructor(location: string);
 }
 
-declare type Promisable$6<T> = T | PromiseLike<T>;
-declare type Falsy = false | null | undefined;
-declare type OneOrMany<T> = T | readonly T[];
-
-declare class ParsedUrl<RouteParams extends {} = Record<string, string>> {
-    searchParams: URLSearchParams;
-    routeParams: Readonly<RouteParams>;
-    readonly path: string;
-    constructor(path: string, searchParams: URLSearchParams, routeParams?: Readonly<RouteParams>);
-    get search(): string;
-    toString(): string;
-    startsWith(prefix: string): boolean;
-    slice(start: number, end?: number): ParsedUrl<Record<string, string>>;
-}
-
-interface Endpoint<Params extends {} = {}> extends Endpoint.Function<Params> {
-    /** This function responds to this HTTP method. */
-    method: string;
-    /** This function responds to these MIME type requests. */
-    contentTypes: Endpoint.ContentType[];
-}
-declare namespace Endpoint {
-    export type Generated = Function<RouteParams> & Partial<Endpoint>;
-    export type Generator = (method: string, route: Route) => Generated | (Generated | Falsy)[] | Falsy;
-    export type ContentType = `${string}/${string}`;
-    export type ContentTypes = [ContentType, ...ContentType[]];
-    export type Declarators<Self, Params extends {} = {}> = {
-        [T in typeof httpMethods[number]]: {
-            /** Declare an endpoint that responds to any `Accept` header */
-            (fn: Function<Params>): Self;
-            /** Declare an endpoint that responds to specific `Accept` headers */
-            (contentTypes: ContentTypes, fn: Function<Params>): Self;
-            /** Declare a JSON endpoint */
-            <RoutePath extends string>(nestedPath: `${RoutePath}.json`, fn: JsonFunction<Params & RouteParams$1<RoutePath>>): Self;
-            <RoutePath extends string>(nestedPath: RoutePath, contentTypes: ContentTypes, fn: Function<Params & RouteParams$1<RoutePath>>): Self;
-        };
-    };
-    export type Result = Response | HttpRedirect | null | void;
-    /**
-     * Endpoints ending in `.json` don't have to wrap their
-     * response data. Just return a JSON-compatible value
-     * or a promise that resolves with one. If the result
-     * is undefined, the next endpoint handler is tried.
-     */
-    export type JsonFunction<Params extends {} = {}> = (request: Request<Params>) => Promisable$6<any>;
-    export type Function<Params extends {} = {}> = (request: Request<Params>) => Promisable$6<Result>;
-    export type Request<RouteParams extends {} = {}> = unknown & RequestUrl<RouteParams> & RequestMethods & Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>;
-    interface RequestMethods {
-        respondWith(...response: ResponseTuple): void;
-    }
-    export interface RequestUrl<RouteParams extends {} = Record<string, string>> extends ParsedUrl<RouteParams> {
-        readonly method: string;
-        readonly headers: Headers;
-    }
-    export type ResponseHook = (request: Request, response: ResponseTuple) => Promisable$6<void>;
-    export type ResponseTuple = [
-        status?: number,
-        headers?: Headers | null,
-        body?: Endpoint.ResponseBody
-    ];
-    export type ResponseBody = {
-        buffer: Buffer$1;
-    } | {
-        stream: NodeJS.ReadableStream;
-    } | {
-        text: string;
-    } | {
-        json: any;
-    } | {};
-    export {};
-}
-
-/** Define the default route */
-declare function route(load: RouteLoader): void;
-/** Define a catch route */
-declare function route<Module extends object>(path: 'error', load: RouteLoader<Module>, config?: RouteConfig<Module, {
-    error: any;
-}>): void;
-/** Define a route */
-declare function route<RoutePath extends string, Module extends object>(path: RoutePath, load?: RouteLoader<Module>, config?: RouteConfig<Module, RouteParams$1<RoutePath>>): Route.API<RouteParams$1<RoutePath>>;
+declare type Deferred<T> = PromiseLike<T> & {
+    resolve: undefined extends T ? (value?: T | PromiseLike<T>) => void : (value: T | PromiseLike<T>) => void;
+    reject: (error?: any) => void;
+    promise: Promise<T>;
+};
 
 declare type CacheControl = {
     /** The string used to identify this entry */
@@ -180,6 +227,56 @@ interface StateModule<T = any, Args extends any[] = any[]> {
     load(...args: Args): Promise<T>;
     bind(...args: Args): StateModule<T, []>;
     get(...args: Args): T;
+}
+
+declare class ParsedUrl<RouteParams extends {} = Record<string, string>> {
+    searchParams: URLSearchParams;
+    routeParams: Readonly<RouteParams>;
+    readonly path: string;
+    constructor(path: string, searchParams: URLSearchParams, routeParams?: Readonly<RouteParams>);
+    get search(): string;
+    toString(): string;
+    startsWith(prefix: string): boolean;
+    slice(start: number, end?: number): ParsedUrl<Record<string, string>>;
+}
+
+declare function ssrImport<T = ModuleExports>(id: string, isRequire?: boolean): Promise<T>;
+declare type Promisable$3<T> = T | PromiseLike<T>;
+declare type ModuleExports = Record<string, any>;
+declare type ModuleLoader<T = ModuleExports> = (exports: T, module?: {
+    exports: T;
+}) => Promisable$3<void>;
+/** Define a SSR module with async loading capability */
+declare const __d: <T = ModuleExports>(id: string, loader: ModuleLoader<T>) => ModuleLoader<T>;
+
+declare type RuntimeHook = (config: RuntimeConfig) => void;
+
+declare type Promisable$2<T> = T | PromiseLike<T>;
+/** Load state if missing from the global cache */
+declare const getCachedState: {
+    <State = any>(cacheKey: string, loader: (cacheControl: CacheControl) => Promisable$2<State>, options?: StateOptions | undefined): Promise<State>;
+    <State_1 = any>(cacheKey: string, loader?: ((cacheControl: CacheControl) => Promisable$2<State_1>) | undefined, options?: StateOptions | undefined): Promise<State_1 | undefined> | undefined;
+};
+
+declare type FileMappings = Record<string, string> & {
+    path: string;
+};
+
+/**
+ * For caching compiled files on disk by the hash of their
+ * original contents. The cache cleans up unused files before
+ * the process exits cleanly. The cache can be locked to
+ * prevent clean up in the case of unexpected errors.
+ */
+declare class CompileCache {
+    readonly name: string;
+    private root;
+    protected fileMappings: FileMappings;
+    constructor(name: string, root: string);
+    get path(): string;
+    key(content: string, name?: string): string;
+    get(key: string, sourcePath?: string): string | undefined;
+    set(key: string, content: string): string;
 }
 
 interface SourceMap {
@@ -236,39 +333,46 @@ declare type ModuleMap = Record<string, CompiledModule | undefined> & {
 declare type LinkedModuleMap = Record<string, LinkedModule | undefined>;
 declare type RequireAsync = (id: string, importer?: string | null, isDynamic?: boolean) => Promise<any>;
 
-declare type Promisable$5<T> = T | PromiseLike<T>;
-/** Load state if missing from the global cache */
-declare const getCachedState: {
-    <State = any>(cacheKey: string, loader: (cacheControl: CacheControl) => Promisable$5<State>, options?: StateOptions | undefined): Promise<State>;
-    <State_1 = any>(cacheKey: string, loader?: ((cacheControl: CacheControl) => Promisable$5<State_1>) | undefined, options?: StateOptions | undefined): Promise<State_1 | undefined> | undefined;
-};
-
-declare type FileMappings = Record<string, string> & {
-    path: string;
-};
-
-/**
- * For caching compiled files on disk by the hash of their
- * original contents. The cache cleans up unused files before
- * the process exits cleanly. The cache can be locked to
- * prevent clean up in the case of unexpected errors.
- */
-declare class CompileCache {
-    readonly name: string;
-    private root;
-    protected fileMappings: FileMappings;
-    constructor(name: string, root: string);
-    get path(): string;
-    key(content: string, name?: string): string;
-    get(key: string, sourcePath?: string): string | undefined;
-    set(key: string, content: string): string;
+interface SausContext extends RenderModule, RoutesModule, HtmlContext {
+    root: string;
+    plugins: readonly SausPlugin[];
+    logger: vite.Logger;
+    config: ResolvedConfig;
+    configPath: string | undefined;
+    configHooks: ConfigHookRef[];
+    userConfig: vite.UserConfig;
+    /**
+     * Use this instead of `this.config` when an extra Vite build is needed,
+     * or else you risk corrupting the Vite plugin state.
+     */
+    resolveConfig: (command: 'build' | 'serve', inlineConfig?: vite.UserConfig) => Promise<ResolvedConfig>;
+    /** The cache for compiled SSR modules */
+    compileCache: CompileCache;
+    /** The URL prefix for all pages */
+    basePath: string;
+    /** The `saus.defaultPath` option from Vite config */
+    defaultPath: string;
+    /** Path to the routes module */
+    routesPath: string;
+    /** Track which files are responsible for state modules */
+    stateModulesByFile: Record<string, string[]>;
+    /** Load a page if not cached */
+    getCachedPage: typeof getCachedState;
+    /** Get all cached pages. Loading pages are waited for. */
+    getCachedPages: () => Promise<Map<string, RenderPageResult>>;
+    /** Clear any matching pages (loading or loaded) */
+    clearCachedPages: (filter?: string | ((key: string) => boolean)) => void;
+    /** Path to the render module */
+    renderPath: string;
+    /** For checking if a page is outdated since rendering began */
+    reloadId: number;
+    /** Wait to serve pages until hot reloading completes */
+    reloading?: Deferred<void>;
+    /** Exists in dev mode only */
+    server?: vite.ViteDevServer;
+    /** Used by the `route` function in dev mode */
+    ssrRequire?: RequireAsync;
 }
-
-declare type Deferred<T> = PromiseLike<T> & {
-    resolve: undefined extends T ? (value?: T | PromiseLike<T>) => void : (value: T | PromiseLike<T>) => void;
-    reject: (error?: any) => void;
-    promise: Promise<T>;
-};
 
 interface OutputBundle {
     /** Where the bundle is saved to disk. */
@@ -492,7 +596,7 @@ declare module 'vite' {
          * is created or replaced. When `saus dev` is used, it's also called
          * when the routes/renderers are updated.
          */
-        saus?: SausPlugin | ((context: SausContext) => Promisable$4<SausPlugin | void>);
+        saus?: SausPlugin | ((context: SausContext) => Promisable$1<SausPlugin | void>);
     }
 }
 interface UserConfig extends Omit<vite.UserConfig, 'build'> {
@@ -518,7 +622,7 @@ interface BuildOptions extends vite.BuildOptions {
     /** Include `sourcesContent` is cached bundle sourcemap. */
     sourcesContent?: boolean;
 }
-declare type Promisable$4<T> = T | Promise<T>;
+declare type Promisable$1<T> = T | Promise<T>;
 /**
  * Saus plugins are returned by the `saus` hook of a Vite plugin.
  */
@@ -529,304 +633,35 @@ interface SausPlugin {
      * Transform files from the `publicDir` when the `copyPublicDir`
      * plugin is active in the project.
      */
-    transformPublicFile?: (file: PublicFile) => Promisable$4<void>;
+    transformPublicFile?: (file: PublicFile) => Promisable$1<void>;
     /**
      * Define virtual modules and/or return an array of side-effectful module
      * identifiers to be imported by the SSR bundle.
      */
-    fetchBundleImports?: (modules: ModuleProvider) => Promisable$4<string[] | null | void>;
+    fetchBundleImports?: (modules: ModuleProvider) => Promisable$1<string[] | null | void>;
     /**
      * Inspect or mutate the `RuntimeConfig` object, which is serialized to
      * JSON and used by the SSR bundle. The runtime config is also used
      * in development.
      */
-    onRuntimeConfig?: (config: RuntimeConfig) => Promisable$4<void>;
+    onRuntimeConfig?: (config: RuntimeConfig) => Promisable$1<void>;
     /**
      * Called before the SSR bundle is written to disk.
      * This is only called when `saus bundle` is used.
      */
-    receiveBundle?: (bundle: OutputBundle) => Promisable$4<void>;
+    receiveBundle?: (bundle: OutputBundle) => Promisable$1<void>;
     /**
      * Called before rendered pages are written to disk.
      * This is only called when `saus build` is used.
      */
-    onWritePages?: (pages: RenderedPage[]) => void;
+    onWritePages?: (pages: PageBundle[]) => void;
     /**
      * In development only, SSR errors can be sent to the browser
      * for a better developer experience. The default behavior is
      * minimal but overridable via this plugin hook.
      */
-    renderErrorReport?: (req: Endpoint.Request, error: any) => Promisable$4<string>;
+    renderErrorReport?: (req: Endpoint.Request, error: any) => Promisable$1<string>;
 }
-
-interface SausContext extends RenderModule, RoutesModule, HtmlContext {
-    root: string;
-    plugins: readonly SausPlugin[];
-    logger: vite.Logger;
-    config: ResolvedConfig;
-    configPath: string | undefined;
-    configHooks: ConfigHookRef[];
-    userConfig: vite.UserConfig;
-    /**
-     * Use this instead of `this.config` when an extra Vite build is needed,
-     * or else you risk corrupting the Vite plugin state.
-     */
-    resolveConfig: (command: 'build' | 'serve', inlineConfig?: vite.UserConfig) => Promise<ResolvedConfig>;
-    /** The cache for compiled SSR modules */
-    compileCache: CompileCache;
-    /** The URL prefix for all pages */
-    basePath: string;
-    /** The `saus.defaultPath` option from Vite config */
-    defaultPath: string;
-    /** Path to the routes module */
-    routesPath: string;
-    /** Track which files are responsible for state modules */
-    stateModulesByFile: Record<string, string[]>;
-    /** Load a page if not cached */
-    getCachedPage: typeof getCachedState;
-    /** Get all cached pages. Loading pages are waited for. */
-    getCachedPages: () => Promise<Map<string, RenderPageResult>>;
-    /** Clear any matching pages (loading or loaded) */
-    clearCachedPages: (filter?: string | ((key: string) => boolean)) => void;
-    /** Path to the render module */
-    renderPath: string;
-    /** For checking if a page is outdated since rendering began */
-    reloadId: number;
-    /** Wait to serve pages until hot reloading completes */
-    reloading?: Deferred<void>;
-    /** Exists in dev mode only */
-    server?: vite.ViteDevServer;
-    /** Used by the `generateRoute` function in dev mode */
-    ssrRequire?: RequireAsync;
-}
-
-declare type RuntimeHook = (config: RuntimeConfig) => void;
-
-interface RouteModule extends Record<string, any> {
-}
-declare type RouteLoader<T extends object = RouteModule> = () => Promise<T>;
-declare type RouteParams = Record<string, string>;
-declare type HasOneKey<T> = [string & keyof T] extends infer Keys ? Keys extends [infer Key] ? Key extends any ? [string & keyof T] extends [Key] ? 1 : 0 : never : never : never;
-declare type StaticPageParams<Params extends object> = 1 extends HasOneKey<Params> ? string | number : readonly (string | number)[];
-declare type Promisable$3<T> = T | PromiseLike<T>;
-interface RouteConfig<Module extends object = RouteModule, Params extends object = RouteParams> extends RouteStateConfig<Module, Params> {
-    /**
-     * Define which pages should be statically generated by providing
-     * their path params.
-     */
-    paths?: () => Promisable$3<readonly StaticPageParams<Params>[]>;
-    /**
-     * If intermediate state is shared between the `state`, `include`, and/or
-     * `headProps` options, define a `config` function to avoid work duplication.
-     */
-    config?: PageSpecificOption<RouteStateConfig<Module, Params>, Module, Params>;
-}
-declare type PageSpecificOption<T = any, Module extends object = RouteModule, Params extends object = RouteParams> = (request: Endpoint.Request<Params>, route: BareRoute<Module>) => Promisable$3<T>;
-declare type RoutePropsOption<Module extends object = any, Params extends object = any> = Record<string, any> | PageSpecificOption<Record<string, any>, Module, Params>;
-declare type RouteIncludedState = readonly OneOrMany<StateModule<any, []>>[];
-/** A value that defines which state modules are needed by a route. */
-declare type RouteIncludeOption<Module extends object = any, Params extends object = any> = RouteIncludedState | PageSpecificOption<RouteIncludedState, Module, Params>;
-interface RouteStateConfig<Module extends object = RouteModule, Params extends object = RouteParams> {
-    /**
-     * Load the page props for this route. These props exist during hydration
-     * and are usually provided to the root component on the page.
-     */
-    props?: RoutePropsOption<Module, Params>;
-    /**
-     * Declare which state modules are required by this route.
-     *
-     * For state modules whose `load` method expects one or more arguments,
-     * you should define those arguments with the `bind` method. If no arguments
-     * are expected, pass the state module without calling any method.
-     */
-    include?: RouteIncludeOption<Module, Params>;
-    /**
-     * Similar to the `include` option, but the state modules' data is declared
-     * inside the "page state module" so no extra HTTP requests are needed.
-     */
-    inline?: RouteIncludeOption<Module, Params>;
-    /**
-     * Load or generate state used only when rendering the `<head>` element.
-     * This state is never sent to the client.
-     */
-    headProps?: Record<string, any> | ((request: Endpoint.Request<Params>, state: any) => Promisable$3<Record<string, any>>);
-}
-interface ParsedRoute {
-    pattern: RegExp;
-    keys: string[];
-}
-interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
-    path: string;
-    load: RouteLoader<T>;
-    moduleId: string | null;
-    generated?: boolean;
-    endpoints?: Endpoint[];
-    /**
-     * This is generated on-demand when the route is matched.
-     */
-    methods?: {
-        [method: string]: RouteEndpointMap;
-    };
-}
-declare type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint[]>;
-interface Route extends BareRoute, RouteConfig {
-}
-declare namespace Route {
-    interface API<Params extends {} = {}> extends Endpoint.Declarators<API<Params>, Params> {
-        /**
-         * In the given callback, you can add routes that have this
-         * route's path automatically prepended to theirs.
-         */
-        extend: (cb: (route: typeof route) => Promisable$3<void>) => API<Params>;
-    }
-}
-/**
- * Values configurable from the `saus.routes` module defined
- * in your Vite config.
- */
-interface RoutesModule extends HtmlContext {
-    /** State modules that are loaded by default */
-    defaultState: RouteIncludeOption[];
-    /** These hooks are called after the routes module is loaded */
-    runtimeHooks: RuntimeHook[];
-    /** Routes defined with the `route` function */
-    routes: Route[];
-    /** The route used when no route is matched */
-    defaultRoute?: Route;
-    /** The route used when an error is thrown while rendering */
-    catchRoute?: Route;
-    /** Used by generated routes to import their route module */
-    ssrRequire?: RequireAsync;
-    requestHooks?: Endpoint.Function[];
-    responseHooks?: Endpoint.ResponseHook[];
-}
-
-/** A generated client module */
-interface Client {
-    id: string;
-    code: string;
-    map?: ExistingRawSourceMap | null;
-}
-interface ExistingRawSourceMap {
-    file?: string;
-    mappings: string;
-    names: string[];
-    sourceRoot?: string;
-    sources: string[];
-    sourcesContent?: string[];
-    version: number;
-}
-declare type AnyClientProps = CommonClientProps & Record<string, any>;
-/** JSON state provided by the renderer and made available to the client */
-interface CommonClientProps<Params extends {} = RouteParams> {
-    rootId?: string;
-    routePath: string;
-    routeParams: Params;
-    error?: any;
-}
-interface ClientDescription {
-    /**
-     * Define `import` statements to be included.
-     *
-     * The keys are modules to import from, and the values are either the
-     * identifier used for the default export or an array of identifiers
-     * used for named exports.
-     */
-    imports: ImportDescriptorMap;
-    /**
-     * Hydration code to run on the client.
-     *
-     * Executed inside a function with this type signature:
-     *
-     *     async (content: unknown, request: RenderRequest) => void
-     *
-     * Custom imports are available as well.
-     */
-    onHydrate: string;
-}
-
-declare type Promisable$2<T> = T | PromiseLike<T>;
-interface RenderRequest<Props extends {} = Record<string, any>, Params extends {} = RouteParams> {
-    /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
-    path: string;
-    /** The `.html` file associated with this page */
-    file: string;
-    /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
-    query?: string;
-    /** The entry module imported by the route */
-    module: RouteModule;
-    /** Page props provided by the route */
-    props: Props & CommonClientProps;
-    /** Named strings extracted with a route pattern */
-    params: Params;
-}
-declare type DocumentHook = (this: RenderApi, html: string, request: RenderRequest, config: RuntimeConfig) => Promisable$2<void>;
-declare type RenderApi = {
-    emitFile(id: string, mime: string, data: BufferLike): void;
-};
-declare class Renderer<T = any> {
-    readonly getBody: (module: RouteModule, request: RenderRequest) => Promisable$2<T | null | void>;
-    readonly stringifyBody: (body: T) => Promisable$2<string>;
-    readonly stringifyHead: (head: T) => Promisable$2<string>;
-    readonly onDocument: DocumentHook;
-    readonly client?: ClientDescription | undefined;
-    readonly start?: number | undefined;
-    api: RenderCall<T>;
-    test: (path: string) => boolean;
-    getHead?: (request: RenderRequest) => Promisable$2<T>;
-    didRender?: (request: RenderRequest) => Promisable$2<void>;
-    constructor(route: string, getBody: (module: RouteModule, request: RenderRequest) => Promisable$2<T | null | void>, stringifyBody: (body: T) => Promisable$2<string>, stringifyHead: (head: T) => Promisable$2<string>, onDocument?: DocumentHook, client?: ClientDescription | undefined, start?: number | undefined);
-    renderDocument(request: RenderRequest, headProps?: any): Promise<string | null>;
-}
-/**
- * The public API returned by `render` call.
- *
- * It lets the user define an optional `<head>` element
- * and/or post-render isomorphic side effect.
- */
-declare class RenderCall<T = string | null | void> {
-    protected _renderer: Renderer<T>;
-    constructor(_renderer: Renderer<T>);
-    /**
-     * Render the `<head>` subtree of the HTML document. The given render
-     * function only runs in an SSR environment, and it's invoked after
-     * the `<body>` is pre-rendered.
-     */
-    head<Props extends {} = Record<string, any>>(getHead: (request: RenderRequest<Props>) => T | Promise<T>): this;
-    /**
-     * Run an isomorphic function after render. In SSR, it runs after the
-     * HTML string is rendered. On the client, it runs post-hydration.
-     */
-    then(didRender: (request: RenderRequest) => Promisable$2<void>): void;
-}
-
-declare type Promisable$1<T> = T | PromiseLike<T>;
-/**
- * Values configurable from the `saus.render` module defined in
- * your Vite config.
- */
-declare type RenderModule = {
-    /** Hooks that run before the renderer */
-    beforeRenderHooks: BeforeRenderHook[];
-    /** The renderers for specific routes */
-    renderers: Renderer[];
-    /** The renderer used when no route is matched */
-    defaultRenderer?: Renderer;
-};
-declare type BeforeRenderHook = {
-    (request: RenderRequest<any, any>): Promisable$1<void>;
-    match?: (path: string) => RouteParams | undefined;
-    start?: number;
-};
-
-declare function ssrImport<T = ModuleExports>(id: string, isRequire?: boolean): Promise<T>;
-declare type Promisable<T> = T | PromiseLike<T>;
-declare type ModuleExports = Record<string, any>;
-declare type ModuleLoader<T = ModuleExports> = (exports: T, module?: {
-    exports: T;
-}) => Promisable<void>;
-/** Define a SSR module with async loading capability */
-declare const __d: <T = ModuleExports>(id: string, loader: ModuleLoader<T>) => ModuleLoader<T>;
 
 declare type ParsedHeadTag<T = any> = {
     value: T;
@@ -848,7 +683,7 @@ declare type RenderedFile$1 = {
     data: BufferLike;
     mime: string;
 };
-declare type RenderedPage$1 = {
+declare type RenderedPage = {
     path: string;
     html: string;
     head: ParsedHead;
@@ -870,9 +705,9 @@ interface ProfiledEventHandler {
 }
 interface PageContext extends RenderModule {
 }
-declare type RenderPageFn = (url: ParsedUrl, route: Route, options?: RenderPageOptions$1) => Promise<RenderPageResult>;
-declare type RenderPageResult = [page: RenderedPage$1 | null, error?: any];
-declare type RenderPageOptions$1 = {
+declare type RenderPageFn = (url: ParsedUrl, route: Route, options?: RenderPageOptions) => Promise<RenderPageResult>;
+declare type RenderPageResult = [page: RenderedPage | null, error?: any];
+declare type RenderPageOptions = {
     props?: AnyClientProps;
     request?: Endpoint.Request;
     resolved?: ResolvedRoute;
@@ -882,7 +717,7 @@ declare type RenderPageOptions$1 = {
         url: string;
     }) => void;
     renderStart?: (url: ParsedUrl) => void;
-    renderFinish?: (url: ParsedUrl, error: Error | null, page?: RenderedPage$1 | null) => void;
+    renderFinish?: (url: ParsedUrl, error: Error | null, page?: RenderedPage | null) => void;
     /**
      * The setup hook can manipulate the render hooks,
      * allowing for rendered pages to be isolated from
@@ -928,34 +763,202 @@ interface App {
     loadClientProps: ClientPropsLoader;
     renderPage: RenderPageFn;
     preProcessHtml?: MergedHtmlProcessor;
-    postProcessHtml?: (page: RenderedPage$1, timeout?: number) => Promise<string>;
+    postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>;
 }
 declare namespace App {
-    type Property = 'config';
-    type Method = Exclude<keyof App, Property>;
-    type Plugin<Declared extends Method = never, Required extends Method = Declared> = (app: [Required] extends [never] ? App : Pick<App, Required | Property>) => [Declared] extends [never] ? Partial<App> : Pick<App, Declared>;
+    type Plugin = (app: App) => Partial<App>;
 }
 
-interface BundledApp extends Omit<App, 'renderPage'> {
-    renderPage: (url: ParsedUrl, route: Route, options?: RenderPageOptions) => Promise<RenderedPage | null>;
+interface Endpoint<Params extends {} = {}> extends Endpoint.Function<Params> {
+    /** This function responds to this HTTP method. */
+    method: string;
+    /** This function responds to these MIME type requests. */
+    contentTypes: Endpoint.ContentType[];
 }
-declare namespace BundledApp {
-    type Plugin = (app: BundledApp) => Omit<Partial<BundledApp>, 'config'>;
+declare namespace Endpoint {
+    export type Generated = Function<RouteParams> & Partial<Endpoint>;
+    export type Generator = (method: string, route: Route) => Generated | (Generated | Falsy)[] | Falsy;
+    export type ContentType = `${string}/${string}`;
+    export type ContentTypes = [ContentType, ...ContentType[]];
+    export type Declarators<Self, Params extends {} = {}> = {
+        [T in typeof httpMethods[number]]: {
+            /** Declare an endpoint that responds to any `Accept` header */
+            (fn: Function<Params>): Self;
+            /** Declare an endpoint that responds to specific `Accept` headers */
+            (contentTypes: ContentTypes, fn: Function<Params>): Self;
+            /** Declare a JSON endpoint */
+            <RoutePath extends string>(nestedPath: `${RoutePath}.json`, fn: JsonFunction<Params & RouteParams$1<RoutePath>>): Self;
+            <RoutePath extends string>(nestedPath: RoutePath, contentTypes: ContentTypes, fn: Function<Params & RouteParams$1<RoutePath>>): Self;
+        };
+    };
+    export type Result = Response | HttpRedirect | null | void;
+    /**
+     * Endpoints ending in `.json` don't have to wrap their
+     * response data. Just return a JSON-compatible value
+     * or a promise that resolves with one. If the result
+     * is undefined, the next endpoint handler is tried.
+     */
+    export type JsonFunction<Params extends {} = {}> = (request: Request<Params>, app: App) => Promisable$4<any>;
+    export type Function<Params extends {} = {}> = (request: Request<Params>, app: App) => Promisable$4<Result>;
+    export type Request<RouteParams extends {} = {}> = unknown & RequestUrl<RouteParams> & RequestMethods & Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>;
+    interface RequestMethods {
+        respondWith(...response: ResponseTuple): void;
+    }
+    export interface RequestUrl<RouteParams extends {} = Record<string, string>> extends ParsedUrl<RouteParams> {
+        readonly method: string;
+        readonly headers: Readonly<Headers>;
+        readonly read: () => Promise<Buffer$1>;
+    }
+    export type ResponseHook<App = any> = (request: Request, response: ResponseTuple, app: App) => Promisable$4<void>;
+    export type ResponseTuple = [
+        status?: number,
+        headers?: Headers | null,
+        body?: Endpoint.ResponseBody
+    ];
+    export type ResponseBody = {
+        buffer: Buffer$1;
+    } | {
+        stream: NodeJS.ReadableStream;
+    } | {
+        text: string;
+    } | {
+        json: any;
+    } | {};
+    export {};
 }
-declare type RenderPageOptions = {
+
+/** Define the default route */
+declare function route(load: RouteLoader): void;
+/** Define a catch route */
+declare function route<Module extends object>(path: 'error', load: RouteLoader<Module>, config?: RouteConfig<Module, {
+    error: any;
+}>): void;
+/** Define a route */
+declare function route<RoutePath extends string, Module extends object>(path: RoutePath & string, load?: RouteLoader<Module>, config?: RouteConfig<Module, RouteParams$1<RoutePath>>): Route.API<RouteParams$1<RoutePath>>;
+
+interface RouteModule extends Record<string, any> {
+}
+declare type RouteLoader<T extends object = RouteModule> = () => Promise<T>;
+declare type RouteParams = Record<string, string>;
+declare type HasOneKey<T> = [string & keyof T] extends infer Keys ? Keys extends [infer Key] ? Key extends any ? [string & keyof T] extends [Key] ? 1 : 0 : never : never : never;
+declare type StaticPageParams<Params extends object> = 1 extends HasOneKey<Params> ? string | number : readonly (string | number)[];
+declare type Promisable<T> = T | PromiseLike<T>;
+interface RouteConfig<Module extends object = RouteModule, Params extends object = RouteParams> extends RouteStateConfig<Module, Params> {
+    /**
+     * Either a file path (relative to the caller) or a function that loads
+     * the entry module for this route.
+     */
+    entry?: string | (() => Promise<Module>);
+    /**
+     * Define which pages should be statically generated by providing
+     * their path params.
+     */
+    paths?: () => Promisable<readonly StaticPageParams<Params>[]>;
+    /**
+     * If intermediate state is shared between the `state`, `include`, and/or
+     * `headProps` options, define a `config` function to avoid work duplication.
+     */
+    config?: PageSpecificOption<RouteStateConfig<Module, Params>, Module, Params>;
+}
+declare type PageSpecificOption<T = any, Module extends object = RouteModule, Params extends object = RouteParams> = (request: Endpoint.Request<Params>, route: BareRoute<Module>) => Promisable<T>;
+declare type RoutePropsOption<Module extends object = any, Params extends object = any> = Record<string, any> | PageSpecificOption<Record<string, any>, Module, Params>;
+declare type RouteIncludedState = readonly OneOrMany<StateModule<any, []>>[];
+/** A value that defines which state modules are needed by a route. */
+declare type RouteIncludeOption<Module extends object = any, Params extends object = any> = RouteIncludedState | PageSpecificOption<RouteIncludedState, Module, Params>;
+interface RouteStateConfig<Module extends object = RouteModule, Params extends object = RouteParams> {
+    /**
+     * Load the page props for this route. These props exist during hydration
+     * and are usually provided to the root component on the page.
+     */
+    props?: RoutePropsOption<Module, Params>;
+    /**
+     * Declare which state modules are required by this route.
+     *
+     * For state modules whose `load` method expects one or more arguments,
+     * you should define those arguments with the `bind` method. If no arguments
+     * are expected, pass the state module without calling any method.
+     */
+    include?: RouteIncludeOption<Module, Params>;
+    /**
+     * Similar to the `include` option, but the state modules' data is declared
+     * inside the "page state module" so no extra HTTP requests are needed.
+     */
+    inline?: RouteIncludeOption<Module, Params>;
+    /**
+     * Load or generate state used only when rendering the `<head>` element.
+     * This state is never sent to the client.
+     */
+    headProps?: Record<string, any> | ((request: Endpoint.Request<Params>, state: any) => Promisable<Record<string, any>>);
+}
+interface ParsedRoute {
+    pattern: RegExp;
+    keys: string[];
+}
+interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
+    path: string;
+    load: RouteLoader<T>;
+    moduleId: string | null;
+    generated?: boolean;
+    endpoints?: Endpoint[];
+    /**
+     * This is generated on-demand when the route is matched.
+     */
+    methods?: {
+        [method: string]: RouteEndpointMap;
+    };
+}
+declare type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint[]>;
+interface Route extends BareRoute, RouteConfig {
+}
+declare namespace Route {
+    interface API<Params extends {} = {}> extends Endpoint.Declarators<API<Params>, Params> {
+        /**
+         * In the given callback, you can add routes that have this
+         * route's path automatically prepended to theirs.
+         */
+        extend: (cb: (route: typeof route) => Promisable<void>) => API<Params>;
+    }
+}
+/**
+ * Values configurable from the `saus.routes` module defined
+ * in your Vite config.
+ */
+interface RoutesModule extends HtmlContext {
+    /** State modules that are loaded by default */
+    defaultState: RouteIncludeOption[];
+    /** These hooks are called after the routes module is loaded */
+    runtimeHooks: RuntimeHook[];
+    /** Routes defined with the `route` function */
+    routes: Route[];
+    /** The route used when no route is matched */
+    defaultRoute?: Route;
+    /** The route used when an error is thrown while rendering */
+    catchRoute?: Route;
+    /** Used by generated routes to import their route module */
+    ssrRequire?: RequireAsync;
+    requestHooks?: Endpoint.Function[];
+    responseHooks?: Endpoint.ResponseHook[];
+}
+
+declare module '../app/createApp' {
+    interface App {
+        /**
+         * Available in SSR bundles only.
+         *
+         * Render a page and the modules it uses.
+         */
+        renderPageBundle: (url: ParsedUrl, route: Route, options?: PageBundleOptions) => Promise<PageBundle | null>;
+    }
+}
+interface PageBundleOptions {
     timeout?: number;
     onError?: (error: Error & {
         url: string;
     }) => null;
     renderStart?: (url: ParsedUrl) => void;
-    renderFinish?: (url: ParsedUrl, error: Error | null, page?: RenderedPage | null) => void;
-};
-declare type RenderedFile = {
-    id: string;
-    data: any;
-    mime: string;
-};
-interface RenderedPage {
+    renderFinish?: (url: ParsedUrl, error: Error | null, page?: PageBundle | null) => void;
+}
+interface PageBundle {
     id: string;
     html: string;
     /** Files generated whilst rendering. */
@@ -964,6 +967,11 @@ interface RenderedPage {
     modules: Set<ClientModule>;
     /** Assets required by the client. */
     assets: Map<string, ClientAsset>;
+}
+interface RenderedFile {
+    id: string;
+    data: any;
+    mime: string;
 }
 declare type ClientAsset = ArrayBufferLike | HttpRedirect;
 interface ClientModule {
@@ -988,7 +996,7 @@ interface ClientModuleMap {
  * Returns a map of file names to their size in kilobytes. This object can be
  * passed to the `printFiles` function.
  */
-declare function writePages(pages: ReadonlyArray<RenderedPage | null>, outDir: string, inlinedAssets?: Record<string, string>): Record<string, number>;
+declare function writePages(pages: ReadonlyArray<PageBundle | null>, outDir: string, inlinedAssets?: Record<string, string>): Record<string, number>;
 /**
  * Print a bunch of files kind of like Vite does.
  *
@@ -1012,7 +1020,7 @@ declare function loadResponseCache(root: string): {
     write(cacheKey: string, resp: Response, maxAge: number): void;
 };
 
-declare function createApp(plugins?: BundledApp.Plugin[]): Promise<BundledApp>;
+declare function createApp(plugins?: App.Plugin[]): Promise<App>;
 
 /**
  * Update the bundle's runtime config.
@@ -1037,4 +1045,4 @@ declare function getKnownPaths(options?: {
     noDebug?: boolean;
 }): Promise<string[]>;
 
-export { BundledApp, ClientAsset, ClientModule, ClientModuleMap, RenderPageOptions, RenderedFile, RenderedPage, config, configureBundle, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, setResponseCache, __d as ssrDefine, ssrImport, writePages };
+export { ClientAsset, ClientModule, ClientModuleMap, PageBundle, PageBundleOptions, RenderedFile, config, configureBundle, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, setResponseCache, __d as ssrDefine, ssrImport, writePages };
