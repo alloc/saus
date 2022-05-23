@@ -1,7 +1,9 @@
 import { getCachedState } from '../runtime/getCachedState'
 import { App } from './createApp'
 
-export function cacheClientProps(maxAge: number): App.Plugin {
+export function cacheClientProps(
+  maxAge: number
+): App.Plugin<'loadClientProps'> {
   return app => {
     const { loadClientProps } = app
 

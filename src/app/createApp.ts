@@ -5,7 +5,11 @@ import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
 import { Endpoint, makeRequest, makeRequestUrl } from '../core/endpoint'
 import { setRoutesModule } from '../core/global'
-import { applyHtmlProcessors, mergeHtmlProcessors } from '../core/html'
+import {
+  applyHtmlProcessors,
+  mergeHtmlProcessors,
+  MergedHtmlProcessor,
+} from '../core/html'
 import {
   matchRoute,
   Route,
@@ -36,13 +40,30 @@ import {
   ClientResolver,
   ProfiledEventHandler,
   RenderedPage,
+  RenderPageFn,
   RouteResolver,
 } from './types'
 
-export type App = ReturnType<typeof createApp>
+export interface App {
+  config: RuntimeConfig
+  resolveRoute: RouteResolver
+  getEndpoints: Endpoint.Generator | null
+  callEndpoints(
+    url: Endpoint.RequestUrl,
+    endpoints?: readonly Endpoint.Function[]
+  ): Promise<Endpoint.ResponseTuple>
+  loadClientProps: ClientPropsLoader
+  renderPage: RenderPageFn
+  preProcessHtml?: MergedHtmlProcessor
+  postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>
+}
 
 export namespace App {
-  export type Plugin = (app: App) => Omit<Partial<App>, 'config'>
+  type AppMethod = Exclude<keyof App, 'config'>
+
+  export interface Plugin<P extends AppMethod = never> {
+    (app: App): [P] extends [never] ? Partial<App> : Pick<App, P>
+  }
 }
 
 /**
@@ -51,7 +72,10 @@ export namespace App {
  *
  * Note: This function does not use Vite for anything.
  */
-export function createApp(context: AppContext, plugins: App.Plugin[] = []) {
+export function createApp(
+  context: AppContext,
+  plugins: App.Plugin[] = []
+): App {
   const { config, onError, profile, functions } = context
 
   // Let runtime hooks inject routes, HTML processors, and page state.
@@ -192,10 +216,10 @@ export function createApp(context: AppContext, plugins: App.Plugin[] = []) {
     return [emptyArray]
   }
 
-  const callEndpoints = async (
-    url: Endpoint.RequestUrl,
-    endpoints: readonly Endpoint.Function[] = resolveRoute(url)[0]
-  ): Promise<Endpoint.ResponseTuple> => {
+  const callEndpoints: App['callEndpoints'] = async (
+    url,
+    endpoints = resolveRoute(url)[0]
+  ) => {
     let response: Endpoint.ResponseTuple | undefined
     let request = makeRequest(url, (...args) => {
       response ||= args
@@ -228,17 +252,17 @@ export function createApp(context: AppContext, plugins: App.Plugin[] = []) {
     return response
   }
 
-  const app = {
+  const app: App = {
     config,
     resolveRoute,
-    getEndpoints: null as Endpoint.Generator | null,
+    getEndpoints: null,
     callEndpoints,
     loadClientProps,
     renderPage,
     preProcessHtml,
     postProcessHtml:
       htmlProcessors &&
-      ((page: RenderedPage, timeout = config.htmlTimeout) =>
+      ((page, timeout = config.htmlTimeout) =>
         applyHtmlProcessors(
           page.html,
           htmlProcessors.post,

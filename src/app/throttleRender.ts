@@ -13,7 +13,7 @@ type PreloadFn = (
 ) => Promise<void>
 
 export const throttleRender =
-  (preload: PreloadFn): App.Plugin =>
+  (preload: PreloadFn): App.Plugin<'renderPage'> =>
   app => {
     const { config, renderPage } = app
 
