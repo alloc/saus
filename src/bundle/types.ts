@@ -1,38 +1,34 @@
-import type { App } from '../app/createApp'
 import type { Route } from '../core/routes'
 import type { HttpRedirect } from '../http/redirect'
 import type { ParsedUrl } from '../utils/url'
 
-export interface BundledApp extends Omit<App, 'renderPage'> {
-  renderPage: (
-    url: ParsedUrl,
-    route: Route,
-    options?: RenderPageOptions
-  ) => Promise<RenderedPage | null>
+declare module '../app/createApp' {
+  export interface App {
+    /**
+     * Available in SSR bundles only.
+     *
+     * Render a page and the modules it uses.
+     */
+    renderPageBundle: (
+      url: ParsedUrl,
+      route: Route,
+      options?: PageBundleOptions
+    ) => Promise<PageBundle | null>
+  }
 }
 
-export namespace BundledApp {
-  export type Plugin = (app: BundledApp) => Omit<Partial<BundledApp>, 'config'>
-}
-
-export type RenderPageOptions = {
+export interface PageBundleOptions {
   timeout?: number
   onError?: (error: Error & { url: string }) => null
   renderStart?: (url: ParsedUrl) => void
   renderFinish?: (
     url: ParsedUrl,
     error: Error | null,
-    page?: RenderedPage | null
+    page?: PageBundle | null
   ) => void
 }
 
-export type RenderedFile = {
-  id: string
-  data: any
-  mime: string
-}
-
-export interface RenderedPage {
+export interface PageBundle {
   id: string
   html: string
   /** Files generated whilst rendering. */
@@ -41,6 +37,12 @@ export interface RenderedPage {
   modules: Set<ClientModule>
   /** Assets required by the client. */
   assets: Map<string, ClientAsset>
+}
+
+export interface RenderedFile {
+  id: string
+  data: any
+  mime: string
 }
 
 export type ClientAsset = ArrayBufferLike | HttpRedirect

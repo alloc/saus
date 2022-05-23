@@ -1,11 +1,11 @@
-import type { BundledApp } from '../../bundle/types'
+import type { App } from '../../app/createApp'
 import { parseUrl } from '../../utils/url'
 import { makeRequestUrl } from '../endpoint'
 import { connect } from './connect'
 import { writeResponse } from './writeResponse'
 
 interface RequestProps {
-  app: BundledApp
+  app: App
 }
 
 export const servePages: connect.Middleware<RequestProps> =

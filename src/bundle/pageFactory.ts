@@ -25,7 +25,7 @@ import moduleMap from './moduleMap'
 import { postProcessAsset } from './postProcessAsset'
 import { loadRenderers } from './render'
 import { ssrClearCache } from './ssrModules'
-import { BundledApp, ClientAsset, ClientModule, RenderedPage } from './types'
+import { ClientAsset, ClientModule, PageBundle } from './types'
 
 const hydrateImport = `import { hydrate } from "saus/client"`
 
@@ -38,14 +38,16 @@ for (const id in inlinedModules) {
   inlinedModules[id].id = id
 }
 
-export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
+export const createPageFactory: App.Plugin = app => {
+  const { config } = app
+
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''
   // Prepended to module IDs in debug view.
   const debugDir = debugBase.slice(1)
 
-  const wrapper: Partial<BundledApp> = {
-    async renderPage(url, route, options = {}) {
+  return {
+    async renderPageBundle(url, route, options = {}) {
       const { renderStart, renderFinish } = options
 
       // Let's assume `config.base` is already stripped.
@@ -65,7 +67,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
         renderStart(url)
       }
 
-      const [page, error] = await renderPage(url, route, {
+      const [page, error] = await app.renderPage(url, route, {
         defaultRoute: !/\.[^./]+$/.test(url.path) && context.defaultRoute,
         ...options,
         renderStart: renderStart && (() => renderStart(url)),
@@ -100,7 +102,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
       const pageStateId = filename + '.js'
 
       if (!page.html) {
-        const finishedPage: RenderedPage = {
+        const finishedPage: PageBundle = {
           id: filename,
           html: '',
           modules: new Set(),
@@ -278,7 +280,11 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
 
           for (const styleUrl of styleUrls) {
             if (!existingLinks.has(styleUrl)) {
-              page.head.stylesheet.push({ value: styleUrl, start: -1, end: -1 })
+              page.head.stylesheet.push({
+                value: styleUrl,
+                start: -1,
+                end: -1,
+              })
             }
           }
           for (const assetUrl of assetUrls) {
@@ -324,7 +330,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
           }
         }
 
-        const finishedPage: RenderedPage = {
+        const finishedPage: PageBundle = {
           id: filename,
           html,
           files,
@@ -337,8 +343,6 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
       })
     },
   }
-
-  return wrapper as any
 }
 
 async function rewriteImports(

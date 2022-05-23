@@ -1,34 +1,30 @@
-import { createApp as create } from '../app/createApp'
+import { App, createApp as create } from '../app/createApp'
 import type { AppContext } from '../app/types'
 import { context } from './context'
 import config from './core/runtimeConfig'
 import { defineClientEntry } from './defineClientEntry'
 import { createPageFactory } from './pageFactory'
 import { ssrImport } from './ssrModules'
-import { BundledApp } from './types'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
 
-export async function createApp(
-  plugins: BundledApp.Plugin[] = []
-): Promise<BundledApp> {
+export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
   await ssrImport(config.ssrRoutesId)
-
   return create(context, [
-    createPageFactory as any,
+    createPageFactory,
     createPageEndpoint(context),
     ...plugins,
-  ] as any) as any
+  ])
 }
 
-function createPageEndpoint(context: AppContext): BundledApp.Plugin {
+function createPageEndpoint(context: AppContext): App.Plugin {
   return app => ({
     getEndpoints: (method, route) =>
       route.moduleId !== null &&
       method == 'GET' &&
       (async req => {
-        const page = await app.renderPage(req, route)
+        const page = await app.renderPageBundle(req, route)
         if (page) {
           const headers = {
             'Content-Type': 'text/html; charset=utf-8',

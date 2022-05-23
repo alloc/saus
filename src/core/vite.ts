@@ -3,7 +3,7 @@ import * as vite from 'vite'
 import { App } from '../app/createApp'
 import type { RenderedFile } from '../app/types'
 import type { OutputBundle } from '../bundle'
-import type { RenderedPage } from '../bundle/types'
+import type { PageBundle } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
@@ -257,7 +257,7 @@ export interface SausPlugin {
    * Called before rendered pages are written to disk.
    * This is only called when `saus build` is used.
    */
-  onWritePages?: (pages: RenderedPage[]) => void
+  onWritePages?: (pages: PageBundle[]) => void
   /**
    * In development only, SSR errors can be sent to the browser
    * for a better developer experience. The default behavior is

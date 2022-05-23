@@ -42,7 +42,7 @@ export async function createDevApp(
     // while still allowing isomorphic routers and what-not to access
     // them without reloading them.
     cacheClientProps(1),
-    throttleRender<App>({
+    throttleRender({
       onError: error => [null, error],
     }),
   ]

@@ -1,7 +1,7 @@
 import { MessagePort } from 'worker_threads'
 import { emptyHeaders } from '../app/global'
 import { ProfiledEventHandler } from '../app/types'
-import { RenderedPage, RenderPageOptions } from '../bundle/types'
+import { PageBundle, RenderPageOptions } from '../bundle/types'
 import { loadSourceMap, MutableRuntimeConfig, SourceMap } from '../core'
 import { makeRequestUrl } from '../core/endpoint'
 import { loadResponseCache, responseCache } from '../http/responseCache'
@@ -95,7 +95,7 @@ export function loadPageFactory(bundle: BundleDescriptor) {
 }
 
 export type PageEvents = {
-  page(pagePath: string, page: RenderedPage | null): void
+  page(pagePath: string, page: PageBundle | null): void
   error(pagePath: string, error: any): void
   profile: ProfiledEventHandler
 }

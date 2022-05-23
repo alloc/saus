@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
-import type { RenderedPage } from '../bundle/types'
+import type { PageBundle } from '../bundle/types'
 import runtimeConfig from '../core/runtimeConfig'
 import { HttpRedirect } from '../http'
 
@@ -12,7 +12,7 @@ import { HttpRedirect } from '../http'
  * passed to the `printFiles` function.
  */
 export function writePages(
-  pages: ReadonlyArray<RenderedPage | null>,
+  pages: ReadonlyArray<PageBundle | null>,
   outDir: string,
   inlinedAssets?: Record<string, string>
 ) {

@@ -8,7 +8,7 @@ export function cachePages(
     key: string,
     loader: (cacheControl: CacheControl) => Promise<RenderPageResult | null>
   ) => Promise<RenderPageResult>
-): App.Plugin<'renderPage'> {
+): App.Plugin {
   return app => {
     const { renderPage } = app
 

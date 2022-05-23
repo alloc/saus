@@ -14,7 +14,7 @@ import { runBundle } from './build/runBundle'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
 import { bundle } from './bundle'
-import type { RenderedPage } from './bundle/types'
+import type { PageBundle } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
@@ -34,10 +34,10 @@ import { prependBase } from './utils/prependBase'
 import { loadTinypool } from './utils/tinypool'
 
 export type FailedPage = { path: string; reason: string }
-export type BuildResult = { pages: RenderedPage[]; errors: FailedPage[] }
+export type BuildResult = { pages: PageBundle[]; errors: FailedPage[] }
 
 export function build(options: BuildOptions) {
-  const pages: RenderedPage[] = []
+  const pages: PageBundle[] = []
   const errors: FailedPage[] = []
 
   return new Promise<BuildResult>((resolve, reject) => {
@@ -53,7 +53,7 @@ export function build(options: BuildOptions) {
 }
 
 async function buildPages(
-  pages: RenderedPage[],
+  pages: PageBundle[],
   errors: FailedPage[],
   options: BuildOptions
 ): Promise<void> {

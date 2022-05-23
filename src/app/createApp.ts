@@ -8,13 +8,13 @@ import { setRoutesModule } from '../core/global'
 import {
   applyHtmlProcessors,
   MergedHtmlProcessor,
-  mergeHtmlProcessors,
+  mergeHtmlProcessors
 } from '../core/html'
 import {
   matchRoute,
   Route,
   RouteEndpointMap,
-  RouteIncludeOption,
+  RouteIncludeOption
 } from '../core/routes'
 import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
@@ -26,7 +26,7 @@ import {
   emptyHeaders,
   headPropsCache,
   inlinedStateMap,
-  stateModulesMap,
+  stateModulesMap
 } from './global'
 import { handleNestedState } from './handleNestedState'
 import { createNegotiator } from './negotiator'
@@ -41,7 +41,7 @@ import {
   ProfiledEventHandler,
   RenderedPage,
   RenderPageFn,
-  RouteResolver,
+  RouteResolver
 } from './types'
 
 export interface App {
@@ -59,15 +59,7 @@ export interface App {
 }
 
 export namespace App {
-  export type Property = 'config'
-  export type Method = Exclude<keyof App, Property>
-
-  export type Plugin<
-    Declared extends Method = never,
-    Required extends Method = Declared
-  > = (
-    app: [Required] extends [never] ? App : Pick<App, Required | Property>
-  ) => [Declared] extends [never] ? Partial<App> : Pick<App, Declared>
+  export type Plugin = (app: App) => Partial<App>
 }
 
 /**
@@ -256,7 +248,7 @@ export function createApp(
     return response
   }
 
-  const app: App = {
+  const app = {
     config,
     resolveRoute,
     getEndpoints: null,
@@ -273,7 +265,7 @@ export function createApp(
           { page, config },
           timeout
         )),
-  }
+  } as App
 
   for (const plugin of plugins) {
     Object.assign(app, plugin(app))
