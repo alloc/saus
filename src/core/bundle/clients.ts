@@ -12,7 +12,7 @@ import { createModuleProvider } from '../../plugins/moduleProvider'
 import {
   moduleRedirection,
   overrideBareImport,
-  redirectModule,
+  redirectModule
 } from '../../plugins/moduleRedirection'
 import { routesPlugin } from '../../plugins/routes'
 import { findPackage } from '../../utils/findPackage'
@@ -27,7 +27,7 @@ import {
   mapClientFunctions,
   RuntimeConfig,
   SausContext,
-  vite,
+  vite
 } from '../index'
 import {
   bundleDir,
@@ -36,7 +36,7 @@ import {
   globalCachePath,
   httpDir,
   runtimeDir,
-  toSausPath,
+  toSausPath
 } from '../paths'
 import { BundleContext } from './context'
 
@@ -171,6 +171,10 @@ export async function generateClientModules(
           path.join(clientDir, 'AbortController.ts')
         ),
         redirectModule(
+          path.join(clientDir, 'index.dev.ts'),
+          path.join(clientDir, 'index.prod.ts')
+        ),
+        redirectModule(
           path.join(httpDir, 'httpImport.ts'),
           path.join(runtimeDir, 'emptyModule.ts')
         ),
@@ -213,11 +217,6 @@ export async function generateClientModules(
             }
             return splitVendor(id, api)
           },
-        },
-        external: (id, importer, isResolved) => {
-          if (!isResolved && importer?.includes('/saus/')) {
-            return ['source-map', 'callsites', 'ansi-to-html'].includes(id)
-          }
         },
         preserveEntrySignatures: 'allow-extension',
         onwarn(warning, warn) {

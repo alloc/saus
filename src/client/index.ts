@@ -6,6 +6,7 @@ export type {
   RouteModule,
   RouteParams,
 } from '../core'
+export * from './index.dev'
 export * from './api'
 export * from './baseUrl'
 export * from './buffer'
@@ -14,5 +15,4 @@ export * from './http/get'
 export * from './hydrate'
 export * from './loadPageModule'
 export * from './loadPageState'
-export * from './renderErrorPage'
 export { default as routes } from './routes'
