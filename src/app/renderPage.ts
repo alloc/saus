@@ -311,6 +311,7 @@ export function createRenderPageFn(
     route,
     options = {}
   ): Promise<RenderPageResult> {
+    options.props ||= await loadClientProps(url, route)
     debug(`Page in progress: %s`, url)
     options.renderStart?.(url)
     return limitTime(
