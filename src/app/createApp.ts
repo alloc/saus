@@ -23,7 +23,6 @@ import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
 import {
   emptyArray,
-  emptyHeaders,
   headPropsCache,
   inlinedStateMap,
   stateModulesMap
@@ -280,7 +279,7 @@ function createClientPropsLoader(
   profile: ProfiledEventHandler | undefined
 ): ClientPropsLoader {
   return async (url, route) => {
-    const requestUrl = makeRequestUrl(url, 'GET', emptyHeaders)
+    const requestUrl = makeRequestUrl(url, 'GET')
     const request = makeRequest(requestUrl, noop)
 
     const timestamp = Date.now()

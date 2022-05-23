@@ -1,5 +1,4 @@
 import { MessagePort } from 'worker_threads'
-import { emptyHeaders } from '../app/global'
 import { ProfiledEventHandler } from '../app/types'
 import { PageBundle, RenderPageOptions } from '../bundle/types'
 import { loadSourceMap, MutableRuntimeConfig, SourceMap } from '../core'
@@ -77,9 +76,7 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   return (pagePath: string): void =>
     void init.then(app => {
       const url = parseUrl(pagePath)
-      const [, route] = app.resolveRoute(
-        makeRequestUrl(url, 'GET', emptyHeaders)
-      )
+      const [, route] = app.resolveRoute(makeRequestUrl(url, 'GET'))
       if (!route) {
         return
       }

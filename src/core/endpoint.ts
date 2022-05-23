@@ -1,5 +1,6 @@
 import type { App } from '../app/createApp'
-import type { Buffer } from '../client'
+import { emptyHeaders } from '../app/global'
+import { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
 import type { httpMethods } from '../utils/httpMethods'
@@ -77,7 +78,8 @@ export namespace Endpoint {
   export interface RequestUrl<RouteParams extends {} = Record<string, string>>
     extends ParsedUrl<RouteParams> {
     readonly method: string
-    readonly headers: Headers
+    readonly headers: Readonly<Headers>
+    readonly read: () => Promise<Buffer>
   }
 
   export type ResponseHook<App = any> = (
@@ -100,13 +102,17 @@ export namespace Endpoint {
     | {}
 }
 
+const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)
+const emptyRead = async () => emptyBody
+
 /**
  * Attach `method` and `headers` properties to the given URL.
  */
 export function makeRequestUrl<Params extends {}>(
   url: ParsedUrl<Params>,
   method: string,
-  headers: Headers
+  headers = emptyHeaders,
+  read = emptyRead
 ): Endpoint.RequestUrl<Params> {
   if (isRequestUrl(url)) {
     return url
@@ -114,9 +120,11 @@ export function makeRequestUrl<Params extends {}>(
   const requestUrl = url as ParsedUrl<Params> & {
     method: typeof method
     headers: typeof headers
+    read: typeof read
   }
   requestUrl.method = method
   requestUrl.headers = headers
+  requestUrl.read = read
   return requestUrl
 }
 

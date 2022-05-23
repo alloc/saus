@@ -1,3 +1,4 @@
+import getBody from 'raw-body'
 import type { App } from '../../app/createApp'
 import { parseUrl } from '../../utils/url'
 import { makeRequestUrl } from '../endpoint'
@@ -10,7 +11,12 @@ interface RequestProps {
 
 export const servePages: connect.Middleware<RequestProps> =
   async function servePage(req, res, next) {
-    const url = makeRequestUrl(parseUrl(req.url), req.method!, req.headers)
+    const url = makeRequestUrl(
+      parseUrl(req.url),
+      req.method!,
+      req.headers,
+      () => getBody(req)
+    )
     const [status, headers, body] = await req.app.callEndpoints(url)
     if (status == null) {
       return next()

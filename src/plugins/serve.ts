@@ -143,7 +143,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           return res.end()
         }
 
-        const url = makeRequestUrl(parseUrl(path), req.method!, req.headers)
+        const url = makeRequestUrl(
+          parseUrl(path),
+          req.method!,
+          req.headers,
+          () => getBody(req)
+        )
+
         await processRequest(context, url, res, next).catch(error => {
           onError(error)
 
