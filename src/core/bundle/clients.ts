@@ -12,7 +12,7 @@ import { createModuleProvider } from '../../plugins/moduleProvider'
 import {
   moduleRedirection,
   overrideBareImport,
-  redirectModule
+  redirectModule,
 } from '../../plugins/moduleRedirection'
 import { routesPlugin } from '../../plugins/routes'
 import { findPackage } from '../../utils/findPackage'
@@ -27,7 +27,7 @@ import {
   mapClientFunctions,
   RuntimeConfig,
   SausContext,
-  vite
+  vite,
 } from '../index'
 import {
   bundleDir,
@@ -36,7 +36,7 @@ import {
   globalCachePath,
   httpDir,
   runtimeDir,
-  toSausPath
+  toSausPath,
 } from '../paths'
 import { BundleContext } from './context'
 
@@ -278,7 +278,7 @@ export async function generateClientModules(
       }
       if (globalCachePath in chunk.modules) {
         stateCache = chunk
-        runtimeConfig.stateCacheId = stateCache.fileName
+        runtimeConfig.stateCacheId = '/' + stateCache.fileName
       }
       let debugChunk: OutputChunk | undefined
       if (debugBase) {

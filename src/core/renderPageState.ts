@@ -6,8 +6,8 @@ import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
 import { prependBase } from '../utils/prependBase'
 import { CommonClientProps } from './client'
-import { globalCachePath } from './paths'
 import { renderStateModule } from './renderStateModule'
+import runtimeConfig from './runtimeConfig'
 import { INDENT, RETURN, SPACE } from './tokens'
 
 export interface CommonServerProps extends CommonClientProps {
@@ -20,10 +20,10 @@ export interface CommonServerProps extends CommonClientProps {
  */
 export function renderPageState(
   { path, props, stateModules, head }: RenderedPage,
-  base: string,
   helpersId: string,
   preloadUrls?: string[]
 ) {
+  const base = runtimeConfig.base!
   const toStateUrl = (id: string) =>
     prependBase(stateModuleBase + id + '.js', base)
 
@@ -52,17 +52,13 @@ export function renderPageState(
   const inlinedState = inlinedStateMap.get(props!)
   if (inlinedState) {
     const inlined = Array.from(inlinedState, state => {
-      return renderStateModule(
-        state.id,
-        globalCache.loaded[state.id],
-        globalCachePath,
-        true
-      )
+      return renderStateModule(state.id, globalCache.loaded[state.id], true)
     })
       .join(RETURN)
       .replace(/\n/g, '\n  ')
 
-    imports.set(base + '@fs' + globalCachePath, ['globalCache'])
+    const stateCacheUrl = prependBase(runtimeConfig.stateCacheId!, base)
+    imports.set(stateCacheUrl, ['globalCache'])
     code =
       `Object.assign(globalCache.loaded, {` +
       (RETURN + INDENT + inlined + RETURN) +

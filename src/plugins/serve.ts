@@ -7,7 +7,6 @@ import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
 import { Plugin, renderStateModule, SausContext, vite } from '../core'
 import { Endpoint, makeRequestUrl } from '../core/endpoint'
-import { globalCachePath } from '../core/paths'
 import { renderPageState } from '../core/renderPageState'
 import { writeResponse } from '../core/server/writeResponse'
 import { globalCache } from '../runtime/cache'
@@ -57,11 +56,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
           return `throw Object.assign(Error(), ${JSON.stringify(props)})`
         }
         if (page?.props) {
-          return renderPageState(
-            page,
-            context.basePath,
-            '@id/saus/src/client/helpers.ts'
-          )
+          return renderPageState(page, '@id/saus/src/client/helpers.ts')
         }
       } else if (isStateModuleRequest(id)) {
         await init
@@ -71,11 +66,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin[] => {
 
         const stateEntry = globalCache.loaded[stateModuleId]
         if (stateEntry) {
-          return renderStateModule(
-            stateModuleId,
-            stateEntry,
-            '/@fs/' + globalCachePath
-          )
+          return renderStateModule(stateModuleId, stateEntry)
         }
       }
     },

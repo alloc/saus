@@ -187,11 +187,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
           const stateModuleId = stateModuleBase.slice(1) + stateId + '.js'
           modules.add({
             id: stateModuleId,
-            text: renderStateModule(
-              stateId,
-              globalCache.loaded[stateId],
-              config.base + config.stateCacheId
-            ),
+            text: renderStateModule(stateId, globalCache.loaded[stateId]),
             exports: ['default'],
           })
         }
@@ -296,12 +292,7 @@ export const createPageFactory: App.Plugin = ({ config, renderPage }) => {
           if (page.props) {
             modules.add({
               id: pageStateId,
-              text: renderPageState(
-                page,
-                config.base,
-                moduleMap.helpers,
-                preloadList
-              ),
+              text: renderPageState(page, moduleMap.helpers, preloadList),
               exports: ['default'],
             })
 

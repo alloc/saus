@@ -1,11 +1,12 @@
 import { stateModuleArguments } from '../runtime/loadStateModule'
 import { dataToEsm } from '../utils/dataToEsm'
+import { prependBase } from '../utils/prependBase'
+import runtimeConfig from './runtimeConfig'
 import type { CacheEntry } from './withCache'
 
 export function renderStateModule(
   stateModuleId: string,
   [state, ...config]: CacheEntry,
-  stateCacheUrl: string,
   inline?: boolean
 ) {
   let lines: string[]
@@ -14,6 +15,10 @@ export function renderStateModule(
     lines = [`"${stateModuleId}": ${cacheEntry},`]
   } else {
     const cacheEntry = 'state' + commaDelimited(config)
+    const stateCacheUrl = prependBase(
+      runtimeConfig.stateCacheId!,
+      runtimeConfig.base!
+    )
     lines = [
       `import { globalCache } from "${stateCacheUrl}"`,
       dataToEsm(state, 'state'),
