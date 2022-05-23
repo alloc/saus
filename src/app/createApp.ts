@@ -7,8 +7,8 @@ import { Endpoint, makeRequest, makeRequestUrl } from '../core/endpoint'
 import { setRoutesModule } from '../core/global'
 import {
   applyHtmlProcessors,
-  mergeHtmlProcessors,
   MergedHtmlProcessor,
+  mergeHtmlProcessors,
 } from '../core/html'
 import {
   matchRoute,
@@ -59,11 +59,15 @@ export interface App {
 }
 
 export namespace App {
-  type AppMethod = Exclude<keyof App, 'config'>
+  type AppProperty = 'config'
+  type AppMethod = Exclude<keyof App, AppProperty>
 
-  export interface Plugin<P extends AppMethod = never> {
-    (app: App): [P] extends [never] ? Partial<App> : Pick<App, P>
-  }
+  export type Plugin<
+    Declared extends AppMethod = never,
+    Required extends AppMethod = Declared
+  > = (
+    app: [Required] extends [never] ? App : Pick<App, Required | AppProperty>
+  ) => [Declared] extends [never] ? Partial<App> : Pick<App, Declared>
 }
 
 /**
