@@ -3,6 +3,7 @@ import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
 import config from './core/runtimeConfig'
 import functions from './functions'
+import moduleMap from './moduleMap'
 
 export const context: AppContext = {
   beforeRenderHooks: [],
@@ -18,6 +19,7 @@ export const context: AppContext = {
   renderers: [],
   routes: [],
   runtimeHooks: [],
+  helpersId: moduleMap.helpers,
 }
 
 /**

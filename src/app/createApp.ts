@@ -21,6 +21,7 @@ import { HttpRedirect } from '../http'
 import { toArray } from '../utils/array'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
+import { defineBuiltinRoutes } from './builtinRoutes'
 import {
   emptyArray,
   headPropsCache,
@@ -76,6 +77,7 @@ export function createApp(
   // Let runtime hooks inject routes, HTML processors, and page state.
   setRoutesModule(context)
   callRuntimeHooks(context.runtimeHooks, config, onError)
+  defineBuiltinRoutes(context)
   setRoutesModule(null)
 
   let {

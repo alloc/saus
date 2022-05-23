@@ -51,6 +51,7 @@ export async function createDevApp(
     {
       ...context,
       config: runtimeConfig,
+      helpersId: '@id/saus/src/client/helpers.ts',
       functions,
       onError,
     },

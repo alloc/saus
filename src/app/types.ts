@@ -18,6 +18,7 @@ import type { ParsedUrl } from '../utils/url'
 
 export interface AppContext extends RoutesModule, RenderModule {
   config: RuntimeConfig
+  helpersId: string
   functions: ClientFunctions
   getCachedPage: SausContext['getCachedPage']
   onError: (e: any) => void
