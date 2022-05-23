@@ -59,7 +59,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   reloading?: Deferred<void>
   /** Exists in dev mode only */
   server?: vite.ViteDevServer
-  /** Used by the `generateRoute` function in dev mode */
+  /** Used by the `route` function in dev mode */
   ssrRequire?: RequireAsync
 }
 

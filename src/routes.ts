@@ -4,8 +4,8 @@ import { getCurrentModule, ssrImport } from './bundle/ssrModules'
 import { Endpoint } from './core/endpoint'
 import { routesModule } from './core/global'
 import type {
-  GeneratedRouteConfig,
   InferRouteParams,
+  ParsedRoute,
   Route,
   RouteConfig,
   RouteLoader,
@@ -22,6 +22,10 @@ const parseDynamicImport = (fn: Function, path: string) => {
 }
 
 const routeStack: Route[] = []
+const privateRoute: ParsedRoute = {
+  pattern: /^$/,
+  keys: [],
+}
 
 /** Define the default route */
 export function route(load: RouteLoader): void
@@ -40,151 +44,168 @@ export function route<RoutePath extends string, Module extends object>(
   config?: RouteConfig<Module, InferRouteParams<RoutePath>>
 ): Route.API<InferRouteParams<RoutePath>>
 
+/** Define a route */
+export function route<RoutePath extends string, Module extends object>(
+  path: RoutePath,
+  config: RouteConfig<Module, InferRouteParams<RoutePath>>
+): Route.API<InferRouteParams<RoutePath>>
+
 /** @internal */
 export function route(
   pathOrLoad: string | RouteLoader,
-  maybeLoad?: RouteLoader<any>,
+  maybeLoad?: RouteLoader<any> | RouteConfig<any, any>,
   config?: RouteConfig<any, any>
 ) {
   let path = typeof pathOrLoad == 'string' ? pathOrLoad : 'default'
   let load =
-    typeof pathOrLoad == 'string' ? maybeLoad : (pathOrLoad as RouteLoader)
+    typeof maybeLoad == 'function'
+      ? maybeLoad
+      : typeof pathOrLoad == 'function'
+      ? pathOrLoad
+      : undefined
 
-  const routeDecl = {
-    path,
-    load,
-    moduleId: load ? parseDynamicImport(load, path) : null,
-    ...config,
-  } as Route
+  // A route is marked as "generated" when its entry module
+  // isn't defined by a wrapped dynamic import call. In this
+  // case, the module ID needs to be resolved manually.
+  let generated = false
+  let moduleId: string | null = null
 
-  if (path[0] === '/') {
-    if (routeStack.length) {
-      routeDecl.path = path =
-        Array.from(routeStack, route => route.path).join('') + path
+  if (load == null && maybeLoad) {
+    config = maybeLoad as RouteConfig
+    if (typeof config.entry == 'function') {
+      load = config.entry
+    } else if (typeof config.entry == 'string') {
+      generated = true
+      moduleId = config.entry
     }
-
-    Object.assign(routeDecl, RegexParam.parse(path))
-    routesModule.routes.push(routeDecl)
-
-    const api = {
-      extend(cb) {
-        const addRoute = ((...args: Parameters<typeof route>) => {
-          routeStack.push(routeDecl)
-          route(...args)
-          routeStack.pop()
-        }) as typeof route
-
-        routeStack.push(routeDecl)
-        try {
-          const result = cb(addRoute)
-          if (result instanceof Promise) {
-            result.catch(console.error)
-          }
-        } finally {
-          routeStack.pop()
-        }
-      },
-    } as Route.API
-
-    for (const method of httpMethods) {
-      api[method] = (
-        arg1: string | Endpoint.ContentType[] | typeof fn,
-        arg2?: Endpoint.ContentType[] | typeof fn,
-        fn?: Endpoint.Function
-      ) => {
-        let contentTypes: Endpoint.ContentType[]
-        if (typeof arg1 == 'string') {
-          const nestedPath = arg1
-          if (Array.isArray(arg2)) {
-            contentTypes = arg2
-          } else {
-            contentTypes = ['application/json']
-            fn = async req => {
-              const result = await arg2!(req)
-              if (result !== undefined) {
-                req.respondWith(200, null, { json: result })
-              }
-            }
-          }
-          const nestedRoute = route(path + nestedPath)
-          nestedRoute[method](contentTypes as Endpoint.ContentTypes, fn!)
-          return api
-        }
-
-        if (Array.isArray(arg1)) {
-          contentTypes = arg1
-          fn = arg2 as Endpoint.Function
-        } else {
-          contentTypes = ['*/*']
-          fn = arg1
-        }
-
-        const endpoint = fn as Endpoint
-        endpoint.method = method.toUpperCase()
-        endpoint.contentTypes = contentTypes
-
-        routeDecl.endpoints ||= []
-        routeDecl.endpoints.push(endpoint)
-
-        return api
-      }
-    }
-
-    return api
   }
 
-  if (routeStack.length)
-    throw Error(
-      'Cannot set "default" or "error" route within `extend` callback'
-    )
-
-  if (path === 'default') {
-    routesModule.defaultRoute = routeDecl
-  } else if (path === 'error') {
-    routesModule.catchRoute = routeDecl
-  }
-}
-
-/** Define a route */
-export function generateRoute<RoutePath extends string, Module extends object>(
-  path: RoutePath,
-  {
-    entry,
-    ...config
-  }: GeneratedRouteConfig<Module, InferRouteParams<RoutePath>>
-): void {
-  let moduleId: string
-  let load: () => Promise<any>
-
-  if (typeof entry == 'string') {
-    const { ssrRequire } = routesModule
+  if (load) {
+    moduleId = parseDynamicImport(load, path)
+  } else if (moduleId) {
+    const id = moduleId
     const importer = getCurrentModule()
-
-    moduleId = entry
+    const { ssrRequire } = routesModule
     load = ssrRequire
-      ? () => ssrRequire(entry, importer, true)
+      ? () => ssrRequire(id, importer, true)
       : () => {
-          const resolvedId =
-            (importer &&
-              /^\.\.?\//.test(moduleId) &&
-              relative(importer, moduleId)) ||
-            moduleId
-
+          let resolvedId: string | null = id
+          if (importer && /^\.\.?\//.test(id)) {
+            resolvedId = relative(importer, id)
+            if (!resolvedId)
+              throw Error(
+                `Cannot find module "${id}" imported by "${importer}"`
+              )
+          }
           return ssrImport(resolvedId)
         }
   } else {
-    moduleId = parseDynamicImport(entry, path)
-    load = entry
+    load = () => {
+      throw Error(`Route "${path}" has no module defined`)
+    }
   }
 
-  routesModule.routes.push({
-    ...(config as RouteConfig),
-    ...RegexParam.parse(path),
+  const isPublic = path[0] === '/'
+  if (isPublic && routeStack.length) {
+    path = Array.from(routeStack, route => route.path).join('') + path
+  }
+
+  const { pattern, keys } = isPublic ? RegexParam.parse(path) : privateRoute
+  const self: Route = {
+    ...config,
     path,
     load,
+    generated,
     moduleId,
-    generated: true,
-  })
+    pattern,
+    keys,
+  }
+
+  if (isPublic) {
+    routesModule.routes.push(self)
+  } else {
+    // TODO: support nesting of catch-all and error routes
+    if (routeStack.length)
+      throw Error(
+        'Cannot set "default" or "error" route within `extend` callback'
+      )
+
+    if (path === 'default') {
+      routesModule.defaultRoute = self
+    } else if (path === 'error') {
+      routesModule.catchRoute = self
+    }
+  }
+
+  return createRouteAPI(self)
+}
+
+function createRouteAPI(parent: Route) {
+  const api = {
+    extend(cb) {
+      const addRoute = ((...args: Parameters<typeof route>) => {
+        routeStack.push(parent)
+        route(...args)
+        routeStack.pop()
+      }) as typeof route
+
+      routeStack.push(parent)
+      try {
+        const result = cb(addRoute)
+        if (result instanceof Promise) {
+          result.catch(console.error)
+        }
+      } finally {
+        routeStack.pop()
+      }
+    },
+  } as Route.API
+
+  for (const method of httpMethods) {
+    api[method] = (
+      arg1: string | Endpoint.ContentType[] | typeof fn,
+      arg2?: Endpoint.ContentType[] | typeof fn,
+      fn?: Endpoint.Function
+    ) => {
+      let contentTypes: Endpoint.ContentType[]
+      if (typeof arg1 == 'string') {
+        const nestedPath = arg1
+        if (Array.isArray(arg2)) {
+          contentTypes = arg2
+        } else {
+          contentTypes = ['application/json']
+          fn = async (req, app) => {
+            const result = await arg2!(req, app)
+            if (result !== undefined) {
+              req.respondWith(200, null, { json: result })
+            }
+          }
+        }
+        const nestedRoute = route(parent.path + nestedPath)
+        nestedRoute[method](contentTypes as Endpoint.ContentTypes, fn!)
+        return api
+      }
+
+      if (Array.isArray(arg1)) {
+        contentTypes = arg1
+        fn = arg2 as Endpoint.Function
+      } else {
+        contentTypes = ['*/*']
+        fn = arg1
+      }
+
+      const endpoint = fn as Endpoint
+      endpoint.method = method.toUpperCase()
+      endpoint.contentTypes = contentTypes
+
+      parent.endpoints ||= []
+      parent.endpoints.push(endpoint)
+
+      return api
+    }
+  }
+
+  return api
 }
 
 export function onRequest(hook: Endpoint.Function) {
