@@ -108,7 +108,7 @@ export function createApp(
     renderers,
     defaultRenderer,
     beforeRenderHooks,
-    loadClientProps,
+    (url, route) => app.loadClientProps(url, route),
     resolveClient,
     preProcessHtml,
     catchRoute,
