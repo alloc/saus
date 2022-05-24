@@ -366,10 +366,6 @@ async function prepareFunctions(context: BundleContext) {
 
 const internalRedirects = [
   redirectModule(
-    path.join(coreDir, 'global.ts'),
-    path.join(bundleDir, 'core/global.ts')
-  ),
-  redirectModule(
     path.join(coreDir, 'constants.ts'),
     path.join(bundleDir, 'core/constants.ts')
   ),
