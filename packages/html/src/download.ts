@@ -3,13 +3,13 @@ import fs from 'fs'
 import MagicString from 'magic-string'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { setup } from 'saus'
 import {
   EnforcementPhase,
-  md5Hex,
-  setup,
-  unwrapBuffer,
   isExternalUrl,
   limitTime,
+  md5Hex,
+  unwrapBuffer,
 } from 'saus/core'
 import { get, Response } from 'saus/http'
 import { debug } from './debug'

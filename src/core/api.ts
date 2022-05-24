@@ -3,7 +3,6 @@
 export * from './buffer'
 export * from './html'
 export * from './render'
-export * from './setup'
 export * from './endpoint'
 export * from './utils'
 
