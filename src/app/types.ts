@@ -80,6 +80,7 @@ export type RenderPageOptions = {
   request?: Endpoint.Request
   resolved?: ResolvedRoute
   timeout?: number
+  isDebug?: boolean
   defaultRoute?: Route | Falsy
   onError?: (error: Error & { url: string }) => void
   renderStart?: (url: ParsedUrl) => void

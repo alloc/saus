@@ -15,7 +15,6 @@ import { context } from './context'
 import { applyHtmlProcessors, endent } from './core'
 import config from './core/runtimeConfig'
 import { injectDebugBase } from './debugBase'
-import { defineClientEntry } from './defineClientEntry'
 import { getModuleUrl } from './getModuleUrl'
 import { injectToBody, injectToHead } from './html/inject'
 import { HtmlTagDescriptor } from './html/types'
@@ -23,8 +22,6 @@ import inlinedModules from './inlinedModules'
 import getModuleLoader from './moduleLoader'
 import moduleMap from './moduleMap'
 import { postProcessAsset } from './postProcessAsset'
-import { loadRenderers } from './render'
-import { ssrClearCache } from './ssrModules'
 import { ClientAsset, ClientModule, PageBundle } from './types'
 
 const hydrateImport = `import { hydrate } from "saus/client"`
@@ -58,8 +55,6 @@ export const createPageFactory: App.Plugin = app => {
         isDebug = true
       }
 
-      // When loading renderers, the `base` is omitted.
-      const pageRenderPath = url.path
       // Page caching includes the query string.
       const pageRelativeUrl = url.toString()
 
@@ -70,20 +65,9 @@ export const createPageFactory: App.Plugin = app => {
       const [page, error] = await app.renderPage(url, route, {
         defaultRoute: !/\.[^./]+$/.test(url.path) && context.defaultRoute,
         ...options,
+        isDebug,
         renderStart: renderStart && (() => renderStart(url)),
         renderFinish: undefined,
-        // Prepare the page context with isolated modules.
-        async setup(pageContext) {
-          ssrClearCache()
-          defineClientEntry({
-            BASE_URL: isDebug ? debugBase : base,
-          })
-          context.renderers = []
-          context.defaultRenderer = undefined
-          context.beforeRenderHooks = []
-          await loadRenderers(pageRenderPath)
-          Object.assign(pageContext, context)
-        },
       })
 
       if (error) {
