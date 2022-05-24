@@ -56,7 +56,7 @@ export async function preBundleSsrRuntime(
     // "saus" entry point
     saus: path.join(bundleDir, 'index.ts'),
     // "saus/core" entry point
-    core: path.join(bundleDir, 'core.ts'),
+    core: path.join(bundleDir, 'core/index.ts'),
     // "saus/bundle" entry point
     bundle: path.join(bundleDir, 'main.ts'),
     // "saus/client" entry point

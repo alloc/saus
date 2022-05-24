@@ -486,7 +486,7 @@ async function generateSsrBundle(
     overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
     overrideBareImport('saus/bundle', bundleId),
     overrideBareImport('saus/client', path.join(clientDir, 'index.ssr.ts')),
-    overrideBareImport('saus/core', path.join(bundleDir, 'core.ts')),
+    overrideBareImport('saus/core', path.join(bundleDir, 'core/index.ts')),
     overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
   ]
 

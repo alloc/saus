@@ -4,6 +4,7 @@ export * from './buffer'
 export * from './html'
 export * from './render'
 export * from './server'
+export * from './setup'
 export * from './endpoint'
 export * from './utils'
 
