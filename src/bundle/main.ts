@@ -1,6 +1,7 @@
 export { printFiles, writePages } from '../build/write'
 export { setResponseCache } from '../http/responseCache'
 export { createApp as default } from './app'
+export { cacheClientProps } from './cacheClientProps'
 export { configureBundle } from './context'
 export { default as config } from './core/runtimeConfig'
 export { getModuleUrl } from './getModuleUrl'
