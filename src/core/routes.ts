@@ -6,8 +6,27 @@ import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
 
-export * as RegexParam from 'regexparam'
-export type { RouteParams as InferRouteParams } from 'regexparam'
+// Lifted from https://github.com/lukeed/regexparam
+export type InferRouteParams<T extends string> =
+  T extends `${infer Prev}/*/${infer Rest}`
+    ? InferRouteParams<Prev> & { wild: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}.${string}/${infer Rest}`
+    ? { [K in P]: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}?/${infer Rest}`
+    ? { [K in P]?: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}/${infer Rest}`
+    ? { [K in P]: string } & InferRouteParams<Rest>
+    : T extends `${string}:${infer P}.${string}`
+    ? { [K in P]: string }
+    : T extends `${string}:${infer P}?`
+    ? { [K in P]?: string }
+    : T extends `${string}:${infer P}`
+    ? { [K in P]: string }
+    : T extends `${string}*.${string}`
+    ? { wild: string }
+    : T extends `${string}*`
+    ? { wild: string }
+    : {}
 
 export interface RouteModule extends Record<string, any> {}
 

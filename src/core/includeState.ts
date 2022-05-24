@@ -1,5 +1,6 @@
+import { parseRoutePath } from '../utils/parseRoutePath'
 import { routesModule } from './global'
-import { RegexParam, RouteIncludeOption } from './routes'
+import { RouteIncludeOption } from './routes'
 
 /**
  * Include the provided state modules in all routes by default.
@@ -19,9 +20,9 @@ export function includeState(
       if (typeof pattern !== 'string') {
         only.push(pattern)
       } else if (pattern[0] !== '!') {
-        only.push(RegexParam.parse(pattern).pattern)
+        only.push(parseRoutePath(pattern).pattern)
       } else {
-        skip.push(RegexParam.parse(pattern.slice(1)).pattern)
+        skip.push(parseRoutePath(pattern.slice(1)).pattern)
       }
     }
     const match = (path: string) => {

@@ -1,5 +1,4 @@
 import { relative } from '@cush/relative'
-import * as RegexParam from 'regexparam'
 import { getCurrentModule, ssrImport } from './bundle/ssrModules'
 import { Endpoint } from './core/endpoint'
 import { routesModule } from './core/global'
@@ -11,6 +10,7 @@ import type {
   RouteLoader,
 } from './core/routes'
 import { httpMethods } from './utils/httpMethods'
+import { parseRoutePath } from './utils/parseRoutePath'
 
 const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function, path: string) => {
@@ -110,7 +110,7 @@ export function route(
     path = Array.from(routeStack, route => route.path).join('') + path
   }
 
-  const { pattern, keys } = isPublic ? RegexParam.parse(path) : privateRoute
+  const { pattern, keys } = isPublic ? parseRoutePath(path) : privateRoute
   const self: Route = {
     ...config,
     path,

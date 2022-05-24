@@ -51,7 +51,6 @@ importers:
       raw-body: ^2.5.1
       react: ^17.0.2
       react-dom: ^17.0.2
-      regexparam: ^2.0.0
       rollup: npm:@aleclarson/rollup@^2.62.1
       rollup-plugin-dts: ^4.1.0
       shared-log: ^1.2.8
@@ -120,7 +119,6 @@ importers:
       prettier: 2.4.1
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
-      regexparam: 2.0.0
       rollup-plugin-dts: 4.1.0_09ecfda2292df930b47b4fffbaeb7e2f
       source-map: 0.6.1
       strip-comments: 2.0.1
@@ -3652,11 +3650,6 @@ packages:
     resolution: {integrity: sha512-6IQpFBv6e5vz1QAqI+V4k8P2e/3gRrqfCJ9FI+O1FLQTO+Uz6RXZEZOPmTJ6hlGj7gkERzY5BRCv09whKP96/g==}
     engines: {node: '>=6'}
     dev: false
-
-  /regexparam/2.0.0:
-    resolution: {integrity: sha512-gJKwd2MVPWHAIFLsaYDZfyKzHNS4o7E/v8YmNf44vmeV2e4YfVoDToTOKTvE7ab68cRJ++kLuEXJBaEeJVt5ow==}
-    engines: {node: '>=8'}
-    dev: true
 
   /repeating/2.0.1:
     resolution: {integrity: sha1-UhTFOpJtNVJwdSf7q0FdvAjQbdo=}

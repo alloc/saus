@@ -1,4 +1,5 @@
-import { ParsedRoute, RegexParam } from '../core/routes'
+import type { ParsedRoute } from '../core/routes'
+import { parseRoutePath } from '../utils/parseRoutePath'
 import { plural } from '../utils/plural'
 import { debug } from '../vm/debug'
 
@@ -22,7 +23,7 @@ const allMatch = { pattern: /./, keys: [] }
 
 export function addRenderers(hooks: [string | undefined, RendererInit][]) {
   for (const [route, init] of hooks) {
-    const parsedRoute = route ? RegexParam.parse(route) : allMatch
+    const parsedRoute = route ? parseRoutePath(route) : allMatch
     renderers.push([parsedRoute, init])
   }
 }

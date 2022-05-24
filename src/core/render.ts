@@ -1,7 +1,8 @@
+import { parseRoutePath } from '../utils/parseRoutePath'
 import type { ClientDescription } from './client'
-import { DocumentHook, RenderRequest, Renderer } from './renderer'
 import { renderModule } from './global'
-import { matchRoute, RegexParam, RouteParams } from './routes'
+import { DocumentHook, Renderer, RenderRequest } from './renderer'
+import { matchRoute, RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -75,7 +76,7 @@ export function beforeRender(...args: any[]) {
   if (typeof args[0] == 'string') {
     const route = args[0]
     hook = args[1]
-    const parsedRoute = RegexParam.parse(route)
+    const parsedRoute = parseRoutePath(route)
     hook.match = path => matchRoute(path, parsedRoute)
   } else {
     hook = args[0]

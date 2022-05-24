@@ -1,8 +1,9 @@
 import type { BufferLike } from '../app/types'
 import type { RouteModule } from '../client'
+import { parseRoutePath } from '../utils/parseRoutePath'
 import type { ClientDescription, CommonClientProps } from './client'
 import type { RuntimeConfig } from './config'
-import { RegexParam, RouteParams } from './routes'
+import type { RouteParams } from './routes'
 
 type Promisable<T> = T | PromiseLike<T>
 
@@ -58,7 +59,7 @@ export class Renderer<T = any> {
     readonly start?: number
   ) {
     if (route) {
-      const regex = RegexParam.parse(route).pattern
+      const regex = parseRoutePath(route).pattern
       this.test = regex.test.bind(regex)
     } else {
       this.test = () => true
