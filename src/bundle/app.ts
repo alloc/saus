@@ -1,5 +1,6 @@
 import { createApp as create } from '../app/createApp'
 import type { App, AppContext, PageContext } from '../app/types'
+import { LazyPromise } from '../utils/LazyPromise'
 import { context } from './context'
 import config from './core/runtimeConfig'
 import { defineClientEntry } from './defineClientEntry'
@@ -10,8 +11,13 @@ import { ssrClearCache, ssrImport } from './ssrModules'
 // Allow `ssrImport("saus/client")` outside page rendering.
 defineClientEntry()
 
+// Avoid loading the routes module more than once.
+const routeSetup = new LazyPromise(resolve => {
+  resolve(ssrImport(config.ssrRoutesId))
+})
+
 export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
-  await ssrImport(config.ssrRoutesId)
+  await routeSetup
   return create(context, [
     isolatePages(context),
     createPageFactory,
