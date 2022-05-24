@@ -1,5 +1,6 @@
 import etag from 'etag'
-import { Endpoint, makeRequestUrl } from '../core/endpoint'
+import { Endpoint } from '../core/endpoint'
+import { makeRequestUrl } from '../core/makeRequest'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import type { Headers } from '../http'

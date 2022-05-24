@@ -1,8 +1,8 @@
 import { MessagePort } from 'worker_threads'
 import { ProfiledEventHandler } from '../app/types'
-import { PageBundle, RenderPageOptions } from '../bundle/types'
+import { PageBundle, PageBundleOptions } from '../bundle/types'
 import { loadSourceMap, MutableRuntimeConfig, SourceMap } from '../core'
-import { makeRequestUrl } from '../core/endpoint'
+import { makeRequestUrl } from '../core/makeRequest'
 import { loadResponseCache, responseCache } from '../http/responseCache'
 import { resolveStackTrace } from '../utils/stack'
 import { parseUrl } from '../utils/url'
@@ -64,7 +64,7 @@ export function loadPageFactory(bundle: BundleDescriptor) {
       })
   }
 
-  const renderOptions: RenderPageOptions = {
+  const renderOptions: PageBundleOptions = {
     onError(error) {
       // By default, errors are logged and null is returned,
       // but we want to send them back to the main thread instead.
@@ -80,7 +80,7 @@ export function loadPageFactory(bundle: BundleDescriptor) {
       if (!route) {
         return
       }
-      app.renderPage(url, route, renderOptions).then(
+      app.renderPageBundle(url, route, renderOptions).then(
         page => {
           events.emit('page', pagePath, page)
         },

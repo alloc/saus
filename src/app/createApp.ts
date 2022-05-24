@@ -3,9 +3,10 @@ import path from 'path'
 import { CommonClientProps, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
-import { Endpoint, makeRequest, makeRequestUrl } from '../core/endpoint'
+import { Endpoint } from '../core/endpoint'
 import { setRoutesModule } from '../core/global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../core/html'
+import { makeRequest, makeRequestUrl } from '../core/makeRequest'
 import {
   matchRoute,
   Route,

@@ -1,7 +1,7 @@
 import getBody from 'raw-body'
 import type { App } from '../../app/types'
 import { parseUrl } from '../../utils/url'
-import { makeRequestUrl } from '../endpoint'
+import { makeRequestUrl } from '../makeRequest'
 import { connect } from './connect'
 import { writeResponse } from './writeResponse'
 

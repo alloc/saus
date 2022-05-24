@@ -1,11 +1,9 @@
-import { emptyHeaders } from '../app/global'
 import type { App } from '../app/types'
 import type { Buffer } from '../client'
 import type { Headers, HttpRedirect, Response } from '../http'
-import { assignDefaults } from '../utils/assignDefaults'
 import type { httpMethods } from '../utils/httpMethods'
 import type { Falsy, Promisable } from '../utils/types'
-import { ParsedUrl } from '../utils/url'
+import type { ParsedUrl } from '../utils/url'
 import type { InferRouteParams, Route, RouteParams } from './routes'
 
 export interface Endpoint<Params extends {} = {}>
@@ -100,51 +98,4 @@ export namespace Endpoint {
     | { text: string }
     | { json: any }
     | {}
-}
-
-const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)
-const emptyRead = async () => emptyBody
-
-/**
- * Attach `method` and `headers` properties to the given URL.
- */
-export function makeRequestUrl<Params extends {}>(
-  url: ParsedUrl<Params>,
-  method: string,
-  headers = emptyHeaders,
-  read = emptyRead
-): Endpoint.RequestUrl<Params> {
-  if (isRequestUrl(url)) {
-    return url
-  }
-  const requestUrl = url as ParsedUrl<Params> & {
-    method: typeof method
-    headers: typeof headers
-    read: typeof read
-  }
-  requestUrl.method = method
-  requestUrl.headers = headers
-  requestUrl.read = read
-  return requestUrl
-}
-
-function isRequestUrl<T extends {} = any>(
-  arg: ParsedUrl
-): arg is Endpoint.RequestUrl<T> {
-  return 'method' in arg
-}
-
-/**
- * Convert the given `url` into a Saus request.
- */
-export function makeRequest<Params extends {}>(
-  url: Endpoint.RequestUrl<Params>,
-  respondWith: (...response: Endpoint.ResponseTuple) => void
-): Endpoint.Request<Params> {
-  const request = Object.assign(
-    Object.create(ParsedUrl.prototype),
-    url
-  ) as Endpoint.Request<Params>
-  request.respondWith = respondWith
-  return assignDefaults<any>(request, url.routeParams)
 }
