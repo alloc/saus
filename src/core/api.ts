@@ -9,6 +9,7 @@ export * from './endpoint'
 export * from './utils'
 
 export * from '../runtime/constants'
+export * from '../app/cacheClientProps'
 export * from '../app/cachePages'
 export * from '../app/throttleRender'
 
