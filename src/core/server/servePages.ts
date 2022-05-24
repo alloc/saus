@@ -1,5 +1,5 @@
 import getBody from 'raw-body'
-import type { App } from '../../app/createApp'
+import type { App } from '../../app/types'
 import { parseUrl } from '../../utils/url'
 import { makeRequestUrl } from '../endpoint'
 import { connect } from './connect'

@@ -7,10 +7,10 @@ import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { clearExports } from '../vm/moduleMap'
 import { cacheClientProps } from './cacheClientProps'
 import { cachePages } from './cachePages'
-import { App, createApp } from './createApp'
+import { createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
 import { throttleRender } from './throttleRender'
-import { RenderPageOptions } from './types'
+import { App, RenderPageOptions } from './types'
 
 export async function createDevApp(
   context: SausContext,

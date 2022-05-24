@@ -1,21 +1,5 @@
-import type { Route } from '../core/routes'
 import type { HttpRedirect } from '../http/redirect'
 import type { ParsedUrl } from '../utils/url'
-
-declare module '../app/createApp' {
-  export interface App {
-    /**
-     * Available in SSR bundles only.
-     *
-     * Render a page and the modules it uses.
-     */
-    renderPageBundle: (
-      url: ParsedUrl,
-      route: Route,
-      options?: PageBundleOptions
-    ) => Promise<PageBundle | null>
-  }
-}
 
 export interface PageBundleOptions {
   timeout?: number

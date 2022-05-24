@@ -3,7 +3,7 @@ import { controlExecution } from '../utils/controlExecution'
 import { limitConcurrency } from '../utils/limitConcurrency'
 import type { ExtractProps, Promisable } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
-import type { App } from './createApp'
+import type { App } from './types'
 
 type RenderFn = (url: ParsedUrl, route: Route, options?: any) => any
 

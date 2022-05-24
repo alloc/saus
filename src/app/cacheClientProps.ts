@@ -1,5 +1,5 @@
 import { getCachedState } from '../runtime/getCachedState'
-import { App } from './createApp'
+import { App } from './types'
 
 export function cacheClientProps(maxAge: number): App.Plugin {
   return app => {

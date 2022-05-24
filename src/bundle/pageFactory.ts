@@ -1,5 +1,5 @@
 import path from 'path'
-import { App } from '../app/createApp'
+import { App } from '../app/types'
 import { renderPageState } from '../core/renderPageState'
 import { renderStateModule } from '../core/renderStateModule'
 import { globalCache } from '../runtime/cache'

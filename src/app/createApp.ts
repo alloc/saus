@@ -5,16 +5,12 @@ import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
 import { Endpoint, makeRequest, makeRequestUrl } from '../core/endpoint'
 import { setRoutesModule } from '../core/global'
-import {
-  applyHtmlProcessors,
-  MergedHtmlProcessor,
-  mergeHtmlProcessors
-} from '../core/html'
+import { applyHtmlProcessors, mergeHtmlProcessors } from '../core/html'
 import {
   matchRoute,
   Route,
   RouteEndpointMap,
-  RouteIncludeOption
+  RouteIncludeOption,
 } from '../core/routes'
 import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
@@ -26,7 +22,7 @@ import {
   emptyArray,
   headPropsCache,
   inlinedStateMap,
-  stateModulesMap
+  stateModulesMap,
 } from './global'
 import { handleNestedState } from './handleNestedState'
 import { createNegotiator } from './negotiator'
@@ -34,33 +30,14 @@ import { renderClient } from './renderClient'
 import { createRenderPageFn } from './renderPage'
 import { createStateModuleMap, loadIncludedState } from './stateModules'
 import {
+  App,
   AppContext,
   ClientFunctions,
   ClientPropsLoader,
   ClientResolver,
   ProfiledEventHandler,
-  RenderedPage,
-  RenderPageFn,
-  RouteResolver
+  RouteResolver,
 } from './types'
-
-export interface App {
-  config: RuntimeConfig
-  resolveRoute: RouteResolver
-  getEndpoints: Endpoint.Generator | null
-  callEndpoints(
-    url: Endpoint.RequestUrl,
-    endpoints?: readonly Endpoint.Function[]
-  ): Promise<Endpoint.ResponseTuple>
-  loadClientProps: ClientPropsLoader
-  renderPage: RenderPageFn
-  preProcessHtml?: MergedHtmlProcessor
-  postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>
-}
-
-export namespace App {
-  export type Plugin = (app: App) => Partial<App>
-}
 
 /**
  * Create a Saus application that can run anywhere. It can render pages

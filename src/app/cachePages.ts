@@ -1,6 +1,5 @@
 import { CacheControl } from '../core/withCache'
-import { App } from './createApp'
-import { RenderPageResult } from './types'
+import { App, RenderPageResult } from './types'
 
 export function cachePages(
   maxAge: number,

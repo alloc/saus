@@ -1,8 +1,10 @@
+import type { PageBundle, PageBundleOptions } from '../bundle/types'
 import type { Buffer } from '../client'
 import type {
   AnyClientProps,
   BeforeRenderHook,
   Client,
+  MergedHtmlProcessor,
   Renderer,
   RenderModule,
   Route,
@@ -13,8 +15,36 @@ import type {
 } from '../core'
 import type { Endpoint } from '../core/endpoint'
 import type { ParsedHead } from '../utils/parseHead'
-import { Falsy } from '../utils/types'
+import type { Falsy } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
+
+export interface App {
+  config: RuntimeConfig
+  resolveRoute: RouteResolver
+  getEndpoints: Endpoint.Generator | null
+  callEndpoints(
+    url: Endpoint.RequestUrl,
+    endpoints?: readonly Endpoint.Function[]
+  ): Promise<Endpoint.ResponseTuple>
+  loadClientProps: ClientPropsLoader
+  renderPage: RenderPageFn
+  /**
+   * Available in SSR bundles only.
+   *
+   * Render a page and the modules it uses.
+   */
+  renderPageBundle: (
+    url: ParsedUrl,
+    route: Route,
+    options?: PageBundleOptions
+  ) => Promise<PageBundle | null>
+  preProcessHtml?: MergedHtmlProcessor
+  postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>
+}
+
+export namespace App {
+  export type Plugin = (app: App) => Partial<App>
+}
 
 export interface AppContext extends RoutesModule, RenderModule {
   config: RuntimeConfig

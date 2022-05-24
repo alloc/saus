@@ -1,5 +1,5 @@
-import { App, createApp as create } from '../app/createApp'
-import type { AppContext, PageContext } from '../app/types'
+import { createApp as create } from '../app/createApp'
+import type { App, AppContext, PageContext } from '../app/types'
 import { context } from './context'
 import config from './core/runtimeConfig'
 import { defineClientEntry } from './defineClientEntry'

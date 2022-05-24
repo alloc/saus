@@ -1,4 +1,4 @@
-import type { App } from '../../app/createApp'
+import type { App } from '../../app/types'
 import type { FileCache } from './fileCache'
 
 export const cachePageAssets =
