@@ -52,6 +52,14 @@ export function createApp(
 ): App {
   const { config, onError, profile, functions } = context
 
+  // Let the app be recreated for every request (if so desired)
+  // by avoiding the creation of duplicate routes. This can be
+  // useful if your app plugins are dependent on each request.
+  context = {
+    ...context,
+    routes: [...context.routes],
+  }
+
   // Let runtime hooks inject routes, HTML processors, and page state.
   setRoutesModule(context)
   callRuntimeHooks(context.runtimeHooks, plugins, config, onError)
