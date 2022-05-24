@@ -2,6 +2,7 @@ import { URLSearchParams } from 'url';
 import { AbortSignal } from 'node-abort-controller';
 import * as vite from 'vite';
 import { RouteParams as RouteParams$1 } from 'regexparam';
+import http from 'http';
 
 declare class HttpRedirect {
     readonly location: string;
@@ -699,7 +700,7 @@ interface SausContext extends RenderModule, RoutesModule, HtmlContext {
     ssrRequire?: RequireAsync;
 }
 
-declare type RuntimeHook = (config: RuntimeConfig) => void;
+declare type RuntimeHook = (config: RuntimeConfig) => OneOrMany<App.Plugin | Falsy> | void;
 
 interface RouteModule extends Record<string, any> {
 }
@@ -1043,4 +1044,40 @@ declare function getKnownPaths(options?: {
     noDebug?: boolean;
 }): Promise<string[]>;
 
-export { ClientAsset, ClientModule, ClientModuleMap, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, config, configureBundle, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, setResponseCache, __d as ssrDefine, ssrImport, writePages };
+interface FileCache extends Map<string, string | ClientAsset> {
+    addModules(module: Set<ClientModule>): void;
+    addAssets(assets: Map<string, ClientAsset>): void;
+}
+declare function createFileCache(base: string): FileCache;
+
+declare const cachePageAssets: (cache: FileCache) => App.Plugin;
+
+/**
+ * A tiny implementation of the `connect` package.
+ */
+declare function connect<RequestProps extends object = {}>(extendRequest?: (req: http.IncomingMessage) => Promisable$6<RequestProps>): connect.App<RequestProps>;
+declare namespace connect {
+    type Request<Props extends object = {}> = Props & http.IncomingMessage & {
+        url: string;
+    };
+    type Response = http.ServerResponse;
+    type NextFunction = (error?: any) => void;
+    type ErrorListener = (e: any, req: Request, res: Response, next: NextFunction) => void;
+    type Middleware<RequestProps extends object = {}> = (req: Request<RequestProps>, res: Response, next: NextFunction) => void | Promise<void>;
+    interface App<RequestProps extends object = {}> {
+        (req: http.IncomingMessage, res: http.ServerResponse, next?: connect.NextFunction): Promise<void>;
+        use(handler: connect.Middleware<RequestProps>): this;
+        on(name: 'error', listener: connect.ErrorListener): this;
+    }
+}
+
+declare const serveCachedFiles: (cache: FileCache) => connect.Middleware;
+
+interface RequestProps {
+    app: App;
+}
+declare const servePages: connect.Middleware<RequestProps>;
+
+declare const servePublicDir: (config: RuntimeConfig, publicDir?: string, ignore?: RegExp) => connect.Middleware;
+
+export { ClientAsset, ClientModule, ClientModuleMap, FileCache, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
