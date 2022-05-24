@@ -3,9 +3,9 @@ import type { FileCache } from './fileCache'
 
 export const cachePageAssets =
   (cache: FileCache): App.Plugin =>
-  app => ({
+  ({ renderPageBundle }) => ({
     async renderPageBundle(url, route, options) {
-      const page = await app.renderPageBundle(url, route, options)
+      const page = await renderPageBundle(url, route, options)
       if (page) {
         cache.addModules(page.modules)
         cache.addAssets(page.assets)
