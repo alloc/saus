@@ -54,7 +54,7 @@ export function createApp(
 
   // Let runtime hooks inject routes, HTML processors, and page state.
   setRoutesModule(context)
-  callRuntimeHooks(context.runtimeHooks, config, onError)
+  callRuntimeHooks(context.runtimeHooks, plugins, config, onError)
   defineBuiltinRoutes(context)
   setRoutesModule(null)
 
@@ -362,12 +362,17 @@ function createClientResolver(functions: ClientFunctions): ClientResolver {
 
 function callRuntimeHooks(
   hooks: RuntimeHook[],
+  plugins: App.Plugin[],
   config: RuntimeConfig,
   onError: (e: any) => void
 ) {
   for (const setup of hooks) {
     try {
-      setup(config)
+      const newPlugins = toArray(setup(config))
+      for (const plugin of newPlugins)
+        if (typeof plugin == 'function') {
+          plugins.push(plugin)
+        }
     } catch (error: any) {
       onError(error)
     }
