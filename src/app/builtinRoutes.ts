@@ -16,8 +16,8 @@ export function defineBuiltinRoutes(context: AppContext) {
   const indexFileRE = /(^|\/)index$/
 
   // Page-based entry modules
-  route('/:id.html.js').get(async (req, app) => {
-    const pagePath = '/' + req.id.replace(indexFileRE, '')
+  route(`/*.html.js`).get(async (req, app) => {
+    const pagePath = '/' + req.wild.replace(indexFileRE, '')
     const pageUrl = parseUrl(pagePath)
     const [, route] = app.resolveRoute(
       makeRequestUrl(pageUrl, 'GET', { accept: 'text/html' })
@@ -37,9 +37,9 @@ export function defineBuiltinRoutes(context: AppContext) {
   })
 
   // State modules
-  route(`${stateModuleBase}:id.js`)
+  route(`${stateModuleBase}*.js`)
     .get(async req => {
-      const stateModuleId = req.id
+      const stateModuleId = req.wild
       await getCachedState(stateModuleId, globalCache.loaders[stateModuleId])
 
       const stateEntry = globalCache.loaded[stateModuleId]
