@@ -5,7 +5,6 @@ import { globalCachePath } from '../core/paths'
 import { callPlugins } from '../utils/callPlugins'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { clearExports } from '../vm/moduleMap'
-import { cacheClientProps } from './cacheClientProps'
 import { cachePages } from './cachePages'
 import { createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
@@ -38,10 +37,6 @@ export async function createDevApp(
     createPageEndpoint(context, onError),
     isolatePages(context),
     cachePages(1, context.getCachedPage),
-    // By caching for 1 second, the client props will never go stale
-    // while still allowing isomorphic routers and what-not to access
-    // them without reloading them.
-    cacheClientProps(1),
     throttleRender({
       onError: error => [null, error],
     }),
