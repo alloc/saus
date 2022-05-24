@@ -208,9 +208,18 @@ function createRouteAPI(parent: Route) {
   return api
 }
 
-export function onRequest(hook: Endpoint.Function) {
-  routesModule.requestHooks ||= []
-  routesModule.requestHooks.push(hook)
+export function onRequest(hook: Endpoint.Function): void
+export function onRequest(enforce: 'pre', hook: Endpoint.Function): void
+export function onRequest(
+  arg1: 'pre' | Endpoint.Function,
+  hook?: Endpoint.Function
+) {
+  const hooks = (routesModule.requestHooks ||= [])
+  if (arg1 === 'pre') {
+    hooks.unshift(hook!)
+  } else {
+    hooks.push(arg1)
+  }
 }
 
 export function onResponse(hook: Endpoint.ResponseHook) {
