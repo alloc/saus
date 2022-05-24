@@ -1,9 +1,9 @@
 import getBody from 'raw-body'
 import type { App } from '../../app/types'
+import { makeRequestUrl } from '../../core/makeRequest'
+import { writeResponse } from '../../runtime/writeResponse'
 import { parseUrl } from '../../utils/url'
-import { makeRequestUrl } from '../makeRequest'
 import { connect } from './connect'
-import { writeResponse } from './writeResponse'
 
 interface RequestProps {
   app: App

@@ -3,12 +3,12 @@
 export * from './buffer'
 export * from './html'
 export * from './render'
-export * from './server'
 export * from './setup'
 export * from './endpoint'
 export * from './utils'
 
 export * from '../runtime/constants'
+export * from '../runtime/writeResponse'
 export * from '../app/cacheClientProps'
 export * from '../app/cachePages'
 export * from '../app/throttleRender'

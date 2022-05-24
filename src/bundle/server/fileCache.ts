@@ -1,6 +1,6 @@
 import { gray } from 'kleur/colors'
-import { getModuleUrl } from '../../bundle/getModuleUrl'
-import type { ClientAsset, ClientModule } from '../../bundle/types'
+import { getModuleUrl } from '../getModuleUrl'
+import type { ClientAsset, ClientModule } from '../types'
 import { debug } from './debug'
 
 export interface FileCache extends Map<string, string | ClientAsset> {

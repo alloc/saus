@@ -5,10 +5,9 @@ import getBody from 'raw-body'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
-import { Plugin, SausContext } from '../core'
-import { Endpoint } from '../core/endpoint'
+import { Endpoint, Plugin, SausContext } from '../core'
 import { makeRequestUrl } from '../core/makeRequest'
-import { writeResponse } from '../core/server/writeResponse'
+import { writeResponse } from '../runtime/writeResponse'
 import { parseUrl } from '../utils/url'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin => {

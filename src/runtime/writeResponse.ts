@@ -1,7 +1,7 @@
-import { ServerResponse } from 'http'
-import { Headers } from '../../http'
-import { writeBody } from '../../runtime/writeBody'
-import { Endpoint } from '../endpoint'
+import type { ServerResponse } from 'http'
+import type { Endpoint } from '../core/endpoint'
+import type { Headers } from '../http'
+import { writeBody } from './writeBody'
 
 export function writeResponse(
   res: ServerResponse,
