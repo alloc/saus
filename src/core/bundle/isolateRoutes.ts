@@ -68,7 +68,11 @@ export async function isolateRoutes(
       rewriteRouteImports(context.routesPath, routeImports),
       ...config.plugins.filter(p => {
         // CommonJS modules are externalized, so this plugin is just overhead.
-        return p.name !== 'commonjs'
+        if (p.name == 'commonjs') return false
+        // Leave static replacement up to the main build.
+        if (p.name == 'vite:define') return false
+
+        return true
       }),
     ],
     build: {
