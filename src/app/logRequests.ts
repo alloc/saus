@@ -3,6 +3,7 @@ import { Endpoint } from '../core/endpoint'
 import { setup } from '../core/setup'
 import type { Headers } from '../http'
 import { onRequest, onResponse } from '../routes'
+import { Falsy } from '../utils/types'
 
 export const logRequests = (
   options: {
@@ -10,13 +11,19 @@ export const logRequests = (
     response?: { headers?: boolean; prefix?: string }
     timestamp?: boolean
     elapsed?: boolean
+    ignore?: (req: Endpoint.Request) => boolean | Falsy
   } = {}
 ) =>
   // Use `setup` to attach our hooks as late as possible.
   setup(() => {
     const timing = new WeakMap<Endpoint.Request, number>()
+    const ignored = new WeakSet<Endpoint.Request>()
 
     onRequest('pre', req => {
+      if (options.ignore?.(req)) {
+        ignored.add(req)
+        return
+      }
       if (options.timestamp) {
         printTimestamp()
       }
@@ -31,11 +38,15 @@ export const logRequests = (
       timing.set(req, Date.now())
     })
 
-    onResponse((req, [status, headers]) => {
+    onResponse((req, res) => {
+      if (ignored.has(req)) {
+        return
+      }
+      const elapsed = options.elapsed && (Date.now() - timing.get(req)!) / 1e3
       if (options.timestamp) {
         printTimestamp()
       }
-      const elapsed = options.elapsed && (Date.now() - timing.get(req)!) / 1e3
+      const [status, headers] = res
       const statusColor = /^[23]/.test('' + status) ? kleur.green : kleur.red
       const message = [
         statusColor((options.response?.prefix || '◀︎') + ' ' + status),
