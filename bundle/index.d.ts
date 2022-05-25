@@ -1,7 +1,6 @@
 import { URLSearchParams } from 'url';
 import { AbortSignal } from 'node-abort-controller';
 import * as vite from 'vite';
-import { RouteParams as RouteParams$1 } from 'regexparam';
 import http from 'http';
 
 declare class HttpRedirect {
@@ -195,8 +194,8 @@ declare namespace Endpoint {
             /** Declare an endpoint that responds to specific `Accept` headers */
             (contentTypes: ContentTypes, fn: Function<Params>): Self;
             /** Declare a JSON endpoint */
-            <RoutePath extends string>(nestedPath: `${RoutePath}.json`, fn: JsonFunction<Params & RouteParams$1<RoutePath>>): Self;
-            <RoutePath extends string>(nestedPath: RoutePath, contentTypes: ContentTypes, fn: Function<Params & RouteParams$1<RoutePath>>): Self;
+            <RoutePath extends string>(nestedPath: `${RoutePath}.json`, fn: JsonFunction<Params & InferRouteParams<RoutePath>>): Self;
+            <RoutePath extends string>(nestedPath: RoutePath, contentTypes: ContentTypes, fn: Function<Params & InferRouteParams<RoutePath>>): Self;
         };
     };
     export type Result = Response | HttpRedirect | null | void;
@@ -242,9 +241,9 @@ declare function route<Module extends object>(path: 'error', load: RouteLoader<M
     error: any;
 }>): void;
 /** Define a route */
-declare function route<RoutePath extends string, Module extends object>(path: RoutePath, load?: RouteLoader<Module>, config?: RouteConfig<Module, RouteParams$1<RoutePath>>): Route.API<RouteParams$1<RoutePath>>;
+declare function route<RoutePath extends string, Module extends object>(path: RoutePath, load?: RouteLoader<Module>, config?: RouteConfig<Module, InferRouteParams<RoutePath>>): Route.API<InferRouteParams<RoutePath>>;
 /** Define a route */
-declare function route<RoutePath extends string, Module extends object>(path: RoutePath, config: RouteConfig<Module, RouteParams$1<RoutePath>>): Route.API<RouteParams$1<RoutePath>>;
+declare function route<RoutePath extends string, Module extends object>(path: RoutePath, config: RouteConfig<Module, InferRouteParams<RoutePath>>): Route.API<InferRouteParams<RoutePath>>;
 
 declare type CacheControl = {
     /** The string used to identify this entry */
@@ -702,6 +701,25 @@ interface SausContext extends RenderModule, RoutesModule, HtmlContext {
 
 declare type RuntimeHook = (config: RuntimeConfig) => OneOrMany<App.Plugin | Falsy> | void;
 
+declare type InferRouteParams<T extends string> = T extends `${infer Prev}/*/${infer Rest}` ? InferRouteParams<Prev> & {
+    wild: string;
+} & InferRouteParams<Rest> : T extends `${string}:${infer P}.${string}/${infer Rest}` ? {
+    [K in P]: string;
+} & InferRouteParams<Rest> : T extends `${string}:${infer P}?/${infer Rest}` ? {
+    [K in P]?: string;
+} & InferRouteParams<Rest> : T extends `${string}:${infer P}/${infer Rest}` ? {
+    [K in P]: string;
+} & InferRouteParams<Rest> : T extends `${string}:${infer P}.${string}` ? {
+    [K in P]: string;
+} : T extends `${string}:${infer P}?` ? {
+    [K in P]?: string;
+} : T extends `${string}:${infer P}` ? {
+    [K in P]: string;
+} : T extends `${string}*.${string}` ? {
+    wild: string;
+} : T extends `${string}*` ? {
+    wild: string;
+} : {};
 interface RouteModule extends Record<string, any> {
 }
 declare type RouteLoader<T extends object = RouteModule> = () => Promise<T>;
@@ -1078,6 +1096,19 @@ interface RequestProps {
 }
 declare const servePages: connect.Middleware<RequestProps>;
 
-declare const servePublicDir: (config: RuntimeConfig, publicDir?: string, ignore?: RegExp) => connect.Middleware;
+interface Options {
+    /** @default runtimeConfig.publicDir */
+    root?: string;
+    /** Prevent certain files from being served */
+    ignore?: RegExp;
+    /**
+     * Set the `max-age` Cache-Control directive. \
+     * Set to `Infinity` to use the `immutable` directive.
+     */
+    maxAge?: number;
+    /** Use the `stale-while-revalidate` cache strategy */
+    swr?: boolean | number;
+}
+declare function servePublicDir(options?: Options): connect.Middleware;
 
 export { ClientAsset, ClientModule, ClientModuleMap, FileCache, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
