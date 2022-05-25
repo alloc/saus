@@ -42,11 +42,14 @@ export const logRequests = (
       if (ignored.has(req)) {
         return
       }
+      const [status, headers] = res
+      if (status == null) {
+        return
+      }
       const elapsed = options.elapsed && (Date.now() - timing.get(req)!) / 1e3
       if (options.timestamp) {
         printTimestamp()
       }
-      const [status, headers] = res
       const statusColor = /^[23]/.test('' + status) ? kleur.green : kleur.red
       const message = [
         statusColor((options.response?.prefix || '◀︎') + ' ' + status),
