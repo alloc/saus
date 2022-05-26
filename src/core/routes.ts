@@ -212,6 +212,7 @@ export async function generateRoutePaths(
   const { path: onPath, error: onError } = handlers
 
   for (const route of context.routes) {
+    if (!route.moduleId) continue
     if (route.paths) {
       if (!route.keys.length) {
         onError({
