@@ -5,7 +5,7 @@ import { HttpOptions } from '../types'
 
 export function startRequest(
   opts: HttpOptions,
-  trace: Error,
+  trace: Error & { status?: number },
   reject: (e: any) => void,
   resolve: (resp: Response) => void,
   redirectCount: number,
@@ -27,12 +27,13 @@ export function startRequest(
         return onRedirect(resp.headers.location)
       }
       const status = resp.statusCode!
-      if (status >= 200 && status < 400) {
+      if (opts.allowBadStatus || (status >= 200 && status < 400)) {
         return resolve(
           new Response(Buffer.concat(chunks), status, resp.headers)
         )
       }
       trace.message = `Request to ${opts.href} ended with status code ${resp.statusCode}.`
+      trace.status = resp.statusCode
       reject(trace)
     })
   })

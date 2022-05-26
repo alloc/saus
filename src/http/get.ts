@@ -3,15 +3,12 @@ import type { CacheControl } from '../core/withCache'
 import { getCachedState } from '../runtime/getCachedState'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
-import { http } from './http'
+import { http, HttpRequestOptions } from './http'
 import { Response } from './response'
 import { responseCache } from './responseCache'
 import { URL } from './types'
 
-export type GetOptions = {
-  headers?: Record<string, string>
-  timeout?: number
-}
+export interface GetOptions extends Omit<HttpRequestOptions, 'body'> {}
 
 /**
  * Do one thing, do it well.

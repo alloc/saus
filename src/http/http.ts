@@ -3,12 +3,13 @@ import { writeBody } from '../runtime/writeBody'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
 import { urlToHttpOptions } from './internal/urlToHttpOptions'
-import { Response } from './response'
+import { Headers, Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
-export type HttpRequestOptions = {
+export interface HttpRequestOptions
+  extends Pick<HttpOptions, 'allowBadStatus'> {
   body?: Endpoint.ResponseBody
-  headers?: Record<string, string>
+  headers?: Headers
   timeout?: number
 }
 
@@ -65,6 +66,7 @@ function createRequest(url: string | URL, opts?: HttpRequestOptions) {
   if (opts) {
     req.headers = opts.headers
     req.timeout = opts.timeout
+    req.allowBadStatus = opts.allowBadStatus
   }
   return req
 }

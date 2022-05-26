@@ -1,6 +1,7 @@
 import md5Hex from 'md5-hex'
+import { Headers } from './response'
 
-export function getCacheKey(url: string, headers?: Record<string, string>) {
+export function getCacheKey(url: string, headers?: Headers) {
   let cacheKey = 'GET ' + url
   if (headers) {
     const keys = Object.keys(headers)

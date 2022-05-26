@@ -10,6 +10,11 @@ export interface HttpOptions extends http.RequestOptions {
   search?: string
   pathname?: string
   href?: string
+  /**
+   * If the response has a status code *not* between 200 and 399,
+   * resolve the promise normally instead of rejecting it.
+   */
+  allowBadStatus?: boolean
 }
 
 export const URL = (globalThis as any).URL as typeof import('url').URL
