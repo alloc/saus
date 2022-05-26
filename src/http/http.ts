@@ -6,11 +6,11 @@ import { urlToHttpOptions } from './internal/urlToHttpOptions'
 import { Headers, Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
-export interface HttpRequestOptions
-  extends Pick<HttpOptions, 'allowBadStatus'> {
+type NodeHttpOptions = 'agent' | 'allowBadStatus' | 'signal' | 'timeout'
+
+export interface HttpRequestOptions extends Pick<HttpOptions, NodeHttpOptions> {
   body?: Endpoint.ResponseBody
   headers?: Headers
-  timeout?: number
 }
 
 /**
@@ -64,9 +64,8 @@ function createRequest(url: string | URL, opts?: HttpRequestOptions) {
   }
   const req = urlToHttpOptions(url)
   if (opts) {
-    req.headers = opts.headers
-    req.timeout = opts.timeout
-    req.allowBadStatus = opts.allowBadStatus
+    const { body, ...assignedOpts } = opts
+    Object.assign(req, assignedOpts)
   }
   return req
 }
