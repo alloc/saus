@@ -6,7 +6,7 @@ const debug = createDebug('saus:cache')
 
 const ssrPrefix = 'saus-ssr:'
 const ssrLoaderMap: Record<string, ModuleLoader<any>> = {}
-const ssrPendingExports = new Map<string, any>()
+const ssrPendingExports = new Map<string, ModuleExports>()
 
 /** Clear all loaded SSR modules */
 export function ssrClearCache() {
@@ -59,8 +59,9 @@ export function ssrImport<T = ModuleExports>(
 
 /** Require a SSR module defined with `__d` */
 export function __requireAsync(id: string) {
-  if (importerStack.includes(id)) {
-    return ssrPendingExports.get(id)
+  const pendingExports = ssrPendingExports.get(id)
+  if (pendingExports) {
+    return Promise.resolve(pendingExports)
   }
   return ssrImport(id, true)
 }
