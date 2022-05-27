@@ -1,6 +1,7 @@
 import createDebug from 'debug'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
+import { noop } from '../utils/noop'
 
 const debug = createDebug('saus:cache')
 
@@ -9,61 +10,86 @@ const ssrLoaderMap: Record<string, ModuleLoader<any>> = {}
 const ssrPendingExports = new Map<string, ModuleExports>()
 
 /** Clear all loaded SSR modules */
-export function ssrClearCache() {
+export async function ssrClearCache() {
+  while (mainModule) {
+    await mainModule
+  }
   debug('Clearing the module cache')
   clearCachedState(key => key.startsWith(ssrPrefix))
 }
 
-const importerStack: string[] = []
+let mainModule: Promise<void> | null = null
+let importerStack: string[] = []
 
 export const getCurrentModule = (): string | undefined =>
   importerStack[importerStack.length - 1]
 
-export function ssrImport<T = ModuleExports>(
+function importModule<T = ModuleExports>(
   id: string,
-  isRequire?: boolean
+  isMain?: boolean
 ): Promise<T> {
   const loader = ssrLoaderMap[id]
   if (!loader) {
     throw Error(`Module not found: "${id}"`)
   }
   return getCachedState(ssrPrefix + id, async function ssrLoadModule() {
+    // To avoid stepping on the toes of other top-level imports,
+    // we need to avoid loading them in parallel.
+    while (isMain && mainModule) {
+      await mainModule
+    }
     const exports = {} as T & { __esModule?: boolean }
     try {
+      importerStack.push(id)
       ssrPendingExports.set(id, exports)
-      if (isRequire) {
-        importerStack.push(id)
+
+      const isCommonJS = loader.length > 1
+      const cjsModule = isCommonJS ? { exports } : null!
+      const loading = isCommonJS ? loader(exports, cjsModule) : loader(exports)
+      if (isMain) {
+        // Postpone other top-level imports.
+        mainModule = Promise.resolve(loading)
+          .catch(noop)
+          .then(() => {
+            mainModule = null
+          })
       }
 
-      // CommonJS loader
-      if (loader.length > 1) {
-        const module = { exports }
-        await loader(exports, module)
-        return module.exports
-      }
+      // Wait for the module and its static dependencies.
+      await loading
 
-      // ESM loader
-      await loader(exports)
+      // Return the module's exports.
+      if (isCommonJS) {
+        return cjsModule.exports
+      }
       if (!exports.__esModule) {
         Object.defineProperty(exports, '__esModule', { value: true })
       }
       return exports
     } finally {
       ssrPendingExports.delete(id)
-      if (isRequire) {
-        importerStack.pop()
-      }
+      importerStack.pop()
     }
   })
 }
 
-/** Require a SSR module defined with `__d` */
+/**
+ * Safely import a module without interrupting other modules that
+ * may be in the process of loading.
+ */
+export const ssrImport = <T = ModuleExports>(id: string): Promise<T> =>
+  importModule(id, true)
+
+/**
+ * This should only be used for *static* imports within a module
+ * loader defined with the `__d` function.
+ */
 export function __requireAsync(id: string) {
   const pendingExports = ssrPendingExports.get(id)
   if (pendingExports) {
     return Promise.resolve(pendingExports)
   }
-  return ssrImport(id, true)
+  return importModule(id)
 }
 
 type Promisable<T> = T | PromiseLike<T>

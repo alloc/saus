@@ -34,7 +34,7 @@ function isolatePages(context: AppContext): App.Plugin {
     renderPage(url, route, options = {}) {
       const callerSetup = options.setup
       options.setup = async (pageContext: PageContext) => {
-        ssrClearCache()
+        await ssrClearCache()
         defineClientEntry({
           BASE_URL: options.isDebug ? debugBase : '/',
         })

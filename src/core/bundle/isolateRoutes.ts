@@ -695,9 +695,7 @@ function isolateRenderers(
 
       const chunkId = '/' + relative(config.root, chunkPath)
       rendererList.push(
-        `[${JSON.stringify(
-          func.route
-        )}, () => ${requireAsyncId}("${chunkId}")],`
+        `[${JSON.stringify(func.route)}, () => ssrImport("${chunkId}")],`
       )
     }
   }
@@ -705,7 +703,7 @@ function isolateRenderers(
   modules.addModule({
     id: toDevPath(virtualRenderPath, config.root),
     code: endent`
-      import { addRenderers, ${requireAsyncId} } from "saus/core"
+      import { addRenderers, ssrImport } from "saus/core"
 
       addRenderers([
         ${rendererList.join('\n')}
