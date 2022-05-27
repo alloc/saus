@@ -14,7 +14,7 @@ export const serveCachedFiles =
       cache.get(req.url.endsWith('/') ? req.url.slice(0, -1) : req.url + '/')
 
     if (file == null) {
-      return next()
+      return process.nextTick(next)
     }
 
     debug(gray('cached'), req.url)
@@ -31,5 +31,5 @@ export const serveCachedFiles =
       })
       res.write(file)
     }
-    return res.end()
+    res.end()
   }
