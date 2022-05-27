@@ -58,6 +58,8 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           () => getBody(req)
         )
 
+        url.object = req
+
         await processRequest(context, url, res, next).catch(error => {
           onError(error)
 

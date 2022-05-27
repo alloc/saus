@@ -78,6 +78,12 @@ export namespace Endpoint {
     readonly method: string
     readonly headers: Readonly<Headers>
     readonly read: () => Promise<Buffer>
+    /**
+     * The platform-specific request object related to this URL. \
+     * For example, it's an `IncomingMessage` instance when using a
+     * basic Node.js server.
+     */
+    object?: any
   }
 
   export type ResponseHook<App = any> = (

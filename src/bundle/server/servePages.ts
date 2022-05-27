@@ -17,6 +17,7 @@ export const servePages: connect.Middleware<RequestProps> =
       req.headers,
       () => getBody(req)
     )
+    url.object = req
     const [status, headers, body] = await req.app.callEndpoints(url)
     if (status == null) {
       return next()
