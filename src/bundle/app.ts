@@ -33,21 +33,23 @@ function isolatePages(context: AppContext): App.Plugin {
   return ({ renderPage }) => ({
     renderPage(url, route, options = {}) {
       const callerSetup = options.setup
-      options.setup = async (pageContext: PageContext) => {
-        await ssrClearCache()
-        defineClientEntry({
-          BASE_URL: options.isDebug ? debugBase : '/',
-        })
-        context.renderers = []
-        context.defaultRenderer = undefined
-        context.beforeRenderHooks = []
-        await loadRenderers(url.path)
-        Object.assign(pageContext, context)
-        if (callerSetup) {
-          await callerSetup(pageContext, route, url)
-        }
-      }
-      return renderPage(url, route, options)
+      return renderPage(url, route, {
+        ...options,
+        async setup(pageContext: PageContext) {
+          await ssrClearCache()
+          defineClientEntry({
+            BASE_URL: options.isDebug ? debugBase : '/',
+          })
+          context.renderers = []
+          context.defaultRenderer = undefined
+          context.beforeRenderHooks = []
+          await loadRenderers(url.path)
+          Object.assign(pageContext, context)
+          if (callerSetup) {
+            await callerSetup(pageContext, route, url)
+          }
+        },
+      })
     },
   })
 }
