@@ -2,7 +2,6 @@ import fs from 'fs'
 import { blue, cyan, dim, gray, green, magenta, yellow } from 'kleur/colors'
 import path from 'path'
 import type { PageBundle } from '../bundle/types'
-import runtimeConfig from '../core/runtimeConfig'
 import { HttpRedirect } from '../http'
 
 /**
@@ -81,7 +80,7 @@ export function printFiles(
   files: Record<string, number>,
   outDir: string,
   chunkLimit = 500,
-  debugBase = runtimeConfig.debugBase
+  debugBase?: string
 ) {
   if (!outDir.endsWith('/')) {
     outDir += '/'

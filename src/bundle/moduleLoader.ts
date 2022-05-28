@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import config from './core/runtimeConfig'
 import inlinedModules from './inlinedModules'
+import config from './runtimeConfig'
 
 type Promisable<T> = T | PromiseLike<T>
 

@@ -1,5 +1,5 @@
 import { createHtmlResolver, createVisitor } from '@saus/html'
-import config from './core/runtimeConfig'
+import config from './runtimeConfig'
 
 /**
  * Scan the `<body>` tree for internal links to be rewritten

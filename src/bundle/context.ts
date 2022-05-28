@@ -1,9 +1,9 @@
 import type { AppContext } from '../app/types'
 import type { MutableRuntimeConfig } from '../core/config'
 import { withCache } from '../core/withCache'
-import config from './core/runtimeConfig'
 import functions from './functions'
 import moduleMap from './moduleMap'
+import config from './runtimeConfig'
 
 export const context: AppContext = {
   beforeRenderHooks: [],

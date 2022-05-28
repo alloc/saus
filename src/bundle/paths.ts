@@ -1,7 +1,7 @@
 import { generateRoutePaths } from '../core/routes'
 import { getPagePath } from '../utils/getPagePath'
 import { context } from './context'
-import config from './core/runtimeConfig'
+import config from './runtimeConfig'
 import { ssrImport } from './ssrModules'
 
 const { onError } = context

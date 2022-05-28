@@ -3,7 +3,7 @@ import fs from 'fs'
 import { gray } from 'kleur/colors'
 import * as mime from 'mrmime'
 import path from 'path'
-import runtimeConfig from '../core/runtimeConfig'
+import runtimeConfig from '../runtimeConfig'
 import { connect } from './connect'
 import { debug } from './debug'
 

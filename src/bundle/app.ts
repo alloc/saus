@@ -2,10 +2,10 @@ import { createApp as create } from '../app/createApp'
 import type { App, AppContext, PageContext } from '../app/types'
 import { LazyPromise } from '../utils/LazyPromise'
 import { context } from './context'
-import config from './core/runtimeConfig'
 import { defineClientEntry } from './defineClientEntry'
 import { createPageFactory } from './pageFactory'
 import { loadRenderers } from './render'
+import config from './runtimeConfig'
 import { ssrClearCache, ssrImport } from './ssrModules'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
