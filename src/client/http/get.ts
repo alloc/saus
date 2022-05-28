@@ -12,6 +12,7 @@ export async function get(url: string, options?: GetOptions) {
   }
   const resp = await fetch(url, {
     ...options,
+    headers: options?.headers as HeadersInit,
     signal,
   })
   if (resp.status >= 200 && resp.status < 400) {
