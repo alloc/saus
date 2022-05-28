@@ -1,7 +1,7 @@
 import endent from 'endent'
 import { Plugin, RenderedPage, SausConfig, SausContext, vite } from '../core'
 import { debug } from '../core/debug'
-import { CommonServerProps } from '../core/renderPageState'
+import { CommonServerProps } from '../core/getModuleRenderer'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'

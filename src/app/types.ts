@@ -14,11 +14,12 @@ import type {
   WrappedNode,
 } from '../core'
 import type { Endpoint } from '../core/endpoint'
+import type { ModuleRenderer } from '../core/getModuleRenderer'
 import type { ParsedHead } from '../utils/parseHead'
 import type { Falsy } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
 
-export interface App {
+export interface App extends ModuleRenderer {
   config: RuntimeConfig
   resolveRoute: RouteResolver
   getEndpoints: Endpoint.Generator | null

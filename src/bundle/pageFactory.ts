@@ -1,7 +1,5 @@
 import path from 'path'
 import { App } from '../app/types'
-import { renderPageState } from '../core/renderPageState'
-import { renderStateModule } from '../core/renderStateModule'
 import { globalCache } from '../runtime/cache'
 import { stateModuleBase } from '../runtime/constants'
 import { getPageFilename } from '../utils/getPageFilename'
@@ -36,7 +34,7 @@ for (const id in inlinedModules) {
 }
 
 export const createPageFactory: App.Plugin = app => {
-  const { config } = app
+  const { config, renderPageState, renderStateModule } = app
 
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''

@@ -1,8 +1,7 @@
 import etag from 'etag'
 import { Endpoint } from '../core/endpoint'
+import { ModuleRenderer } from '../core/getModuleRenderer'
 import { makeRequestUrl } from '../core/makeRequest'
-import { renderPageState } from '../core/renderPageState'
-import { renderStateModule } from '../core/renderStateModule'
 import type { Headers } from '../http'
 import { route } from '../routes'
 import { globalCache } from '../runtime/cache'
@@ -12,9 +11,12 @@ import { stateModulesById } from '../runtime/stateModules'
 import { parseUrl } from '../utils/url'
 import type { AppContext } from './types'
 
-export function defineBuiltinRoutes(context: AppContext) {
-  const indexFileRE = /(^|\/)index$/
+const indexFileRE = /(^|\/)index$/
 
+export function defineBuiltinRoutes(
+  context: AppContext,
+  renderer: ModuleRenderer
+) {
   // Page-based entry modules
   route(`/*.html.js`).get(async (req, app) => {
     const pagePath = '/' + req.wild.replace(indexFileRE, '')
@@ -30,7 +32,7 @@ export function defineBuiltinRoutes(context: AppContext) {
         const module = `throw Object.assign(Error(), ${JSON.stringify(props)})`
         sendModule(req, module)
       } else if (page?.props) {
-        const module = renderPageState(page, context.helpersId)
+        const module = renderer.renderPageState(page, context.helpersId)
         sendModule(req, module)
       }
     }
@@ -44,7 +46,7 @@ export function defineBuiltinRoutes(context: AppContext) {
 
       const stateEntry = globalCache.loaded[stateModuleId]
       if (stateEntry) {
-        const module = renderStateModule(stateModuleId, stateEntry)
+        const module = renderer.renderStateModule(stateModuleId, stateEntry)
         sendModule(req, module)
       }
     })

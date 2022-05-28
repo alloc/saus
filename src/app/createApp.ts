@@ -4,6 +4,7 @@ import { CommonClientProps, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
 import { debug } from '../core/debug'
 import { Endpoint } from '../core/endpoint'
+import { getModuleRenderer } from '../core/getModuleRenderer'
 import { setRoutesModule } from '../core/global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../core/html'
 import { makeRequest, makeRequestUrl } from '../core/makeRequest'
@@ -51,6 +52,7 @@ export function createApp(
   plugins: App.Plugin[] = []
 ): App {
   const { config, onError, profile, functions } = context
+  const moduleRenderer = getModuleRenderer(context)
 
   // Let the app be recreated for every request (if so desired)
   // by avoiding the creation of duplicate routes. This can be
@@ -63,7 +65,7 @@ export function createApp(
   // Let runtime hooks inject routes, HTML processors, and page state.
   setRoutesModule(context)
   callRuntimeHooks(context.runtimeHooks, plugins, config, onError)
-  defineBuiltinRoutes(context)
+  defineBuiltinRoutes(context, moduleRenderer)
   setRoutesModule(null)
 
   let {
@@ -242,6 +244,7 @@ export function createApp(
     callEndpoints,
     loadClientProps,
     renderPage,
+    ...moduleRenderer,
     preProcessHtml,
     postProcessHtml:
       htmlProcessors &&
