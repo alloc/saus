@@ -15,6 +15,11 @@ export interface HttpOptions extends http.RequestOptions {
    * resolve the promise normally instead of rejecting it.
    */
   allowBadStatus?: boolean
+  /**
+   * Instead of buffering the response data into memory, this
+   * function will be called with the response object.
+   */
+  sink?: (resp: http.IncomingMessage) => void
 }
 
 export const URL = (globalThis as any).URL as typeof import('url').URL

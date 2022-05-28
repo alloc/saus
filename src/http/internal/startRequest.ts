@@ -14,10 +14,15 @@ export function startRequest(
   const { request } = opts.protocol == 'http:' ? http : https
 
   const client = request(opts, resp => {
-    const chunks: Buffer[] = []
-    resp.on('data', chunk => {
-      chunks.push(chunk)
-    })
+    let chunks: Buffer[]
+    if (opts.sink) {
+      opts.sink(resp)
+    } else {
+      chunks = []
+      resp.on('data', chunk => {
+        chunks.push(chunk)
+      })
+    }
     resp.on('error', e => {
       trace.message = e.message
       reject(trace)
@@ -29,7 +34,11 @@ export function startRequest(
       const status = resp.statusCode!
       if (opts.allowBadStatus || (status >= 200 && status < 400)) {
         return resolve(
-          new Response(Buffer.concat(chunks), status, resp.headers)
+          new Response(
+            chunks ? Buffer.concat(chunks) : Buffer.alloc(0),
+            status,
+            resp.headers
+          )
         )
       }
       trace.message = `Request to ${opts.href} ended with status code ${resp.statusCode}.`

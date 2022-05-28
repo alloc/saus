@@ -6,9 +6,9 @@ import { urlToHttpOptions } from './internal/urlToHttpOptions'
 import { Headers, Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
-type NodeHttpOptions = 'agent' | 'allowBadStatus' | 'signal' | 'timeout'
+type ForwardedKeys = 'agent' | 'allowBadStatus' | 'signal' | 'sink' | 'timeout'
 
-export interface HttpRequestOptions extends Pick<HttpOptions, NodeHttpOptions> {
+export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
   body?: Endpoint.ResponseBody
   headers?: Headers
 }
