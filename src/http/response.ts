@@ -1,9 +1,9 @@
 import type { Buffer } from '../client/buffer'
 
 export interface CommonHeaders {
-  'Cache-Control'?: string
-  'Content-Length'?: string
-  'Content-Type'?: string
+  'cache-control'?: string
+  'content-length'?: string
+  'content-type'?: string
 }
 
 export type Headers = CommonHeaders &
