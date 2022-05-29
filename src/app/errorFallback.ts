@@ -41,8 +41,10 @@ export function renderErrorFallback(
     <link rel="stylesheet" href="/@id/saus/src/app/errorFallback.css?direct">
     <script type="module" src="/@id/saus/src/app/errorFallbackClient.js"></script>
     <body ${ssr ? '' : 'style="display: none"'}>
-      <h1>An error occurred while the ${
-        ssr ? 'server was rendering' : 'client was hydrating'
+      <h1>${
+        ssr
+          ? 'The server caught an error while rendering'
+          : 'The client caught an error while hydrating'
       }.</h1>
       <small>
         ${renderLoadingIcon('class="waiting"')}
