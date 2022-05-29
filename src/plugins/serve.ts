@@ -1,5 +1,4 @@
 import { ServerResponse } from 'http'
-import { gray, green, red } from 'kleur/colors'
 import os from 'os'
 import getBody from 'raw-body'
 import { renderErrorFallback } from '../app/errorFallback'
@@ -101,14 +100,6 @@ async function processRequest(
   if (status == null) {
     process.nextTick(next)
   } else {
-    const statusColor = /^[23]/.test('' + status) ? green : red
-    const contentLength = headers && (headers['content-length'] as string)
-    context.logger.info(
-      statusColor('⨠ ' + status) +
-        ` ${req} ${
-          contentLength ? gray((+contentLength / 1024).toFixed(2) + 'KiB') : ''
-        }`
-    )
     writeResponse(res, status, headers, body)
   }
 }
