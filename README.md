@@ -1,3 +1,8 @@
+### Excuse the dust.
+Saus is still in development (see the `next` branch) and is wholly undocumented for the foreseeable future. You can help by sponsoring [@aleclarson](https://github.com/sponsors/aleclarson), so he can spend more time on getting Saus ready for general availability!
+
+---
+
 # saus
 
 [![npm](https://img.shields.io/npm/v/saus.svg)](https://www.npmjs.com/package/saus)
