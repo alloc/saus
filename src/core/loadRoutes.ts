@@ -42,6 +42,8 @@ export async function loadRoutes(
     htmlProcessors: undefined,
     routes: [],
     runtimeHooks: [],
+    requestHooks: [],
+    responseHooks: [],
     ssrRequire,
   })
   try {
