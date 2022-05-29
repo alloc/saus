@@ -10,4 +10,6 @@ const extraction = extractModules({
 extraction.on('packageCreated', pkg => {
   pkg.name = '@saus/marko-parser'
   pkg.main = 'src/babel-plugin/parser.js'
+  pkg.type = undefined
+  pkg.dependencies['@babel/core'] = '^7.0.0'
 })

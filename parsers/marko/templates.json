@@ -1,0 +1,110 @@
+{
+  "TodoApp": {
+    "name": "TodoApp",
+    "body": [
+      {
+        "type": {
+          "id": "TodoStore"
+        },
+        "ref": "const {\n  todos,\n  filter,\n  setFilter,\n  addNewTodo,\n  updateTodo,\n  removeTodo,\n  toggleAllTodosCompleted,\n  clearCompleted\n }"
+      },
+      {
+        "type": "section",
+        "props": [
+          {
+            "name": "class",
+            "value": "todoapp"
+          }
+        ]
+      },
+      {
+        "type": "style"
+      }
+    ]
+  },
+  "TodoHeader": {
+    "name": "TodoHeader",
+    "body": [
+      {
+        "type": "header",
+        "props": [
+          {
+            "name": "class",
+            "value": "header"
+          }
+        ]
+      },
+      {
+        "type": "style"
+      }
+    ],
+    "props": [
+      {
+        "id": "addNewTodo"
+      }
+    ]
+  },
+  "TodoItem": {
+    "name": "TodoItem",
+    "body": [
+      {
+        "statement": "let isEditing = false"
+      },
+      {
+        "statement": "let editingTitle = \"\""
+      },
+      {
+        "statement": "const saveEdit = () => {\n  if (isEditing) {\n    const el = title();\n    updateTodo(todo.id, { title: el.value });\n    isEditing = false;\n  }\n}"
+      },
+      {
+        "type": "li",
+        "props": [
+          {
+            "name": "class",
+            "value": {
+              "expression": "{ completed: todo.completed, editing: isEditing }"
+            }
+          }
+        ]
+      }
+    ],
+    "props": [
+      {
+        "id": "todo"
+      },
+      {
+        "id": "updateTodo"
+      },
+      {
+        "id": "removeTodo"
+      }
+    ]
+  },
+  "TodoStore": {
+    "name": "TodoStore",
+    "body": [
+      {
+        "statement": "let nextId = 1"
+      },
+      {
+        "statement": "let todos = []"
+      },
+      {
+        "statement": "let filter = \"all\""
+      },
+      {
+        "type": {
+          "id": "return"
+        },
+        "props": [
+          {
+            "name": "default",
+            "value": {
+              "expression": "{\n  todos,\n  filter,\n  setFilter(f) { filter = f },\n  updateTodo(todoId, newProps) {\n    todos = todos.map(todo => {\n      if (todo.id !== todoId) return todo;\n      return { ...todo, ...newProps }\n    })\n  },\n  clearCompleted() {\n    todos = todos.filter(todo => !todo.completed);\n  },\n  removeTodo(todoId) {\n    todos = todos.filter(todo => todo.id !== todoId);\n  },\n  toggleAllTodosCompleted(completed) {\n    todos = todos.map((todo) => {\n      if (todo.completed === completed) return todo;\n      return { ...todo, completed };\n    });\n  },\n  addNewTodo(todoData) {\n    todos = [...todos, {\n      title: todoData.title,\n      id: 'c' + (nextId++),\n      completed: false\n    }];\n  }\n}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

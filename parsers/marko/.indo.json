@@ -1,0 +1,7 @@
+{
+  "repos": {
+    "vendor/marko-todomvc": {
+      "url": "https://github.com/ryansolid/marko-todomvc.git"
+    }
+  }
+}

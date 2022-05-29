@@ -1,0 +1,401 @@
+{
+  "type": "Program",
+  "sourceType": "module",
+  "body": [
+    {
+      "type": "MarkoTag",
+      "name": {
+        "type": "StringLiteral",
+        "value": "attrs",
+        "start": 1,
+        "end": 6,
+        "loc": {
+          "start": {
+            "line": 1,
+            "column": 1
+          },
+          "end": {
+            "line": 1,
+            "column": 6
+          }
+        }
+      },
+      "attributes": [],
+      "body": {
+        "type": "MarkoTagBody",
+        "body": [],
+        "params": []
+      },
+      "arguments": null,
+      "var": {
+        "type": "ObjectPattern",
+        "start": 7,
+        "end": 18,
+        "loc": {
+          "start": {
+            "line": 1,
+            "column": 7,
+            "index": 7
+          },
+          "end": {
+            "line": 1,
+            "column": 18,
+            "index": 18
+          }
+        },
+        "properties": [
+          {
+            "type": "ObjectProperty",
+            "start": 9,
+            "end": 11,
+            "loc": {
+              "start": {
+                "line": 1,
+                "column": 9,
+                "index": 9
+              },
+              "end": {
+                "line": 1,
+                "column": 11,
+                "index": 11
+              }
+            },
+            "method": false,
+            "key": {
+              "type": "Identifier",
+              "start": 9,
+              "end": 11,
+              "loc": {
+                "start": {
+                  "line": 1,
+                  "column": 9,
+                  "index": 9
+                },
+                "end": {
+                  "line": 1,
+                  "column": 11,
+                  "index": 11
+                },
+                "identifierName": "id"
+              },
+              "name": "id"
+            },
+            "computed": false,
+            "shorthand": true,
+            "value": {
+              "type": "Identifier",
+              "start": 9,
+              "end": 11,
+              "loc": {
+                "start": {
+                  "line": 1,
+                  "column": 9,
+                  "index": 9
+                },
+                "end": {
+                  "line": 1,
+                  "column": 11,
+                  "index": 11
+                },
+                "identifierName": "id"
+              },
+              "name": "id"
+            },
+            "extra": {
+              "shorthand": true
+            }
+          },
+          {
+            "type": "ObjectProperty",
+            "start": 13,
+            "end": 16,
+            "loc": {
+              "start": {
+                "line": 1,
+                "column": 13,
+                "index": 13
+              },
+              "end": {
+                "line": 1,
+                "column": 16,
+                "index": 16
+              }
+            },
+            "method": false,
+            "key": {
+              "type": "Identifier",
+              "start": 13,
+              "end": 16,
+              "loc": {
+                "start": {
+                  "line": 1,
+                  "column": 13,
+                  "index": 13
+                },
+                "end": {
+                  "line": 1,
+                  "column": 16,
+                  "index": 16
+                },
+                "identifierName": "msg"
+              },
+              "name": "msg"
+            },
+            "computed": false,
+            "shorthand": true,
+            "value": {
+              "type": "Identifier",
+              "start": 13,
+              "end": 16,
+              "loc": {
+                "start": {
+                  "line": 1,
+                  "column": 13,
+                  "index": 13
+                },
+                "end": {
+                  "line": 1,
+                  "column": 16,
+                  "index": 16
+                },
+                "identifierName": "msg"
+              },
+              "name": "msg"
+            },
+            "extra": {
+              "shorthand": true
+            }
+          }
+        ]
+      },
+      "start": 0,
+      "end": 20,
+      "loc": {
+        "start": {
+          "line": 1,
+          "column": 0
+        },
+        "end": {
+          "line": 2,
+          "column": 0
+        }
+      }
+    },
+    {
+      "type": "MarkoTag",
+      "name": {
+        "type": "StringLiteral",
+        "value": "span",
+        "start": 22,
+        "end": 26,
+        "loc": {
+          "start": {
+            "line": 2,
+            "column": 1
+          },
+          "end": {
+            "line": 2,
+            "column": 5
+          }
+        }
+      },
+      "attributes": [
+        {
+          "type": "MarkoAttribute",
+          "name": "id",
+          "value": {
+            "type": "Identifier",
+            "start": 30,
+            "end": 32,
+            "loc": {
+              "start": {
+                "line": 2,
+                "column": 9,
+                "index": 30
+              },
+              "end": {
+                "line": 2,
+                "column": 11,
+                "index": 32
+              },
+              "identifierName": "id"
+            },
+            "name": "id",
+            "comments": [],
+            "errors": []
+          },
+          "modifier": null,
+          "arguments": null,
+          "default": false,
+          "bound": false,
+          "start": 27,
+          "end": 32,
+          "loc": {
+            "start": {
+              "line": 2,
+              "column": 6
+            },
+            "end": {
+              "line": 2,
+              "column": 11
+            }
+          }
+        },
+        {
+          "type": "MarkoAttribute",
+          "name": "class",
+          "value": {
+            "type": "StringLiteral",
+            "start": 39,
+            "end": 48,
+            "loc": {
+              "start": {
+                "line": 2,
+                "column": 18,
+                "index": 39
+              },
+              "end": {
+                "line": 2,
+                "column": 27,
+                "index": 48
+              }
+            },
+            "extra": {
+              "rawValue": "message",
+              "raw": "\"message\""
+            },
+            "value": "message",
+            "comments": [],
+            "errors": []
+          },
+          "modifier": null,
+          "arguments": null,
+          "default": false,
+          "bound": false,
+          "start": 33,
+          "end": 48,
+          "loc": {
+            "start": {
+              "line": 2,
+              "column": 12
+            },
+            "end": {
+              "line": 2,
+              "column": 27
+            }
+          }
+        },
+        {
+          "type": "MarkoAttribute",
+          "name": "disabled",
+          "value": {
+            "type": "BooleanLiteral",
+            "value": true
+          },
+          "modifier": null,
+          "arguments": null,
+          "default": false,
+          "bound": null,
+          "start": 49,
+          "end": 57,
+          "loc": {
+            "start": {
+              "line": 2,
+              "column": 28
+            },
+            "end": {
+              "line": 2,
+              "column": 36
+            }
+          }
+        }
+      ],
+      "body": {
+        "type": "MarkoTagBody",
+        "body": [
+          {
+            "type": "MarkoText",
+            "value": "Message: ",
+            "start": 61,
+            "end": 73,
+            "loc": {
+              "start": {
+                "line": 3,
+                "column": 2
+              },
+              "end": {
+                "line": 3,
+                "column": 14
+              }
+            }
+          },
+          {
+            "type": "MarkoPlaceholder",
+            "value": {
+              "type": "Identifier",
+              "start": 72,
+              "end": 75,
+              "loc": {
+                "start": {
+                  "line": 3,
+                  "column": 13,
+                  "index": 72
+                },
+                "end": {
+                  "line": 3,
+                  "column": 16,
+                  "index": 75
+                },
+                "identifierName": "msg"
+              },
+              "name": "msg",
+              "comments": [],
+              "errors": []
+            },
+            "escape": true,
+            "start": 70,
+            "end": 76,
+            "loc": {
+              "start": {
+                "line": 3,
+                "column": 11
+              },
+              "end": {
+                "line": 4,
+                "column": 0
+              }
+            }
+          }
+        ],
+        "params": []
+      },
+      "arguments": null,
+      "var": null,
+      "start": 21,
+      "end": 84,
+      "loc": {
+        "start": {
+          "line": 2,
+          "column": 0
+        },
+        "end": {
+          "line": 5,
+          "column": 0
+        }
+      }
+    }
+  ],
+  "directives": [],
+  "start": 0,
+  "end": 84,
+  "loc": {
+    "start": {
+      "line": 1,
+      "column": 0
+    },
+    "end": {
+      "line": 5,
+      "column": 0
+    }
+  }
+}

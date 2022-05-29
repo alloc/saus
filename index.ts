@@ -4,6 +4,8 @@
  *   - storing elements in a variable with mixed type
  */
 
+export { Component }
+
 interface SourceFile {
   /** File identifier (before Vite resolution) */
   id: string
@@ -99,9 +101,9 @@ interface CompositeElement extends UnknownElement {
   type: Component | ComponentRef
   /**
    * If the component uses a `Return` node, this is the
-   * local identifier in this element's scope.
+   * statement used to declare a variable for it.
    */
-  ref?: Name
+  ref?: Statement
 }
 
 interface UnknownElement extends Node {
