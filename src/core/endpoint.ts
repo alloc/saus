@@ -70,7 +70,17 @@ export namespace Endpoint {
     Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>
 
   interface RequestMethods {
-    respondWith(...response: ResponseTuple): void
+    respondWith: RespondWith
+  }
+
+  export interface ResponseStream extends NodeJS.ReadableStream {
+    statusCode?: number
+    headers?: Headers
+  }
+
+  export interface RespondWith {
+    (...response: ResponseTuple): void
+    (response: ResponseStream): void
   }
 
   export interface RequestUrl<RouteParams extends {} = Record<string, string>>

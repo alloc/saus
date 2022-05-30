@@ -206,8 +206,11 @@ export function createApp(
     endpoints = resolveRoute(url)[0]
   ) => {
     let response: Endpoint.ResponseTuple | undefined
-    let request = makeRequest(url, (...args) => {
-      response ||= args
+    let request = makeRequest(url, (arg1, headers?: any, body?: any) => {
+      response ||=
+        !arg1 || typeof arg1 == 'number'
+          ? [arg1, headers, body]
+          : [arg1.statusCode || 200, arg1.headers, { stream: arg1 }]
     })
 
     if (requestHooks) {

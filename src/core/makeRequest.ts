@@ -41,7 +41,7 @@ function isRequestUrl<T extends {} = any>(
  */
 export function makeRequest<Params extends {}>(
   url: Endpoint.RequestUrl<Params>,
-  respondWith: (...response: Endpoint.ResponseTuple) => void
+  respondWith: Endpoint.RespondWith
 ): Endpoint.Request<Params> {
   const request = Object.assign(
     Object.create(ParsedUrl.prototype),
