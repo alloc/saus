@@ -1,7 +1,7 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import http from 'http'
-import { bold, gray, red } from 'kleur/colors'
+import { bold, gray, green, red, yellow } from 'kleur/colors'
 import path from 'path'
 import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
@@ -37,7 +37,7 @@ import {
   isLinkedModule,
   LinkedModule,
   ModuleMap,
-  ResolveIdHook
+  ResolveIdHook,
 } from './vm/types'
 
 export interface SausDevServer {
@@ -366,7 +366,9 @@ async function hotReloadServerModules(
 
     if (routesChanged) {
       try {
+        context.logger.info(yellow('⨠ Reloading routes...'))
         await loadRoutes(context, resolveId)
+        context.logger.info(green('✔︎ Routes are ready!'), { clear: true })
 
         // Reload the client-side routes map.
         changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
@@ -386,7 +388,9 @@ async function hotReloadServerModules(
     // when new HTTP requests come in.
     if (renderersChanged) {
       try {
+        context.logger.info(yellow('⨠ Reloading renderers...'))
         await loadRenderers(context)
+        context.logger.info(green('✔︎ Renderers are ready!'), { clear: true })
 
         const oldConfigHooks = context.configHooks
         const newConfigHooks = await loadConfigHooks(config)
