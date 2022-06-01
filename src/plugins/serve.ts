@@ -63,22 +63,20 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           onError(error)
 
           const negotiate = createNegotiator(req.headers.accept)
-          if (!negotiate) {
+          const [responseType] = negotiate
+            ? negotiate(['text/html', 'application/json'])
+            : []
+
+          if (!responseType) {
             return writeResponse(res, 500)
           }
 
-          const [responseType] = negotiate(['text/html', 'application/json'])
-          const headers = { 'Content-Type': responseType }
-          writeResponse(res, 200, headers, {
-            text:
-              responseType == 'text/html'
-                ? renderErrorFallback(error, {
-                    homeDir: os.homedir(),
-                    root: context.root,
-                    ssr: true,
-                  })
-                : { error: error.message },
-          })
+          writeResponse(
+            res,
+            200,
+            { 'Content-Type': responseType },
+            renderError(error, responseType, context.root)
+          )
         })
       }),
   }
@@ -101,5 +99,24 @@ async function processRequest(
     process.nextTick(next)
   } else {
     writeResponse(res, status, headers, body)
+  }
+}
+
+function renderError(
+  error: any,
+  responseType: string,
+  root: string
+): Endpoint.ResponseBody | undefined {
+  if (responseType == 'text/html')
+    return {
+      text: renderErrorFallback(error, {
+        homeDir: os.homedir(),
+        root,
+        ssr: true,
+      }),
+    }
+
+  if (responseType == 'application/json') {
+    return { json: { error: error.message } }
   }
 }
