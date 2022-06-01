@@ -1,6 +1,7 @@
 import { URLSearchParams } from 'url';
 import { AbortSignal } from 'node-abort-controller';
 import * as vite from 'vite';
+import QuickLRU, { Options as Options$1 } from 'quick-lru';
 import http from 'http';
 
 declare class HttpRedirect {
@@ -76,7 +77,7 @@ declare function writePages(pages: ReadonlyArray<PageBundle | null>, outDir: str
  */
 declare function printFiles(logger: {
     info(arg: string): void;
-}, files: Record<string, number>, outDir: string, chunkLimit?: number, debugBase?: string | undefined): void;
+}, files: Record<string, number>, outDir: string, chunkLimit?: number, debugBase?: string): void;
 
 declare class Buffer$1 {
     readonly buffer: ArrayBuffer;
@@ -86,9 +87,9 @@ declare class Buffer$1 {
 }
 
 interface CommonHeaders {
-    'Cache-Control'?: string;
-    'Content-Length'?: string;
-    'Content-Type'?: string;
+    'cache-control'?: string;
+    'content-length'?: string;
+    'content-type'?: string;
 }
 declare type Headers = CommonHeaders & Record<string, string | string[] | undefined>;
 declare class Response {
@@ -209,12 +210,26 @@ declare namespace Endpoint {
     export type Function<Params extends {} = {}> = (request: Request<Params>, app: App) => Promisable$6<Result>;
     export type Request<RouteParams extends {} = {}> = unknown & RequestUrl<RouteParams> & RequestMethods & Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>;
     interface RequestMethods {
-        respondWith(...response: ResponseTuple): void;
+        respondWith: RespondWith;
+    }
+    export interface ResponseStream extends NodeJS.ReadableStream {
+        statusCode?: number;
+        headers?: Headers;
+    }
+    export interface RespondWith {
+        (...response: ResponseTuple): void;
+        (response: ResponseStream): void;
     }
     export interface RequestUrl<RouteParams extends {} = Record<string, string>> extends ParsedUrl<RouteParams> {
         readonly method: string;
         readonly headers: Readonly<Headers>;
         readonly read: () => Promise<Buffer$1>;
+        /**
+         * The platform-specific request object related to this URL. \
+         * For example, it's an `IncomingMessage` instance when using a
+         * basic Node.js server.
+         */
+        object?: any;
     }
     export type ResponseHook<App = any> = (request: Request, response: ResponseTuple, app: App) => Promisable$6<void>;
     export type ResponseTuple = [
@@ -245,6 +260,8 @@ declare function route<RoutePath extends string, Module extends object>(path: Ro
 /** Define a route */
 declare function route<RoutePath extends string, Module extends object>(path: RoutePath, config: RouteConfig<Module, InferRouteParams<RoutePath>>): Route.API<InferRouteParams<RoutePath>>;
 
+/** The internal data structure used by `Cache` type */
+declare type CacheEntry<State = any> = [state: State, expiresAt?: number];
 declare type CacheControl = {
     /** The string used to identify this entry */
     readonly key: string;
@@ -942,7 +959,11 @@ declare type BeforeRenderHook = {
     start?: number;
 };
 
-declare function ssrImport<T = ModuleExports>(id: string, isRequire?: boolean): Promise<T>;
+/**
+ * Safely import a module without interrupting other modules that
+ * may be in the process of loading.
+ */
+declare const ssrImport: <T = ModuleExports>(id: string) => Promise<T>;
 declare type Promisable<T> = T | PromiseLike<T>;
 declare type ModuleExports = Record<string, any>;
 declare type ModuleLoader<T = ModuleExports> = (exports: T, module?: {
@@ -950,6 +971,26 @@ declare type ModuleLoader<T = ModuleExports> = (exports: T, module?: {
 }) => Promisable<void>;
 /** Define a SSR module with async loading capability */
 declare const __d: <T = ModuleExports>(id: string, loader: ModuleLoader<T>) => ModuleLoader<T>;
+
+/**
+ * This object is responsible for rendering:
+ * - the entry module of each page
+ * - any state modules used by your site
+ */
+interface ModuleRenderer {
+    /**
+     * The entry module of a specific page, which includes page-specific state,
+     * possibly some `<head>` tags, and preloaded state modules.
+     */
+    renderPageState({ path, props, stateModules, head }: RenderedPage, helpersId: string, preloadUrls?: string[]): string;
+    /**
+     * Convert a "state module" (defined with a build-time `defineStateModule` call)
+     * into an ES module that is ready for the browser. Once loaded, their state is
+     * stored in the client's global cache, which allows for synchronous access via
+     * the `StateModule#get` method.
+     */
+    renderStateModule(stateModuleId: string, cachedState: CacheEntry<any>, inline?: boolean): string;
+}
 
 declare type ParsedHeadTag<T = any> = {
     value: T;
@@ -965,7 +1006,7 @@ declare type ParsedHead = {
     };
 };
 
-interface App {
+interface App extends ModuleRenderer {
     config: RuntimeConfig;
     resolveRoute: RouteResolver;
     getEndpoints: Endpoint.Generator | null;
@@ -1044,8 +1085,6 @@ declare function createApp(plugins?: App.Plugin[]): Promise<App>;
  */
 declare function configureBundle(update: Partial<MutableRuntimeConfig>): void;
 
-declare const config: RuntimeConfig;
-
 /**
  * If you want to cache modules in-memory and serve them, this function
  * will be helpful. It returns the URL pathname that your server should
@@ -1062,11 +1101,14 @@ declare function getKnownPaths(options?: {
     noDebug?: boolean;
 }): Promise<string[]>;
 
-interface FileCache extends Map<string, string | ClientAsset> {
+declare const config: RuntimeConfig;
+
+interface FileCache extends QuickLRU<string, string | ClientAsset> {
     addModules(module: Set<ClientModule>): void;
     addAssets(assets: Map<string, ClientAsset>): void;
 }
-declare function createFileCache(base: string): FileCache;
+declare type FileCacheOptions = Options$1<string, string | ClientAsset>;
+declare function createFileCache(base: string, options?: FileCacheOptions): FileCache;
 
 declare const cachePageAssets: (cache: FileCache) => App.Plugin;
 
@@ -1111,4 +1153,4 @@ interface Options {
 }
 declare function servePublicDir(options?: Options): connect.Middleware;
 
-export { ClientAsset, ClientModule, ClientModuleMap, FileCache, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
+export { ClientAsset, ClientModule, ClientModuleMap, FileCache, FileCacheOptions, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
