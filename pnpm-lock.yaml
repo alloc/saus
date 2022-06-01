@@ -49,6 +49,7 @@ importers:
       mrmime: ^1.0.0
       node-abort-controller: ^3.0.1
       prettier: ^2.0.5
+      quick-lru: ^6.1.1
       raw-body: ^2.5.1
       react: ^17.0.2
       react-dom: ^17.0.2
@@ -86,6 +87,7 @@ importers:
       misty: 1.6.7
       mrmime: 1.0.0
       node-abort-controller: 3.0.1
+      quick-lru: 6.1.1
       raw-body: 2.5.1
       rollup: /@aleclarson/rollup/2.62.1
       shared-log: 1.2.8
@@ -3564,6 +3566,11 @@ packages:
 
   /queue-microtask/1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
+
+  /quick-lru/6.1.1:
+    resolution: {integrity: sha512-S27GBT+F0NTRiehtbrgaSE1idUAJ5bX8dPAQTdylEyNlrdcH5X4Lz7Edz3DYzecbsCluD5zO8ZNEe04z3D3u6Q==}
+    engines: {node: '>=12'}
+    dev: false
 
   /raw-body/2.5.1:
     resolution: {integrity: sha512-qqJBtEyVgS0ZmPGdCFPWJ3FreoqvG4MVQln/kCgF7Olq95IbOp0/BWyMwbdtn4VTvkM8Y7khCQ2Xgk/tcrCXig==}

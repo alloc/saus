@@ -1,15 +1,18 @@
 import { gray } from 'kleur/colors'
+import QuickLRU, { Options } from 'quick-lru'
 import { getModuleUrl } from '../getModuleUrl'
 import type { ClientAsset, ClientModule } from '../types'
 import { debug } from './debug'
 
-export interface FileCache extends Map<string, string | ClientAsset> {
+export interface FileCache extends QuickLRU<string, string | ClientAsset> {
   addModules(module: Set<ClientModule>): void
   addAssets(assets: Map<string, ClientAsset>): void
 }
 
-export function createFileCache(base: string) {
-  const cache = new Map() as FileCache
+export type FileCacheOptions = Options<string, string | ClientAsset>
+
+export function createFileCache(base: string, options?: FileCacheOptions) {
+  const cache = new QuickLRU({ maxSize: 200, ...options }) as FileCache
 
   cache.addModules = modules =>
     modules.forEach(module => {
