@@ -13,19 +13,15 @@ import {
 import { runBundle } from './build/runBundle'
 import type { BuildWorker } from './build/worker'
 import { printFiles, writePages } from './build/write'
-import { bundle } from './bundle'
 import type { PageBundle } from './bundle/types'
 import {
   BuildOptions,
   generateRoutePaths,
-  MutableRuntimeConfig,
   RouteParams,
-  RuntimeConfig,
   SausContext,
-  SourceMap,
   vite,
 } from './core'
-import { loadBundleContext } from './core/bundle'
+import { loadBundle } from './core/loadBundle'
 import { callPlugins } from './utils/callPlugins'
 import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
@@ -59,42 +55,7 @@ async function buildPages(
 ): Promise<void> {
   const buildPlugins = [setSourcesContent(options)]
 
-  const context = await loadBundleContext(
-    { write: false, entry: null, format: 'cjs', moduleMap: 'inline' },
-    { mode: options.mode, plugins: buildPlugins }
-  )
-
-  const bundleFile = `bundle.${options.mode || 'production'}.js`
-  if (options.cached) {
-    options.bundlePath = path.join(context.compileCache.path, bundleFile)
-  }
-
-  type Bundle = { code: string; map?: SourceMap; cached?: true }
-
-  let { code, map, cached }: Bundle =
-    options.bundlePath && fs.existsSync(options.bundlePath)
-      ? { code: fs.readFileSync(options.bundlePath, 'utf8'), cached: true }
-      : await bundle(
-          { isBuild: true, absoluteSources: true, preferExternal: true },
-          context
-        )
-
-  if (!cached) {
-    context.compileCache.set(bundleFile, code)
-  }
-
-  const mapFile = bundleFile + '.map'
-  if (map) {
-    context.compileCache.set(mapFile, JSON.stringify(map))
-    code += '\n//# sourceMappingURL=' + mapFile
-  }
-
-  const buildOptions = context.config.build
-  const outDir = path.resolve(context.root, buildOptions.outDir)
-
-  prepareOutDir(outDir, buildOptions.emptyOutDir, context)
-  process.chdir(outDir)
-
+  // This is only used when build workers are disabled.
   const profile: ProfiledEventHandler = (type, event) => {
     if (type == 'error') {
       console.log(red('» ' + type), event.url, gray(event.message))
@@ -108,29 +69,41 @@ async function buildPages(
     }
   }
 
-  const runtimeConfig: Partial<MutableRuntimeConfig> | undefined = cached && {
-    profile: options.maxWorkers === 0 ? profile : undefined,
-    publicDir: path.relative(outDir, context.config.publicDir),
-    ...pick(context.config.build, ['assetsDir']),
-    ...pick(context.config.saus, [
-      'delayModulePreload',
-      'htmlTimeout',
-      'renderConcurrency',
-      'stripLinkTags',
-    ]),
-  }
+  const { bundle, bundlePath, runtimeConfig, context } = await loadBundle({
+    write: false,
+    entry: null,
+    format: 'cjs',
+    moduleMap: 'inline',
+    bundle: {
+      isBuild: true,
+      absoluteSources: true,
+      preferExternal: true,
+    },
+    config: {
+      mode: options.mode,
+      plugins: buildPlugins,
+    },
+    runtimeConfig(context) {
+      const buildOptions = context.config.build
+      const outDir = path.resolve(context.root, buildOptions.outDir)
+      return {
+        publicDir: path.relative(outDir, context.config.publicDir),
+        profile: options.maxWorkers === 0 ? profile : undefined,
+      }
+    },
+  })
 
-  await callPlugins(
-    context.plugins,
-    'onRuntimeConfig',
-    runtimeConfig as RuntimeConfig
-  )
+  const buildOptions = context.config.build
+  const outDir = path.resolve(context.root, buildOptions.outDir)
+
+  prepareOutDir(outDir, buildOptions.emptyOutDir, context)
+  process.chdir(outDir)
 
   const workerEvents = new Multicast<PageEvents>()
   const workerData: BundleDescriptor = {
     root: context.root,
-    code,
-    filename: path.join(context.compileCache.path, bundleFile),
+    code: bundle.code,
+    filename: bundlePath,
     eventPort: undefined!,
     runtimeConfig,
     isProfiling: true,
@@ -322,19 +295,4 @@ function setSourcesContent(options: BuildOptions): vite.Plugin {
       }
     },
   }
-}
-
-function pick<T, P extends (keyof T)[]>(
-  obj: T,
-  keys: P,
-  filter: (value: any, key: P[number]) => boolean = () => true
-): Pick<T, P[number]> {
-  const picked: any = {}
-  for (const key of keys) {
-    const value = obj[key]
-    if (filter(value, key)) {
-      picked[key] = value
-    }
-  }
-  return picked
 }
