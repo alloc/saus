@@ -1,4 +1,5 @@
 import md5Hex from 'md5-hex'
+import { sortObjects } from '../utils/sortObjects'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 
 export const stateModulesById = new Map<string, StateModule>()
@@ -75,14 +76,3 @@ type ResolvedModule<T> = T extends { default: infer DefaultExport }
     ? DefaultExport
     : T
   : T
-
-function sortObjects(_key: string, value: any) {
-  if (value && value.constructor == Object) {
-    const copy: any = {}
-    for (const key of Object.keys(value).sort()) {
-      copy[key] = value[key]
-    }
-    return copy
-  }
-  return value
-}

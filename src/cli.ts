@@ -39,9 +39,9 @@ type BuildFlags = BuildOptions & {
 }
 
 cli
-  .command('build [bundlePath]')
+  .command('build [cacheDir]')
   .option('-w, --maxWorkers [count]', `[number] set to zero to disable workers`)
-  .option('--cached', `[boolean] use the most recent build`)
+  .option('--force', `[boolean] rebundle instead of using cached bundle`)
   .option('--debug', `[boolean] rebuild pages that failed the last run`)
   .option('--filter <glob>', `[string] control which pages are rendered`)
   .option('--minify', `[boolean] minify the client modules`)
@@ -54,7 +54,7 @@ cli
     '--emptyOutDir',
     `[boolean] force empty outDir when it's outside of root`
   )
-  .action(async (bundlePath: string, options: BuildFlags) => {
+  .action(async (cacheDir: string, options: BuildFlags) => {
     const { build } = require('./build') as typeof import('./build')
     const { getFailedPages, setFailedPages } =
       require('./build/failedPages') as typeof import('./build/failedPages')
@@ -100,7 +100,7 @@ cli
         options.skip = pagePath =>
           !filters.some(filter => filter.test(pagePath))
       }
-      options.bundlePath = bundlePath
+      options.cacheDir = cacheDir
       const { pages, errors } = await build(options)
       const failedPages: string[] = []
       if (errors.length) {

@@ -198,8 +198,8 @@ export interface UserConfig extends Omit<vite.UserConfig, 'build'> {
 export interface BuildOptions extends vite.BuildOptions {
   /** Skip certain pages when pre-rendering. */
   skip?: (pagePath: string) => boolean
-  /** Use the bundle from last `saus build` run. */
-  cached?: boolean
+  /** Force a rebundle. */
+  force?: boolean
   /** The bundle's mode (usually `development` or `production`) */
   mode?: string
   /**
@@ -207,8 +207,8 @@ export interface BuildOptions extends vite.BuildOptions {
    * Use `0` to run on the main thread only.
    */
   maxWorkers?: number
-  /** Use this bundle instead of generating one. */
-  bundlePath?: string
+  /** The directory to load the cached bundle from. */
+  cacheDir?: string
   /** Used to stop rendering the remaining pages. */
   abortSignal?: AbortSignal
   /** Include `sourcesContent` is cached bundle sourcemap. */
