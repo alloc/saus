@@ -91,6 +91,10 @@ export interface SausConfig {
    */
   render: string
   /**
+   * Path to the module that declares deploy targets.
+   */
+  deploy?: string
+  /**
    * How many pages can be rendered at once.
    * @default os.cpus().length
    */

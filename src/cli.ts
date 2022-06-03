@@ -182,6 +182,18 @@ cli
     server.printUrls()
   })
 
+cli.command('deploy').action(async () => {
+  const { deploy } = require('./deploy') as typeof import('./deploy')
+  try {
+    await deploy()
+  } catch (e: any) {
+    if (e.message.startsWith('[saus]')) {
+      fatal(e.message)
+    }
+    throw e
+  }
+})
+
 cli.command('test').action(async () => {
   const { startTestServer } = require('./test') as typeof import('./test')
   await startTestServer()

@@ -1,8 +1,17 @@
-import { vite, UserConfig } from './core'
+import { UserConfig, vite } from './core'
 
 export * from './api'
 export * from './plugins/publicDir'
 export { Plugin, UserConfig, vite } from './core'
+
+export {
+  addDeployTarget,
+  getDeployContext,
+  DeployContext,
+  DeployHook,
+  DeployPlugin,
+  DeployTarget,
+} from './core/deploy'
 
 type BuildFactory = typeof import('./build').build
 type ServerFactory = typeof import('./dev').createServer

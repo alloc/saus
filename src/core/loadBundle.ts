@@ -106,7 +106,7 @@ export async function loadBundle({
       'stripLinkTags',
     ]),
     ...(typeof runtimeUserConfig == 'function'
-      ? (runtimeUserConfig as RuntimeConfigFn)(context)
+      ? runtimeUserConfig(context)
       : runtimeUserConfig),
   }
 

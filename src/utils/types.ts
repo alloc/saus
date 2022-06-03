@@ -11,3 +11,27 @@ export type ExtractProps<T, U> = Pick<
       : never
     : never
 >
+
+type Remap<T> = {} & { [P in keyof T]: T[P] }
+type ArrayKeys<T> = keyof ExtractProps<T, readonly any[]>
+type ObjectKeys<T> = Exclude<keyof ExtractProps<T, object>, ArrayKeys<T>>
+
+/**
+ * Declare a nested object map that tells you which
+ * properties have changed.
+ */
+export type Changed<T> = Remap<
+  {
+    [P in ObjectKeys<T>]: T[P] extends any ? Changed<T[P]> : never
+  } & {
+    [P in keyof T]?: T[P] extends infer U
+      ? U extends object
+        ? U extends any[]
+          ? true
+          : Changed<T[P]>
+        : U extends undefined
+        ? never
+        : true
+      : never
+  }
+>

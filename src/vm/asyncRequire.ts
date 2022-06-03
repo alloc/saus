@@ -103,8 +103,8 @@ export function createAsyncRequire(
     linkedModules = {},
     externalExports = new Map(),
     resolveId = () => undefined,
-    isCompiledModule = () => true,
     compileModule,
+    isCompiledModule = compileModule ? () => true : () => false,
     filterStack,
     nodeResolve,
     watchFile = noop,
@@ -211,26 +211,33 @@ export function createAsyncRequire(
           shouldReload = neverReload
         }
         const resolvedUrl = isExternalUrl(resolved.id) && resolved.id
-        if (resolved.external && !resolvedUrl) {
-          nodeRequire = createRequire(importer || __filename)
-          nodeResolvedId = resolved.id
-          break resolveStep
-        }
         if (resolvedUrl) {
           if (resolvedUrl.endsWith('.json')) {
             return jsonImport(resolvedUrl)
           }
           return httpImport(resolvedUrl)
         }
-        resolvedId = resolved.id
-        if (isVirtual(id, resolvedId)) {
-          virtualId = id
-          break resolveStep
+        if (resolved.external) {
+          if (isNodeRequirable(resolved.id)) {
+            nodeResolvedId = resolved.id
+            break resolveStep
+          }
+        } else {
+          resolvedId = resolved.id
+          if (isVirtual(id, resolvedId)) {
+            virtualId = id
+            break resolveStep
+          }
+          if (isCompiledModule(resolvedId)) {
+            break resolveStep
+          }
+          if (!/\.[mc]?js(on)?$/.test(resolvedId)) {
+            break resolveStep
+          }
         }
-        if (isCompiledModule(resolvedId)) {
-          break resolveStep
-        }
-        if (!/\.[mc]?js(on)?$/.test(resolvedId)) {
+      } else if (path.isAbsolute(id)) {
+        if (isCompiledModule(id)) {
+          resolvedId = id
           break resolveStep
         }
       }

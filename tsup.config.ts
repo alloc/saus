@@ -14,6 +14,7 @@ export default defineConfig({
     // Commands
     'src/build.ts',
     'src/bundle.ts',
+    'src/deploy.ts',
     'src/dev.ts',
   ],
   format: ['cjs'],
