@@ -370,10 +370,6 @@ const internalRedirects = [
     path.join(bundleDir, 'core/constants.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'runtimeConfig.ts'),
-    path.join(bundleDir, 'core/runtimeConfig.ts')
-  ),
-  redirectModule(
     path.join(clientDir, 'node/loadPageModule.ts'),
     path.join(bundleDir, 'loadPageModule.ts')
   ),
@@ -450,7 +446,7 @@ async function generateSsrBundle(
     })
 
   const runtimeConfigModule = modules.addModule({
-    id: path.join(bundleDir, 'core/runtimeConfig.ts'),
+    id: path.join(bundleDir, 'runtimeConfig.ts'),
     code: dataToEsm(runtimeConfig),
   })
 

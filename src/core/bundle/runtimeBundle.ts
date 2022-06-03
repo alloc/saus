@@ -25,15 +25,15 @@ const sausVersion = sausRoot.includes('/node_modules/')
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
-  'bundle/core/runtimeConfig.ts',
   'bundle/debugBase.ts',
   'bundle/functions.ts',
   'bundle/inlinedAssets.ts',
   'bundle/inlinedModules.ts',
   'bundle/moduleMap.ts',
   'bundle/routes.ts',
-  'client/routes.ts',
+  'bundle/runtimeConfig.ts',
   'client/baseUrl.ts',
+  'client/routes.ts',
 ]
 
 // These imports are handled by Rollup.
