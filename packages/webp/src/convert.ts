@@ -1,14 +1,13 @@
+import { createFilter } from '@rollup/pluginutils'
+import fs from 'fs/promises'
 import imagemin from 'imagemin'
 import webp, { Options as WebpOptions } from 'imagemin-webp'
-import fs from 'fs/promises'
+import { red } from 'kleur/colors'
+import { success } from 'misty'
+import { MistyTask, startTask } from 'misty/task'
 import path from 'path'
 import { Plugin } from 'saus'
-import { limitConcurrency, controlExecution, plural } from 'saus/core'
-import { createFilter } from '@rollup/pluginutils'
-import md5Hex from 'md5-hex'
-import { MistyTask, startTask } from 'misty/task'
-import { success } from 'misty'
-import { red } from 'kleur/colors'
+import { controlExecution, limitConcurrency, md5Hex, plural } from 'saus/core'
 
 export interface Options extends WebpOptions {
   /** By default, all `.png` and `.jpg` files are converted. */
