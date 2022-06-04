@@ -97,7 +97,9 @@ export async function preBundleSsrRuntime(
             return { path: id, external: true }
           }
 
-          const resolved = await pluginContainer.resolveId(id, importer)
+          const resolved = await pluginContainer.resolveId(id, importer, {
+            ssr: true,
+          })
           if (!resolved) {
             return
           }
