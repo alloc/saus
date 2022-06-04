@@ -4,7 +4,7 @@ import { globalCache } from './cache'
 type Promisable<T> = T | PromiseLike<T>
 
 /** Load state if missing from the global cache */
-export const getCachedState = withCache(globalCache) as {
+export const getCachedState = /* @__PURE__ */ withCache(globalCache) as {
   <State = any>(
     cacheKey: string,
     loader: (cacheControl: CacheControl) => Promisable<State>,

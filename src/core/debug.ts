@@ -1,3 +1,3 @@
 import createDebug from 'debug'
 
-export const debug = createDebug('saus')
+export const debug = /* @__PURE__ */ createDebug('saus')

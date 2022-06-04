@@ -14,7 +14,7 @@ export async function httpImport(url: string) {
   return import(file)
 }
 
-const root = join(os.tmpdir(), 'saus-ssr')
+const root = /* @__PURE__ */ join(/* @__PURE__ */ os.tmpdir(), 'saus-ssr')
 
 function toFilePath(url: string) {
   const { host, pathname } = new URL(url)

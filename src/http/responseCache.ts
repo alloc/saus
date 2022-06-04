@@ -55,7 +55,7 @@ export function loadResponseCache(root: string) {
   }
 }
 
-const delimiter = Buffer.from('\r\n')
+const delimiter = /* @__PURE__ */ Buffer.from('\r\n')
 
 function encodeResponse(resp: Response) {
   return Buffer.concat([
