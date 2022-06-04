@@ -1,11 +1,18 @@
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import {
+  moduleRedirection,
+  overrideBareImport,
+} from '../../plugins/moduleRedirection'
 import { renderPlugin } from '../../plugins/render'
 import { plural } from '../../utils/plural'
 import { loadContext, SausContext } from '../context'
 import { loadRoutes } from '../loadRoutes'
+import { bundleDir, clientDir, httpDir } from '../paths'
 import { SausBundleConfig, vite } from '../vite'
+import { internalRedirects } from './internalRedirects'
+import { preBundleSsrRuntime } from './runtimeBundle'
 
 type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'moduleMap' | 'target'
 
@@ -25,6 +32,13 @@ export interface BundleConfig
 
 export interface BundleContext extends SausContext {
   bundle: BundleConfig
+  /** The virtual module ID of the SSR bundle. */
+  bundleModuleId: string
+  /**
+   * These plugins must be used whenever bundling a set of modules
+   * that could import from the `saus` package.
+   */
+  bundlePlugins: vite.Plugin[]
 }
 
 export async function loadBundleContext(
@@ -106,6 +120,19 @@ export async function loadBundleContext(
   loading.finish(`${plural(routeCount, 'route')} loaded.`)
 
   await pluginContainer.close()
+
+  context.bundleModuleId = '\0saus/main.js'
+  context.bundlePlugins = [
+    await preBundleSsrRuntime(context),
+    moduleRedirection([
+      ...internalRedirects,
+      overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
+      overrideBareImport('saus/bundle', context.bundleModuleId),
+      overrideBareImport('saus/client', path.join(clientDir, 'index.ssr.ts')),
+      overrideBareImport('saus/core', path.join(bundleDir, 'core/index.ts')),
+      overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
+    ]),
+  ]
 
   return context
 }

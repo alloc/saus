@@ -3,6 +3,7 @@ import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
 import fs from 'fs'
 import path from 'path'
+import { moduleRedirection } from '../../plugins/moduleRedirection'
 import { CompileCache } from '../../utils/CompileCache'
 import { relativeToCwd } from '../../utils/relativeToCwd'
 import {
@@ -13,6 +14,7 @@ import {
 import { SausContext } from '../context'
 import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
+import { internalRedirects } from './internalRedirects'
 
 const sausRoot = toSausPath('src/')
 const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
@@ -49,8 +51,7 @@ function buildEntryMap(entries: Record<string, string>) {
 }
 
 export async function preBundleSsrRuntime(
-  context: SausContext,
-  plugins: vite.PluginOption[]
+  context: SausContext
 ): Promise<vite.Plugin> {
   const entryMap = buildEntryMap({
     // "saus" entry point
@@ -82,7 +83,10 @@ export async function preBundleSsrRuntime(
   if (entryBundles.every(Boolean)) {
     bundleInfo = JSON.parse(cache.get('_bundle.json')!)
   } else {
-    const config = await context.resolveConfig('build', { plugins })
+    const config = await context.resolveConfig('build', {
+      plugins: [moduleRedirection(internalRedirects)],
+    })
+
     const { pluginContainer } = await vite.createTransformContext(config, false)
 
     const markSausExternals: esbuild.Plugin = {

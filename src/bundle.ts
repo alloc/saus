@@ -24,24 +24,19 @@ import {
   generateClientModules,
   IsolatedModuleMap,
   isolateRoutes,
-  preBundleSsrRuntime,
   resolveRouteImports,
 } from './core/bundle'
 import { preferExternal } from './core/bundle/preferExternal'
 import type { RuntimeConfig } from './core/config'
 import { debug } from './core/debug'
-import { bundleDir, clientDir, coreDir, httpDir } from './core/paths'
+import { bundleDir, clientDir, httpDir } from './core/paths'
 import { vite } from './core/vite'
 import { getViteTransform } from './core/viteTransform'
 import { BufferLike } from './http/types'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
 import { createModuleProvider } from './plugins/moduleProvider'
-import {
-  moduleRedirection,
-  overrideBareImport,
-  redirectModule,
-} from './plugins/moduleRedirection'
+import { overrideBareImport, redirectModule } from './plugins/moduleRedirection'
 import { routesPlugin } from './plugins/routes'
 import { Profiling } from './profiling'
 import { callPlugins } from './utils/callPlugins'
@@ -90,11 +85,8 @@ export async function bundle(
 
   const isolatedModules: IsolatedModuleMap = {}
 
-  // Prepare these plugins in parallel with the client build.
-  const bundlePlugins = Promise.all([
-    isolateRoutes(context, routeImports, isolatedModules),
-    preBundleSsrRuntime(context, [moduleRedirection(internalRedirects)]),
-  ])
+  // Isolate the server routes while bundling client modules.
+  const isolatedRoutes = isolateRoutes(context, routeImports, isolatedModules)
 
   Profiling.mark('generate client modules')
   const { moduleMap, assetMap, clientRouteMap } = await generateClientModules(
@@ -119,7 +111,7 @@ export async function bundle(
     assetMap,
     clientRouteMap,
     isolatedModules,
-    await bundlePlugins
+    [await isolatedRoutes]
   )
 
   const bundle: OutputBundle = {
@@ -364,21 +356,6 @@ async function prepareFunctions(context: BundleContext) {
   }
 }
 
-const internalRedirects = [
-  redirectModule(
-    path.join(coreDir, 'constants.ts'),
-    path.join(bundleDir, 'core/constants.ts')
-  ),
-  redirectModule(
-    path.join(clientDir, 'node/loadPageModule.ts'),
-    path.join(bundleDir, 'loadPageModule.ts')
-  ),
-  redirectModule(
-    path.join(coreDir, 'getCurrentModule.ts'),
-    path.join(bundleDir, 'ssrModules.ts')
-  ),
-]
-
 async function generateSsrBundle(
   context: BundleContext,
   options: BundleOptions,
@@ -458,10 +435,9 @@ async function generateSsrBundle(
     }
   }
 
-  const bundleId = '\0saus/main.js'
   const runtimeId = `/@fs/${path.join(bundleDir, 'main.ts')}`
   modules.addModule({
-    id: bundleId,
+    id: context.bundleModuleId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
       import "${context.renderPath}"
@@ -474,18 +450,11 @@ async function generateSsrBundle(
     moduleSideEffects: 'no-treeshake',
   })
 
-  const moduleResolution: vite.PluginOption[] = [
-    overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
-    overrideBareImport('saus/bundle', bundleId),
-    overrideBareImport('saus/client', path.join(clientDir, 'index.ssr.ts')),
-    overrideBareImport('saus/core', path.join(bundleDir, 'core/index.ts')),
-    overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
-  ]
-
   // Avoid using Node built-ins for `get` function.
   const isWorker = bundleConfig.type == 'worker'
+  const workerPlugins: vite.PluginOption[] = []
   if (isWorker) {
-    moduleResolution.push(
+    workerPlugins.push(
       redirectModule(
         path.join(httpDir, 'get.ts'),
         path.join(clientDir, 'http/get.ts')
@@ -508,20 +477,18 @@ async function generateSsrBundle(
     plugins: [
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
+      ...workerPlugins,
       routesPlugin(clientRouteMap)(),
+      context.bundlePlugins,
       modules,
-      moduleResolution,
-      moduleRedirection([
-        debugForbiddenImports([
-          'vite',
-          './babel/index.js',
-          './client/index.js',
-          './src/babel/index.ts',
-          './src/client/index.ts',
-          './src/core/index.ts',
-          './src/core/context.ts',
-        ]) || { name: '' },
-        ...internalRedirects,
+      debugForbiddenImports([
+        'vite',
+        './babel/index.js',
+        './client/index.js',
+        './src/babel/index.ts',
+        './src/client/index.ts',
+        './src/core/index.ts',
+        './src/core/context.ts',
       ]),
       preferExternalPlugin,
       defineNodeConstants(),
