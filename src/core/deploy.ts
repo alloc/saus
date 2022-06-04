@@ -17,6 +17,8 @@ export function injectDeployContext(context: DeployContext) {
 export interface DeployContext extends BundleContext {
   /** For git operations, deploy to this repository. */
   gitRepo: { name: string; url: string }
+  /** When true, skip any real deployment. */
+  dryRun: boolean
 }
 
 export function addDeployTarget<T extends object>(

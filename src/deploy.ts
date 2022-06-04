@@ -29,6 +29,10 @@ export interface DeployOptions {
    * Kill all deployed targets.
    */
   killAll?: boolean
+  /**
+   * Skip the execution of any deployment action.
+   */
+  dryRun?: boolean
 }
 
 /**
@@ -41,12 +45,15 @@ export async function deploy(
   const context = (bundleContext ||
     (await loadBundleContext())) as DeployContext
 
-  if (await exec('git status --porcelain', { cwd: context.root })) {
+  const gitStatus = await exec('git status --porcelain', { cwd: context.root })
+  if (!options.dryRun && gitStatus) {
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
 
+  context.dryRun = !!options.dryRun
   context.gitRepo =
     options.gitRepo || (await getGitRepoByName('origin', context))
+
   injectDeployContext(context)
 
   const targetsByHook = await loadDeployHooks(context)
@@ -112,7 +119,7 @@ export async function deploy(
   ) => {
     if (typeof revert == 'function') {
       revertFns.push(revert)
-    } else {
+    } else if (!options.dryRun) {
       logger.warnOnce(
         `Beware: Plugin "${plugin.name}" did not return a rollback function ` +
           `for its "${action}" action. If an error happens while deploying, its ` +
@@ -166,19 +173,17 @@ export async function deploy(
   } catch (e: any) {
     logger.error(e, { error: e })
     logger.info(
-      `Plugin "${currentPlugin.name}" threw an error. Reverting prior changes...`
+      `Plugin "${currentPlugin.name}" threw an error.` +
+        (options.dryRun ? '' : ' Reverting changes...')
     )
-    for (const revert of revertFns.reverse()) {
-      await revert()
-    }
+    if (!options.dryRun)
+      for (const revert of revertFns.reverse()) {
+        await revert()
+      }
     throw e
   }
 
-  if (task) {
-    task.finish()
-    logActionCounts(spawnCount, updateCount, killCount)
-    task = startTask('Saving deployment state')
-  }
+  task?.finish()
 
   const targetsByPlugin: Record<string, DeployTarget[]> = {}
   for (const [hook, targets] of targetsByHook) {
@@ -186,10 +191,21 @@ export async function deploy(
     targetsByPlugin[name] = targets
   }
 
-  fs.writeFileSync(targetsFile, yaml.stringify(targetsByPlugin))
-  await pushCachedTargets(cacheDir, context)
+  if (options.dryRun) {
+    const debugFile = path.resolve(context.root, 'targets.debug.yaml')
+    fs.writeFileSync(debugFile, yaml.stringify(targetsByPlugin))
+    if (logger.isLogged('info')) {
+      success('Dry run complete! Targets saved to:\n    ' + debugFile)
+    }
+  } else {
+    logActionCounts(spawnCount, updateCount, killCount)
+    task = startTask('Saving deployment state')
 
-  task?.finish()
+    fs.writeFileSync(targetsFile, yaml.stringify(targetsByPlugin))
+    await pushCachedTargets(cacheDir, context)
+
+    task?.finish()
+  }
 }
 
 type DeployAction =
