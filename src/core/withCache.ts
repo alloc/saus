@@ -1,5 +1,5 @@
 import { klona } from 'klona'
-import { AbortController, AbortSignal } from 'node-abort-controller'
+import { AbortController, AbortSignal } from '../utils/AbortController'
 import { debug } from './debug'
 
 export type Cache<State = any> = {

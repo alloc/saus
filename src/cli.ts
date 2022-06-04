@@ -5,10 +5,10 @@ import * as inspector from 'inspector'
 import { cyan, gray, red } from 'kleur/colors'
 import { fatal, success } from 'misty'
 import { startTask } from 'misty/task'
-import { AbortController } from 'node-abort-controller'
 import log from 'shared-log'
 import { BuildOptions, vite } from './core'
 import { InlinePreviewConfig, startPreviewServer } from './preview'
+import { AbortController } from './utils/AbortController'
 import { onShortcut } from './utils/shortcuts'
 
 declare const globalThis: any
