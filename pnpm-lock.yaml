@@ -45,10 +45,8 @@ importers:
       kleur: ^4.1.4
       klona: ^2.0.5
       magic-string: ^0.25.7
-      md5-hex: ^3.0.0
       misty: ^1.6.7
       mrmime: ^1.0.0
-      node-abort-controller: ^3.0.1
       prettier: ^2.0.5
       quick-lru: ^6.1.1
       react: ^17.0.2
@@ -85,10 +83,8 @@ importers:
       etag: 1.8.1
       klona: 2.0.5
       magic-string: 0.25.7
-      md5-hex: 3.0.1
       misty: 1.6.7
       mrmime: 1.0.0
-      node-abort-controller: 3.0.1
       quick-lru: 6.1.1
       rollup: /@aleclarson/rollup/2.62.1
       shared-log: 1.2.8
@@ -125,13 +121,13 @@ importers:
       prettier: 2.4.1
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
-      rollup-plugin-dts: 4.1.0_09ecfda2292df930b47b4fffbaeb7e2f
+      rollup-plugin-dts: 4.1.0_typescript@4.6.2
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 3.0.0
       tsup: 5.12.8_typescript@4.6.2
       typescript: 4.6.2
-      vitest: 0.0.117_@alloc+vite@2.6.3-3
+      vitest: 0.0.117
 
   examples/react-basic:
     specifiers:
@@ -223,7 +219,6 @@ importers:
 
   packages/vercel:
     specifiers:
-      '@alloc/fast-rimraf': ^1.0.8
       '@cush/exec': ^1.7.1
       '@cush/relative': ^1.0.0
       '@types/debug': ^4.1.7
@@ -242,7 +237,6 @@ importers:
       magic-string: 0.25.7
       misty: 1.6.7
     devDependencies:
-      '@alloc/fast-rimraf': 1.0.8
       '@types/debug': 4.1.7
       '@types/node': 16.10.2
       recrawl-sync: 2.2.1
@@ -1178,10 +1172,6 @@ packages:
     dependencies:
       readable-stream: 2.3.7
       safe-buffer: 5.2.1
-    dev: false
-
-  /blueimp-md5/2.19.0:
-    resolution: {integrity: sha512-DRQrD6gJyy8FbiE4s+bDoXS9hiW3Vbx5uCdwvcCf3zLHL+Iv7LtGHLpr+GZV8rHG8tK766FGYBwRbu8pELTt+w==}
     dev: false
 
   /brace-expansion/1.1.11:
@@ -3046,13 +3036,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: false
 
-  /md5-hex/3.0.1:
-    resolution: {integrity: sha512-BUiRtTtV39LIJwinWBjqVsU9xhdnz7/i889V859IBFpuqGAj6LuOvHv5XLbgZ2R7ptJoJaEcxkv88/h25T7Ciw==}
-    engines: {node: '>=8'}
-    dependencies:
-      blueimp-md5: 2.19.0
-    dev: false
-
   /meow/3.7.0:
     resolution: {integrity: sha1-cstmi0JSKCkKu/qFaJJYcwioAfs=}
     engines: {node: '>=0.10.0'}
@@ -3182,10 +3165,6 @@ packages:
 
   /nice-try/1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
-    dev: false
-
-  /node-abort-controller/3.0.1:
-    resolution: {integrity: sha512-/ujIVxthRs+7q6hsdjHMaj8hRG9NuWmwrz+JdRwZ14jdFoKSkm+vDsCbF9PLpnSqjaWQJuTmVtcWHNLr+vrOFw==}
     dev: false
 
   /node-releases/1.1.76:
@@ -3715,7 +3694,7 @@ packages:
       glob: 7.1.6
     dev: false
 
-  /rollup-plugin-dts/4.1.0_09ecfda2292df930b47b4fffbaeb7e2f:
+  /rollup-plugin-dts/4.1.0_typescript@4.6.2:
     resolution: {integrity: sha512-rriXIm3jdUiYeiAAd1Fv+x2AxK6Kq6IybB2Z/IdoAW95fb4uRUurYsEYKa8L1seedezDeJhy8cfo8FEL9aZzqg==}
     engines: {node: '>=v12.22.7'}
     peerDependencies:
@@ -3723,7 +3702,6 @@ packages:
       typescript: ~4.1 || ~4.2 || ~4.3 || ~4.4 || ~4.5
     dependencies:
       magic-string: 0.25.7
-      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.6.2
     optionalDependencies:
       '@babel/code-frame': 7.16.7
@@ -4319,7 +4297,7 @@ packages:
       spdx-expression-parse: 3.0.1
     dev: false
 
-  /vitest/0.0.117_@alloc+vite@2.6.3-3:
+  /vitest/0.0.117:
     resolution: {integrity: sha512-BcNvxUQ15alP60PN3mvThMZMolMYwKVBepvkm69rL5Og50R6YCLTzR+ePPhWH9+uQ6oOs14fiGDGvf7etQn2tw==}
     engines: {node: '>=14.14.0'}
     hasBin: true
@@ -4342,7 +4320,6 @@ packages:
       local-pkg: 0.4.0
       tinypool: 0.0.6
       tinyspy: 0.2.6
-      vite: /@alloc/vite/2.6.3-3
     dev: true
 
   /webidl-conversions/4.0.2:
