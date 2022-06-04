@@ -11,7 +11,7 @@ export async function httpImport(url: string) {
   const resp = await get(url)
   fs.writeFileSync(file, unwrapBuffer(resp.data))
   setExitHandler()
-  return import(file)
+  return import(/* @vite-ignore */ file)
 }
 
 const root = /* @__PURE__ */ join(/* @__PURE__ */ os.tmpdir(), 'saus-ssr')
