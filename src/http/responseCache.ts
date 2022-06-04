@@ -1,8 +1,8 @@
 import fs from 'fs'
-import md5Hex from 'md5-hex'
 import { dirname, resolve } from 'path'
 import { unwrapBuffer } from '../core/buffer'
 import type { CacheEntry } from '../core/withCache'
+import { md5Hex } from '../utils/md5-hex'
 import { Response } from './response'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}

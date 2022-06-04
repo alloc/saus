@@ -1,4 +1,4 @@
-import md5Hex from 'md5-hex'
+import { md5Hex } from '../utils/md5-hex'
 import { Headers } from './response'
 
 export function getCacheKey(url: string, headers?: Headers) {

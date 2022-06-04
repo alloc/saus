@@ -1,4 +1,4 @@
-import md5Hex from 'md5-hex'
+import { md5Hex } from './md5-hex'
 import { sortObjects } from './sortObjects'
 
 export function toObjectHash(data: object, length = 8) {

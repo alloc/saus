@@ -1,7 +1,7 @@
-import md5Hex from 'md5-hex'
 import fs from 'fs'
 import path from 'path'
 import { loadFileMappings, saveFileMappings } from './CompileCache/fileMappings'
+import { md5Hex } from './md5-hex'
 
 /**
  * For caching compiled files on disk by the hash of their

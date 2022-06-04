@@ -1,9 +1,9 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
-import md5Hex from 'md5-hex'
 import path from 'path'
 import { BundleOptions } from '../bundle'
 import { callPlugins } from '../utils/callPlugins'
+import { md5Hex } from '../utils/md5-hex'
 import { SourceMap } from '../utils/sourceMap'
 import {
   BundleConfig,

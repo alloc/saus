@@ -1,0 +1,11 @@
+{
+  "name": "md5-hex",
+  "version": "4.0.0",
+  "private": true,
+  "exports": {
+    ".": {
+      "node": "index.node.ts",
+      "default": "index.ts"
+    }
+  }
+}
