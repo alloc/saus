@@ -105,6 +105,21 @@ export async function deploy(
   task = task && startTask('Deploying targets')
 
   const revertFns: RevertFn[] = []
+  const addRevertFn = (
+    revert: RevertFn | void,
+    plugin: DeployPlugin,
+    action: string
+  ) => {
+    if (typeof revert == 'function') {
+      revertFns.push(revert)
+    } else {
+      logger.warnOnce(
+        `Beware: Plugin "${plugin.name}" did not return a rollback function ` +
+          `for its "${action}" action. If an error happens while deploying, its ` +
+          `effects won't be automatically reversible!`
+      )
+    }
+  }
 
   let spawnCount = 0
   let updateCount = 0
@@ -120,23 +135,22 @@ export async function deploy(
         if (action.type == 'update') {
           if (plugin.update) {
             revert = await plugin.update(target, action.changed)
+            addRevertFn(revert, plugin, 'update')
           } else {
             revert = await plugin.kill(target)
-            if (typeof revert == 'function') {
-              revertFns.push(revert)
-            }
+            addRevertFn(revert, plugin, 'kill')
             revert = await plugin.spawn(target)
+            addRevertFn(revert, plugin, 'spawn')
           }
           updateCount++
         } else if (action.type == 'spawn') {
           revert = await plugin.spawn(target)
+          addRevertFn(revert, plugin, 'spawn')
           spawnCount++
         } else {
           revert = await plugin.kill(target)
+          addRevertFn(revert, plugin, 'kill')
           killCount++
-        }
-        if (typeof revert == 'function') {
-          revertFns.push(revert)
         }
       }
     }
