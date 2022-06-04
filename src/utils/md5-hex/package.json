@@ -5,7 +5,7 @@
   "exports": {
     ".": {
       "node": "index.node.ts",
-      "default": "index.ts"
+      "default": "index.js"
     }
   }
 }
