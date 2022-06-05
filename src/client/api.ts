@@ -6,5 +6,7 @@ export * from '../runtime/mapStateModule'
 export * from '../runtime/stateModules'
 
 export * from '../utils/getPagePath'
+export * from '../utils/parseRoutePath'
+export * from '../utils/renderRoutePath'
 export * from '../utils/resolveModules'
 export * from '../utils/unwrapDefault'
