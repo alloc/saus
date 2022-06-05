@@ -34,11 +34,11 @@ export function renderClient(
       }
     }
 
-    topLevel.append(`const ${name} = ${rawFn}`)
+    topLevel.append(`const ${name} = ${rawFn}\n`)
     onHydrate.append(
       name == `$render`
         ? `let content = await $render(request.module, request)\n`
-        : `${name}(request)\n`
+        : `\n${name}(request)\n`
     )
   }
 
@@ -52,9 +52,9 @@ export function renderClient(
   }
 
   // Indent the function body, then wrap with $onHydrate call.
-  onHydrate.indent('  ')
+  onHydrate.indent(`  `)
   onHydrate.prepend(`$onHydrate(async (request) => {\n`)
-  onHydrate.append(`\n})`)
+  onHydrate.append(`})`)
 
   return {
     code: script.toString(),

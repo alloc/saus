@@ -103,11 +103,23 @@ export function extractClientFunctions(
 
   const program = getBabelProgram(code, filename)
   program.traverse({
+    ArrowFunctionExpression(fn) {
+      fn.skip()
+    },
     CallExpression(callPath) {
       const callee = callPath.get('callee')
       if (callee.isIdentifier() && renderIdentRE.test(callee.node.name)) {
         const start = callPath.node.start!
+        while (callPath.parentPath.isMemberExpression()) {
+          const { parentPath } = callPath.parentPath
+          if (parentPath.isCallExpression()) {
+            callPath = parentPath
+          } else break
+        }
         callPath.traverse({
+          ArrowFunctionExpression(fn) {
+            fn.skip()
+          },
           Identifier(path) {
             const { node, parentPath } = path
 
@@ -119,7 +131,6 @@ export function extractClientFunctions(
                   return true
                 }
               })
-              path.stop()
             }
 
             // Parse the `.then(...)` call
