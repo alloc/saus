@@ -1,6 +1,7 @@
 import { emptyHeaders } from '../app/global'
 import type { Headers } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
+import { defer } from '../utils/defer'
 import type { Endpoint } from './endpoint'
 import { ParsedUrl } from './utils'
 
@@ -48,5 +49,12 @@ export function makeRequest<Params extends {}>(
     url
   ) as Endpoint.Request<Params>
   request.respondWith = respondWith
+  request.promise = respondWithPromise
   return assignDefaults<any>(request, url.routeParams)
+}
+
+function respondWithPromise(this: Endpoint.Request) {
+  const { promise, resolve } = defer<any>()
+  this.respondWith(promise)
+  return (...args: any[]) => resolve(args)
 }

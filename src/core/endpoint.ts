@@ -71,6 +71,7 @@ export namespace Endpoint {
 
   interface RequestMethods {
     respondWith: RespondWith
+    promise: () => RespondWith
   }
 
   export interface ResponseStream extends NodeJS.ReadableStream {
@@ -78,9 +79,12 @@ export namespace Endpoint {
     headers?: Headers
   }
 
+  export type ResponsePromise = Promise<ResponseTuple | [ResponseStream] | null>
+
   export interface RespondWith {
     (...response: ResponseTuple): void
     (response: ResponseStream): void
+    (promise: ResponsePromise): void
   }
 
   export interface RequestUrl<RouteParams extends {} = Record<string, string>>

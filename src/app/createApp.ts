@@ -205,12 +205,18 @@ export function createApp(
     url,
     endpoints = resolveRoute(url)[0]
   ) => {
+    let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.ResponseTuple | undefined
     let request = makeRequest(url, (arg1, headers?: any, body?: any) => {
-      response ||=
-        !arg1 || typeof arg1 == 'number'
-          ? [arg1, headers, body]
-          : [arg1.statusCode || 200, arg1.headers, { stream: arg1 }]
+      if (response) return
+      if (arg1 instanceof Promise) {
+        promise = arg1
+      } else {
+        response =
+          !arg1 || typeof arg1 == 'number'
+            ? [arg1, headers, body]
+            : [arg1.statusCode || 200, arg1.headers, { stream: arg1 }]
+      }
     })
 
     if (requestHooks) {
@@ -221,6 +227,14 @@ export function createApp(
       const returned = await endpoint(request, app)
       if (response) {
         break
+      }
+      if (promise) {
+        const resolved = await promise
+        promise = undefined
+        if (resolved) {
+          request.respondWith(...(resolved as any))
+          break
+        }
       }
       if (returned) {
         response =
