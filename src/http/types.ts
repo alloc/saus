@@ -15,6 +15,7 @@ export interface HttpOptions {
   hash?: string
   href?: string
   pathname?: string
+  protocol?: string
   search?: string
   signal?: AbortSignal | undefined
   /**
