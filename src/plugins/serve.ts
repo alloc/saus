@@ -1,12 +1,12 @@
 import { ServerResponse } from 'http'
 import os from 'os'
-import getBody from 'raw-body'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
 import { Endpoint, Plugin, SausContext } from '../core'
 import { makeRequestUrl } from '../core/makeRequest'
 import { writeResponse } from '../runtime/writeResponse'
+import { streamToBuffer } from '../utils/streamToBuffer'
 import { parseUrl } from '../utils/url'
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
@@ -54,7 +54,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           parseUrl(path),
           req.method!,
           req.headers,
-          () => getBody(req)
+          () => streamToBuffer(req)
         )
 
         url.object = req

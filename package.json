@@ -62,7 +62,6 @@
     "misty": "^1.6.7",
     "mrmime": "^1.0.0",
     "quick-lru": "^6.1.1",
-    "raw-body": "^2.5.1",
     "rollup": "npm:@aleclarson/rollup@^2.62.1",
     "shared-log": "^1.2.8",
     "strict-event-emitter-types": "^2.0.0",

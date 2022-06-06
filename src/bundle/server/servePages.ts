@@ -1,7 +1,7 @@
-import getBody from 'raw-body'
 import type { App } from '../../app/types'
 import { makeRequestUrl } from '../../core/makeRequest'
 import { writeResponse } from '../../runtime/writeResponse'
+import { streamToBuffer } from '../../utils/streamToBuffer'
 import { parseUrl } from '../../utils/url'
 import { connect } from './connect'
 
@@ -15,7 +15,7 @@ export const servePages: connect.Middleware<RequestProps> =
       parseUrl(req.url),
       req.method!,
       req.headers,
-      () => getBody(req)
+      () => streamToBuffer(req)
     )
     url.object = req
     const [status, headers, body] = await req.app.callEndpoints(url)
