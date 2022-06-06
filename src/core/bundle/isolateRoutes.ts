@@ -54,33 +54,29 @@ export async function isolateRoutes(
   routeImports: RouteImports,
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
-  const { config } = context
   const modules = createModuleProvider()
-
-  const { transform, pluginContainer } = await getViteTransform({
-    ...config,
+  const config = await context.resolveConfig('build', {
     resolve: {
-      ...config.resolve,
       conditions: ['ssr'],
     },
-    plugins: [
-      modules,
-      rewriteRouteImports(context.routesPath, routeImports),
-      ...config.plugins.filter(p => {
-        // CommonJS modules are externalized, so this plugin is just overhead.
-        if (p.name == 'commonjs') return false
-        // Leave static replacement up to the main build.
-        if (p.name == 'vite:define') return false
-
-        return true
-      }),
-    ],
+    plugins: [modules, rewriteRouteImports(context.routesPath, routeImports)],
     build: {
-      ...config.build,
       sourcemap: true,
       ssr: true,
       target: 'esnext',
     },
+  })
+
+  const { transform, pluginContainer } = await getViteTransform({
+    ...config,
+    plugins: config.plugins.filter(p => {
+      // CommonJS modules are externalized, so this plugin is just overhead.
+      if (p.name == 'commonjs') return false
+      // Leave static replacement up to the main build.
+      if (p.name == 'vite:define') return false
+
+      return true
+    }),
     ssr: {
       ...config.ssr,
       noExternal: [],
