@@ -36,18 +36,22 @@ export function http(
       }
 
       const continueRequest = (req: HttpOptions, redirects: number) => {
-        const client = startRequest(
-          req,
-          trace,
-          reject,
-          onResponse,
-          redirects,
-          url => continueRequest(createRequest(url, opts), redirects + 1)
-        )
-        if (opts?.body) {
-          writeBody(client, opts.body)
-        } else {
-          client.end()
+        try {
+          const client = startRequest(
+            req,
+            trace,
+            reject,
+            onResponse,
+            redirects,
+            url => continueRequest(createRequest(url, opts), redirects + 1)
+          )
+          if (opts?.body) {
+            writeBody(client, opts.body)
+          } else {
+            client.end()
+          }
+        } catch (e: any) {
+          reject(e)
         }
       }
 
