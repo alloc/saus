@@ -8,7 +8,7 @@ export class Buffer {
     return new Buffer(data)
   }
 
-  toString(encoding?: string) {
+  toString(encoding?: string): string {
     const decoder = new TextDecoder(encoding)
     return decoder.decode(this.buffer)
   }
