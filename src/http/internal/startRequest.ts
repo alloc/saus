@@ -4,7 +4,7 @@ import { Response } from '../response'
 import { HttpOptions } from '../types'
 
 export function startRequest(
-  opts: HttpOptions,
+  { headers, ...opts }: HttpOptions,
   trace: Error & { status?: number },
   reject: (e: any) => void,
   resolve: (resp: Response) => void,
@@ -51,6 +51,13 @@ export function startRequest(
     trace.message = e.message
     reject(trace)
   })
+
+  if (headers)
+    for (const name in headers) {
+      if (headers[name] !== undefined) {
+        client.setHeader(name, headers[name]!)
+      }
+    }
 
   return client
 }

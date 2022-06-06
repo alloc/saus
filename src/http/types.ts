@@ -1,5 +1,6 @@
 import http, { Agent } from 'http'
 import { httpMethods } from '../utils/httpMethods'
+import type { Headers } from './response'
 
 export type { BufferLike } from '../app/types'
 
@@ -13,6 +14,7 @@ export interface HttpOptions {
    */
   allowBadStatus?: boolean
   hash?: string
+  headers?: Headers
   href?: string
   pathname?: string
   protocol?: string
