@@ -5,6 +5,10 @@ import type { Headers } from '../http'
 import { onRequest, onResponse } from '../routes'
 import { Falsy } from '../utils/types'
 
+/**
+ * Note that request/response hooks added by `logRequests` use a
+ * priority of `1,000,000` (negative for requests).
+ */
 export const logRequests = (
   options: {
     request?: { headers?: boolean; prefix?: string }
@@ -19,7 +23,7 @@ export const logRequests = (
     const timing = new WeakMap<Endpoint.Request, number>()
     const ignored = new WeakSet<Endpoint.Request>()
 
-    onRequest('pre', req => {
+    onRequest(-1e6, req => {
       if (options.ignore?.(req)) {
         ignored.add(req)
         return
@@ -38,7 +42,7 @@ export const logRequests = (
       timing.set(req, Date.now())
     })
 
-    onResponse((req, res) => {
+    onResponse(1e6, (req, res) => {
       if (ignored.has(req)) {
         return
       }

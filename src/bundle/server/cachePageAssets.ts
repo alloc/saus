@@ -5,6 +5,11 @@ import { pick } from '../../utils/pick'
 import type { PageBundle } from '../types'
 import type { FileCache } from './fileCache'
 
+/**
+ * In addition to the returned `App` plugin, this function also adds
+ * a response hook with a priority of `1,000`. You should avoid mutating
+ * response headers from a response hook with a higher priority.
+ */
 export const cachePageAssets = (cache: FileCache): App.Plugin => {
   // Assets produced by Rollup have a content hash,
   // so the browser can cache them for longer periods.
@@ -15,7 +20,7 @@ export const cachePageAssets = (cache: FileCache): App.Plugin => {
   )
 
   const recentPages = new Map<string, PageBundle>()
-  onResponse((req, [status, headers]) => {
+  onResponse(1e3, (req, [status, headers]) => {
     if (status == 200) {
       const page = recentPages.get(req.path)
       if (page) {
