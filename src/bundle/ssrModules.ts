@@ -3,7 +3,7 @@ import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { noop } from '../utils/noop'
 
-const debug = createDebug('saus:cache')
+const debug = createDebug('saus:ssr')
 
 const ssrPrefix = 'saus-ssr:'
 const ssrLoaderMap: Record<string, ModuleLoader<any>> = {}
@@ -47,11 +47,15 @@ function importModule<T = ModuleExports>(
       const cjsModule = isCommonJS ? { exports } : null!
       const loading = isCommonJS ? loader(exports, cjsModule) : loader(exports)
       if (isMain) {
+        const start = Date.now()
         // Postpone other top-level imports.
         mainModule = Promise.resolve(loading)
           .catch(noop)
           .then(() => {
             mainModule = null
+
+            const elapsed = ((Date.now() - start) / 1e3).toFixed(3)
+            debug('Loaded "%s" in %ss', id, elapsed)
           })
       }
 
