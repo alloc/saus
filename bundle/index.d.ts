@@ -1,5 +1,4 @@
 import { URLSearchParams } from 'url';
-import { AbortSignal } from 'node-abort-controller';
 import * as vite from 'vite';
 import QuickLRU, { Options as Options$1 } from 'quick-lru';
 import http from 'http';
@@ -211,14 +210,17 @@ declare namespace Endpoint {
     export type Request<RouteParams extends {} = {}> = unknown & RequestUrl<RouteParams> & RequestMethods & Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>;
     interface RequestMethods {
         respondWith: RespondWith;
+        promise: () => RespondWith;
     }
     export interface ResponseStream extends NodeJS.ReadableStream {
         statusCode?: number;
         headers?: Headers;
     }
+    export type ResponsePromise = Promise<ResponseTuple | [ResponseStream] | null>;
     export interface RespondWith {
         (...response: ResponseTuple): void;
         (response: ResponseStream): void;
+        (promise: ResponsePromise): void;
     }
     export interface RequestUrl<RouteParams extends {} = Record<string, string>> extends ParsedUrl<RouteParams> {
         readonly method: string;
@@ -259,6 +261,41 @@ declare function route<Module extends object>(path: 'error', load: RouteLoader<M
 declare function route<RoutePath extends string, Module extends object>(path: RoutePath, load?: RouteLoader<Module>, config?: RouteConfig<Module, InferRouteParams<RoutePath>>): Route.API<InferRouteParams<RoutePath>>;
 /** Define a route */
 declare function route<RoutePath extends string, Module extends object>(path: RoutePath, config: RouteConfig<Module, InferRouteParams<RoutePath>>): Route.API<InferRouteParams<RoutePath>>;
+
+// `AbortSignal`,`AbortController` are defined here to prevent a dependency on the `dom` library which disagrees with node runtime.
+// The definition for `AbortSignal` is taken from @types/node-fetch (https://github.com/DefinitelyTyped/DefinitelyTyped) for
+// maximal compatibility with node-fetch.
+// Original node-fetch definitions are under MIT License.
+
+declare class AbortSignal {
+  aborted: boolean
+
+  addEventListener: (
+    type: 'abort',
+    listener: (this: AbortSignal, event: any) => any,
+    options?:
+      | boolean
+      | {
+          capture?: boolean
+          once?: boolean
+          passive?: boolean
+        }
+  ) => void
+
+  removeEventListener: (
+    type: 'abort',
+    listener: (this: AbortSignal, event: any) => any,
+    options?:
+      | boolean
+      | {
+          capture?: boolean
+        }
+  ) => void
+
+  dispatchEvent: (event: any) => boolean
+
+  onabort: null | ((this: AbortSignal, event: any) => void)
+}
 
 /** The internal data structure used by `Cache` type */
 declare type CacheEntry<State = any> = [state: State, expiresAt?: number];
@@ -519,6 +556,10 @@ interface SausConfig {
      */
     render: string;
     /**
+     * Path to the module that declares deploy targets.
+     */
+    deploy?: string;
+    /**
      * How many pages can be rendered at once.
      * @default os.cpus().length
      */
@@ -618,8 +659,8 @@ interface UserConfig extends Omit<vite.UserConfig, 'build'> {
 interface BuildOptions extends vite.BuildOptions {
     /** Skip certain pages when pre-rendering. */
     skip?: (pagePath: string) => boolean;
-    /** Use the bundle from last `saus build` run. */
-    cached?: boolean;
+    /** Force a rebundle. */
+    force?: boolean;
     /** The bundle's mode (usually `development` or `production`) */
     mode?: string;
     /**
@@ -627,8 +668,8 @@ interface BuildOptions extends vite.BuildOptions {
      * Use `0` to run on the main thread only.
      */
     maxWorkers?: number;
-    /** Use this bundle instead of generating one. */
-    bundlePath?: string;
+    /** The directory to load the cached bundle from. */
+    cacheDir?: string;
     /** Used to stop rendering the remaining pages. */
     abortSignal?: AbortSignal;
     /** Include `sourcesContent` is cached bundle sourcemap. */
@@ -1141,7 +1182,15 @@ declare const servePages: connect.Middleware<RequestProps>;
 interface Options {
     /** @default runtimeConfig.publicDir */
     root?: string;
-    /** Prevent certain files from being served */
+    /**
+     * When defined, only files matching this can be served
+     * by this middleware.
+     */
+    include?: RegExp;
+    /**
+     * When defined, files matching this cannot be served
+     * by this middleware.
+     */
     ignore?: RegExp;
     /**
      * Set the `max-age` Cache-Control directive. \
