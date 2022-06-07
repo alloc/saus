@@ -509,7 +509,7 @@ async function generateSsrBundle(
       minify: bundleConfig.minify == true,
       sourcemap: context.userConfig.build?.sourcemap ?? true,
       rollupOptions: {
-        input: bundleConfig.entry || bundleId,
+        input: bundleConfig.entry || context.bundleModuleId,
         output: {
           dir: bundleOutDir,
           format: bundleConfig.format,
