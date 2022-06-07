@@ -4,6 +4,7 @@ import path from 'path'
 import { BundleOptions } from '../bundle'
 import { callPlugins } from '../utils/callPlugins'
 import { md5Hex } from '../utils/md5-hex'
+import { pick } from '../utils/pick'
 import { SourceMap } from '../utils/sourceMap'
 import {
   BundleConfig,
@@ -140,19 +141,4 @@ function getBundleHash(
     bundle: bundleOptions,
   }
   return md5Hex(JSON.stringify(values)).slice(0, 8)
-}
-
-function pick<T, P extends (keyof T)[]>(
-  obj: T,
-  keys: P,
-  filter: (value: any, key: P[number]) => boolean = () => true
-): Pick<T, P[number]> {
-  const picked: any = {}
-  for (const key of keys) {
-    const value = obj[key]
-    if (filter(value, key)) {
-      picked[key] = value
-    }
-  }
-  return picked
 }

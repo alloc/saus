@@ -10,15 +10,16 @@ const isUpperCase = (name: string) => upperCaseRE.test(name)
  */
 export function normalizeHeaders(headers: Headers, trust?: boolean): Headers
 export function normalizeHeaders(
-  headers: Headers | undefined,
+  headers: Headers | null | undefined,
   trust?: boolean
 ): Headers | undefined
 
 export function normalizeHeaders(
-  headers: (Headers & { [kNormalized]?: true }) | undefined,
+  headers: (Headers & { [kNormalized]?: true }) | null | undefined,
   trust?: boolean
 ): Headers | undefined {
-  if (!headers || headers[kNormalized]) {
+  if (!headers) return
+  if (headers[kNormalized]) {
     return headers
   }
 
