@@ -10,7 +10,15 @@ import { debug } from './debug'
 interface Options {
   /** @default runtimeConfig.publicDir */
   root?: string
-  /** Prevent certain files from being served */
+  /**
+   * When defined, only files matching this can be served
+   * by this middleware.
+   */
+  include?: RegExp
+  /**
+   * When defined, files matching this cannot be served
+   * by this middleware.
+   */
   ignore?: RegExp
   /**
    * Set the `max-age` Cache-Control directive. \
@@ -22,12 +30,16 @@ interface Options {
 }
 
 export function servePublicDir(options: Options = {}): connect.Middleware {
-  const { root: publicDir = runtimeConfig.publicDir, ignore = /^$/ } = options
   const cacheControl = resolveCacheControl(options)
+  const {
+    root: publicDir = runtimeConfig.publicDir,
+    include = /./,
+    ignore = /^$/,
+  } = options
 
   return async function servePublicFile(req, res, next) {
     const fileName = req.url.slice(runtimeConfig.base.length)
-    if (ignore.test(fileName)) {
+    if (ignore.test(fileName) || !include.test(fileName)) {
       return next()
     }
     try {
