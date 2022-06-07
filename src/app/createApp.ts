@@ -16,6 +16,7 @@ import {
 } from '../core/routes'
 import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
+import { normalizeHeaders } from '../http/normalizeHeaders'
 import { toArray } from '../utils/array'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
@@ -211,11 +212,14 @@ export function createApp(
       if (response) return
       if (arg1 instanceof Promise) {
         promise = arg1
+      } else if (!arg1 || typeof arg1 == 'number') {
+        response = [arg1, normalizeHeaders(headers), body]
       } else {
-        response =
-          !arg1 || typeof arg1 == 'number'
-            ? [arg1, headers, body]
-            : [arg1.statusCode || 200, arg1.headers, { stream: arg1 }]
+        response = [
+          arg1.statusCode || 200,
+          normalizeHeaders(arg1.headers),
+          { stream: arg1 },
+        ]
       }
     })
 

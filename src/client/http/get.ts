@@ -1,5 +1,6 @@
 // HTTP helpers suitable for browser and web worker environments.
 import type { GetOptions } from '../../http/get'
+import { normalizeHeaders } from '../../http/normalizeHeaders'
 import { Headers, Response } from '../../http/response'
 import { Buffer } from '../buffer'
 
@@ -23,7 +24,7 @@ export async function get(url: string, options?: GetOptions) {
     return new Response(
       Buffer.from(await resp.arrayBuffer()),
       resp.status,
-      headers
+      normalizeHeaders(headers, true)
     )
   }
   throw Error(`Request to ${url} ended with status code ${resp.status}`)

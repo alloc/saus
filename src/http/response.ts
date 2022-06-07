@@ -1,4 +1,5 @@
 import type { Buffer } from '../client/buffer'
+import { normalizeHeaders } from './normalizeHeaders'
 
 export interface CommonHeaders {
   'cache-control'?: string
@@ -10,11 +11,15 @@ export type Headers = CommonHeaders &
   Record<string, string | string[] | undefined>
 
 export class Response {
+  readonly headers: Headers
+
   constructor(
     readonly data: Buffer,
     readonly status: number,
-    readonly headers: Headers
-  ) {}
+    headers: Headers
+  ) {
+    this.headers = normalizeHeaders(headers)
+  }
 
   toString(encoding?: string) {
     return this.data.toString(encoding)
