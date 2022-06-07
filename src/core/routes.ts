@@ -190,7 +190,7 @@ export interface RoutesModule extends HtmlContext {
   catchRoute?: Route
   /** Used by generated routes to import their route module */
   ssrRequire?: RequireAsync
-  requestHooks?: Endpoint.Function[]
+  requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
 }
 

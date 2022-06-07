@@ -100,11 +100,14 @@ export namespace Endpoint {
     object?: any
   }
 
-  export type ResponseHook<App = any> = (
-    request: Request,
-    response: ResponseTuple,
-    app: App
-  ) => Promisable<void>
+  export interface RequestHook extends Function {
+    priority?: number
+  }
+
+  export interface ResponseHook {
+    (request: Request, response: ResponseTuple, app: App): Promisable<void>
+    priority?: number
+  }
 
   export type ResponseTuple = [
     status?: number,
