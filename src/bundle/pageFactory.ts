@@ -38,6 +38,10 @@ export const createPageFactory: App.Plugin = app => {
 
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''
+  const debugBaseRE = debugBase
+    ? new RegExp('^' + debugBase.replace(/\./g, '\\.').replace(/\/?$/, '(/|$)'))
+    : null
+
   // Prepended to module IDs in debug view.
   const debugDir = debugBase.slice(1)
 
@@ -48,9 +52,14 @@ export const createPageFactory: App.Plugin = app => {
       // Let's assume `config.base` is already stripped.
       let base = '/'
       let isDebug = false
-      if (debugBase && url.startsWith(debugBase)) {
+      if (debugBaseRE?.test(url.path)) {
         base = debugBase
         isDebug = true
+        // Append a trailing slash if this request is
+        // for the debug version of the root page.
+        if (!url.startsWith(debugBase)) {
+          url = url.append('/')
+        }
       }
 
       // Page caching includes the query string.
