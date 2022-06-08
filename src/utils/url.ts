@@ -32,16 +32,33 @@ export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
     return this.path.startsWith(prefix)
   }
 
-  slice(start: number, end?: number) {
-    const sliced = Object.create(ParsedUrl.prototype)
-    sliced.path = this.path.slice(start, end)
-    sliced.searchParams = new URLSearchParams(this.searchParams)
-    return sliced as ParsedUrl
+  slice(start: number, end?: number): this {
+    return cloneUrl(this, {
+      path: this.path.slice(start, end),
+    })
+  }
+
+  append(subpath: string) {
+    return cloneUrl(this, {
+      path: joinUrl(this.path, subpath),
+    })
   }
 }
 
 export function joinUrl(...parts: (string | undefined)[]) {
   return ('/' + parts.filter(Boolean).join('/')).replace(/\/{2,}/g, '/')
+}
+
+export function cloneUrl<Url extends ParsedUrl>(
+  url: Url,
+  newProps: Partial<ParsedUrl> = {}
+) {
+  const newUrl = Object.create(ParsedUrl.prototype)
+  newUrl.path = newProps.path ?? url.path
+  newUrl.searchParams =
+    newProps.searchParams ?? new URLSearchParams(url.searchParams)
+  newUrl.routeParams = newProps.routeParams ?? { ...url.routeParams }
+  return newUrl as Url
 }
 
 /**
