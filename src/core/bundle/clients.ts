@@ -9,11 +9,7 @@ import { transformClientState } from '../../plugins/clientState'
 import { debugForbiddenImports } from '../../plugins/debug'
 import { rewriteHttpImports } from '../../plugins/httpImport'
 import { createModuleProvider } from '../../plugins/moduleProvider'
-import {
-  moduleRedirection,
-  overrideBareImport,
-  redirectModule,
-} from '../../plugins/moduleRedirection'
+import { moduleRedirection } from '../../plugins/moduleRedirection'
 import { routesPlugin } from '../../plugins/routes'
 import { findPackage } from '../../utils/findPackage'
 import { parseImports } from '../../utils/imports'
@@ -29,16 +25,9 @@ import {
   SausContext,
   vite,
 } from '../index'
-import {
-  bundleDir,
-  clientDir,
-  coreDir,
-  globalCachePath,
-  httpDir,
-  runtimeDir,
-  toSausPath,
-} from '../paths'
+import { clientDir, globalCachePath, toSausPath } from '../paths'
 import { BundleContext } from './context'
+import { clientRedirects } from './moduleRedirects'
 
 const posixPath = path.posix
 
@@ -168,30 +157,7 @@ export async function generateClientModules(
         './src/core/context.ts',
       ]),
       modules,
-      moduleRedirection([
-        overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
-        overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
-        redirectModule(
-          path.join(clientDir, 'index.dev.ts'),
-          path.join(clientDir, 'index.prod.ts')
-        ),
-        redirectModule(
-          path.join(httpDir, 'httpImport.ts'),
-          path.join(runtimeDir, 'emptyModule.ts')
-        ),
-        redirectModule(
-          path.join(httpDir, 'get.ts'),
-          path.join(clientDir, 'http/get.ts')
-        ),
-        redirectModule(
-          path.join(coreDir, 'buffer.ts'),
-          path.join(clientDir, 'buffer.ts')
-        ),
-        redirectModule(
-          path.join(runtimeDir, 'loadStateModule.ts'),
-          path.join(clientDir, 'loadStateModule.ts')
-        ),
-      ]),
+      moduleRedirection(clientRedirects),
       routesPlugin(clientRouteMap)(),
       rewriteHttpImports(context.logger, true),
       defineClientContext(),

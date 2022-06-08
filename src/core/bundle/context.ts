@@ -9,9 +9,8 @@ import { renderPlugin } from '../../plugins/render'
 import { plural } from '../../utils/plural'
 import { loadContext, SausContext } from '../context'
 import { loadRoutes } from '../loadRoutes'
-import { bundleDir, clientDir, httpDir } from '../paths'
 import { SausBundleConfig, vite } from '../vite'
-import { internalRedirects } from './internalRedirects'
+import { internalRedirects, ssrRedirects } from './moduleRedirects'
 import { preBundleSsrRuntime } from './runtimeBundle'
 
 type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'moduleMap' | 'target'
@@ -126,11 +125,8 @@ export async function loadBundleContext(
     await preBundleSsrRuntime(context),
     moduleRedirection([
       ...internalRedirects,
-      overrideBareImport('saus', path.join(bundleDir, 'index.ts')),
+      ...ssrRedirects,
       overrideBareImport('saus/bundle', context.bundleModuleId),
-      overrideBareImport('saus/client', path.join(clientDir, 'index.ssr.ts')),
-      overrideBareImport('saus/core', path.join(bundleDir, 'core/index.ts')),
-      overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
     ]),
   ]
 

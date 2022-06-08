@@ -14,7 +14,7 @@ import {
 import { SausContext } from '../context'
 import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
-import { internalRedirects } from './internalRedirects'
+import { internalRedirects } from './moduleRedirects'
 
 const sausRoot = toSausPath('src/')
 const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
