@@ -16,7 +16,8 @@ declare class ParsedUrl<RouteParams extends {} = Record<string, string>> {
     get search(): string;
     toString(): string;
     startsWith(prefix: string): boolean;
-    slice(start: number, end?: number): ParsedUrl<Record<string, string>>;
+    slice(start: number, end?: number): this;
+    append(subpath: string): this;
 }
 
 interface PageBundleOptions {
@@ -89,6 +90,7 @@ interface CommonHeaders {
     'cache-control'?: string;
     'content-length'?: string;
     'content-type'?: string;
+    expires?: string;
 }
 declare type Headers = CommonHeaders & Record<string, string | string[] | undefined>;
 declare class Response {
@@ -1150,15 +1152,16 @@ declare function getKnownPaths(options?: {
 
 declare const config: RuntimeConfig;
 
-declare type FileHeaders = Headers | null | ((url: string) => Headers | null | undefined);
+declare type BoundHeadersFn = () => Headers | null | undefined;
+declare type HeadersParam = Headers | null | ((url: string) => Headers | null | undefined);
 interface FileCache extends QuickLRU<string, FileCacheEntry> {
-    addModules(module: Set<ClientModule>, headers?: FileHeaders): void;
-    addAssets(assets: Map<string, ClientAsset>, headers?: FileHeaders): void;
+    addModules(module: Set<ClientModule>, headers?: HeadersParam): void;
+    addAssets(assets: Map<string, ClientAsset>, headers?: HeadersParam): void;
 }
 declare type FileCacheOptions = Options$1<string, FileCacheEntry>;
 declare type FileCacheEntry = [
     data: string | ClientAsset,
-    headers: Headers | null | undefined
+    headers: BoundHeadersFn | null | undefined
 ];
 declare function createFileCache(base: string, options?: FileCacheOptions): FileCache;
 
