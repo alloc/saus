@@ -249,10 +249,6 @@ export async function generateClientModules(
     } else {
       chunks.push(chunk)
 
-      // Restore imports that Vite removed.
-      chunk.imports.push(...chunk.importedAssets)
-      chunk.imports.push(...chunk.importedCss)
-
       if (chunk.isEntry) {
         const code = rewriteExports(chunk.code)
         const lines = stripComments(code).split('\n').filter(Boolean)
@@ -334,8 +330,30 @@ export async function generateClientModules(
   const moduleMap: ClientModuleMap = {}
   const assetMap: Record<string, Buffer> = {}
 
+  assets.forEach(asset => {
+    if (textExtensions.test(asset.fileName)) {
+      const text = asset.source + ''
+      if (!asset.fileName.endsWith('.css') || text.trim()) {
+        moduleMap[asset.fileName] = { id: asset.fileName, text }
+      }
+    } else {
+      assetMap[asset.fileName] = Buffer.from(asset.source)
+    }
+  })
+
   let entryIndex: number
   await mapSerial(chunks, async chunk => {
+    // Restore imports that Vite removed, but only if
+    // the asset wasn't compiled away to an empty string.
+    if (!chunk.isDebug) {
+      const importedAssets = [...chunk.importedAssets, ...chunk.importedCss]
+      importedAssets.forEach(fileName => {
+        if (assetMap[fileName] || moduleMap[fileName]) {
+          chunk.imports.push(fileName)
+        }
+      })
+    }
+
     // Convert relative imports to absolute imports, because we'll want
     // to inline the chunk if it only consists of import statements.
     for (const { source } of parseImports(chunk.code).reverse()) {
@@ -433,17 +451,6 @@ export async function generateClientModules(
     }
     if (chunk.exports.length) {
       mod.exports = chunk.exports
-    }
-  })
-
-  assets.forEach(asset => {
-    if (textExtensions.test(asset.fileName)) {
-      moduleMap[asset.fileName] = {
-        id: asset.fileName,
-        text: asset.source + '',
-      }
-    } else {
-      assetMap[asset.fileName] = Buffer.from(asset.source)
     }
   })
 
