@@ -1,7 +1,9 @@
 import { URLSearchParams } from 'url'
+import { joinUrl } from './joinUrl'
 
 const rawUrlRE = /^(\/[^#?]*)(?:#[^?]*)?(?:\?(.+)?)?$/
 
+export { joinUrl }
 export type { URLSearchParams }
 
 const emptyParams: any = Object.freeze({})
@@ -43,10 +45,6 @@ export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
       path: joinUrl(this.path, subpath),
     })
   }
-}
-
-export function joinUrl(...parts: (string | undefined)[]) {
-  return ('/' + parts.filter(Boolean).join('/')).replace(/\/{2,}/g, '/')
 }
 
 export function cloneUrl<Url extends ParsedUrl>(
