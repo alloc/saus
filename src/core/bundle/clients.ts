@@ -153,6 +153,11 @@ export async function generateClientModules(
   const splitVendor = vite.splitVendorChunk({})
 
   const { onwarn: userOnWarn } = context.config.build.rollupOptions
+  const chunkFilePattern = path.join(config.build.assetsDir, 'chunk.[hash].js')
+  const assetFilePattern = path.join(
+    config.build.assetsDir,
+    'chunk.[hash].[ext]'
+  )
 
   debug('Resolving "build" config for client bundle')
   config = await context.resolveConfig('build', {
@@ -206,6 +211,9 @@ export async function generateClientModules(
         output: {
           dir: outDir,
           minifyInternalExports: false,
+          entryFileNames: chunkFilePattern,
+          chunkFileNames: chunkFilePattern,
+          assetFileNames: assetFilePattern,
           manualChunks(id, api) {
             // Ensure a chunk exporting the `globalCache` object exists.
             if (id == globalCachePath) {
