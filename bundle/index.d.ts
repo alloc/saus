@@ -233,7 +233,13 @@ declare namespace Endpoint {
          */
         object?: any;
     }
-    export type ResponseHook<App = any> = (request: Request, response: ResponseTuple, app: App) => Promisable$6<void>;
+    export interface RequestHook extends Function {
+        priority?: number;
+    }
+    export interface ResponseHook {
+        (request: Request, response: ResponseTuple, app: App): Promisable$6<void>;
+        priority?: number;
+    }
     export type ResponseTuple = [
         status?: number,
         headers?: Headers | null,
@@ -878,7 +884,7 @@ interface RoutesModule extends HtmlContext {
     catchRoute?: Route;
     /** Used by generated routes to import their route module */
     ssrRequire?: RequireAsync;
-    requestHooks?: Endpoint.Function[];
+    requestHooks?: Endpoint.RequestHook[];
     responseHooks?: Endpoint.ResponseHook[];
 }
 
@@ -1144,13 +1150,23 @@ declare function getKnownPaths(options?: {
 
 declare const config: RuntimeConfig;
 
-interface FileCache extends QuickLRU<string, string | ClientAsset> {
-    addModules(module: Set<ClientModule>): void;
-    addAssets(assets: Map<string, ClientAsset>): void;
+declare type FileHeaders = Headers | null | ((url: string) => Headers | null | undefined);
+interface FileCache extends QuickLRU<string, FileCacheEntry> {
+    addModules(module: Set<ClientModule>, headers?: FileHeaders): void;
+    addAssets(assets: Map<string, ClientAsset>, headers?: FileHeaders): void;
 }
-declare type FileCacheOptions = Options$1<string, string | ClientAsset>;
+declare type FileCacheOptions = Options$1<string, FileCacheEntry>;
+declare type FileCacheEntry = [
+    data: string | ClientAsset,
+    headers: Headers | null | undefined
+];
 declare function createFileCache(base: string, options?: FileCacheOptions): FileCache;
 
+/**
+ * In addition to the returned `App` plugin, this function also adds
+ * a response hook with a priority of `1,000`. You should avoid mutating
+ * response headers from a response hook with a higher priority.
+ */
 declare const cachePageAssets: (cache: FileCache) => App.Plugin;
 
 /**
@@ -1202,4 +1218,4 @@ interface Options {
 }
 declare function servePublicDir(options?: Options): connect.Middleware;
 
-export { ClientAsset, ClientModule, ClientModuleMap, FileCache, FileCacheOptions, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
+export { ClientAsset, ClientModule, ClientModuleMap, FileCache, FileCacheEntry, FileCacheOptions, PageBundle, PageBundleOptions, RenderedFile$1 as RenderedFile, cachePageAssets, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, getModuleUrl, inlinedAssets, printFiles, serveCachedFiles, servePages, servePublicDir, setResponseCache, __d as ssrDefine, ssrImport, writePages };
