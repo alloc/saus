@@ -22,7 +22,7 @@ export const serveCachedFiles =
       })
     } else {
       res.writeHead(200, {
-        ...headers,
+        ...(headers && headers()),
         'content-type': mime.lookup(req.url)!,
         etag: etag(typeof file !== 'string' ? Buffer.from(file) : file, {
           weak: true,

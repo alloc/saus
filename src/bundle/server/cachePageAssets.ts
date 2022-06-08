@@ -28,14 +28,37 @@ export const cachePageAssets = (cache: FileCache): App.Plugin => {
 
         const pageCacheRules =
           headers &&
-          pick(headers, ['cache-control', 'cdn-cache-control'], Boolean)
+          pick(
+            headers,
+            ['cache-control', 'cdn-cache-control', 'expires'],
+            Boolean
+          )
 
-        const getHeaders = (url: string) =>
-          url.endsWith('.html.js')
-            ? pageCacheRules
-            : url.startsWith('/assets/')
-            ? assetCacheRules
-            : null
+        const getHeaders = (url: string) => {
+          if (url.endsWith('.html.js')) {
+            const headers = pageCacheRules && { ...pageCacheRules }
+
+            // If the Expires header exists, use it to refresh the max-age and
+            // s-maxage values in the Cache-Control and CDN-Cache-Control headers.
+            if (headers?.expires) {
+              const expires = new Date(headers.expires)
+              const maxAge = Math.floor((expires.getTime() - Date.now()) / 1e3)
+              const replaceMaxAge = (key: keyof typeof headers) => {
+                headers[key] &&= (headers[key] as string).replace(
+                  /\b(max-?age=)\d+/,
+                  (_, $1) => $1 + maxAge
+                )
+              }
+              replaceMaxAge('cache-control')
+              replaceMaxAge('cdn-cache-control')
+            }
+
+            return headers
+          }
+          if (url.startsWith('/assets/')) {
+            return assetCacheRules
+          }
+        }
 
         cache.addModules(page.modules, getHeaders)
         cache.addAssets(page.assets, getHeaders)

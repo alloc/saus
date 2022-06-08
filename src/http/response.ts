@@ -5,6 +5,7 @@ export interface CommonHeaders {
   'cache-control'?: string
   'content-length'?: string
   'content-type'?: string
+  expires?: string
 }
 
 export type Headers = CommonHeaders &

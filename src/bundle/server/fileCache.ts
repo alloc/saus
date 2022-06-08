@@ -3,21 +3,22 @@ import { Headers, normalizeHeaders } from '../../http'
 import { getModuleUrl } from '../getModuleUrl'
 import type { ClientAsset, ClientModule } from '../types'
 
-type FileHeaders =
+type BoundHeadersFn = () => Headers | null | undefined
+type HeadersParam =
   | Headers
   | null
   | ((url: string) => Headers | null | undefined)
 
 export interface FileCache extends QuickLRU<string, FileCacheEntry> {
-  addModules(module: Set<ClientModule>, headers?: FileHeaders): void
-  addAssets(assets: Map<string, ClientAsset>, headers?: FileHeaders): void
+  addModules(module: Set<ClientModule>, headers?: HeadersParam): void
+  addAssets(assets: Map<string, ClientAsset>, headers?: HeadersParam): void
 }
 
 export type FileCacheOptions = Options<string, FileCacheEntry>
 
 export type FileCacheEntry = [
   data: string | ClientAsset,
-  headers: Headers | null | undefined
+  headers: BoundHeadersFn | null | undefined
 ]
 
 export function createFileCache(base: string, options?: FileCacheOptions) {
@@ -27,8 +28,10 @@ export function createFileCache(base: string, options?: FileCacheOptions) {
     modules.forEach(module => {
       const url = getModuleUrl(module, base)
       if (!cache.has(url)) {
-        const resolvedHeaders = resolveHeaders(headers, url)
-        cache.set(url, [module.text, resolvedHeaders])
+        cache.set(url, [
+          module.text,
+          headers && resolveHeaders.bind(null, headers, url),
+        ])
       }
     })
 
@@ -36,8 +39,10 @@ export function createFileCache(base: string, options?: FileCacheOptions) {
     assets.forEach((data, assetId) => {
       const url = base + assetId
       if (!cache.has(url)) {
-        const resolvedHeaders = resolveHeaders(headers, url)
-        cache.set(url, [data, resolvedHeaders])
+        cache.set(url, [
+          data,
+          headers && resolveHeaders.bind(null, headers, url),
+        ])
       }
     })
 
@@ -45,7 +50,7 @@ export function createFileCache(base: string, options?: FileCacheOptions) {
 }
 
 function resolveHeaders(
-  headers: FileHeaders | undefined,
+  headers: HeadersParam | undefined,
   url: string
 ): Headers | null | undefined {
   if (typeof headers == 'function') {
