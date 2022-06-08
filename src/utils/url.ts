@@ -40,6 +40,10 @@ export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
   }
 }
 
+export function joinUrl(...parts: (string | undefined)[]) {
+  return ('/' + parts.filter(Boolean).join('/')).replace(/\/{2,}/g, '/')
+}
+
 /**
  * Expects a string like `"/foo#bar?baz"`
  *
