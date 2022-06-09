@@ -80,8 +80,10 @@ export const createPageFactory: App.Plugin = app => {
         return null
       }
 
-      const filename = getPageFilename(url.path)
-      const pageStateId = filename + '.js'
+      const isDefaultPage = page.props.routePath == 'default'
+      const filename = getPageFilename(
+        isDefaultPage ? config.defaultPath : url.path
+      )
 
       if (!page.html) {
         const finishedPage: PageBundle = {
@@ -135,6 +137,7 @@ export const createPageFactory: App.Plugin = app => {
         (id.startsWith(stateModuleBase) && id.endsWith('.js'))
 
       const routeModule = addModule(moduleMap[page.routeModuleId])!
+      const pageStateId = filename + '.js'
       const entryId = page.client
         ? path.join(config.assetsDir, page.client.id)
         : null!
