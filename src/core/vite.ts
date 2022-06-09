@@ -9,6 +9,8 @@ import type { ClientDescription } from './client'
 import type { RuntimeConfig } from './config'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
+import { RenderModule } from './render'
+import { RoutesModule } from './routes'
 import './viteRequire'
 
 export { vite }
@@ -176,9 +178,9 @@ declare module 'vite' {
     /**
      * Provide plugin hooks specific to Saus.
      *
-     * If a function is given, it gets called whenever the Saus context
-     * is created or replaced. When `saus dev` is used, it's also called
-     * when the routes/renderers are updated.
+     * If a function is given, it's called after the `SausContext`
+     * object is created or replaced (when the dev server is
+     * restarted).
      */
     saus?:
       | SausPlugin
@@ -244,13 +246,27 @@ export interface SausPlugin {
    */
   onRuntimeConfig?: (config: RuntimeConfig) => Promisable<void>
   /**
+   * Called after the routes are loaded or reloaded. Plugins can
+   * modify the routes if they want.
+   */
+  receiveRoutes?: (context: RoutesModule) => Promisable<void>
+  /**
+   * Called after the renderers are loaded or reloaded. Plugins can
+   * modify the renderers if they want.
+   *
+   * ⚠︎ This is only called when `saus dev` is used.
+   */
+  receiveRenderers?: (context: RenderModule) => Promisable<void>
+  /**
    * Called before the SSR bundle is written to disk.
-   * This is only called when `saus bundle` is used.
+   *
+   * ⚠︎ This is only called when `saus bundle` is used.
    */
   receiveBundle?: (bundle: OutputBundle) => Promisable<void>
   /**
    * Called before rendered pages are written to disk.
-   * This is only called when `saus build` is used.
+   *
+   * ⚠︎ This is only called when `saus build` is used.
    */
   onWritePages?: (pages: PageBundle[]) => void
   /**

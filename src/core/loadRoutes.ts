@@ -2,6 +2,7 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
+import { callPlugins } from '../utils/callPlugins'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { toDevPath } from '../utils/toDevPath'
 import { compileNodeModule } from '../vm/compileNodeModule'
@@ -79,6 +80,7 @@ export async function loadRoutes(
       }
     }
 
+    await callPlugins(context.plugins, 'receiveRoutes', routesConfig)
     Object.assign(context, routesConfig)
     injectRoutesMap(context)
 

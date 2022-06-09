@@ -1,3 +1,4 @@
+import { callPlugins } from '../utils/callPlugins'
 import { defer, Deferred } from '../utils/defer'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
@@ -33,6 +34,7 @@ export async function loadRenderers(context: SausContext) {
   })
   try {
     await executeModule(renderModule)
+    await callPlugins(context.plugins, 'receiveRenderers', renderConfig)
     Object.assign(context, renderConfig)
     debug(
       `Loaded ${plural(
