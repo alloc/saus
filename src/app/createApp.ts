@@ -17,7 +17,7 @@ import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
 import { normalizeHeaders } from '../http/normalizeHeaders'
 import { toArray } from '../utils/array'
-import { baseToRegex } from '../utils/base'
+import { baseToRegex, prependBase } from '../utils/base'
 import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
@@ -106,7 +106,13 @@ export function createApp(
       ['pre', 'default']
     )
 
-  const loadClientProps = createClientPropsLoader(config, defaultState, profile)
+  const loadClientProps = createClientPropsLoader(
+    config,
+    defaultState,
+    defaultRoute,
+    profile
+  )
+
   const resolveClient = createClientResolver(functions)
   const renderPage = createRenderPageFn(
     config,
@@ -304,8 +310,11 @@ export function createApp(
 function createClientPropsLoader(
   config: RuntimeConfig,
   defaultState: RouteIncludeOption[],
+  defaultRoute: Route | undefined,
   profile: ProfiledEventHandler | undefined
 ): ClientPropsLoader {
+  const { debugBase } = config
+
   return async (url, route) => {
     const requestUrl = makeRequestUrl(url, 'GET')
     const request = makeRequest(requestUrl, noop)
@@ -345,7 +354,10 @@ function createClientPropsLoader(
         : { ...routeConfig.props }
     ) as any
 
-    clientProps.routePath = route.path
+    clientProps.routePath =
+      route !== defaultRoute && debugBase && url.startsWith(debugBase)
+        ? prependBase(route.path, debugBase)
+        : route.path
     clientProps.routeParams = url.routeParams
 
     // Load any embedded state modules.
