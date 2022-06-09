@@ -5,7 +5,5 @@ export function prependBase(uri: string, base: string) {
 }
 
 export function baseToRegex(base: string) {
-  base = base.replace(/\./g, '\\.')
-  base = base.replace(trailingSlash, '(/|$)')
-  return new RegExp('^' + base)
+  return new RegExp('^' + base.replace(/\./g, '\\.'))
 }

@@ -3,8 +3,7 @@ import type { ParsedRoute } from '../core/routes'
 export function parseRoutePath(path: string): ParsedRoute {
   let pattern = '',
     keys: string[] = [],
-    match: RegExpExecArray | null,
-    lastMatch: RegExpExecArray | undefined
+    match: RegExpExecArray | null
 
   path.split('/').forEach(part => {
     if (!part) return
@@ -57,17 +56,13 @@ export function parseRoutePath(path: string): ParsedRoute {
         // They must be escaped.
         wip += match[5].replace(/\./g, '\\.')
       }
-      lastMatch = match
     }
 
     pattern += wip
   })
 
-  // If an extension comes last, disallow trailing slash.
-  pattern += lastMatch?.[5] ? '$' : '/?$'
-
   return {
     keys,
-    pattern: new RegExp('^' + pattern, 'i'),
+    pattern: new RegExp('^' + (pattern || '/') + '$', 'i'),
   }
 }

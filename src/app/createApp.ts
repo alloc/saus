@@ -21,7 +21,6 @@ import { baseToRegex, prependBase } from '../utils/base'
 import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
-import { ParsedUrl } from '../utils/url'
 import { defineBuiltinRoutes } from './builtinRoutes'
 import {
   emptyArray,
@@ -190,16 +189,11 @@ export function createApp(
   const debugBase = config.debugBase || ''
   const debugBaseRE = debugBase ? baseToRegex(debugBase) : null
 
-  // Append a trailing slash if the given URL is pointing to
-  // the debug version of the root page.
-  const normalizeUrl = <T extends ParsedUrl>(url: T) =>
-    debugBaseRE?.test(url.path) && !url.startsWith(debugBase)
-      ? url.append('/')
-      : url
-
   const resolveRoute: RouteResolver = url => {
-    const routedPath = normalizeUrl(url).withoutBase(debugBase).path
     const negotiate = createNegotiator(url.headers.accept)
+    const routedPath = debugBaseRE
+      ? url.path.replace(debugBaseRE, '/')
+      : url.path
 
     let route: Route | undefined
     for (route of routes) {
@@ -228,7 +222,7 @@ export function createApp(
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.ResponseTuple | undefined
     let request = makeRequest(
-      normalizeUrl(url),
+      url,
       function respondWith(arg1, headers?: any, body?: any) {
         if (response) return
         if (arg1 instanceof Promise) {
