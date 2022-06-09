@@ -1,6 +1,7 @@
 import path from 'path'
 import { App } from '../app/types'
 import { globalCache } from '../runtime/cache'
+import { prependBase } from '../utils/base'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
@@ -84,7 +85,7 @@ export const createPageFactory: App.Plugin = app => {
 
       const isDefaultPage = page.props.routePath == 'default'
       const filename = getPageFilename(
-        isDefaultPage ? config.defaultPath : url.path
+        isDefaultPage ? prependBase(config.defaultPath, base) : url.path
       )
 
       if (!page.html) {
