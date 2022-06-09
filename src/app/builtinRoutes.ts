@@ -7,6 +7,7 @@ import { route } from '../routes'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
+import { prependBase } from '../utils/base'
 import { parseUrl } from '../utils/url'
 import type { AppContext } from './types'
 
@@ -16,10 +17,16 @@ export function defineBuiltinRoutes(
   context: AppContext,
   renderer: ModuleRenderer
 ) {
+  const { debugBase } = context.config
+
   // Page-based entry modules
   route(`/*.html.js`).get(async (req, app) => {
     const pagePath = '/' + req.wild.replace(indexFileRE, '')
-    const pageUrl = parseUrl(pagePath)
+    const pageUrl = parseUrl(
+      debugBase && req.startsWith(debugBase)
+        ? prependBase(pagePath, debugBase)
+        : pagePath
+    )
     const [, route] = app.resolveRoute(
       makeRequestUrl(pageUrl, 'GET', { accept: 'text/html' })
     )
