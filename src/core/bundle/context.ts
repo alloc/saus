@@ -114,10 +114,12 @@ export async function loadBundleContext(
   await loadRoutes(context, (id, importer) =>
     pluginContainer.resolveId(id, importer!, { ssr: true })
   )
+  const routeCount =
+    context.routes.length +
+    (context.defaultRoute ? 1 : 0) +
+    (context.catchRoute ? 1 : 0)
 
-  const routeCount = context.routes.length + (context.defaultRoute ? 1 : 0)
   loading.finish(`${plural(routeCount, 'route')} loaded.`)
-
   await pluginContainer.close()
 
   context.bundleModuleId = '\0saus/main.js'

@@ -420,27 +420,6 @@ export function createAsyncRequire(
   }
 }
 
-export function injectExports(filename: string, exports: object) {
-  const moduleCache = (Module as any)._cache as Record<string, NodeModule>
-  const module = moduleCache[filename]
-  if (module) {
-    if (exports.constructor == Object) {
-      Object.defineProperties(
-        module.exports,
-        Object.getOwnPropertyDescriptors(exports)
-      )
-    } else {
-      module.exports = exports
-    }
-  } else {
-    moduleCache[filename] = Object.assign(new Module(filename), {
-      filename,
-      exports,
-      loaded: true,
-    })
-  }
-}
-
 function createRequire(importer: string) {
   return Module.createRequire(
     path.isAbsolute(importer) ? importer : path.resolve('index.js')

@@ -15,7 +15,6 @@ import { debug } from './core/debug'
 import { Endpoint } from './core/endpoint'
 import { createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
-import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
@@ -188,23 +187,24 @@ async function startServer(
     server.pluginContainer.resolveId(id, importer!, { ssr: true })
 
   context.server = server
-  server.moduleMap = moduleMap
-  server.externalExports = new Map()
-  server.linkedModules = {}
-  Object.assign(server, getRequireFunctions(context, resolveId))
-  context.ssrRequire = server.ssrRequire
+  context.watcher = watcher
+  context.moduleMap = moduleMap
+  context.externalExports = new Map()
+  context.linkedModules = {}
+  Object.assign(context, getRequireFunctions(context, resolveId))
 
   // Force all node_modules to be reloaded
-  server.ssrForceReload = createFullReload()
+  context.ssrForceReload = createFullReload()
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
   } catch (e: any) {
     events.emit('error', e)
   }
-  server.ssrForceReload = undefined
+  context.ssrForceReload = undefined
 
-  await hotReloadServerModules(context, config, events, resolveId)
+  await prepareDevApp(context, config, events, resolveId)
+  watcher.prependListener('change', context.hotReload)
 
   // Use process.nextTick to ensure whoever is awaiting the `createServer`
   // call can handle this event.
@@ -289,28 +289,23 @@ function waitForChanges(
   logger.info('\n' + gray('Waiting for changes...'))
 }
 
-async function hotReloadServerModules(
+async function prepareDevApp(
   context: DevContext,
   config: ResolvedConfig,
   events: EventEmitter,
   resolveId: ResolveIdHook
 ) {
-  const server = context.server!
-  const watcher = server.watcher!
+  const { server, watcher } = context
   const failedRequests = new Set<Endpoint.Request>()
 
-  await onContextUpdate()
-
-  // This runs on server startup and whenever the routes and/or
-  // renderers are reloaded.
-  async function onContextUpdate() {
+  await resetDevApp()
+  async function resetDevApp() {
     context.app = await createDevApp(context, error => {
       if (error.req) {
         failedRequests.add(error.req)
       }
       events.emit('error', error)
     })
-    context.plugins = await getSausPlugins(context)
   }
 
   const dirtyFiles = new Set<string>()
@@ -419,7 +414,7 @@ async function hotReloadServerModules(
 
     if (routesChanged || renderersChanged) {
       context.clearCachedPages()
-      await onContextUpdate()
+      await resetDevApp()
     }
 
     for (const file of changesToEmit) {
@@ -439,12 +434,12 @@ async function hotReloadServerModules(
     })
   }, 50)
 
-  watcher.prependListener('change', async file => {
+  context.hotReload = async file => {
     if (dirtyFiles.has(file)) {
       return
     }
-    const moduleMap = server.moduleMap
-    const changedModule = moduleMap[file] || server.linkedModules[file]
+    const moduleMap = context.moduleMap
+    const changedModule = moduleMap[file] || context.linkedModules[file]
     if (changedModule) {
       await moduleMap.__compileQueue
       const stateModules = new Set(
@@ -488,7 +483,7 @@ async function hotReloadServerModules(
           accept: acceptModule,
           onPurge(module, isAccepted) {
             if (isLinkedModule(module)) {
-              server.externalExports.delete(module.id)
+              context.externalExports.delete(module.id)
             } else {
               resetStateModule(module)
             }
@@ -527,7 +522,7 @@ async function hotReloadServerModules(
       debug(`Vite config changed. Restarting server.`)
       events.emit('restart')
     }
-  })
+  }
 }
 
 function formatError(error: any, app: App) {

@@ -1,13 +1,13 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
-import type { App, RenderPageResult } from '../app/types'
+import type { App, RenderedFile, RenderPageResult } from '../app/types'
 import { loadResponseCache, setResponseCache } from '../http/responseCache'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { RequireAsync } from '../vm/types'
+import { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
 import { getSausPlugins } from './getSausPlugins'
@@ -19,7 +19,10 @@ import { RoutesModule } from './routes'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { Cache, withCache } from './withCache'
 
-export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
+type Command = 'build' | 'serve'
+
+export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
+  command: Command
   root: string
   plugins: readonly SausPlugin[]
   logger: vite.Logger
@@ -32,7 +35,7 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
    * or else you risk corrupting the Vite plugin state.
    */
   resolveConfig: (
-    command: 'build' | 'serve',
+    command: Command,
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
   /** The cache for compiled SSR modules */
@@ -57,18 +60,31 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
-  /** Saus application. Exists in dev mode only */
-  app?: App
   /** Vite dev server. Exists in dev mode only */
   server?: vite.ViteDevServer
-  /** Used by the `route` function in dev mode */
-  ssrRequire?: RequireAsync
 }
 
-export interface DevContext extends SausContext {
+type ProdContext = BaseContext &
+  Partial<Omit<DevContext, keyof BaseContext>> & {
+    command: 'build'
+  }
+
+export type SausContext = DevContext | ProdContext
+
+export interface DevContext extends BaseContext {
+  command: 'serve'
   app: App
   server: vite.ViteDevServer
+  watcher: vite.FSWatcher
+  moduleMap: ModuleMap
+  linkedModules: LinkedModuleMap
+  externalExports: Map<string, any>
+  hotReload: (file: string) => Promise<void>
+  require: RequireAsync
   ssrRequire: RequireAsync
+  ssrForceReload?: (id: string) => boolean
+  /** Files emitted by a renderer are cached here. */
+  servedFiles: Record<string, RenderedFile>
 }
 
 type InlinePlugin = (
@@ -79,8 +95,8 @@ type InlinePlugin = (
 function createContext(
   config: ResolvedConfig,
   configHooks: ConfigHookRef[],
-  resolveConfig: SausContext['resolveConfig']
-): SausContext {
+  resolveConfig: BaseContext['resolveConfig']
+): BaseContext {
   const pageCache: Cache<RenderPageResult> = {
     loading: {},
     loaders: {},
@@ -102,6 +118,7 @@ function createContext(
   }
 
   return {
+    command: config.command,
     root: config.root,
     plugins: [],
     logger: config.logger,
@@ -128,12 +145,12 @@ function createContext(
   }
 }
 
-export async function loadContext<T extends SausContext>(
-  command: 'build' | 'serve',
+export async function loadContext<T extends BaseContext>(
+  command: Command,
   inlineConfig?: vite.InlineConfig,
   inlinePlugins?: InlinePlugin[]
 ): Promise<T> {
-  let context: SausContext | undefined
+  let context: BaseContext | undefined
   let configHooks: ConfigHookRef[]
 
   const resolveConfig = getConfigResolver(
@@ -154,12 +171,9 @@ function getConfigResolver(
   defaultConfig: vite.InlineConfig,
   inlinePlugins: InlinePlugin[] | undefined,
   getConfigHooks: (config: ResolvedConfig) => Promise<ConfigHookRef[]>,
-  getContext: (config: ResolvedConfig) => SausContext
+  getContext: (config: ResolvedConfig) => BaseContext
 ) {
-  return async (
-    command: 'build' | 'serve',
-    inlineConfig?: vite.InlineConfig
-  ) => {
+  return async (command: Command, inlineConfig?: vite.InlineConfig) => {
     const isBuild = command == 'build'
     const sausDefaults: vite.InlineConfig = {
       configFile: false,
@@ -270,12 +284,7 @@ function getConfigResolver(
     ]
 
     const context = getContext(config)
-
-    // In build mode, we create Saus plugins *before* routes load,
-    // whereas, in dev mode, they're created *after* that.
-    if (config.command == 'build') {
-      context.plugins = await getSausPlugins(context, config)
-    }
+    context.plugins = await getSausPlugins(context, config)
 
     return config
   }

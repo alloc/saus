@@ -1,12 +1,10 @@
 import * as vite from 'vite'
-import type { RenderedFile } from '../app/types'
 import type { OutputBundle } from '../bundle'
 import type { PageBundle } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
 import type { TestFramework } from '../test'
 import type { AbortSignal } from '../utils/AbortController'
-import type { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import type { ClientDescription } from './client'
 import type { RuntimeConfig } from './config'
 import type { SausContext } from './context'
@@ -172,17 +170,6 @@ declare module 'vite' {
      * less noise from files you don't care about.
      */
     filterStack?: (source: string) => boolean
-  }
-
-  interface ViteDevServer {
-    /** Files emitted by a renderer are cached here. */
-    servedFiles: Record<string, RenderedFile>
-    moduleMap: ModuleMap
-    linkedModules: LinkedModuleMap
-    externalExports: Map<string, any>
-    require: RequireAsync
-    ssrRequire: RequireAsync
-    ssrForceReload?: (id: string) => boolean
   }
 
   interface Plugin {

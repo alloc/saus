@@ -1,6 +1,6 @@
 import path from 'path'
 import { Changed, Promisable } from '../utils/types'
-import { injectExports } from '../vm/asyncRequire'
+import { injectNodeModule } from '../vm/nodeModules'
 import { BundleContext } from './bundle'
 import { deployModule } from './global'
 
@@ -11,7 +11,7 @@ export function getDeployContext() {
 }
 
 export function injectDeployContext(context: DeployContext) {
-  injectExports(contextPath, context)
+  injectNodeModule(contextPath, context)
 }
 
 export interface DeployContext extends BundleContext {

@@ -1,8 +1,8 @@
-import { SausContext } from './context'
+import { BaseContext } from './context'
 import { Plugin, SausPlugin, vite } from './vite'
 
 export async function getSausPlugins(
-  context: SausContext,
+  context: BaseContext,
   config = context.config
 ) {
   const sausPlugins: SausPlugin[] = []

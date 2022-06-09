@@ -1,13 +1,14 @@
 import os from 'os'
 import path from 'path'
-import { extractClientFunctions, RuntimeConfig, SausContext } from '../core'
+import { extractClientFunctions, RuntimeConfig } from '../core'
+import { DevContext } from '../core/context'
 import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
 import { prependBase } from '../utils/base'
 import { callPlugins } from '../utils/callPlugins'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
-import { injectExports } from '../vm/asyncRequire'
 import { clearExports } from '../vm/moduleMap'
+import { injectNodeModule } from '../vm/nodeModules'
 import { cachePages } from './cachePages'
 import { createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
@@ -15,7 +16,7 @@ import { throttleRender } from './throttleRender'
 import { App, RenderPageOptions } from './types'
 
 export async function createDevApp(
-  context: SausContext,
+  context: DevContext,
   onError: (e: any) => void
 ): Promise<App> {
   const functions = extractClientFunctions(context.renderPath)
@@ -59,9 +60,9 @@ export async function createDevApp(
 }
 
 const createPageEndpoint =
-  (context: SausContext, onError: (e: any) => void): App.Plugin =>
+  (context: DevContext, onError: (e: any) => void): App.Plugin =>
   app => {
-    const server = context.server!
+    const { server } = context
     return {
       getEndpoints: (method, route) =>
         method == 'GET' &&
@@ -96,7 +97,7 @@ const createPageEndpoint =
 
           if (page) {
             for (const file of page.files) {
-              server.servedFiles[file.id] = file
+              context.servedFiles[file.id] = file
             }
             page.html = await server.transformIndexHtml(req.path, page.html)
             if (!error && app.postProcessHtml) {
@@ -118,7 +119,7 @@ const createPageEndpoint =
  * Reload SSR modules before a page is rendered, so pages can't share
  * stateful modules between each other.
  */
-function isolatePages(context: SausContext): App.Plugin {
+function isolatePages(context: DevContext): App.Plugin {
   const routeModuleIds = new Set(
     context.routes.map(route => route.moduleId).filter(Boolean) as string[]
   )
@@ -131,7 +132,9 @@ function isolatePages(context: SausContext): App.Plugin {
   })
   entryPaths.push(context.renderPath)
 
-  const server = context.server!
+  const clientInjectionsPath = path.resolve(__dirname, '../client/baseUrl.cjs')
+  context.liveModulePaths.push(clientInjectionsPath)
+
   return app => {
     const { config, renderPage } = app
     const { debugBase = '' } = config
@@ -145,7 +148,7 @@ function isolatePages(context: SausContext): App.Plugin {
       // which modules have side effects and are also used by the route matched
       // for the currently rendering page.
       for (const entryPath of entryPaths) {
-        const entryModule = server.moduleMap[entryPath]
+        const entryModule = context.moduleMap[entryPath]
         if (entryModule) {
           for (const module of entryModule.package || [entryModule]) {
             clearExports(module)
@@ -155,14 +158,14 @@ function isolatePages(context: SausContext): App.Plugin {
 
       // Some "saus/client" exports are determined by page URL.
       const isDebug = url.startsWith(debugBase)
-      const injectedPath = path.resolve(__dirname, '../client/baseUrl.cjs')
-      injectExports(injectedPath, {
+      injectNodeModule(clientInjectionsPath, {
         BASE_URL: isDebug ? prependBase(debugBase, config.base) : config.base,
         isDebug,
         prependBase(uri: string, base = config.base) {
           return prependBase(uri, base)
         },
       })
+      await context.hotReload(clientInjectionsPath)
 
       // Load the route module and its dependencies now, since the
       // setup function is guaranteed to run serially, which lets us

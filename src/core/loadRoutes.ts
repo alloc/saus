@@ -4,11 +4,11 @@ import MagicString from 'magic-string'
 import path from 'path'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { toDevPath } from '../utils/toDevPath'
-import { injectExports } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { executeModule } from '../vm/executeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from '../vm/moduleMap'
+import { injectNodeModule } from '../vm/nodeModules'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
@@ -21,9 +21,12 @@ export async function loadRoutes(
   resolveId: ResolveIdHook
 ) {
   const time = Date.now()
-  const moduleMap = context.server?.moduleMap || {}
+  const moduleMap = context.moduleMap || {}
+
   const { require, ssrRequire } =
-    context.server || getRequireFunctions(context, resolveId, moduleMap)
+    context.command == 'build'
+      ? getRequireFunctions(context, resolveId, moduleMap)
+      : context
 
   const routesModule =
     moduleMap[context.routesPath] ||
@@ -150,5 +153,5 @@ function injectRoutesMap(context: SausContext) {
   }
 
   const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
-  injectExports(routesMapPath, routesMap)
+  injectNodeModule(routesMapPath, routesMap)
 }

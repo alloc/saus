@@ -3,20 +3,22 @@ import { createAsyncRequire } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
-import { ModuleMap, ResolveIdHook } from '../vm/types'
+import { ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 
 export function getRequireFunctions(
   context: SausContext,
   resolveId: ResolveIdHook,
-  moduleMap?: ModuleMap
+  moduleMap = context.moduleMap || {}
 ) {
-  const { root, config, compileCache, server } = context
-  const linkedModules = server?.linkedModules
-  const externalExports = server?.externalExports
-  const filterStack = config.filterStack
-
-  moduleMap ||= server?.moduleMap || {}
+  const {
+    root,
+    config,
+    compileCache,
+    externalExports,
+    linkedModules,
+    watcher,
+  } = context
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -24,8 +26,8 @@ export function getRequireFunctions(
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
-  const watcher = server?.watcher
-  const watchFile = watcher ? watcher.add.bind(watcher) : undefined
+  const watchFile = watcher && watcher.add.bind(watcher)
+  const filterStack = config.filterStack
 
   return {
     ssrRequire: createAsyncRequire({
@@ -41,7 +43,7 @@ export function getRequireFunctions(
         return compileSsrModule(id, context)
       },
       get shouldReload() {
-        return server?.ssrForceReload
+        return context.ssrForceReload
       },
     }),
     require: createAsyncRequire({
@@ -68,7 +70,7 @@ export function getRequireFunctions(
         )
       },
       get shouldReload() {
-        return server?.ssrForceReload
+        return context.ssrForceReload
       },
     }),
   }

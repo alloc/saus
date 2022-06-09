@@ -20,7 +20,7 @@ export async function loadRenderers(context: SausContext) {
   loading.promise.catch(noop)
 
   const time = Date.now()
-  const moduleMap = context.server?.moduleMap || {}
+  const moduleMap = context.moduleMap || {}
 
   const renderModule =
     moduleMap[context.renderPath] ||

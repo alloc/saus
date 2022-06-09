@@ -40,7 +40,11 @@ export function serveClientEntries(
     },
     saus(c) {
       context = c as DevContext
-      config = context.app.config
+      return {
+        onRuntimeConfig(c) {
+          config = c
+        },
+      }
     },
     resolveId(id, importer) {
       if (id.startsWith(clientUrlPrefix)) {
