@@ -142,6 +142,8 @@ export async function generateClientModules(
   const splitVendor = vite.splitVendorChunk({})
 
   const { onwarn: userOnWarn } = context.config.build.rollupOptions
+
+  const entryFilePattern = path.join(config.build.assetsDir, 'entry.[hash].js')
   const chunkFilePattern = path.join(config.build.assetsDir, 'chunk.[hash].js')
   const assetFilePattern = path.join(
     config.build.assetsDir,
@@ -177,7 +179,7 @@ export async function generateClientModules(
         output: {
           dir: outDir,
           minifyInternalExports: false,
-          entryFileNames: chunkFilePattern,
+          entryFileNames: entryFilePattern,
           chunkFileNames: chunkFilePattern,
           assetFileNames: assetFilePattern,
           manualChunks(id, api) {
