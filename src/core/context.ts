@@ -78,6 +78,7 @@ export interface DevContext extends BaseContext {
   watcher: vite.FSWatcher
   moduleMap: ModuleMap
   linkedModules: LinkedModuleMap
+  liveModulePaths: string[]
   externalExports: Map<string, any>
   hotReload: (file: string) => Promise<void>
   require: RequireAsync

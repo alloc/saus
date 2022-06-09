@@ -132,6 +132,9 @@ async function compileRoutesModule(
   )
 }
 
+/**
+ * This injects the `routes` object exported by `saus/client`.
+ */
 function injectRoutesMap(context: SausContext) {
   const routesMap: Record<string, string> = {}
 
@@ -156,4 +159,19 @@ function injectRoutesMap(context: SausContext) {
 
   const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
   injectNodeModule(routesMapPath, routesMap)
+
+  if (context.command == 'serve') {
+    // Do nothing if already registered.
+    if (!context.liveModulePaths.includes(routesMapPath)) {
+      context.liveModulePaths.push(routesMapPath)
+
+      // Eagerly invalidate our importers when the routes module
+      // is changed, thereby merging the two reload passes.
+      context.watcher.on('change', file => {
+        if (file === context.routesPath) {
+          context.hotReload(routesMapPath)
+        }
+      })
+    }
+  }
 }

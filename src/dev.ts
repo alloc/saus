@@ -191,6 +191,7 @@ async function startServer(
   context.moduleMap = moduleMap
   context.externalExports = new Map()
   context.linkedModules = {}
+  context.liveModulePaths = []
   Object.assign(context, getRequireFunctions(context, resolveId))
 
   // Force all node_modules to be reloaded

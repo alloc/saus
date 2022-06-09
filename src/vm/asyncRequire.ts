@@ -43,6 +43,19 @@ export type RequireAsyncConfig = {
    */
   linkedModules?: LinkedModuleMap
   /**
+   * Return `true` to mark an installed module as "live", implying that
+   * its exports may be updated dynamically after being loaded.
+   *
+   * ⚠️ This is only called for files in `node_modules` directory.
+   *
+   * Live modules are added to the `linkedModules` map so their importers
+   * can be reset with the `unloadModuleAndImporters` function.
+   *
+   * Use the `injectNodeModule` function to update a live module, but keep
+   * in mind that importers won't be reset when you do.
+   */
+  isLiveModule?: (file: string) => boolean
+  /**
    * Modules loaded with Node's module loader (instead of Vite-based compilation)
    * have their exports cached in here.
    *
@@ -101,6 +114,7 @@ export function createAsyncRequire(
   const {
     moduleMap = {},
     linkedModules = {},
+    isLiveModule = () => false,
     externalExports = new Map(),
     resolveId = () => undefined,
     compileModule,
@@ -164,6 +178,9 @@ export function createAsyncRequire(
       trackImport(importer, linkedModule)
     }
   }
+
+  const isLinkedModuleId = (id: string) =>
+    path.isAbsolute(id) && (!id.includes('/node_modules/') || isLiveModule(id))
 
   /**
    * When the importer is a linked module, wrap the `nodeResolve` hook so we
@@ -424,10 +441,6 @@ function createRequire(importer: string) {
   return Module.createRequire(
     path.isAbsolute(importer) ? importer : path.resolve('index.js')
   )
-}
-
-function isLinkedModuleId(id: string) {
-  return path.isAbsolute(id) && !id.includes('/node_modules/')
 }
 
 const nodeExtensions = Module.createRequire(__filename).extensions

@@ -17,11 +17,15 @@ export function getRequireFunctions(
     compileCache,
     externalExports,
     linkedModules,
+    liveModulePaths,
     watcher,
   } = context
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
+
+  const isLiveModule =
+    liveModulePaths && ((id: string) => liveModulePaths.includes(id))
 
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
@@ -34,6 +38,7 @@ export function getRequireFunctions(
       resolveId,
       moduleMap,
       linkedModules,
+      isLiveModule,
       externalExports,
       nodeResolve,
       watchFile,
@@ -50,6 +55,7 @@ export function getRequireFunctions(
       resolveId,
       moduleMap,
       linkedModules,
+      isLiveModule,
       externalExports,
       nodeResolve,
       watchFile,
