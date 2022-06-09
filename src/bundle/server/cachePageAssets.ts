@@ -2,6 +2,8 @@ import type { App } from '../../app/types'
 import { Headers, normalizeHeaders } from '../../http'
 import { onResponse } from '../../routes'
 import { pick } from '../../utils/pick'
+import { prependBase } from '../../utils/prependBase'
+import config from '../runtimeConfig'
 import type { PageBundle } from '../types'
 import type { FileCache } from './fileCache'
 
@@ -11,6 +13,13 @@ import type { FileCache } from './fileCache'
  * response headers from a response hook with a higher priority.
  */
 export const cachePageAssets = (cache: FileCache): App.Plugin => {
+  const assetBase = `/${config.assetsDir}/`
+  const assetDebugBase =
+    config.debugBase && prependBase(assetBase, config.debugBase)
+  const isAsset = (url: string) =>
+    url.startsWith(assetBase) ||
+    (assetDebugBase && url.startsWith(assetDebugBase))
+
   // Assets produced by Rollup have a content hash,
   // so the browser can cache them for longer periods.
   const assetMaxAge = 2629800 // 1 month
@@ -55,7 +64,7 @@ export const cachePageAssets = (cache: FileCache): App.Plugin => {
 
             return headers
           }
-          if (url.startsWith('/assets/')) {
+          if (isAsset(url)) {
             return assetCacheRules
           }
         }
