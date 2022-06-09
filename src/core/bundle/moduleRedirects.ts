@@ -9,12 +9,12 @@ const emptyModule = path.join(runtimeDir, 'emptyModule.ts')
 
 export const internalRedirects = [
   redirectModule(
-    path.join(coreDir, 'constants.ts'),
-    path.join(bundleDir, 'core/constants.ts')
-  ),
-  redirectModule(
     path.join(clientDir, 'node/loadPageModule.ts'),
     path.join(bundleDir, 'loadPageModule.ts')
+  ),
+  redirectModule(
+    path.join(coreDir, 'constants.ts'),
+    path.join(bundleDir, 'core/constants.ts')
   ),
   redirectModule(
     path.join(coreDir, 'getCurrentModule.ts'),
@@ -39,17 +39,14 @@ export const clientRedirects = [
     path.join(clientDir, 'index.prod.ts')
   ),
   redirectModule(
-    path.join(httpDir, 'httpImport.ts'),
-    path.join(runtimeDir, 'emptyModule.ts')
+    path.join(coreDir, 'buffer.ts'),
+    path.join(clientDir, 'buffer.ts')
   ),
   redirectModule(
     path.join(httpDir, 'get.ts'),
     path.join(clientDir, 'http/get.ts')
   ),
-  redirectModule(
-    path.join(coreDir, 'buffer.ts'),
-    path.join(clientDir, 'buffer.ts')
-  ),
+  redirectModule(path.join(httpDir, 'httpImport.ts'), emptyModule),
   redirectModule(
     path.join(runtimeDir, 'loadStateModule.ts'),
     path.join(clientDir, 'loadStateModule.ts')
