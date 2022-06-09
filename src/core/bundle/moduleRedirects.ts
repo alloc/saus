@@ -5,6 +5,8 @@ import {
 } from '../../plugins/moduleRedirection'
 import { bundleDir, clientDir, coreDir, httpDir, runtimeDir } from '../paths'
 
+const emptyModule = path.join(runtimeDir, 'emptyModule.ts')
+
 export const internalRedirects = [
   redirectModule(
     path.join(coreDir, 'constants.ts'),
@@ -29,6 +31,8 @@ export const ssrRedirects = [
 
 export const clientRedirects = [
   overrideBareImport('debug', path.join(bundleDir, 'debug.ts')),
+  overrideBareImport('saus', emptyModule),
+  overrideBareImport('saus/core', emptyModule),
   overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
   redirectModule(
     path.join(clientDir, 'index.dev.ts'),
