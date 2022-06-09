@@ -96,8 +96,8 @@ const createPageEndpoint =
               server.servedFiles[file.id] = file
             }
             page.html = await server.transformIndexHtml(req.path, page.html)
-            if (!error && server.postProcessHtml) {
-              page.html = await server.postProcessHtml(page)
+            if (!error && app.postProcessHtml) {
+              page.html = await app.postProcessHtml(page)
             }
             const headers = {
               'Content-Type': 'text/html; charset=utf-8',

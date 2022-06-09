@@ -3,7 +3,8 @@ import os from 'os'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
-import { Endpoint, Plugin, SausContext } from '../core'
+import { Endpoint, Plugin } from '../core'
+import { DevContext } from '../core/context'
 import { makeRequestUrl } from '../core/makeRequest'
 import { writeResponse } from '../runtime/writeResponse'
 import { streamToBuffer } from '../utils/streamToBuffer'
@@ -16,13 +17,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
   let didInit: () => void
   init = new Promise(resolve => (didInit = resolve))
 
-  let context: SausContext
+  let context: DevContext
   let fileCache: Record<string, RenderedFile> = {}
 
   return {
     name: 'saus:serve',
     saus(c) {
-      context = c
+      context = c as DevContext
       init = {
         // Defer to the reload promise after the context is initialized.
         then: (...args) => (c.reloading || Promise.resolve()).then(...args),
@@ -83,13 +84,13 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
 }
 
 async function processRequest(
-  context: SausContext,
+  context: DevContext,
   req: Endpoint.RequestUrl,
   res: ServerResponse,
   next: () => void
 ): Promise<void> {
-  const { server, reloadId } = context
-  const [status, headers, body] = await server!.callEndpoints(req)
+  const { app, reloadId } = context
+  const [status, headers, body] = await app.callEndpoints(req)
   if (reloadId !== context.reloadId) {
     return (context.reloading || Promise.resolve()).then(() => {
       return processRequest(context, req, res, next)

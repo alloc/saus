@@ -1,5 +1,5 @@
 import * as vite from 'vite'
-import type { App, RenderedFile } from '../app/types'
+import type { RenderedFile } from '../app/types'
 import type { OutputBundle } from '../bundle'
 import type { PageBundle } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
@@ -174,7 +174,7 @@ declare module 'vite' {
     filterStack?: (source: string) => boolean
   }
 
-  interface ViteDevServer extends Omit<App, 'config'> {
+  interface ViteDevServer {
     /** Files emitted by a renderer are cached here. */
     servedFiles: Record<string, RenderedFile>
     moduleMap: ModuleMap
