@@ -1,5 +1,6 @@
 import { createApp as create } from '../app/createApp'
 import type { App, AppContext, PageContext } from '../app/types'
+import { prependBase } from '../utils/base'
 import { LazyPromise } from '../utils/LazyPromise'
 import { context } from './context'
 import { defineClientEntry } from './defineClientEntry'
@@ -39,6 +40,9 @@ function isolatePages(context: AppContext): App.Plugin {
           await ssrClearCache()
           defineClientEntry({
             BASE_URL: options.isDebug ? debugBase : '/',
+            prependBase(uri: string, base = config.base) {
+              return prependBase(uri, base)
+            },
           })
           context.renderers = []
           context.defaultRenderer = undefined
