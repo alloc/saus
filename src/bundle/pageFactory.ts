@@ -135,10 +135,11 @@ export const createPageFactory: App.Plugin = app => {
       const bodyTags: HtmlTagDescriptor[] = []
 
       // Share the state cache and state modules b/w debug and production views.
+      const stateCacheId = config.stateCacheId.slice(1)
       const stateModuleBase = config.stateModuleBase.slice(1)
       const preserveBase = (id: string) =>
         id == moduleMap.helpers ||
-        id == config.stateCacheId ||
+        id == stateCacheId ||
         (id.startsWith(stateModuleBase) && id.endsWith('.js'))
 
       const routeModule = addModule(moduleMap[page.routeModuleId])!
