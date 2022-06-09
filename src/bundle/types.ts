@@ -1,9 +1,9 @@
+import type { RenderPageOptions } from '../app/types'
 import type { HttpRedirect } from '../http/redirect'
 import type { ParsedUrl } from '../utils/url'
 
-export interface PageBundleOptions {
-  timeout?: number
-  onError?: (error: Error & { url: string }) => null
+export interface PageBundleOptions
+  extends Pick<RenderPageOptions, 'timeout' | 'onError'> {
   renderStart?: (url: ParsedUrl) => void
   renderFinish?: (
     url: ParsedUrl,
