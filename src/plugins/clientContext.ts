@@ -20,6 +20,7 @@ export function defineClientContext(): Plugin {
       const clientContext: ClientConstants = {
         defaultPath: sausConfig.defaultPath!,
         devRoot: path.resolve(config.root || ''),
+        stateModuleBase: sausConfig.stateModuleBase!,
       }
       for (const [key, value] of Object.entries(clientContext)) {
         define['saus.' + key] = JSON.stringify(value)

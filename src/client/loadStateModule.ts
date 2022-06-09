@@ -1,5 +1,4 @@
 // Overrides "src/core/loadStateModule.ts" module in client builds
-import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
 import { getLoadedStateOrThrow } from '../runtime/getLoadedStateOrThrow'
 import { prependBase } from './prependBase'
@@ -18,7 +17,7 @@ export function loadStateModule(
   }
 
   return getCachedState(cacheKey, async () => {
-    const stateUrl = prependBase(stateModuleBase + cacheKey + '.js')
+    const stateUrl = prependBase(saus.stateModuleBase + cacheKey + '.js')
     if (import.meta.env.DEV) {
       // Ensure this module is ready to serve.
       await fetch(stateUrl, {

@@ -29,6 +29,7 @@ export async function createDevApp(
     publicDir: viteConfig.publicDir,
     ssrRoutesId: '/@fs' + context.routesPath,
     stateCacheId: '/@fs' + globalCachePath,
+    stateModuleBase: viteConfig.saus.stateModuleBase!,
   }
 
   await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)

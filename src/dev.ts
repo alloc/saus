@@ -8,8 +8,9 @@ import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
 import * as vite from 'vite'
 import { createDevApp } from './app/createDevApp'
-import { getPageFilename, ResolvedConfig, SausContext } from './core'
-import { loadContext } from './core/context'
+import { App } from './app/types'
+import { getPageFilename, ResolvedConfig } from './core'
+import { DevContext, loadContext } from './core/context'
 import { debug } from './core/debug'
 import { Endpoint } from './core/endpoint'
 import { createFullReload } from './core/fullReload'
@@ -27,7 +28,6 @@ import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
-import { stateModuleBase } from './runtime/constants'
 import { defer } from './utils/defer'
 import { prependBase } from './utils/prependBase'
 import { formatAsyncStack } from './vm/formatAsyncStack'
@@ -66,7 +66,7 @@ export async function createServer(
 ): Promise<SausDevServer> {
   const events: SausDevServer.EventEmitter = new EventEmitter()
   const createContext = () =>
-    loadContext('serve', inlineConfig, [
+    loadContext<DevContext>('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
       serveClientEntries,
       routesPlugin(),
@@ -113,7 +113,7 @@ export async function createServer(
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
-      logger.error(formatError(error), { error })
+      logger.error(formatError(error, context.app), { error })
     }
   }
 
@@ -158,7 +158,7 @@ export async function createServer(
 }
 
 async function startServer(
-  context: SausContext,
+  context: DevContext,
   moduleMap: ModuleMap,
   events: SausDevServer.EventEmitter,
   isRestart?: boolean
@@ -290,7 +290,7 @@ function waitForChanges(
 }
 
 async function hotReloadServerModules(
-  context: SausContext,
+  context: DevContext,
   config: ResolvedConfig,
   events: EventEmitter,
   resolveId: ResolveIdHook
@@ -304,16 +304,12 @@ async function hotReloadServerModules(
   // This runs on server startup and whenever the routes and/or
   // renderers are reloaded.
   async function onContextUpdate() {
-    Object.assign(
-      server,
-      await createDevApp(context, error => {
-        if (error.req) {
-          failedRequests.add(error.req)
-        }
-        events.emit('error', error)
-      }),
-      { config: server.config }
-    )
+    context.app = await createDevApp(context, error => {
+      if (error.req) {
+        failedRequests.add(error.req)
+      }
+      events.emit('error', error)
+    })
     context.plugins = await getSausPlugins(context)
   }
 
@@ -344,6 +340,7 @@ async function hotReloadServerModules(
     // Track which virtual modules need change events.
     const changesToEmit = new Set<string>()
 
+    const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
       const stateModuleIds = context.stateModulesByFile[id]
       clearCachedState(key => {
@@ -533,16 +530,17 @@ async function hotReloadServerModules(
   })
 }
 
-function formatError(error: any) {
+function formatError(error: any, app: App) {
   let prelude = ''
   if (error.code == 'STATE_MODULE_404') {
+    const moduleUrl = app.config.stateModuleBase + error.cacheKey + '.js'
     const inspectedArgs = inspect(error.args, {
       depth: 5,
       colors: true,
     })
     prelude =
       red(bold('Error: ')) +
-      `The ${red(stateModuleBase + error.cacheKey + '.js')} module was ` +
+      `The ${red(moduleUrl)} module was ` +
       `never loaded with the following arguments:\n` +
       inspectedArgs.replace(/(^|\n)/g, '$1  ') +
       `\n\n`

@@ -1,6 +1,6 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
-import type { RenderPageResult } from '../app/types'
+import type { App, RenderPageResult } from '../app/types'
 import { loadResponseCache, setResponseCache } from '../http/responseCache'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
@@ -57,10 +57,18 @@ export interface SausContext extends RenderModule, RoutesModule, HtmlContext {
   reloadId: number
   /** Wait to serve pages until hot reloading completes */
   reloading?: Deferred<void>
-  /** Exists in dev mode only */
+  /** Saus application. Exists in dev mode only */
+  app?: App
+  /** Vite dev server. Exists in dev mode only */
   server?: vite.ViteDevServer
   /** Used by the `route` function in dev mode */
   ssrRequire?: RequireAsync
+}
+
+export interface DevContext extends SausContext {
+  app: App
+  server: vite.ViteDevServer
+  ssrRequire: RequireAsync
 }
 
 type InlinePlugin = (
@@ -120,11 +128,11 @@ function createContext(
   }
 }
 
-export async function loadContext(
+export async function loadContext<T extends SausContext>(
   command: 'build' | 'serve',
   inlineConfig?: vite.InlineConfig,
   inlinePlugins?: InlinePlugin[]
-): Promise<SausContext> {
+): Promise<T> {
   let context: SausContext | undefined
   let configHooks: ConfigHookRef[]
 
@@ -139,7 +147,7 @@ export async function loadContext(
   await resolveConfig(command)
 
   setResponseCache(loadResponseCache(context!.root))
-  return context!
+  return context as T
 }
 
 function getConfigResolver(
@@ -212,6 +220,7 @@ function getConfigResolver(
     sausConfig.render = resolve(root, sausConfig.render)
     sausConfig.routes = resolve(root, sausConfig.routes)
     sausConfig.defaultPath ||= '/404'
+    sausConfig.stateModuleBase ||= '/state/'
 
     if (inlinePlugins) {
       userConfig.plugins ??= []

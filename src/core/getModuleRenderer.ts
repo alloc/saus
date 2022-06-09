@@ -1,7 +1,6 @@
 import { inlinedStateMap } from '../app/global'
 import type { AppContext, RenderedPage } from '../app/types'
 import { globalCache } from '../runtime/cache'
-import { stateModuleBase } from '../runtime/constants'
 import { stateModuleArguments } from '../runtime/loadStateModule'
 import { dataToEsm } from '../utils/dataToEsm'
 import { ParsedHeadTag } from '../utils/parseHead'
@@ -50,7 +49,7 @@ export function getModuleRenderer(context: AppContext): ModuleRenderer {
     renderPageState(page, helpersId, preloadUrls) {
       const { path, props, stateModules, head } = page
 
-      const base = runtimeConfig.base!
+      const { base, stateModuleBase } = runtimeConfig
       const toStateUrl = (id: string) =>
         prependBase(stateModuleBase + id + '.js', base)
 

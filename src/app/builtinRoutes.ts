@@ -5,7 +5,6 @@ import { makeRequestUrl } from '../core/makeRequest'
 import type { Headers } from '../http'
 import { route } from '../routes'
 import { globalCache } from '../runtime/cache'
-import { stateModuleBase } from '../runtime/constants'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
 import { parseUrl } from '../utils/url'
@@ -39,7 +38,7 @@ export function defineBuiltinRoutes(
   })
 
   // State modules
-  route(`${stateModuleBase}*.js`)
+  route(`${context.config.stateModuleBase}*.js`)
     .get(async req => {
       const stateModuleId = req.wild
       await getCachedState(stateModuleId, globalCache.loaders[stateModuleId])

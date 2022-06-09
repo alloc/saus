@@ -6,7 +6,6 @@ export * from './render'
 export * from './endpoint'
 export * from './utils'
 
-export * from '../runtime/constants'
 export * from '../runtime/writeResponse'
 export * from '../app/cacheClientProps'
 export * from '../app/cachePages'

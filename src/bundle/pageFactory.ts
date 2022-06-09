@@ -1,7 +1,6 @@
 import path from 'path'
 import { App } from '../app/types'
 import { globalCache } from '../runtime/cache'
-import { stateModuleBase } from '../runtime/constants'
 import { getPageFilename } from '../utils/getPageFilename'
 import { parseImports } from '../utils/imports'
 import { isCSSRequest } from '../utils/isCSSRequest'
@@ -136,10 +135,11 @@ export const createPageFactory: App.Plugin = app => {
       const bodyTags: HtmlTagDescriptor[] = []
 
       // Share the state cache and state modules b/w debug and production views.
+      const stateModuleBase = config.stateModuleBase.slice(1)
       const preserveBase = (id: string) =>
         id == moduleMap.helpers ||
         id == config.stateCacheId ||
-        (id.startsWith(stateModuleBase.slice(1)) && id.endsWith('.js'))
+        (id.startsWith(stateModuleBase) && id.endsWith('.js'))
 
       const routeModule = addModule(moduleMap[page.routeModuleId])!
       const entryId = page.client
@@ -177,7 +177,7 @@ export const createPageFactory: App.Plugin = app => {
 
         // State modules are not renamed for debug view.
         for (const stateId of [...page.stateModules].reverse()) {
-          const stateModuleId = stateModuleBase.slice(1) + stateId + '.js'
+          const stateModuleId = stateModuleBase + stateId + '.js'
           modules.add({
             id: stateModuleId,
             text: renderStateModule(stateId, globalCache.loaded[stateId]),

@@ -1,10 +1,10 @@
 import endent from 'endent'
-import { Plugin, RenderedPage, SausConfig, SausContext, vite } from '../core'
+import { Plugin, RenderedPage, RuntimeConfig, SausConfig, vite } from '../core'
+import { DevContext } from '../core/context'
 import { debug } from '../core/debug'
 import { CommonServerProps } from '../core/getModuleRenderer'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
-import { stateModuleBase } from '../runtime/constants'
 import { getPageFilename } from '../utils/getPageFilename'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
 import { prependBase } from '../utils/prependBase'
@@ -29,7 +29,8 @@ export function serveClientEntries(
   configEnv: vite.ConfigEnv
 ): Plugin {
   let server: vite.ViteDevServer
-  let context: SausContext
+  let context: DevContext
+  let config: RuntimeConfig
 
   return {
     name: 'saus:client',
@@ -38,7 +39,8 @@ export function serveClientEntries(
       server = s
     },
     saus(c) {
-      context = c
+      context = c as DevContext
+      config = context.app.config
     },
     resolveId(id, importer) {
       if (id.startsWith(clientUrlPrefix)) {
@@ -92,7 +94,7 @@ export function serveClientEntries(
           routeModuleUrl,
           sausClientUrl,
           ...page.stateModules.map(id =>
-            prependBase(stateModuleBase + id + '.js', base)
+            prependBase(config.stateModuleBase + id + '.js', base)
           ),
         ]
 

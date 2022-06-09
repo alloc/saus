@@ -100,6 +100,11 @@ export interface SausConfig {
    */
   renderConcurrency?: number
   /**
+   * Where are state modules served from?
+   * @default "/state/"
+   */
+  stateModuleBase?: string
+  /**
    * Any `<link>` tags produced by renderers are stripped in favor of injecting
    * them through the page's state module via the `applyHead` client API. This
    * can drastically reduce the elapsed time before `<script>` tags are executed.
