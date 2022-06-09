@@ -1,4 +1,5 @@
 import { URLSearchParams } from 'url'
+import { baseToRegex } from './base'
 import { joinUrl } from './joinUrl'
 
 const rawUrlRE = /^(\/[^#?]*)(?:#[^?]*)?(?:\?(.+)?)?$/
@@ -40,9 +41,25 @@ export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
     })
   }
 
-  append(subpath: string) {
+  /**
+   * Return a new `ParsedUrl` based on this one, but with the given
+   * subpath added to the end of the URL.
+   */
+  append(subpath: string): this {
     return cloneUrl(this, {
       path: joinUrl(this.path, subpath),
+    })
+  }
+
+  /**
+   * Return a new `ParsedUrl` based on this one, but with the given
+   * directory removed from the start of the URL.
+   */
+  withoutBase(base: string): this {
+    if (!base) return this
+    const baseRE = baseToRegex(base)
+    return cloneUrl(this, {
+      path: this.path.replace(baseRE, '/'),
     })
   }
 }

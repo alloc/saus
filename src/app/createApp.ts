@@ -17,9 +17,11 @@ import { RuntimeHook } from '../core/setup'
 import { HttpRedirect } from '../http'
 import { normalizeHeaders } from '../http/normalizeHeaders'
 import { toArray } from '../utils/array'
+import { baseToRegex } from '../utils/base'
 import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
 import { plural } from '../utils/plural'
+import { ParsedUrl } from '../utils/url'
 import { defineBuiltinRoutes } from './builtinRoutes'
 import {
   emptyArray,
@@ -179,12 +181,23 @@ export function createApp(
     }
   }
 
+  const debugBase = config.debugBase || ''
+  const debugBaseRE = debugBase ? baseToRegex(debugBase) : null
+
+  // Append a trailing slash if the given URL is pointing to
+  // the debug version of the root page.
+  const normalizeUrl = <T extends ParsedUrl>(url: T) =>
+    debugBaseRE?.test(url.path) && !url.startsWith(debugBase)
+      ? url.append('/')
+      : url
+
   const resolveRoute: RouteResolver = url => {
+    const routedPath = normalizeUrl(url).withoutBase(debugBase).path
     const negotiate = createNegotiator(url.headers.accept)
 
     let route: Route | undefined
     for (route of routes) {
-      const params = matchRoute(url.path, route)
+      const params = matchRoute(routedPath, route)
       if (params) {
         const endpoints = resolveEndpoints(route, url.method, negotiate)
         if (endpoints) {
@@ -208,20 +221,23 @@ export function createApp(
   ) => {
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.ResponseTuple | undefined
-    let request = makeRequest(url, (arg1, headers?: any, body?: any) => {
-      if (response) return
-      if (arg1 instanceof Promise) {
-        promise = arg1
-      } else if (!arg1 || typeof arg1 == 'number') {
-        response = [arg1, normalizeHeaders(headers), body]
-      } else {
-        response = [
-          arg1.statusCode || 200,
-          normalizeHeaders(arg1.headers),
-          { stream: arg1 },
-        ]
+    let request = makeRequest(
+      normalizeUrl(url),
+      function respondWith(arg1, headers?: any, body?: any) {
+        if (response) return
+        if (arg1 instanceof Promise) {
+          promise = arg1
+        } else if (!arg1 || typeof arg1 == 'number') {
+          response = [arg1, normalizeHeaders(headers), body]
+        } else {
+          response = [
+            arg1.statusCode || 200,
+            normalizeHeaders(arg1.headers),
+            { stream: arg1 },
+          ]
+        }
       }
-    })
+    )
 
     if (requestHooks) {
       endpoints = requestHooks.concat(endpoints)

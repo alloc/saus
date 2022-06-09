@@ -1,7 +1,7 @@
 import { loadContext } from './core/context'
 import { vite } from './core/vite'
+import { prependBase } from './utils/base'
 import { noop } from './utils/noop'
-import { prependBase } from './utils/prependBase'
 
 export interface InlinePreviewConfig {
   host?: string | boolean

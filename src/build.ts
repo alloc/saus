@@ -22,11 +22,11 @@ import {
   vite,
 } from './core'
 import { loadBundle } from './core/loadBundle'
+import { prependBase } from './utils/base'
 import { callPlugins } from './utils/callPlugins'
 import { defer, Deferred } from './utils/defer'
 import { emptyDir } from './utils/emptyDir'
 import { getPagePath } from './utils/getPagePath'
-import { prependBase } from './utils/prependBase'
 import { loadTinypool } from './utils/tinypool'
 
 export type FailedPage = { path: string; reason: string }

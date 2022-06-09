@@ -5,9 +5,9 @@ import { debug } from '../core/debug'
 import { CommonServerProps } from '../core/getModuleRenderer'
 import { collectCss } from '../preload'
 import { globalCache } from '../runtime/cache'
+import { prependBase } from '../utils/base'
 import { getPageFilename } from '../utils/getPageFilename'
 import { getPreloadTagsForModules } from '../utils/modulePreload'
-import { prependBase } from '../utils/prependBase'
 
 const clientUrlPrefix = '/@saus/'
 const clientIdPrefix = '\0' + clientUrlPrefix
