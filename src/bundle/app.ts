@@ -39,7 +39,9 @@ function isolatePages(context: AppContext): App.Plugin {
         async setup(pageContext: PageContext) {
           await ssrClearCache()
           defineClientEntry({
-            BASE_URL: options.isDebug ? debugBase : '/',
+            BASE_URL: options.isDebug
+              ? prependBase(debugBase, config.base)
+              : config.base,
             prependBase(uri: string, base = config.base) {
               return prependBase(uri, base)
             },
