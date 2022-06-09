@@ -42,6 +42,7 @@ function isolatePages(context: AppContext): App.Plugin {
             BASE_URL: options.isDebug
               ? prependBase(debugBase, config.base)
               : config.base,
+            isDebug: options.isDebug == true,
             prependBase(uri: string, base = config.base) {
               return prependBase(uri, base)
             },
