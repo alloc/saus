@@ -66,13 +66,19 @@ export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
 
 export function cloneUrl<Url extends ParsedUrl>(
   url: Url,
-  newProps: Partial<ParsedUrl> = {}
+  newProps: Partial<Url> | Partial<ParsedUrl> = {}
 ) {
-  const newUrl = Object.create(ParsedUrl.prototype)
-  newUrl.path = newProps.path ?? url.path
-  newUrl.searchParams =
-    newProps.searchParams ?? new URLSearchParams(url.searchParams)
-  newUrl.routeParams = newProps.routeParams ?? { ...url.routeParams }
+  const newUrl = Object.assign(
+    Object.create(ParsedUrl.prototype),
+    url,
+    newProps
+  )
+  if (!newProps.searchParams) {
+    newUrl.searchParams = new URLSearchParams(url.searchParams)
+  }
+  if (!newProps.routeParams) {
+    newUrl.routeParams = { ...url.routeParams }
+  }
   return newUrl as Url
 }
 
