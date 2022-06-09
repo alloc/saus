@@ -1,7 +1,11 @@
 import { getCachedState } from '../runtime/getCachedState'
+import { baseToRegex } from '../utils/base'
 import { getPagePath } from '../utils/getPagePath'
-import { ssrImport } from './ssrModules'
 import routes from './routes'
+import config from './runtimeConfig'
+import { ssrImport } from './ssrModules'
+
+const debugBaseRE = config.debugBase ? baseToRegex(config.debugBase) : null
 
 /** This overrides `loadPageModule` (exported by `saus/client`) in SSR environment. */
 export async function loadPageModule(
@@ -9,7 +13,9 @@ export async function loadPageModule(
   routeParams: any,
   unwrapModule?: (routeModule: any, pageState: any) => any
 ) {
-  const routeModuleUrl = routes[routePath]
+  const routeModuleUrl =
+    routes[routePath] ||
+    (debugBaseRE && routes[routePath.replace(debugBaseRE, '/')])
   if (!routeModuleUrl) {
     throw Error(`Unknown route: "${routePath}"`)
   }
