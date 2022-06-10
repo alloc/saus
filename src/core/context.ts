@@ -77,7 +77,7 @@ export interface DevContext extends BaseContext {
   moduleMap: ModuleMap
   externalExports: Map<string, any>
   linkedModules: LinkedModuleMap
-  liveModulePaths: string[]
+  liveModulePaths: Set<string>
   /** These hooks are called before each page is rendered. */
   pageSetupHooks: ((url: ParsedUrl) => Promisable<void>)[]
   hotReload: (file: string) => Promise<void>

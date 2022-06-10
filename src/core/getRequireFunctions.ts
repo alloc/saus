@@ -25,7 +25,7 @@ export function getRequireFunctions(
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
 
   const isLiveModule =
-    liveModulePaths && ((id: string) => liveModulePaths.includes(id))
+    liveModulePaths && ((id: string) => liveModulePaths.has(id))
 
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')

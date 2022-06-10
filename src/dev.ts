@@ -194,7 +194,7 @@ async function startServer(
   context.moduleMap = moduleMap
   context.externalExports = new Map()
   context.linkedModules = {}
-  context.liveModulePaths = []
+  context.liveModulePaths = new Set()
   context.pageSetupHooks = []
   Object.assign(context, getRequireFunctions(context, resolveId))
   setupClientInjections(context)
@@ -543,7 +543,7 @@ async function prepareDevApp(
 // Some "saus/client" exports depend on project config.
 function setupClientInjections(context: DevContext) {
   const modulePath = path.resolve(__dirname, '../client/baseUrl.cjs')
-  context.liveModulePaths.push(modulePath)
+  context.liveModulePaths.add(modulePath)
   context.pageSetupHooks.push(() => {
     const { config } = context
     injectNodeModule(modulePath, {

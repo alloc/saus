@@ -162,8 +162,8 @@ function injectRoutesMap(context: SausContext) {
 
   if (context.command == 'serve') {
     // Do nothing if already registered.
-    if (!context.liveModulePaths.includes(routesMapPath)) {
-      context.liveModulePaths.push(routesMapPath)
+    if (!context.liveModulePaths.has(routesMapPath)) {
+      context.liveModulePaths.add(routesMapPath)
 
       // Eagerly invalidate our importers when the routes module
       // is changed, thereby merging the two reload passes.
