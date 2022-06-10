@@ -287,8 +287,9 @@ function getConfigResolver(
     ]
 
     const context = getContext(config)
-    context.plugins = await getSausPlugins(context, config)
-
+    if (command == 'build') {
+      context.plugins = await getSausPlugins(context, config)
+    }
     return config
   }
 }

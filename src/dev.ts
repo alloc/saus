@@ -15,6 +15,7 @@ import { debug } from './core/debug'
 import { Endpoint } from './core/endpoint'
 import { createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
+import { getSausPlugins } from './core/getSausPlugins'
 import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
@@ -197,6 +198,7 @@ async function startServer(
 
   // Force all node_modules to be reloaded
   context.ssrForceReload = createFullReload()
+  context.plugins = await getSausPlugins(context, config)
   try {
     await loadRoutes(context, resolveId)
     await loadRenderers(context)
