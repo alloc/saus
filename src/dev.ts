@@ -441,6 +441,8 @@ async function prepareDevApp(
     })
   }
 
+  const clientDir = path.resolve(__dirname, '../client') + '/'
+
   context.hotReload = async file => {
     const { promise } = (context.pendingReload ||= defer())
     if (dirtyFiles.has(file)) {
@@ -450,6 +452,15 @@ async function prepareDevApp(
     const changedModule = moduleMap[file] || context.linkedModules[file]
     if (changedModule) {
       await moduleMap.__compileQueue
+
+      // State modules import "saus/client" to access the `defineStateModule`
+      // function. Then the routes module imports those state modules.
+      // But we want to avoid reloading the routes module when the live exports
+      // of the "saus/client" module are changed, since the routes module can't
+      // use them anyway.
+      const skipRoutesPath =
+        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
+
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
       )
@@ -512,6 +523,9 @@ async function prepareDevApp(
           },
         })
       }
+      if (skipRoutesPath) {
+        dirtyFiles.delete(context.routesPath)
+      }
       scheduleReload()
       return promise
     }
@@ -539,6 +553,10 @@ async function prepareDevApp(
 function setupClientInjections(context: DevContext) {
   const modulePath = path.resolve(__dirname, '../client/baseUrl.cjs')
   context.liveModulePaths.add(modulePath)
+  context.liveModulePaths.add(
+    // This module re-exports us, so it's also live.
+    path.resolve(modulePath, '../index.cjs')
+  )
   context.pageSetupHooks.push(() => {
     const { config } = context
     injectNodeModule(modulePath, {
