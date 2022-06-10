@@ -26,13 +26,10 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
       context = c as DevContext
       return {
         receiveDevApp() {
-          // Defer to the reload promise once the app is ready.
-          init = {
-            then(...args) {
-              const reloading = context.reloading || Promise.resolve()
-              return reloading.then(...args)
-            },
-          }
+          // Once the app is ready, requests are only delayed
+          // by hot reloading of SSR modules.
+          const then: any = waitForReload.bind(null, context)
+          init = { then }
           didInit()
         },
       }
@@ -99,7 +96,7 @@ async function processRequest(
   const { app, reloadId } = context
   const [status, headers, body] = await app.callEndpoints(req)
   if (reloadId !== context.reloadId) {
-    return (context.reloading || Promise.resolve()).then(() => {
+    return waitForReload(context, () => {
       return processRequest(context, req, res, next)
     })
   }
@@ -108,6 +105,18 @@ async function processRequest(
   } else {
     writeResponse(res, status, headers, body)
   }
+}
+
+function waitForReload<TResult1, TResult2>(
+  context: DevContext,
+  resolve?: () => TResult1,
+  reject?: (e: any) => TResult2
+) {
+  return (
+    context.pendingReload ||
+    context.currentReload ||
+    Promise.resolve()
+  ).then(resolve, reject)
 }
 
 function renderError(

@@ -58,8 +58,6 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   renderPath: string
   /** For checking if a page is outdated since rendering began */
   reloadId: number
-  /** Wait to serve pages until hot reloading completes */
-  reloading?: Deferred<void>
   /** Vite dev server. Exists in dev mode only */
   server?: vite.ViteDevServer
 }
@@ -86,6 +84,10 @@ export interface DevContext extends BaseContext {
   ssrForceReload?: (id: string) => boolean
   /** Files emitted by a renderer are cached here. */
   servedFiles: Record<string, RenderedFile>
+  /** Promise for current hot reload */
+  currentReload?: Deferred<void>
+  /** Promise for scheduled hot reload */
+  pendingReload?: Deferred<void>
 }
 
 type InlinePlugin = (

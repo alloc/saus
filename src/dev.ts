@@ -316,18 +316,22 @@ async function prepareDevApp(
   const dirtyClientModules = new Set<string>()
   let isReloadPending = false
 
-  const scheduleReload = debounce(async () => {
+  const scheduleReload = debounce(reload, 50)
+
+  async function reload() {
     if (isReloadPending) return
     isReloadPending = true
 
     // Wait for reloading to finish.
-    while (context.reloading) {
-      await context.reloading
+    while (context.currentReload) {
+      await context.currentReload
     }
 
     isReloadPending = false
     context.reloadId++
-    context.reloading = defer()
+    context.currentReload = defer()
+    context.pendingReload!.resolve(context.currentReload)
+    context.pendingReload = undefined
 
     let routesChanged = dirtyFiles.has(context.routesPath)
     let renderersChanged = dirtyFiles.has(context.renderPath)
@@ -424,8 +428,8 @@ async function prepareDevApp(
       watcher.emit('change', file)
     }
 
-    context.reloading.resolve()
-    context.reloading = undefined
+    context.currentReload.resolve()
+    context.currentReload = undefined
 
     const reloadedPages = Array.from(failedRequests, req => req.path)
     failedRequests.clear()
@@ -435,11 +439,12 @@ async function prepareDevApp(
         path: pagePath,
       })
     })
-  }, 50)
+  }
 
   context.hotReload = async file => {
+    const { promise } = (context.pendingReload ||= defer())
     if (dirtyFiles.has(file)) {
-      return
+      return promise
     }
     const moduleMap = context.moduleMap
     const changedModule = moduleMap[file] || context.linkedModules[file]
@@ -508,15 +513,17 @@ async function prepareDevApp(
         })
       }
       scheduleReload()
+      return promise
     }
     // In the event of a syntax error, these modules won't exist in the module map,
     // but they still need to be reloaded on file change.
-    else if (file == context.renderPath || file == context.routesPath) {
+    if (file == context.renderPath || file == context.routesPath) {
       dirtyFiles.add(file)
       scheduleReload()
+      return promise
     }
     // Restart the server when Vite config is changed.
-    else if (file == context.configPath) {
+    if (file == context.configPath) {
       // Prevent handling by Vite.
       config.server.hmr = false
       // Skip SSR reloading by Saus.
