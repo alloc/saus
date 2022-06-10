@@ -28,6 +28,7 @@ import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
 import { clearCachedState } from './runtime/clearCachedState'
 import { prependBase } from './utils/base'
+import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule, unloadModuleAndImporters } from './vm/moduleMap'
@@ -307,6 +308,7 @@ async function prepareDevApp(
       }
       events.emit('error', error)
     })
+    await callPlugins(context.plugins, 'receiveDevApp', context.app)
   }
 
   const dirtyFiles = new Set<string>()

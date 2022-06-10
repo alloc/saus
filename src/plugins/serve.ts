@@ -24,11 +24,18 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
     name: 'saus:serve',
     saus(c) {
       context = c as DevContext
-      init = {
-        // Defer to the reload promise after the context is initialized.
-        then: (...args) => (c.reloading || Promise.resolve()).then(...args),
+      return {
+        receiveDevApp() {
+          // Defer to the reload promise once the app is ready.
+          init = {
+            then(...args) {
+              const reloading = context.reloading || Promise.resolve()
+              return reloading.then(...args)
+            },
+          }
+          didInit()
+        },
       }
-      didInit()
     },
     configureServer: server => () =>
       server.middlewares.use(async (req, res, next) => {

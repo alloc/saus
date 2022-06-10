@@ -1,4 +1,5 @@
 import * as vite from 'vite'
+import { App } from '../app/types'
 import type { OutputBundle } from '../bundle'
 import type { PageBundle } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
@@ -257,6 +258,10 @@ export interface SausPlugin {
    * ⚠︎ This is only called when `saus dev` is used.
    */
   receiveRenderers?: (context: RenderModule) => Promisable<void>
+  /**
+   * Called after the dev app is created or replaced.
+   */
+  receiveDevApp?: (app: App) => Promisable<void>
   /**
    * Called before the SSR bundle is written to disk.
    *
