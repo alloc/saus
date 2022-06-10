@@ -1,10 +1,14 @@
 import { Module } from 'module'
 
+export interface NodeModule extends NodeJS.Module {
+  reload?: false
+}
+
 export function getNodeModule(id: string): NodeModule | undefined {
   return (Module as any)._cache[id]
 }
 
-export function invalidateNodeModule(id: string) {
+export function unloadNodeModule(id: string) {
   delete (Module as any)._cache[id]
 }
 
@@ -28,5 +32,6 @@ export function injectNodeModule(filename: string, exports: object) {
       loaded: true,
     })
   }
+  module.reload = false
   return module
 }

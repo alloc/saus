@@ -17,7 +17,7 @@ import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
 import { registerModuleOnceCompiled } from './moduleMap'
-import { getNodeModule, invalidateNodeModule } from './nodeModules'
+import { getNodeModule, unloadNodeModule } from './nodeModules'
 import { traceNodeRequire } from './traceNodeRequire'
 import {
   CompiledModule,
@@ -358,7 +358,7 @@ export function createAsyncRequire(
 
         let isReloading: boolean | undefined
         if (externalExports.has(resolvedId)) {
-          isReloading = shouldReload(resolvedId) && !isLiveModule(resolvedId)
+          isReloading = shouldReload(resolvedId)
           if (!isReloading) {
             isCached = true
             exports = externalExports.get(resolvedId)
@@ -370,20 +370,20 @@ export function createAsyncRequire(
 
         const cachedModule = getNodeModule(resolvedId)
         if (cachedModule) {
-          isReloading ??= shouldReload(resolvedId) && !isLiveModule(resolvedId)
-          if (!isReloading) {
+          isReloading ??= shouldReload(resolvedId)
+          if (!isReloading || cachedModule.reload == false) {
             isCached = true
             exports = cachedModule.exports
             externalExports.set(resolvedId, exports)
             break loadStep
           }
-          invalidateNodeModule(resolvedId)
+          unloadNodeModule(resolvedId)
         }
 
         const restoreModuleCache =
           shouldReload !== neverReload
-            ? forceNodeReload(id => {
-                return shouldReload(id) && !isLiveModule(id)
+            ? forceNodeReload((id, cached) => {
+                return shouldReload(id) && cached.reload !== false
               })
             : noop
 

@@ -1,4 +1,4 @@
-import { invalidateNodeModule } from './nodeModules'
+import { getNodeModule, unloadNodeModule } from './nodeModules'
 import {
   CompiledModule,
   isLinkedModule,
@@ -105,7 +105,10 @@ export function unloadModuleAndImporters(
       unloadModuleAndImporters(importer, context, isAccepted, module)
     }
     if (isLinkedModule(module)) {
-      invalidateNodeModule(module.id)
+      const nodeModule = getNodeModule(module.id)
+      if (nodeModule && nodeModule.reload !== false) {
+        unloadNodeModule(module.id)
+      }
     } else {
       clearExports(module)
     }
