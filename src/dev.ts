@@ -445,10 +445,13 @@ async function prepareDevApp(
 
   const clientDir = path.resolve(__dirname, '../client') + '/'
 
+  const getPendingReload = () => {
+    return (context.pendingReload ||= defer()).promise
+  }
+
   context.hotReload = async file => {
-    const { promise } = (context.pendingReload ||= defer())
     if (dirtyFiles.has(file)) {
-      return promise
+      return getPendingReload()
     }
     const moduleMap = context.moduleMap
     const changedModule = moduleMap[file] || context.linkedModules[file]
@@ -529,14 +532,14 @@ async function prepareDevApp(
         dirtyFiles.delete(context.routesPath)
       }
       scheduleReload()
-      return promise
+      return getPendingReload()
     }
     // In the event of a syntax error, these modules won't exist in the module map,
     // but they still need to be reloaded on file change.
     if (file == context.renderPath || file == context.routesPath) {
       dirtyFiles.add(file)
       scheduleReload()
-      return promise
+      return getPendingReload()
     }
     // Restart the server when Vite config is changed.
     if (file == context.configPath) {
