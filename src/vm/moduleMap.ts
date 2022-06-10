@@ -99,7 +99,9 @@ export function unloadModuleAndImporters(
   const { touched } = context
   if (!touched.has(module.id)) {
     touched.add(module.id)
-    isAccepted ||= !isLinkedModule(module) && context.accept(module, dep)
+    if (!isAccepted) {
+      isAccepted = !isLinkedModule(module) && context.accept(module, dep)
+    }
     context.onPurge(module, isAccepted)
     for (const importer of module.importers) {
       unloadModuleAndImporters(importer, context, isAccepted, module)
