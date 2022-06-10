@@ -1,4 +1,4 @@
-import type { RenderPageOptions } from '../app/types'
+import type { RenderedPage, RenderPageOptions } from '../app/types'
 import type { HttpRedirect } from '../http/redirect'
 import type { ParsedUrl } from '../utils/url'
 
@@ -10,6 +10,8 @@ export interface PageBundleOptions
     error: Error | null,
     page?: PageBundle | null
   ) => void
+  /** @internal */
+  receivePage?: (page: RenderedPage | null, error: any) => void
 }
 
 export interface PageBundle {

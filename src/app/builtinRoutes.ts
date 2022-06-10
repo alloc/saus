@@ -2,14 +2,16 @@ import etag from 'etag'
 import { Endpoint } from '../core/endpoint'
 import { ModuleRenderer } from '../core/getModuleRenderer'
 import { makeRequestUrl } from '../core/makeRequest'
+import type { Route } from '../core/routes'
 import type { Headers } from '../http'
 import { route } from '../routes'
 import { globalCache } from '../runtime/cache'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
 import { prependBase } from '../utils/base'
-import { parseUrl } from '../utils/url'
-import type { AppContext } from './types'
+import { defer } from '../utils/defer'
+import { ParsedUrl, parseUrl } from '../utils/url'
+import type { App, AppContext, RenderPageResult } from './types'
 
 const indexFileRE = /(^|\/)index$/
 
@@ -18,6 +20,27 @@ export function defineBuiltinRoutes(
   renderer: ModuleRenderer
 ) {
   const { debugBase } = context.config
+  const isBundle = context.config.command == 'bundle'
+
+  const renderPage = async (
+    url: ParsedUrl,
+    route: Route,
+    app: App
+  ): Promise<RenderPageResult> => {
+    if (isBundle) {
+      const { resolve, promise } = defer<RenderPageResult>()
+
+      // Use the `renderPageBundle` method so any related modules/assets
+      // can be cached by the `cachePageAssets` plugin.
+      const rendering = app.renderPageBundle(url, route, {
+        receivePage: (...args) => resolve(args),
+      })
+
+      rendering.catch(e => resolve([null, e]))
+      return promise
+    }
+    return app.renderPage(url, route)
+  }
 
   // Page-based entry modules
   route(`/*.html.js`).get(async (req, app) => {
@@ -31,7 +54,7 @@ export function defineBuiltinRoutes(
       makeRequestUrl(pageUrl, 'GET', { accept: 'text/html' })
     )
     if (route) {
-      const [page, error] = await app.renderPage(pageUrl, route)
+      const [page, error] = await renderPage(pageUrl, route, app)
 
       if (error) {
         const props = { message: error.message, stack: error.stack }

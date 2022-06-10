@@ -71,6 +71,8 @@ export const createPageFactory: App.Plugin = app => {
         renderFinish: undefined,
       })
 
+      options.receivePage?.(page, error)
+
       if (error) {
         if (renderFinish) {
           renderFinish(url, error)
