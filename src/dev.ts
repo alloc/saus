@@ -204,7 +204,9 @@ async function startServer(
   context.plugins = await getSausPlugins(context, config)
   try {
     await loadRoutes(context, resolveId)
+    context.logger.info(green('✔︎ Routes are ready!'))
     await loadRenderers(context)
+    context.logger.info(green('✔︎ Renderers are ready!'))
   } catch (e: any) {
     events.emit('error', e)
   }
