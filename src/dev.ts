@@ -362,11 +362,7 @@ async function prepareDevApp(
         return isMatch
       })
     }
-
     dirtyStateModules.clear()
-
-    const cachedPages =
-      routesChanged || renderersChanged ? await context.getCachedPages() : null!
 
     if (routesChanged) {
       try {
@@ -376,12 +372,6 @@ async function prepareDevApp(
 
         // Reload the client-side routes map.
         changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
-
-        // Emit change events for page state modules.
-        for (const [pagePath] of cachedPages)
-          changesToEmit.add(
-            '/' + getPageFilename(pagePath, context.basePath) + '.js'
-          )
       } catch (error: any) {
         routesChanged = false
         events.emit('error', error)
@@ -410,31 +400,36 @@ async function prepareDevApp(
         if (needsRestart) {
           return events.emit('restart')
         }
-
-        if (clientEntriesChanged)
-          for (const [, [page]] of cachedPages) {
-            if (page?.client) {
-              // Ensure client entry modules are updated.
-              changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
-            }
-          }
       } catch (error: any) {
         renderersChanged = false
         events.emit('error', error)
       }
     }
 
+    let pendingPages: Promise<void> | undefined
     if (routesChanged || renderersChanged) {
+      pendingPages = context.forCachedPages((pagePath, [page]) => {
+        // Emit change events for page state modules.
+        if (routesChanged) {
+          const filename = getPageFilename(pagePath, context.basePath)
+          changesToEmit.add('/' + filename + '.js')
+        }
+        // Ensure the generated clients are updated.
+        if (renderersChanged && clientEntriesChanged && page?.client) {
+          changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
+        }
+      })
       context.clearCachedPages()
       await resetDevApp()
     }
 
+    context.currentReload.resolve()
+    context.currentReload = undefined
+
+    await pendingPages
     for (const file of changesToEmit) {
       watcher.emit('change', file)
     }
-
-    context.currentReload.resolve()
-    context.currentReload = undefined
 
     const reloadedPages = Array.from(failedRequests, req => req.path)
     failedRequests.clear()

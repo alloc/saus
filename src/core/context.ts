@@ -52,8 +52,10 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   stateModulesByFile: Record<string, string[]>
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
-  /** Get all cached pages. Loading pages are waited for. */
-  getCachedPages: () => Promise<Map<string, RenderPageResult>>
+  /** Visit every cached page. Loading pages are waited for. */
+  forCachedPages: (
+    onPage: (pagePath: string, pageResult: RenderPageResult) => void
+  ) => Promise<void>
   /** Clear any matching pages (loading or loaded) */
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */
@@ -108,18 +110,19 @@ function createContext(
     loaded: {},
   }
 
-  async function getCachedPages() {
+  async function forCachedPages(
+    onPage: (pagePath: string, pageResult: RenderPageResult) => void
+  ): Promise<void> {
     const loaded = Object.entries(pageCache.loaded)
     const loading = Object.entries(pageCache.loading)
-    const justLoaded = await Promise.all(loading.map(e => e[1]))
-    const cachedPages = new Map<string, RenderPageResult>()
     for (const [pagePath, [pageResult]] of loaded) {
-      cachedPages.set(pagePath, pageResult)
+      onPage(pagePath, pageResult)
     }
-    justLoaded.forEach((pageResult, i) => {
-      cachedPages.set(loading[i][0], pageResult)
-    })
-    return cachedPages
+    await Promise.all(
+      loading.map(async ([pagePath, pagePromise]) => {
+        onPage(pagePath, await pagePromise)
+      })
+    )
   }
 
   return {
@@ -141,8 +144,8 @@ function createContext(
     defaultState: [],
     stateModulesByFile: {},
     getCachedPage: withCache(pageCache),
+    forCachedPages,
     clearCachedPages: filter => clearCachedState(filter, pageCache),
-    getCachedPages,
     renderPath: config.saus.render,
     renderers: [],
     beforeRenderHooks: [],
