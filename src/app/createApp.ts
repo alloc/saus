@@ -1,3 +1,4 @@
+import { klona } from 'klona'
 import path from 'path'
 import { CommonClientProps, StateModule } from '../client'
 import { RuntimeConfig } from '../core/config'
@@ -20,6 +21,7 @@ import { toArray } from '../utils/array'
 import { baseToRegex, prependBase } from '../utils/base'
 import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
+import { pick } from '../utils/pick'
 import { plural } from '../utils/plural'
 import { defineBuiltinRoutes } from './builtinRoutes'
 import {
@@ -56,15 +58,10 @@ export function createApp(
   const { config, onError, profile, functions } = context
   const moduleRenderer = getModuleRenderer(context)
 
-  // Let the app be recreated for every request (if so desired)
-  // by avoiding the creation of duplicate routes. This can be
-  // useful if your app plugins are dependent on each request.
-  context = {
-    ...context,
-    routes: [...context.routes],
-  }
+  // Use an isolated context for each `createApp` instance, since
+  // runtime hooks can define anything the routes module can.
+  context = cloneRouteContext(context)
 
-  // Let runtime hooks inject routes, HTML processors, and page state.
   setRoutesModule(context)
   callRuntimeHooks(context.runtimeHooks, plugins, config, onError)
   defineBuiltinRoutes(context, moduleRenderer)
@@ -411,6 +408,21 @@ function createClientResolver(functions: ClientFunctions): ClientResolver {
         ...result,
       }
     }
+  }
+}
+
+function cloneRouteContext(context: AppContext): AppContext {
+  return {
+    ...context,
+    ...klona(
+      pick(context, [
+        'routes',
+        'defaultState',
+        'htmlProcessors',
+        'requestHooks',
+        'responseHooks',
+      ])
+    ),
   }
 }
 
