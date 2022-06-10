@@ -50,7 +50,13 @@ export const logRequests = (
       if (status == null) {
         return
       }
-      const elapsed = options.elapsed && (Date.now() - timing.get(req)!) / 1e3
+      let elapsed = 0
+      if (options.elapsed) {
+        elapsed = (Date.now() - timing.get(req)!) / 1e3
+        if (isNaN(elapsed)) {
+          return
+        }
+      }
       if (options.timestamp) {
         printTimestamp()
       }
@@ -59,12 +65,12 @@ export const logRequests = (
         statusColor((options.response?.prefix || '◀︎') + ' ' + status),
         req.path,
       ]
-      const contentLength = headers && headers['Content-Length']
+      const contentLength = headers && headers['content-length']
       if (contentLength) {
         message.push(kleur.gray((+contentLength / 1024).toFixed(2) + 'KiB'))
       }
-      if (options.elapsed) {
-        message.push(kleur.gray('in ' + (elapsed as number).toFixed(3) + 's'))
+      if (elapsed) {
+        message.push(kleur.gray('in ' + elapsed.toFixed(3) + 's'))
       }
       console.log(...message)
       if (headers && options.response?.headers) {
