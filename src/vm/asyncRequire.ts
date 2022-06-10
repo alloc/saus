@@ -189,10 +189,10 @@ export function createAsyncRequire(
    */
   const trackLinkedModules = (
     nodeResolve: NodeResolveHook | undefined,
-    isImporterLinked: boolean
-  ): NodeResolveHook =>
-    !isImporterLinked
-      ? nodeResolve!
+    importer: string
+  ): NodeResolveHook | undefined =>
+    !isLinkedModuleId(importer)
+      ? nodeResolve
       : (id, importer, resolve) => {
           const resolvedId =
             (nodeResolve && nodeResolve(id, importer, resolve)) ||
@@ -356,9 +356,9 @@ export function createAsyncRequire(
       } else {
         resolvedId = nodeResolvedId!
 
-        let isReloading: boolean
+        let isReloading: boolean | undefined
         if (externalExports.has(resolvedId)) {
-          isReloading = shouldReload(resolvedId)
+          isReloading = shouldReload(resolvedId) && !isLiveModule(resolvedId)
           if (!isReloading) {
             isCached = true
             exports = externalExports.get(resolvedId)
@@ -370,7 +370,7 @@ export function createAsyncRequire(
 
         const cachedModule = getNodeModule(resolvedId)
         if (cachedModule) {
-          isReloading ??= shouldReload(resolvedId)
+          isReloading ??= shouldReload(resolvedId) && !isLiveModule(resolvedId)
           if (!isReloading) {
             isCached = true
             exports = cachedModule.exports
@@ -381,13 +381,16 @@ export function createAsyncRequire(
         }
 
         const restoreModuleCache =
-          shouldReload !== neverReload ? forceNodeReload(shouldReload) : noop
-
-        const isModuleLinked = isLinkedModuleId(resolvedId)
-        const restoreNodeResolve =
-          nodeResolve || isModuleLinked
-            ? hookNodeResolve(trackLinkedModules(nodeResolve, isModuleLinked))
+          shouldReload !== neverReload
+            ? forceNodeReload(id => {
+                return shouldReload(id) && !isLiveModule(id)
+              })
             : noop
+
+        const wrappedNodeResolve = trackLinkedModules(nodeResolve, resolvedId)
+        const restoreNodeResolve = wrappedNodeResolve
+          ? hookNodeResolve(wrappedNodeResolve)
+          : noop
 
         const stopTracing = traceNodeRequire(
           moduleMap,
