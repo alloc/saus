@@ -1,14 +1,11 @@
 import os from 'os'
-import path from 'path'
 import { extractClientFunctions, RuntimeConfig } from '../core'
 import { DevContext } from '../core/context'
 import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
-import { prependBase } from '../utils/base'
 import { callPlugins } from '../utils/callPlugins'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
 import { clearExports } from '../vm/moduleMap'
-import { injectNodeModule } from '../vm/nodeModules'
 import { cachePages } from './cachePages'
 import { createApp } from './createApp'
 import { renderErrorFallback } from './errorFallback'
@@ -132,53 +129,41 @@ function isolatePages(context: DevContext): App.Plugin {
   })
   entryPaths.push(context.renderPath)
 
-  const clientInjectionsPath = path.resolve(__dirname, '../client/baseUrl.cjs')
-  context.liveModulePaths.push(clientInjectionsPath)
-
-  return app => {
-    const { config, renderPage } = app
-    const { debugBase = '' } = config
-
-    const reload: RenderPageOptions['setup'] = async (
-      pageContext,
-      route,
-      url
-    ) => {
-      // Reset all modules used by every route or renderer, because we can't know
-      // which modules have side effects and are also used by the route matched
-      // for the currently rendering page.
-      for (const entryPath of entryPaths) {
-        const entryModule = context.moduleMap[entryPath]
-        if (entryModule) {
-          for (const module of entryModule.package || [entryModule]) {
-            clearExports(module)
-          }
+  const reload: RenderPageOptions['setup'] = async (
+    pageContext,
+    route,
+    url
+  ) => {
+    // Reset all modules used by every route or renderer, because we can't know
+    // which modules have side effects and are also used by the route matched
+    // for the currently rendering page.
+    for (const entryPath of entryPaths) {
+      const entryModule = context.moduleMap[entryPath]
+      if (entryModule) {
+        for (const module of entryModule.package || [entryModule]) {
+          clearExports(module)
         }
       }
-
-      // Some "saus/client" exports are determined by page URL.
-      const isDebug = url.startsWith(debugBase)
-      injectNodeModule(clientInjectionsPath, {
-        BASE_URL: isDebug ? prependBase(debugBase, config.base) : config.base,
-        isDebug,
-        prependBase(uri: string, base = config.base) {
-          return prependBase(uri, base)
-        },
-      })
-      await context.hotReload(clientInjectionsPath)
-
-      // Load the route module and its dependencies now, since the
-      // setup function is guaranteed to run serially, which lets us
-      // ensure no local modules are shared between page renders.
-      await route.load()
-
-      context.renderers = []
-      context.defaultRenderer = undefined
-      context.beforeRenderHooks = []
-      await loadRenderers(context)
-      Object.assign(pageContext, context)
     }
 
+    // This hook exists for URL-based module injection, which needs
+    // to take place before the route and renderers are loaded.
+    await Promise.all(context.pageSetupHooks.map(hook => hook(url)))
+
+    // Load the route module and its dependencies now, since the
+    // setup function is guaranteed to run serially, which lets us
+    // ensure no local modules are shared between page renders.
+    await route.load()
+
+    context.renderers = []
+    context.defaultRenderer = undefined
+    context.beforeRenderHooks = []
+    await loadRenderers(context)
+    Object.assign(pageContext, context)
+  }
+
+  return app => {
+    const { renderPage } = app
     return {
       renderPage(url, route, options) {
         const callerSetup = options?.setup

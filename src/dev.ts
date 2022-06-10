@@ -33,6 +33,7 @@ import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { purgeModule, unloadModuleAndImporters } from './vm/moduleMap'
+import { injectNodeModule } from './vm/nodeModules'
 import {
   CompiledModule,
   isLinkedModule,
@@ -194,7 +195,9 @@ async function startServer(
   context.externalExports = new Map()
   context.linkedModules = {}
   context.liveModulePaths = []
+  context.pageSetupHooks = []
   Object.assign(context, getRequireFunctions(context, resolveId))
+  setupClientInjections(context)
 
   // Force all node_modules to be reloaded
   context.ssrForceReload = createFullReload()
@@ -535,6 +538,23 @@ async function prepareDevApp(
       events.emit('restart')
     }
   }
+}
+
+// Some "saus/client" exports depend on project config.
+function setupClientInjections(context: DevContext) {
+  const modulePath = path.resolve(__dirname, '../client/baseUrl.cjs')
+  context.liveModulePaths.push(modulePath)
+  context.pageSetupHooks.push(() => {
+    const { config } = context
+    injectNodeModule(modulePath, {
+      BASE_URL: config.base,
+      isDebug: config.mode !== 'production',
+      prependBase(uri: string, base = config.base) {
+        return prependBase(uri, base)
+      },
+    })
+    return context.hotReload(modulePath)
+  })
 }
 
 function formatError(error: any, app: App) {

@@ -7,6 +7,7 @@ import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
 import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
+import { Promisable } from '../utils/types'
 import { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
@@ -16,6 +17,7 @@ import { loadConfigHooks } from './loadConfigHooks'
 import { toSausPath } from './paths'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
+import { ParsedUrl } from './utils'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { Cache, withCache } from './withCache'
 
@@ -58,8 +60,6 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   renderPath: string
   /** For checking if a page is outdated since rendering began */
   reloadId: number
-  /** Vite dev server. Exists in dev mode only */
-  server?: vite.ViteDevServer
 }
 
 type ProdContext = BaseContext &
@@ -75,9 +75,11 @@ export interface DevContext extends BaseContext {
   server: vite.ViteDevServer
   watcher: vite.FSWatcher
   moduleMap: ModuleMap
+  externalExports: Map<string, any>
   linkedModules: LinkedModuleMap
   liveModulePaths: string[]
-  externalExports: Map<string, any>
+  /** These hooks are called before each page is rendered. */
+  pageSetupHooks: ((url: ParsedUrl) => Promisable<void>)[]
   hotReload: (file: string) => Promise<void>
   require: RequireAsync
   ssrRequire: RequireAsync

@@ -6,7 +6,7 @@ import { Module } from 'module'
  */
 export function createFullReload(reloadList = new Set<string>()) {
   const loadedIds = Object.keys((Module as any)._cache)
-  const skippedInternals = /\/saus\/(?!examples|packages)/
+  const skippedInternals = /\/saus\/(?!client|examples|packages)/
 
   return (id: string) => {
     // Module was possibly cached during the full reload.
