@@ -1,28 +1,28 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
-import type { App, RenderedFile, RenderPageResult } from '../app/types'
+import type { RenderPageResult } from '../app/types'
 import { loadResponseCache, setResponseCache } from '../http/responseCache'
 import { clearCachedState } from '../runtime/clearCachedState'
 import { getCachedState } from '../runtime/getCachedState'
 import { CompileCache } from '../utils/CompileCache'
-import { Deferred } from '../utils/defer'
 import { relativeToCwd } from '../utils/relativeToCwd'
-import { Promisable } from '../utils/types'
-import { LinkedModuleMap, ModuleMap, RequireAsync } from '../vm/types'
 import { ConfigHook, ConfigHookRef } from './config'
 import { debug } from './debug'
+import { DevContext } from './dev/context'
 import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
 import { loadConfigHooks } from './loadConfigHooks'
 import { toSausPath } from './paths'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { ParsedUrl } from './utils'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { Cache, withCache } from './withCache'
 
 type Command = 'build' | 'serve'
 
+/**
+ * This context exists in both serve and build mode.
+ */
 export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   command: Command
   root: string
@@ -60,8 +60,6 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   /** Path to the render module */
   renderPath: string
-  /** For checking if a page is outdated since rendering began */
-  reloadId: number
 }
 
 type ProdContext = BaseContext &
@@ -70,29 +68,7 @@ type ProdContext = BaseContext &
   }
 
 export type SausContext = DevContext | ProdContext
-
-export interface DevContext extends BaseContext {
-  command: 'serve'
-  app: App
-  server: vite.ViteDevServer
-  watcher: vite.FSWatcher
-  moduleMap: ModuleMap
-  externalExports: Map<string, any>
-  linkedModules: LinkedModuleMap
-  liveModulePaths: Set<string>
-  /** These hooks are called before each page is rendered. */
-  pageSetupHooks: ((url: ParsedUrl) => Promisable<void>)[]
-  hotReload: (file: string) => Promise<void>
-  require: RequireAsync
-  ssrRequire: RequireAsync
-  ssrForceReload?: (id: string) => boolean
-  /** Files emitted by a renderer are cached here. */
-  servedFiles: Record<string, RenderedFile>
-  /** Promise for current hot reload */
-  currentReload?: Deferred<void>
-  /** Promise for scheduled hot reload */
-  pendingReload?: Deferred<void>
-}
+export type { DevContext, ProdContext }
 
 type InlinePlugin = (
   sausConfig: SausConfig,
@@ -149,7 +125,6 @@ function createContext(
     renderPath: config.saus.render,
     renderers: [],
     beforeRenderHooks: [],
-    reloadId: 0,
   }
 }
 

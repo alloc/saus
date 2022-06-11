@@ -1,10 +1,12 @@
 import os from 'os'
 import { extractClientFunctions, RuntimeConfig } from '../core'
 import { DevContext } from '../core/context'
+import { createHotReload } from '../core/dev/hotReload'
 import { loadRenderers } from '../core/loadRenderers'
 import { globalCachePath } from '../core/paths'
 import { callPlugins } from '../utils/callPlugins'
 import { resolveEntryUrl } from '../utils/resolveEntryUrl'
+import { throttle } from '../utils/throttle'
 import { clearExports } from '../vm/moduleMap'
 import { cachePages } from './cachePages'
 import { createApp } from './createApp'
@@ -146,9 +148,17 @@ function isolatePages(context: DevContext): App.Plugin {
       }
     }
 
+    const oldHotReload = context.hotReload
+    context.hotReload = createHotReload(context, {
+      schedule: throttle(queueMicrotask),
+    })
+
     // This hook exists for URL-based module injection, which needs
     // to take place before the route and renderers are loaded.
     await Promise.all(context.pageSetupHooks.map(hook => hook(url)))
+
+    await context.hotReload.promise
+    context.hotReload = oldHotReload
 
     // Load the route module and its dependencies now, since the
     // setup function is guaranteed to run serially, which lets us

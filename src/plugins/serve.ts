@@ -93,13 +93,20 @@ async function processRequest(
   res: ServerResponse,
   next: () => void
 ): Promise<void> {
-  const { app, reloadId } = context
+  const {
+    app,
+    hotReload: { nonce },
+  } = context
+
   const [status, headers, body] = await app.callEndpoints(req)
-  if (reloadId !== context.reloadId) {
+
+  // Reprocess the request if modules were changed during.
+  if (nonce !== context.hotReload.nonce) {
     return waitForReload(context, () => {
       return processRequest(context, req, res, next)
     })
   }
+
   if (status == null) {
     process.nextTick(next)
   } else {
@@ -112,11 +119,7 @@ function waitForReload<TResult1, TResult2>(
   resolve?: () => TResult1,
   reject?: (e: any) => TResult2
 ) {
-  return (
-    context.pendingReload ||
-    context.currentReload ||
-    Promise.resolve()
-  ).then(resolve, reject)
+  return context.hotReload.promise.then(resolve, reject)
 }
 
 function renderError(

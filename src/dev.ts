@@ -1,22 +1,21 @@
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import http from 'http'
-import { bold, gray, green, red, yellow } from 'kleur/colors'
+import { bold, gray, green, red } from 'kleur/colors'
 import path from 'path'
-import { StrictEventEmitter } from 'strict-event-emitter-types'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
 import * as vite from 'vite'
 import { createDevApp } from './app/createDevApp'
 import { App } from './app/types'
-import { getPageFilename, ResolvedConfig } from './core'
+import { getPageFilename } from './core'
 import { DevContext, loadContext } from './core/context'
-import { debug } from './core/debug'
+import { DevEventEmitter } from './core/dev/events'
+import { createHotReload } from './core/dev/hotReload'
 import { Endpoint } from './core/endpoint'
 import { createFullReload } from './core/fullReload'
 import { getRequireFunctions } from './core/getRequireFunctions'
 import { getSausPlugins } from './core/getSausPlugins'
-import { loadConfigHooks } from './core/loadConfigHooks'
 import { loadRenderers } from './core/loadRenderers'
 import { loadRoutes } from './core/loadRoutes'
 import { clientDir, runtimeDir } from './core/paths'
@@ -27,46 +26,25 @@ import { moduleRedirection, redirectModule } from './plugins/moduleRedirection'
 import { renderPlugin } from './plugins/render'
 import { routesPlugin } from './plugins/routes'
 import { servePlugin } from './plugins/serve'
-import { clearCachedState } from './runtime/clearCachedState'
 import { prependBase } from './utils/base'
 import { callPlugins } from './utils/callPlugins'
 import { defer } from './utils/defer'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { purgeModule, unloadModuleAndImporters } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
-import {
-  CompiledModule,
-  isLinkedModule,
-  LinkedModule,
-  ModuleMap,
-  ResolveIdHook,
-} from './vm/types'
+import { ModuleMap, ResolveIdHook } from './vm/types'
 
 export interface SausDevServer {
   (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void): void
 
-  events: SausDevServer.EventEmitter
+  events: DevEventEmitter
   restart(): void
   close(): Promise<void>
-}
-
-export namespace SausDevServer {
-  export interface Events {
-    listening(): void
-    restart(): void
-    close(): void
-    error(e: any): void
-  }
-  export type EventEmitter = StrictEventEmitter<
-    import('events').EventEmitter,
-    Events
-  >
 }
 
 export async function createServer(
   inlineConfig?: vite.UserConfig
 ): Promise<SausDevServer> {
-  const events: SausDevServer.EventEmitter = new EventEmitter()
+  const events: DevEventEmitter = new EventEmitter()
   const createContext = () =>
     loadContext<DevContext>('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
@@ -162,7 +140,7 @@ export async function createServer(
 async function startServer(
   context: DevContext,
   moduleMap: ModuleMap,
-  events: SausDevServer.EventEmitter,
+  events: DevEventEmitter,
   isRestart?: boolean
 ) {
   const { config, logger } = context
@@ -189,8 +167,10 @@ async function startServer(
   const resolveId: ResolveIdHook = (id, importer) =>
     server.pluginContainer.resolveId(id, importer!, { ssr: true })
 
+  context.events = events
   context.server = server
   context.watcher = watcher
+  context.resolveId = resolveId
   context.moduleMap = moduleMap
   context.externalExports = new Map()
   context.linkedModules = {}
@@ -212,7 +192,7 @@ async function startServer(
   }
   context.ssrForceReload = undefined
 
-  await prepareDevApp(context, config, events, resolveId)
+  await prepareDevApp(context)
   watcher.prependListener('change', context.hotReload)
 
   // Use process.nextTick to ensure whoever is awaiting the `createServer`
@@ -226,7 +206,7 @@ async function startServer(
 
 function listen(
   server: vite.ViteDevServer,
-  events: SausDevServer.EventEmitter,
+  events: DevEventEmitter,
   isRestart?: boolean
 ): Promise<void> {
   let listening = false
@@ -271,7 +251,7 @@ function listen(
 function waitForChanges(
   input: string | Set<string>,
   server: vite.ViteDevServer,
-  events: SausDevServer.EventEmitter,
+  events: DevEventEmitter,
   callback: () => void
 ) {
   const { logger } = server.config
@@ -298,13 +278,8 @@ function waitForChanges(
   logger.info('\n' + gray('Waiting for changes...'))
 }
 
-async function prepareDevApp(
-  context: DevContext,
-  config: ResolvedConfig,
-  events: EventEmitter,
-  resolveId: ResolveIdHook
-) {
-  const { server, watcher } = context
+async function prepareDevApp(context: DevContext) {
+  const { server, watcher, events } = context
   const failedRequests = new Set<Endpoint.Request>()
 
   await resetDevApp()
@@ -318,240 +293,52 @@ async function prepareDevApp(
     await callPlugins(context.plugins, 'receiveDevApp', context.app)
   }
 
-  const dirtyFiles = new Set<string>()
-  const dirtyStateModules = new Set<CompiledModule>()
-  const dirtyClientModules = new Set<string>()
-  let isReloadPending = false
+  context.hotReload = createHotReload(context, {
+    schedule: debounce(reload => reload(), 50),
+    async start({ routesChanged, renderersChanged, clientEntriesChanged }) {
+      const clientChanges = new Set<string>()
 
-  const scheduleReload = debounce(reload, 50)
-
-  async function reload() {
-    if (isReloadPending) return
-    isReloadPending = true
-
-    // Wait for reloading to finish.
-    while (context.currentReload) {
-      await context.currentReload
-    }
-
-    isReloadPending = false
-    context.reloadId++
-    context.currentReload = defer()
-    context.pendingReload!.resolve(context.currentReload)
-    context.pendingReload = undefined
-
-    let routesChanged = dirtyFiles.has(context.routesPath)
-    let renderersChanged = dirtyFiles.has(context.renderPath)
-    let clientEntriesChanged = dirtyClientModules.has(context.renderPath)
-    dirtyFiles.clear()
-    dirtyClientModules.clear()
-
-    // Track which virtual modules need change events.
-    const changesToEmit = new Set<string>()
-
-    const { stateModuleBase } = context.app.config
-    for (const { id } of dirtyStateModules) {
-      const stateModuleIds = context.stateModulesByFile[id]
-      clearCachedState(key => {
-        const isMatch = stateModuleIds.some(
-          moduleId => key == moduleId || key.startsWith(moduleId + '.')
-        )
-        if (isMatch) {
-          changesToEmit.add(
-            prependBase(stateModuleBase + key + '.js', context.basePath)
-          )
-        }
-        return isMatch
-      })
-    }
-    dirtyStateModules.clear()
-
-    if (routesChanged) {
-      try {
-        context.logger.info(yellow('⨠ Reloading routes...'))
-        await loadRoutes(context, resolveId)
-        context.logger.info(green('✔︎ Routes are ready!'), { clear: true })
-
-        // Reload the client-side routes map.
-        changesToEmit.add('/@fs' + path.join(clientDir, 'routes.ts'))
-      } catch (error: any) {
-        routesChanged = false
-        events.emit('error', error)
-      }
-    }
-
-    // Reload the renderers immediately, so the dev server is up-to-date
-    // when new HTTP requests come in.
-    if (renderersChanged) {
-      try {
-        context.logger.info(yellow('⨠ Reloading renderers...'))
-        await loadRenderers(context)
-        context.logger.info(green('✔︎ Renderers are ready!'), { clear: true })
-
-        const oldConfigHooks = context.configHooks
-        const newConfigHooks = await loadConfigHooks(config)
-
-        const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
-        const newConfigPaths = newConfigHooks.map(ref => ref.path)
-
-        // Were the imports of any config providers added or removed?
-        const needsRestart =
-          oldConfigPaths.some(file => !newConfigPaths.includes(file)) ||
-          newConfigPaths.some(file => !oldConfigPaths.includes(file))
-
-        if (needsRestart) {
-          return events.emit('restart')
-        }
-      } catch (error: any) {
-        renderersChanged = false
-        events.emit('error', error)
-      }
-    }
-
-    let pendingPages: Promise<void> | undefined
-    if (routesChanged || renderersChanged) {
-      pendingPages = context.forCachedPages((pagePath, [page]) => {
-        // Emit change events for page state modules.
-        if (routesChanged) {
-          const filename = getPageFilename(pagePath, context.basePath)
-          changesToEmit.add('/' + filename + '.js')
-        }
-        // Ensure the generated clients are updated.
-        if (renderersChanged && clientEntriesChanged && page?.client) {
-          changesToEmit.add('\0' + getClientUrl(page.client.id, '/'))
-        }
-      })
-      context.clearCachedPages()
-      await resetDevApp()
-    }
-
-    context.currentReload.resolve()
-    context.currentReload = undefined
-
-    await pendingPages
-    for (const file of changesToEmit) {
-      watcher.emit('change', file)
-    }
-
-    const reloadedPages = Array.from(failedRequests, req => req.path)
-    failedRequests.clear()
-    reloadedPages.forEach(pagePath => {
-      server.ws?.send({
-        type: 'full-reload',
-        path: pagePath,
-      })
-    })
-  }
-
-  const clientDir = path.resolve(__dirname, '../client') + '/'
-
-  const getPendingReload = () => {
-    return (context.pendingReload ||= defer()).promise
-  }
-
-  context.hotReload = async file => {
-    if (dirtyFiles.has(file)) {
-      return getPendingReload()
-    }
-    const moduleMap = context.moduleMap
-    const changedModule = moduleMap[file] || context.linkedModules[file]
-    if (changedModule) {
-      await moduleMap.__compileQueue
-
-      // State modules import "saus/client" to access the `defineStateModule`
-      // function. Then the routes module imports those state modules.
-      // But we want to avoid reloading the routes module when the live exports
-      // of the "saus/client" module are changed, since the routes module can't
-      // use them anyway.
-      const skipRoutesPath =
-        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
-
-      const stateModules = new Set(
-        Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
-      )
-      const acceptModule = (
-        module: CompiledModule,
-        dep?: CompiledModule | LinkedModule
-      ) => {
-        const viteModule = server.moduleGraph.getModuleById(module.id)
-        if (viteModule) {
-          if (viteModule.isSelfAccepting) {
-            return true
+      return {
+        clientChange(url) {
+          clientChanges.add(url)
+        },
+        async finish() {
+          let pendingPages: Promise<void> | undefined
+          if (routesChanged || renderersChanged) {
+            pendingPages = context.forCachedPages((pagePath, [page]) => {
+              // Emit change events for page state modules.
+              if (routesChanged) {
+                const filename = getPageFilename(pagePath, context.basePath)
+                clientChanges.add('/' + filename + '.js')
+              }
+              // Ensure the generated clients are updated.
+              if (renderersChanged && clientEntriesChanged && page?.client) {
+                clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
+              }
+            })
+            context.clearCachedPages()
+            await resetDevApp()
           }
-          const viteDep = dep && server.moduleGraph.getModuleById(dep?.id)
-          if (viteDep && viteModule.acceptedHmrDeps.has(viteDep)) {
-            return true
-          }
-        }
-        return false
-      }
-      const resetStateModule = (module: CompiledModule) => {
-        // Invalidate any cached state when a state module is reset.
-        if (stateModules.has(module)) {
-          dirtyStateModules.add(module)
-          stateModules.delete(module)
-        }
 
-        // Any state module that dynamically imported this module
-        // needs to invalidate any cached state it produced.
-        for (const stateModule of stateModules) {
-          if (module.importers.hasDynamic(stateModule)) {
-            dirtyStateModules.add(stateModule)
-            stateModules.delete(stateModule)
-          }
-        }
-      }
-      if (isLinkedModule(changedModule)) {
-        unloadModuleAndImporters(changedModule, {
-          touched: dirtyFiles,
-          accept: acceptModule,
-          onPurge(module, isAccepted) {
-            if (isLinkedModule(module)) {
-              context.externalExports.delete(module.id)
-            } else {
-              resetStateModule(module)
+          // Emit watcher events after the reload promise is resolved.
+          queueMicrotask(async () => {
+            await pendingPages
+            for (const url of clientChanges) {
+              watcher.emit('change', url)
             }
-            if (!isAccepted) {
-              dirtyClientModules.add(module.id)
-            }
-          },
-        })
-      } else {
-        purgeModule(changedModule, {
-          touched: dirtyFiles,
-          accept: acceptModule,
-          onPurge(module, isAccepted) {
-            resetStateModule(module)
-            if (!isAccepted) {
-              dirtyClientModules.add(module.id)
-            }
-          },
-        })
+            const reloadedPages = Array.from(failedRequests, req => req.path)
+            failedRequests.clear()
+            reloadedPages.forEach(pagePath => {
+              server.ws?.send({
+                type: 'full-reload',
+                path: pagePath,
+              })
+            })
+          })
+        },
       }
-      if (skipRoutesPath) {
-        dirtyFiles.delete(context.routesPath)
-      }
-      scheduleReload()
-      return getPendingReload()
-    }
-    // In the event of a syntax error, these modules won't exist in the module map,
-    // but they still need to be reloaded on file change.
-    if (file == context.renderPath || file == context.routesPath) {
-      dirtyFiles.add(file)
-      scheduleReload()
-      return getPendingReload()
-    }
-    // Restart the server when Vite config is changed.
-    if (file == context.configPath) {
-      // Prevent handling by Vite.
-      config.server.hmr = false
-      // Skip SSR reloading by Saus.
-      dirtyFiles.clear()
-
-      debug(`Vite config changed. Restarting server.`)
-      events.emit('restart')
-    }
-  }
+    },
+  })
 }
 
 // Some "saus/client" exports depend on project config.
