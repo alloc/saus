@@ -59,7 +59,7 @@ importers:
       strip-comments: ^2.0.1
       terser: ^5.10.0
       tinypool: ^0.1.1
-      ts-debounce: ^3.0.0
+      ts-debounce: 2.0.0
       tsup: ^5.12.8
       typescript: ^4.5.0
       vite: npm:@alloc/vite@2.6.3-3
@@ -124,7 +124,7 @@ importers:
       rollup-plugin-dts: 4.1.0_typescript@4.6.2
       source-map: 0.6.1
       strip-comments: 2.0.1
-      ts-debounce: 3.0.0
+      ts-debounce: 2.0.0
       tsup: 5.12.8_typescript@4.6.2
       typescript: 4.6.2
       vitest: 0.0.117
@@ -4159,8 +4159,8 @@ packages:
       escape-string-regexp: 1.0.5
     dev: false
 
-  /ts-debounce/3.0.0:
-    resolution: {integrity: sha512-7jiRWgN4/8IdvCxbIwnwg2W0bbYFBH6BxFqBjMKk442t7+liF2Z1H6AUCcl8e/pD93GjPru+axeiJwFmRww1WQ==}
+  /ts-debounce/2.0.0:
+    resolution: {integrity: sha512-OZC7MwsMB9boiiARBRNqLiSb0ZzUOj2ANru4j+TDv+Pg4tF73lGLCrDZ0OERwelzvTb9joh/42uVdz3n8EmN8g==}
     dev: true
 
   /ts-interface-checker/0.1.13:
