@@ -1,5 +1,6 @@
 import kleur from 'kleur'
 import { Module } from 'module'
+import path from 'path'
 import { relativeToCwd } from '../utils/relativeToCwd'
 import { debug } from './debug'
 import { getNodeModule } from './nodeModules'
@@ -12,14 +13,33 @@ export type NodeResolveHook = (
 
 export function hookNodeResolve(resolve: NodeResolveHook) {
   const nodeResolve: Function = (Module as any)._resolveFilename
+  const nodeLoader: Function = (Module as any)._load
 
-  // @ts-ignore
-  Module._resolveFilename = (
+  // Track which paths are returned by resolveHook while
+  // inside the `Module._load` hook.
+  const loadedPaths = new Set<string>()
+
+  // Node.js maintains an internal resolution cache, so we
+  // have to override `Module._load` to avoid it.
+  const loadHook = (id: string, parent: NodeModule, isMain: boolean) => {
+    const loadedPath = resolveHook(id, parent, isMain)
+    loadedPaths.add(loadedPath)
+
+    return nodeLoader(loadedPath, parent, isMain)
+  }
+
+  // Our resolution logic still needs to live in `Module._resolveFilename`
+  // or else it won't be used when `require.resolve` is called.
+  const resolveHook = (
     id: string,
     parent: NodeModule,
     isMain: boolean,
-    options: any
-  ) => {
+    options?: any
+  ): string => {
+    if (path.isAbsolute(id) && loadedPaths.has(id)) {
+      return id // Already resolved.
+    }
+
     const resolved =
       !(options && options.skipSelf) &&
       resolve(id, parent.id, (id, importer) => {
@@ -50,8 +70,15 @@ export function hookNodeResolve(resolve: NodeResolveHook) {
     return resolved || nodeResolve(id, parent, isMain, options)
   }
 
+  // @ts-ignore
+  Module._resolveFilename = resolveHook
+  // @ts-ignore
+  Module._load = loadHook
+
   return () => {
     // @ts-ignore
     Module._resolveFilename = nodeResolve
+    // @ts-ignore
+    Module._load = nodeLoader
   }
 }
