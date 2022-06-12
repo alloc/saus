@@ -7,7 +7,7 @@ import { writeHeaders } from './writeHeaders'
 export function writeResponse(
   res: ServerResponse,
   status: number,
-  headers?: Headers | OutgoingHeaders<Headers | null> | null,
+  headers?: Headers | OutgoingHeaders | null,
   body?: Endpoint.ResponseBody
 ) {
   if (headers) {

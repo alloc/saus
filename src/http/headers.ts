@@ -74,7 +74,7 @@ export interface ShortcutHeaders {
   content: ContentHeaders
 }
 
-export type OutgoingHeaders<T = Headers> = {
+export type OutgoingHeaders<T = Headers | null> = {
   readonly [P in keyof CommonHeaders as CamelCase<P>]: (
     value: CommonHeaders[P] | undefined
   ) => OutgoingHeaders<T>
