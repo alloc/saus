@@ -6,7 +6,8 @@
         "type": {
           "id": "TodoStore"
         },
-        "ref": "const {\n  todos,\n  filter,\n  setFilter,\n  addNewTodo,\n  updateTodo,\n  removeTodo,\n  toggleAllTodosCompleted,\n  clearCompleted\n }"
+        "ref": "const {\n  todos,\n  filter,\n  setFilter,\n  addNewTodo,\n  updateTodo,\n  removeTodo,\n  toggleAllTodosCompleted,\n  clearCompleted\n }",
+        "body": []
       },
       {
         "type": "section",
@@ -15,10 +16,324 @@
             "name": "class",
             "value": "todoapp"
           }
+        ],
+        "body": [
+          {
+            "type": {
+              "id": "TodoHeader"
+            },
+            "props": [
+              {
+                "name": "addNewTodo",
+                "value": {
+                  "expression": "addNewTodo"
+                }
+              }
+            ],
+            "body": []
+          },
+          {
+            "case": "todos.length",
+            "body": [
+              {
+                "statement": "const remainingCount = todos.length - todos.filter((todo) => todo.completed).length"
+              },
+              {
+                "statement": "const filteredTodos = todos.filter(todo => {\n      if (filter === \"active\") return !todo.completed;\n      if (filter === \"completed\") return todo.completed;\n      return true;\n    })"
+              },
+              {
+                "statement": "const handleFilter = (filter) => (e) => {\n      setFilter(filter);\n      e.preventDefault();\n    }"
+              },
+              {
+                "type": "section",
+                "props": [
+                  {
+                    "name": "class",
+                    "value": "main"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": {
+                      "id": "id"
+                    },
+                    "ref": "const toggleId",
+                    "body": []
+                  },
+                  {
+                    "type": "input",
+                    "props": [
+                      {
+                        "name": "id",
+                        "value": {
+                          "expression": "toggleId"
+                        }
+                      },
+                      {
+                        "name": "type",
+                        "value": "checkbox"
+                      },
+                      {
+                        "name": "checked",
+                        "value": {
+                          "expression": "!remainingCount"
+                        }
+                      },
+                      {
+                        "name": "onChange",
+                        "value": {
+                          "expression": "(e) => {\n          toggleAllTodosCompleted(e.target.checked);\n        }"
+                        }
+                      },
+                      {
+                        "name": "class",
+                        "value": "toggle-all"
+                      }
+                    ],
+                    "body": []
+                  },
+                  {
+                    "type": "label",
+                    "props": [
+                      {
+                        "name": "for",
+                        "value": {
+                          "expression": "toggleId"
+                        }
+                      }
+                    ],
+                    "body": []
+                  },
+                  {
+                    "type": "ul",
+                    "props": [
+                      {
+                        "name": "class",
+                        "value": "todo-list"
+                      }
+                    ],
+                    "body": [
+                      {
+                        "forOf": {
+                          "expression": "filteredTodos"
+                        },
+                        "value": {
+                          "name": "todo"
+                        },
+                        "body": [
+                          {
+                            "type": {
+                              "id": "TodoItem"
+                            },
+                            "props": [
+                              {
+                                "name": "todo",
+                                "value": {
+                                  "expression": "todo"
+                                }
+                              },
+                              {
+                                "name": "updateTodo",
+                                "value": {
+                                  "expression": "updateTodo"
+                                }
+                              },
+                              {
+                                "name": "removeTodo",
+                                "value": {
+                                  "expression": "removeTodo"
+                                }
+                              }
+                            ],
+                            "body": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "props": [
+                  {
+                    "name": "class",
+                    "value": "footer"
+                  }
+                ],
+                "body": [
+                  {
+                    "type": "span",
+                    "props": [
+                      {
+                        "name": "class",
+                        "value": "todo-count"
+                      }
+                    ],
+                    "body": [
+                      {
+                        "type": "strong",
+                        "body": [
+                          {
+                            "expression": "remainingCount",
+                            "escape": true
+                          }
+                        ]
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "expression": "remainingCount > 1 ? \"items\" : \"item\"",
+                        "escape": true
+                      },
+                      {
+                        "text": " left"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "ul",
+                    "props": [
+                      {
+                        "name": "class",
+                        "value": "filters"
+                      }
+                    ],
+                    "body": [
+                      {
+                        "type": "li",
+                        "body": [
+                          {
+                            "type": "a",
+                            "props": [
+                              {
+                                "name": "href",
+                                "value": "#/"
+                              },
+                              {
+                                "name": "class",
+                                "value": {
+                                  "expression": "{ selected: filter === \"all\" }"
+                                }
+                              },
+                              {
+                                "name": "onClick",
+                                "value": {
+                                  "expression": "handleFilter(\"all\")"
+                                }
+                              }
+                            ],
+                            "body": [
+                              {
+                                "text": "All"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "li",
+                        "body": [
+                          {
+                            "type": "a",
+                            "props": [
+                              {
+                                "name": "href",
+                                "value": "#/active"
+                              },
+                              {
+                                "name": "class",
+                                "value": {
+                                  "expression": "{ selected: filter === \"active\" }"
+                                }
+                              },
+                              {
+                                "name": "onClick",
+                                "value": {
+                                  "expression": "handleFilter(\"active\")"
+                                }
+                              }
+                            ],
+                            "body": [
+                              {
+                                "text": "Active"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "li",
+                        "body": [
+                          {
+                            "type": "a",
+                            "props": [
+                              {
+                                "name": "href",
+                                "value": "#/completed"
+                              },
+                              {
+                                "name": "class",
+                                "value": {
+                                  "expression": "{ selected: filter === \"completed\" }"
+                                }
+                              },
+                              {
+                                "name": "onClick",
+                                "value": {
+                                  "expression": "handleFilter(\"completed\")"
+                                }
+                              }
+                            ],
+                            "body": [
+                              {
+                                "text": "Completed"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "case": "remainingCount !== todos.length",
+                    "body": [
+                      {
+                        "type": "button",
+                        "props": [
+                          {
+                            "name": "onClick",
+                            "value": {
+                              "expression": "clearCompleted"
+                            }
+                          },
+                          {
+                            "name": "class",
+                            "value": "clear-completed"
+                          }
+                        ],
+                        "body": [
+                          {
+                            "text": "Clear completed"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
         ]
       },
       {
-        "type": "style"
+        "type": "style",
+        "body": [
+          {
+            "text": "@import url(\"https://unpkg.com/todomvc-app-css@2.2.0/index.css\");"
+          }
+        ]
       }
     ]
   },
@@ -32,10 +347,53 @@
             "name": "class",
             "value": "header"
           }
+        ],
+        "body": [
+          {
+            "type": "h1",
+            "body": [
+              {
+                "text": "todos"
+              }
+            ]
+          },
+          {
+            "type": "form",
+            "props": [
+              {
+                "name": "onSubmit",
+                "value": {
+                  "expression": "(e) => {\n    const titleInput = title();\n    addNewTodo({ title: titleInput.value });\n    titleInput.value = \"\";\n    e.preventDefault();\n  }"
+                }
+              }
+            ],
+            "body": [
+              {
+                "type": "input",
+                "props": [
+                  {
+                    "name": "class",
+                    "value": "new-todo"
+                  },
+                  {
+                    "name": "placeholder",
+                    "value": "What needs to be done?"
+                  }
+                ],
+                "ref": "const title",
+                "body": []
+              }
+            ]
+          }
         ]
       },
       {
-        "type": "style"
+        "type": "style",
+        "body": [
+          {
+            "text": ".header form { margin: 0; }"
+          }
+        ]
       }
     ],
     "props": [
@@ -64,6 +422,129 @@
             "value": {
               "expression": "{ completed: todo.completed, editing: isEditing }"
             }
+          }
+        ],
+        "body": [
+          {
+            "type": "div",
+            "props": [
+              {
+                "name": "class",
+                "value": "view"
+              }
+            ],
+            "body": [
+              {
+                "type": "input",
+                "props": [
+                  {
+                    "name": "type",
+                    "value": "checkbox"
+                  },
+                  {
+                    "name": "checked",
+                    "value": {
+                      "expression": "todo.completed"
+                    }
+                  },
+                  {
+                    "name": "aria-label",
+                    "value": "Toggle todo completed"
+                  },
+                  {
+                    "name": "onChange",
+                    "value": {
+                      "expression": "(e) => {\n        var completed = e.target.checked === true;\n        updateTodo(todo.id, {completed});\n      }"
+                    }
+                  },
+                  {
+                    "name": "class",
+                    "value": "toggle"
+                  }
+                ],
+                "body": []
+              },
+              {
+                "type": "label",
+                "props": [
+                  {
+                    "name": "onDblClick",
+                    "value": {
+                      "expression": "() => {\n      isEditing = true;\n      editingTitle = todo.title;\n    }"
+                    }
+                  }
+                ],
+                "body": [
+                  {
+                    "expression": "todo.title",
+                    "escape": true
+                  }
+                ]
+              },
+              {
+                "type": "button",
+                "props": [
+                  {
+                    "name": "onClick",
+                    "value": {
+                      "expression": "() => { removeTodo(todo.id) }"
+                    }
+                  },
+                  {
+                    "name": "aria-label",
+                    "value": "Delete todo"
+                  },
+                  {
+                    "name": "class",
+                    "value": "destroy"
+                  }
+                ],
+                "body": []
+              }
+            ]
+          },
+          {
+            "type": "input",
+            "props": [
+              {
+                "name": "class",
+                "value": "edit"
+              },
+              {
+                "name": "title",
+                "value": "Enter the new todo title"
+              },
+              {
+                "name": "type",
+                "value": "text"
+              },
+              {
+                "name": "value",
+                "value": {
+                  "expression": "editingTitle"
+                }
+              },
+              {
+                "name": "onBlur",
+                "value": {
+                  "expression": "saveEdit"
+                }
+              },
+              {
+                "name": "onChange",
+                "value": {
+                  "expression": "saveEdit"
+                }
+              },
+              {
+                "name": "onKeydown",
+                "value": {
+                  "expression": "(e) => {\n      if (e.keyCode === 13 /* ENTER */) {\n        saveEdit();\n      } else if (e.keyCode === 27 /* ESC */) {\n        isEditing = false;\n      }\n    }"
+                }
+              }
+            ],
+            "ref": "const title",
+            "body": []
           }
         ]
       }
@@ -103,7 +584,8 @@
               "expression": "{\n  todos,\n  filter,\n  setFilter(f) { filter = f },\n  updateTodo(todoId, newProps) {\n    todos = todos.map(todo => {\n      if (todo.id !== todoId) return todo;\n      return { ...todo, ...newProps }\n    })\n  },\n  clearCompleted() {\n    todos = todos.filter(todo => !todo.completed);\n  },\n  removeTodo(todoId) {\n    todos = todos.filter(todo => todo.id !== todoId);\n  },\n  toggleAllTodosCompleted(completed) {\n    todos = todos.map((todo) => {\n      if (todo.completed === completed) return todo;\n      return { ...todo, completed };\n    });\n  },\n  addNewTodo(todoData) {\n    todos = [...todos, {\n      title: todoData.title,\n      id: 'c' + (nextId++),\n      completed: false\n    }];\n  }\n}"
             }
           }
-        ]
+        ],
+        "body": []
       }
     ]
   }

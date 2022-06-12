@@ -36,6 +36,7 @@ type RawExpression = string
 interface Expression extends Node {
   /** JavaScript expression */
   expression: RawExpression
+  escape?: boolean
 }
 
 /** One or more JavaScript statements. */
@@ -168,7 +169,6 @@ interface ElementCopy extends Node {
 
 interface Text extends Node {
   text: string | Expression
-  escape?: boolean
 }
 
 interface ErrorBoundary extends Node {
