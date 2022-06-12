@@ -1,6 +1,11 @@
 import type { App } from '../app/types'
 import type { Buffer } from '../client'
-import type { Headers, HttpRedirect, Response } from '../http'
+import type {
+  Headers,
+  HttpRedirect,
+  OutgoingHeaders,
+  Response as HttpResponse,
+} from '../http'
 import type { httpMethods } from '../utils/httpMethods'
 import type { Falsy, Promisable } from '../utils/types'
 import type { ParsedUrl } from '../utils/url'
@@ -46,7 +51,7 @@ export namespace Endpoint {
     }
   }
 
-  export type Result = Response | HttpRedirect | null | void
+  export type Result = HttpResponse | HttpRedirect | null | void
 
   /**
    * Endpoints ending in `.json` don't have to wrap their
@@ -56,11 +61,13 @@ export namespace Endpoint {
    */
   export type JsonFunction<Params extends {} = {}> = (
     request: Request<Params>,
+    responseHeaders: OutgoingHeaders,
     app: App
   ) => Promisable<any>
 
   export type Function<Params extends {} = {}> = (
     request: Request<Params>,
+    responseHeaders: OutgoingHeaders,
     app: App
   ) => Promisable<Result>
 
@@ -83,6 +90,7 @@ export namespace Endpoint {
 
   export interface RespondWith {
     (...response: ResponseTuple): void
+    (response: ResponseTuple): void
     (response: ResponseStream): void
     (promise: ResponsePromise): void
   }
@@ -105,14 +113,19 @@ export namespace Endpoint {
   }
 
   export interface ResponseHook {
-    (request: Request, response: ResponseTuple, app: App): Promisable<void>
+    (request: Request, response: Response, app: App): Promisable<void>
     priority?: number
+  }
+
+  export type Response = {
+    status: number
+    headers: OutgoingHeaders
+    body?: ResponseBody
   }
 
   export type ResponseTuple = [
     status?: number,
-    headers?: Headers | null,
-    body?: Endpoint.ResponseBody
+    body?: ResponseBody & { headers?: Headers | null }
   ]
 
   export type ResponseBody =

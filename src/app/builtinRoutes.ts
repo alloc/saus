@@ -43,7 +43,7 @@ export function defineBuiltinRoutes(
   }
 
   // Page-based entry modules
-  route(`/*.html.js`).get(async (req, app) => {
+  route(`/*.html.js`).get(async (req, _, app) => {
     const pagePath = '/' + req.wild.replace(indexFileRE, '')
     const pageUrl = parseUrl(
       debugBase && req.startsWith(debugBase)
@@ -93,9 +93,9 @@ export function defineBuiltinRoutes(
 }
 
 const sendModule = (req: Endpoint.Request, text: string) =>
-  req.respondWith(200, makeModuleHeaders(text), { text })
+  req.respondWith(200, { text, headers: makeModuleHeaders(text) })
 
 const makeModuleHeaders = (text: string): Headers => ({
-  'Content-Type': 'application/javascript',
-  ETag: etag(text, { weak: true }),
+  'content-type': 'application/javascript',
+  etag: etag(text, { weak: true }),
 })

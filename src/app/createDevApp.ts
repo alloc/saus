@@ -66,7 +66,7 @@ const createPageEndpoint =
       getEndpoints: (method, route) =>
         method == 'GET' &&
         route.moduleId !== null &&
-        (async req => {
+        (async (req, headers) => {
           let [page, error] = await app.renderPage(req, route, {
             defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,
           })
@@ -102,11 +102,11 @@ const createPageEndpoint =
             if (!error && app.postProcessHtml) {
               page.html = await app.postProcessHtml(page)
             }
-            const headers = {
-              'Content-Type': 'text/html; charset=utf-8',
-              'Content-Length': '' + Buffer.byteLength(page.html),
-            }
-            req.respondWith(200, headers, {
+            headers.content({
+              type: 'text/html; charset=utf-8',
+              length: Buffer.byteLength(page.html),
+            })
+            req.respondWith(200, {
               text: page.html,
             })
           }

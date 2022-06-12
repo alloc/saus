@@ -18,7 +18,7 @@ export const servePages: connect.Middleware<RequestProps> =
       () => streamToBuffer(req)
     )
     url.object = req
-    const [status, headers, body] = await req.app.callEndpoints(url)
+    const { status, headers, body } = await req.app.callEndpoints(url)
     if (status == null) {
       return next()
     }

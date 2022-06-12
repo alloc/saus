@@ -66,14 +66,14 @@ function createPageEndpoint(context: AppContext): App.Plugin {
     getEndpoints: (method, route) =>
       route.moduleId !== null &&
       method == 'GET' &&
-      (async req => {
+      (async (req, headers) => {
         const page = await app.renderPageBundle(req, route)
         if (page) {
-          const headers = {
-            'Content-Type': 'text/html; charset=utf-8',
-            'Content-Length': '' + Buffer.byteLength(page.html),
-          }
-          req.respondWith(200, headers, {
+          headers.content({
+            type: 'text/html; charset=utf-8',
+            length: Buffer.byteLength(page.html),
+          })
+          req.respondWith(200, {
             text: page.html,
           })
         }

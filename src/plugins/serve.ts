@@ -79,7 +79,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           writeResponse(
             res,
             200,
-            { 'Content-Type': responseType },
+            { 'content-type': responseType },
             renderError(error, responseType, context.root)
           )
         })
@@ -98,7 +98,7 @@ async function processRequest(
     hotReload: { nonce },
   } = context
 
-  const [status, headers, body] = await app.callEndpoints(req)
+  const { status, headers, body } = await app.callEndpoints(req)
 
   // Reprocess the request if modules were changed during.
   if (nonce !== context.hotReload.nonce) {

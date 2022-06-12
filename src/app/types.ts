@@ -26,7 +26,7 @@ export interface App extends ModuleRenderer {
   callEndpoints(
     url: Endpoint.RequestUrl,
     endpoints?: readonly Endpoint.Function[]
-  ): Promise<Endpoint.ResponseTuple>
+  ): Promise<Partial<Endpoint.Response>>
   loadClientProps: ClientPropsLoader
   renderPage: RenderPageFn
   /**

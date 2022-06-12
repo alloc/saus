@@ -15,13 +15,13 @@ import {
   RouteIncludeOption,
 } from '../core/routes'
 import { RuntimeHook } from '../core/setup'
-import { HttpRedirect } from '../http'
-import { normalizeHeaders } from '../http/normalizeHeaders'
+import { Headers, makeOutgoingHeaders, OutgoingHeaders } from '../http/headers'
+import { HttpRedirect } from '../http/redirect'
 import { toArray } from '../utils/array'
 import { baseToRegex, prependBase } from '../utils/base'
 import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
-import { pick } from '../utils/pick'
+import { pick, pickAllExcept } from '../utils/pick'
 import { plural } from '../utils/plural'
 import { defineBuiltinRoutes } from './builtinRoutes'
 import {
@@ -217,21 +217,16 @@ export function createApp(
     endpoints = resolveRoute(url)[0]
   ) => {
     let promise: Endpoint.ResponsePromise | undefined
-    let response: Endpoint.ResponseTuple | undefined
+    let response: Endpoint.Response | undefined
+    let headers = makeOutgoingHeaders(null as Headers | null)
     let request = makeRequest(
       url,
-      function respondWith(arg1, headers?: any, body?: any) {
+      function respondWith(arg1, body?: Endpoint.ResponseTuple[1]) {
         if (response) return
         if (arg1 instanceof Promise) {
           promise = arg1
-        } else if (!arg1 || typeof arg1 == 'number') {
-          response = [arg1, normalizeHeaders(headers), body]
         } else {
-          response = [
-            arg1.statusCode || 200,
-            normalizeHeaders(arg1.headers),
-            { stream: arg1 },
-          ]
+          response = createResponse(headers, arg1, body)
         }
       }
     )
@@ -241,7 +236,7 @@ export function createApp(
     }
 
     for (const endpoint of endpoints) {
-      const returned = await endpoint(request, app)
+      const returned = await endpoint(request, headers, app)
       if (response) {
         break
       }
@@ -249,26 +244,31 @@ export function createApp(
         const resolved = await promise
         promise = undefined
         if (resolved) {
-          request.respondWith(...(resolved as any))
+          const [arg1, body] = resolved
+          response = createResponse(headers, arg1, body)
           break
         }
       }
       if (returned) {
-        response =
-          returned instanceof HttpRedirect
-            ? [301, { Location: returned.location }]
-            : [returned.status, returned.headers, { buffer: returned.data }]
+        if (returned instanceof HttpRedirect) {
+          headers.location(returned.location)
+          response = createResponse(headers, 301)
+        } else {
+          headers.merge(returned.headers)
+          response = createResponse(headers, returned.status, {
+            buffer: returned.data,
+          })
+        }
         break
       }
     }
 
-    response ||= []
-    if (responseHooks)
+    if (responseHooks && response?.status)
       for (const onResponse of responseHooks) {
         await onResponse(request, response, app)
       }
 
-    return response
+    return response || {}
   }
 
   const app = {
@@ -296,6 +296,34 @@ export function createApp(
   }
 
   return app
+}
+
+function createResponse(
+  headers: OutgoingHeaders,
+  arg1: number | Endpoint.ResponseTuple | Endpoint.ResponseStream | undefined,
+  body?: Endpoint.ResponseTuple[1]
+): Endpoint.Response {
+  let status: number
+  if (Array.isArray(arg1)) {
+    body = arg1[1]
+    arg1 = arg1[0]
+  }
+  if (!arg1 || typeof arg1 == 'number') {
+    status = arg1!
+    if (body) {
+      headers.merge(body.headers)
+      body = pickAllExcept(body, ['headers'])
+    }
+  } else {
+    status = arg1.statusCode!
+    headers.merge(arg1.headers)
+    body = { stream: arg1 }
+  }
+  return {
+    status,
+    headers,
+    body,
+  }
 }
 
 function createClientPropsLoader(

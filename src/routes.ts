@@ -174,10 +174,10 @@ function createRouteAPI(parent: Route) {
           contentTypes = arg2
         } else {
           contentTypes = ['application/json']
-          fn = async (req, app) => {
-            const result = await arg2!(req, app)
+          fn = async (req, headers, app) => {
+            const result = await arg2!(req, headers, app)
             if (result !== undefined) {
-              req.respondWith(200, null, { json: result })
+              req.respondWith(200, { json: result })
             }
           }
         }
