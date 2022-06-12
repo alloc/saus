@@ -92,7 +92,7 @@ export type OutgoingHeaders<T = Headers | null> = {
     setHeader(name: string, value: any): void
   }) => void
   /** Merge headers defined in the given object. */
-  readonly merge: (headers: Headers) => OutgoingHeaders<T>
+  readonly merge: (headers: Headers | null | undefined) => OutgoingHeaders<T>
   /** The next calls will be skipped if the header is already defined. */
   readonly defaults: OutgoingHeaders<T>
   /** Coerce to a `Headers` object or null. */
@@ -125,7 +125,14 @@ export function makeOutgoingHeaders<T extends Headers | null>(
       }
       if (key == 'merge') {
         return (values: any) => {
-          Object.assign(headers, values)
+          if (values) {
+            values = normalizeHeaders(values)
+            for (const key in values) {
+              if (values[key] !== undefined) {
+                headers[key] = values[key]
+              }
+            }
+          }
           return proxy
         }
       }
