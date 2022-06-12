@@ -61,6 +61,7 @@ importers:
       tinypool: ^0.1.1
       ts-debounce: 2.0.0
       tsup: ^5.12.8
+      type-fest: ^2.13.0
       typescript: ^4.5.0
       vite: npm:@alloc/vite@2.6.3-3
       vitest: '*'
@@ -91,6 +92,7 @@ importers:
       strict-event-emitter-types: 2.0.0
       terser: 5.10.0
       tinypool: 0.1.1
+      type-fest: 2.13.0
       vite: /@alloc/vite/2.6.3-3
       yaml: 2.1.1
     devDependencies:
@@ -4242,6 +4244,11 @@ packages:
 
   /type-error/1.0.3:
     resolution: {integrity: sha512-hlNA4NwwjtL9clb8nv+x/5C45uzxND+N+h+/y3z2dYdubGSmdtNtJjHVH4E68ZHR98Bkav4ACf1lmTZepc/4sg==}
+    dev: false
+
+  /type-fest/2.13.0:
+    resolution: {integrity: sha512-lPfAm42MxE4/456+QyIaaVBAwgpJb6xZ8PRu09utnhPdWwcyj9vgy6Sq0Z5yNbJ21EdxB5dRU/Qg8bsyAMtlcw==}
+    engines: {node: '>=12.20'}
     dev: false
 
   /typescript/4.6.2:

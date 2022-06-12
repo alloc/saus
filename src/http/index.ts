@@ -1,4 +1,5 @@
 export * from './get'
+export * from './headers'
 export * from './hooks'
 export * from './http'
 export * from './httpImport'

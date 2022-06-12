@@ -1,4 +1,4 @@
-import type { Headers } from './response'
+import type { Headers } from './headers'
 
 const kNormalized = Symbol.for('saus:normalized')
 

@@ -1,9 +1,10 @@
 import { Endpoint } from '../core'
 import { writeBody } from '../runtime/writeBody'
+import { Headers } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
 import { urlToHttpOptions } from './internal/urlToHttpOptions'
-import { Headers, Response } from './response'
+import { Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
 type ForwardedKeys = 'agent' | 'allowBadStatus' | 'signal' | 'sink' | 'timeout'

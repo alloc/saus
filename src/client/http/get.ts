@@ -1,7 +1,8 @@
 // HTTP helpers suitable for browser and web worker environments.
 import type { GetOptions } from '../../http/get'
+import type { Headers } from '../../http/headers'
 import { normalizeHeaders } from '../../http/normalizeHeaders'
-import { Headers, Response } from '../../http/response'
+import { Response } from '../../http/response'
 import { Buffer } from '../buffer'
 
 export async function get(url: string, options?: GetOptions) {

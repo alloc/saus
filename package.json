@@ -67,6 +67,7 @@
     "strict-event-emitter-types": "^2.0.0",
     "terser": "^5.10.0",
     "tinypool": "^0.1.1",
+    "type-fest": "^2.13.0",
     "vite": "npm:@alloc/vite@2.6.3-3",
     "yaml": "^2.1.1"
   },

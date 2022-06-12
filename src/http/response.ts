@@ -1,15 +1,6 @@
 import type { Buffer } from '../client/buffer'
+import type { Headers } from './headers'
 import { normalizeHeaders } from './normalizeHeaders'
-
-export interface CommonHeaders {
-  'cache-control'?: string
-  'content-length'?: string
-  'content-type'?: string
-  expires?: string
-}
-
-export type Headers = CommonHeaders &
-  Record<string, string | string[] | undefined>
 
 export class Response {
   readonly headers: Headers
