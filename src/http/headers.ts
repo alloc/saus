@@ -1,4 +1,7 @@
+import { ServerResponse } from 'http'
 import { CamelCase } from 'type-fest'
+import { writeHeaders } from '../runtime/writeHeaders'
+import { normalizeHeaders } from './normalizeHeaders'
 
 export interface CommonHeaders {
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control */
@@ -71,20 +74,29 @@ export interface ShortcutHeaders {
   content: ContentHeaders
 }
 
-export type OutgoingHeaders = {
+export type OutgoingHeaders<T = Headers> = {
   readonly [P in keyof CommonHeaders as CamelCase<P>]: (
     value: CommonHeaders[P] | undefined
-  ) => OutgoingHeaders
+  ) => OutgoingHeaders<T>
 } & {
   readonly [P in keyof ShortcutHeaders]: (
     value: ShortcutHeaders[P] | undefined
-  ) => OutgoingHeaders
+  ) => OutgoingHeaders<T>
 } & {
   readonly [name: string]: (
     value: string | string[] | undefined
-  ) => OutgoingHeaders
+  ) => OutgoingHeaders<T>
 } & {
-  readonly toHeaders: () => Headers
+  /** Apply defined headers to the given response. */
+  readonly apply: (response: {
+    setHeader(name: string, value: any): void
+  }) => void
+  /** Merge headers defined in the given object. */
+  readonly merge: (headers: Headers) => OutgoingHeaders<T>
+  /** The next calls will be skipped if the header is already defined. */
+  readonly defaults: OutgoingHeaders<T>
+  /** Coerce to a `Headers` object or null. */
+  readonly toJSON: () => T
 }
 
 const toDashCase = (input: string) =>
@@ -97,19 +109,47 @@ const toDashCase = (input: string) =>
  * functional style via this-chaining. The methods mutate the given
  * `headers` object, so chaining the calls is not strictly required.
  */
-export function makeOutgoingHeaders(headers: Headers): OutgoingHeaders {
+export function makeOutgoingHeaders<T extends Headers | null>(
+  init: T | undefined,
+  filter: (
+    name: string,
+    newValue: string | string[] | undefined,
+    headers: Headers
+  ) => boolean = () => true
+): OutgoingHeaders<T> {
+  const headers = (init || {}) as Headers
   return new Proxy(headers as any, {
     get(_, key: string, proxy) {
-      if (key == 'toHeaders') {
-        return () => headers
+      if (key == 'toJSON') {
+        return () => normalizeHeaders(headers)
+      }
+      if (key == 'merge') {
+        return (values: any) => {
+          Object.assign(headers, values)
+          return proxy
+        }
+      }
+      if (key == 'apply') {
+        return (response: ServerResponse) => {
+          writeHeaders(response, headers)
+        }
+      }
+      if (key == 'defaults') {
+        return makeOutgoingHeaders(headers, name => {
+          return headers[name] === undefined
+        })
       }
       if (shortcutHeaderNames.includes(key as any)) {
         const scope = toDashCase(key)
         return (props: any) => {
           if (props == null) return proxy
           for (const prop in props) {
+            const name = scope + '-' + prop
             const newValue = props[prop]
-            headers[scope + '-' + prop] =
+            if (!filter(name, newValue, headers)) {
+              continue
+            }
+            headers[name] =
               newValue != null
                 ? Array.isArray(newValue)
                   ? commaDelimitedNames.includes(prop)
@@ -124,7 +164,10 @@ export function makeOutgoingHeaders(headers: Headers): OutgoingHeaders {
         }
       }
       return (value: any) => {
-        headers[toDashCase(key)] = value
+        const name = toDashCase(key)
+        if (filter(name, value, headers)) {
+          headers[name] = value
+        }
         return proxy
       }
     },
