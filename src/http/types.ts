@@ -16,6 +16,7 @@ export interface HttpOptions {
   hash?: string
   headers?: Headers
   href?: string
+  method?: string
   pathname?: string
   protocol?: string
   search?: string

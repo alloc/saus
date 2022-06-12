@@ -25,6 +25,8 @@ export function http(
   const trace = Error()
   return new Promise<Response>((resolve, reject) => {
     const req = createRequest(url, opts)
+    req.method = method
+
     Promise.resolve(requestHook.current(req)).then(resp => {
       const onResponse = (resp: Response) =>
         Promise.resolve(responseHook.current(req, resp)).then(
