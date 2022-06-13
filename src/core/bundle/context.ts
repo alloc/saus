@@ -7,7 +7,7 @@ import {
 } from '../../plugins/moduleRedirection'
 import { renderPlugin } from '../../plugins/render'
 import { plural } from '../../utils/plural'
-import { loadContext, SausContext } from '../context'
+import { BaseContext, loadContext } from '../context'
 import { loadRoutes } from '../loadRoutes'
 import { SausBundleConfig, vite } from '../vite'
 import { internalRedirects, ssrRedirects } from './moduleRedirects'
@@ -29,7 +29,7 @@ export interface BundleConfig
   outFile?: string
 }
 
-export interface BundleContext extends SausContext {
+export interface BundleContext extends BaseContext {
   bundle: BundleConfig
   /** The virtual module ID of the SSR bundle. */
   bundleModuleId: string

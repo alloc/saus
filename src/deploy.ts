@@ -16,6 +16,7 @@ import {
   injectDeployContext,
   RevertFn,
 } from './core/deploy'
+import { GitFiles, YamlFile } from './core/deploy/files'
 import { loadDeployHooks } from './core/loadDeployHooks'
 import { toObjectHash } from './utils/objectHash'
 import { Promisable } from './utils/types'
@@ -50,16 +51,17 @@ export async function deploy(
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
 
+  const cacheDir = path.resolve(context.root, 'node_modules/.saus/deployed')
+  fs.mkdirSync(cacheDir, { recursive: true })
+  await pullCachedTargets(cacheDir, 'deployed', context)
+
+  context.files = new GitFiles(cacheDir, options.dryRun)
   context.dryRun = !!options.dryRun
   context.gitRepo =
     options.gitRepo || (await getGitRepoByName('origin', context))
 
   injectDeployContext(context)
-
   const targetsByHook = await loadDeployHooks(context)
-  if (!targetsByHook.size) {
-    throw Error('[saus] Nothing to deploy')
-  }
 
   const { logger } = context
 
@@ -67,11 +69,7 @@ export async function deploy(
     ? startTask('Reading deployment state')
     : null
 
-  const cacheDir = path.resolve(context.root, 'node_modules/.saus/deployed')
-  fs.mkdirSync(cacheDir, { recursive: true })
-  await pullCachedTargets(cacheDir, 'deployed', context)
-
-  const targetsFile = path.join(cacheDir, 'targets.yaml')
+  const targetsFile = context.files.get('targets.yaml')
   const pluginsByHook = new Map<DeployHook, DeployPlugin>()
   const actionsByPlugin = await generateActions(
     targetsFile,
@@ -201,8 +199,8 @@ export async function deploy(
     logActionCounts(spawnCount, updateCount, killCount)
     task = startTask('Saving deployment state')
 
-    fs.writeFileSync(targetsFile, yaml.stringify(targetsByPlugin))
-    await pushCachedTargets(cacheDir, context)
+    targetsFile.setData(targetsByPlugin)
+    await pushCachedTargets(context)
 
     task?.finish()
   }
@@ -214,7 +212,7 @@ type DeployAction =
   | { type: 'kill'; target: DeployTarget }
 
 async function generateActions(
-  targetsFile: string,
+  targetsFile: YamlFile,
   targetsByHook: DeployHooks,
   pluginsByHook: Map<DeployHook, DeployPlugin>,
   context: DeployContext
@@ -236,8 +234,8 @@ async function generateActions(
     }
     actions.push(action)
   }
-  if (fs.existsSync(targetsFile)) {
-    const cachedTargets = yaml.parse(fs.readFileSync(targetsFile, 'utf8')) as {
+  if (targetsFile.exists) {
+    const cachedTargets = targetsFile.getData() as {
       [name: string]: DeployTarget[]
     }
     for (const name in cachedTargets) {
@@ -288,14 +286,13 @@ function defineTargetId(
   })
 }
 
-async function pushCachedTargets(cacheDir: string, context: DeployContext) {
+async function pushCachedTargets({ root, files }: DeployContext) {
   const lastCommitMsg = await exec('git log --format=%B -n 1 head', {
-    cwd: context.root,
+    cwd: root,
   })
-
-  await exec('git add -A', { cwd: cacheDir })
-  await exec('git commit -m', [lastCommitMsg], { cwd: cacheDir })
-  await exec('git push', { cwd: cacheDir })
+  if (await files.commit(lastCommitMsg)) {
+    await files.push()
+  }
 }
 
 async function pullCachedTargets(

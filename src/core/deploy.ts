@@ -2,6 +2,8 @@ import path from 'path'
 import { Changed, Promisable } from '../utils/types'
 import { injectNodeModule } from '../vm/nodeModules'
 import { BundleContext } from './bundle'
+import { GitFiles } from './deploy/files'
+import { SecretHub } from './deploy/secrets'
 import { deployModule } from './global'
 
 const contextPath = path.resolve(__dirname, '../core/context.cjs')
@@ -15,6 +17,9 @@ export function injectDeployContext(context: DeployContext) {
 }
 
 export interface DeployContext extends BundleContext {
+  files: GitFiles
+  secretHub: SecretHub
+  secrets: Record<string, any>
   /** For git operations, deploy to this repository. */
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
