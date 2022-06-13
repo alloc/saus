@@ -1,0 +1,34 @@
+{
+  "name": "@saus/vercel",
+  "version": "0.1.0",
+  "description": "Deploy a Saus app to Vercel",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup --clean",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.7",
+    "@types/node": "^16.10.2",
+    "recrawl-sync": "^2.2.1",
+    "saus": "*"
+  },
+  "dependencies": {
+    "@cush/exec": "^1.7.1",
+    "@cush/relative": "^1.0.0",
+    "css-what": "^6.0.1",
+    "debug": "^4.3.2",
+    "magic-string": "^0.25.7",
+    "misty": "^1.6.2"
+  }
+}
