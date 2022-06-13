@@ -17,6 +17,9 @@
     },
     "vendor/navaid": {
       "url": "https://github.com/aleclarson/navaid.git"
+    },
+    "vendor/cac": {
+      "url": "https://github.com/aleclarson/cac"
     }
   },
   "alias": {
