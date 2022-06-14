@@ -48,6 +48,7 @@
     "@babel/plugin-syntax-typescript": "^7.14.5",
     "@cush/exec": "^1.7.1",
     "@cush/relative": "^1.0.0",
+    "@saus/deploy-utils": "*",
     "@saus/html": "*",
     "ansi-to-html": "^0.7.2",
     "cac": "^6.0.0",

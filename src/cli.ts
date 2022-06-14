@@ -30,7 +30,7 @@ cli
   )
   .action(async (options: vite.ServerOptions) => {
     const { createServer } = require('./dev') as typeof import('./dev')
-    await createServer({ server: options })
+    await run(createServer, { server: options })
   })
 
 type BuildFlags = BuildOptions & {
@@ -89,7 +89,7 @@ cli
       })
     }
 
-    try {
+    await run(async () => {
       if (options.debug) {
         const failedPages = getFailedPages()
         options.skip = pagePath => !failedPages.includes(pagePath)
@@ -115,12 +115,7 @@ cli
       setFailedPages(failedPages)
       success(`${pages.length} pages rendered.`)
       process.exit(errors.length ? 1 : 0)
-    } catch (e: any) {
-      if (e.message.startsWith('[saus]')) {
-        fatal(e.message)
-      }
-      throw e
-    }
+    })
   })
 
 cli
@@ -144,7 +139,7 @@ cli
     const { loadBundleContext } =
       require('./core/bundle/context') as typeof import('./core/bundle/context')
 
-    try {
+    await run(async () => {
       const context = await loadBundleContext(options, {
         mode: options.mode,
         logLevel: noWrite ? 'silent' : undefined,
@@ -162,12 +157,7 @@ cli
       }
       // Shamefully force exit since something unknown is keeping us alive.
       process.exit(0)
-    } catch (e: any) {
-      if (e.message.startsWith('[saus]')) {
-        fatal(e.message)
-      }
-      throw e
-    }
+    })
   })
 
 cli
@@ -187,22 +177,34 @@ cli
   .option('--dry-run', `[boolean] generate deployment actions then bail out`)
   .action(async options => {
     const { deploy } = require('./deploy') as typeof import('./deploy')
-    try {
-      await deploy(options)
-    } catch (e: any) {
-      if (e.message.startsWith('[saus]')) {
-        fatal(e.message)
-      }
-      throw e
-    }
+    await run(deploy, options)
   })
+
+cli.command('secrets add').action(async () => {
+  const { addSecrets } = require('./secrets') as typeof import('./secrets')
+  await run(addSecrets)
+})
 
 cli.command('test').action(async () => {
   const { startTestServer } = require('./test') as typeof import('./test')
-  await startTestServer()
+  await run(startTestServer)
 })
 
 cli.help()
 cli.version(require('../package.json').version)
 
 export default cli
+
+async function run<Args extends any[], Result>(
+  fn: (...args: Args) => Result,
+  ...args: Args
+): Promise<Awaited<Result>> {
+  try {
+    return await fn(...args)
+  } catch (e: any) {
+    if (e.message.startsWith('[saus]')) {
+      fatal(e.message)
+    }
+    throw e
+  }
+}

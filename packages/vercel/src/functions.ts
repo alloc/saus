@@ -32,8 +32,11 @@ interface Options {
   minify?: boolean
 }
 
-export function vercelFunctions(options: Options) {
-  const { root } = getDeployContext()
+export function pushVercelFunctions(options: Options) {
+  const { command, root } = getDeployContext()
+  if (command !== 'deploy') {
+    return
+  }
   const functionDir = path.resolve(root, options.functionDir)
   const entries = crawl(functionDir, {
     only: options.entries || ['*.ts'],

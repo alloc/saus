@@ -219,6 +219,7 @@ async function buildPages(
       }
     })
 
+  await context.loadRoutes()
   await generateRoutePaths(context, {
     path: renderPage,
     error: e => errors.push(e),

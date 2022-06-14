@@ -6,68 +6,55 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
 import { plural } from './core'
-import { BundleContext, loadBundleContext } from './core/bundle'
+import { BundleContext } from './core/bundle'
 import {
   DeployContext,
   DeployHook,
   DeployHooks,
   DeployPlugin,
   DeployTarget,
-  injectDeployContext,
   RevertFn,
 } from './core/deploy'
-import { GitFiles, YamlFile } from './core/deploy/files'
-import { loadDeployHooks } from './core/loadDeployHooks'
+import { prepareDeployContext } from './core/deploy/context'
+import { YamlFile } from './core/deploy/files'
+import { DeployOptions } from './core/deploy/options'
+import { loadDeployFile } from './core/loadDeployFile'
 import { toObjectHash } from './utils/objectHash'
 import { Promisable } from './utils/types'
-
-export interface DeployOptions {
-  /**
-   * Deploy to a git respository other than `origin`.
-   */
-  gitRepo?: { name: string; url: string }
-  /**
-   * Kill all deployed targets.
-   */
-  killAll?: boolean
-  /**
-   * Skip the execution of any deployment action.
-   */
-  dryRun?: boolean
-}
 
 /**
  * Identical to running `saus deploy` from the terminal.
  */
 export async function deploy(
   options: DeployOptions = {},
-  bundleContext?: BundleContext
+  bundleContext?: Promisable<BundleContext>
 ) {
-  const context = (bundleContext ||
-    (await loadBundleContext())) as DeployContext
+  const context = await prepareDeployContext(options, bundleContext)
+  const { logger } = context
 
   const gitStatus = await exec('git status --porcelain', { cwd: context.root })
   if (!options.dryRun && gitStatus) {
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
 
-  const cacheDir = path.resolve(context.root, 'node_modules/.saus/deployed')
-  fs.mkdirSync(cacheDir, { recursive: true })
-  await pullCachedTargets(cacheDir, 'deployed', context)
-
-  context.files = new GitFiles(cacheDir, options.dryRun)
-  context.dryRun = !!options.dryRun
-  context.gitRepo =
-    options.gitRepo || (await getGitRepoByName('origin', context))
-
-  injectDeployContext(context)
-  const targetsByHook = await loadDeployHooks(context)
-
-  const { logger } = context
-
   let task = logger.isLogged('info')
-    ? startTask('Reading deployment state')
+    ? startTask('Loading deployment targets')
     : null
+
+  const targetsByHook = await loadDeployFile(context)
+
+  task?.finish()
+  task = task && startTask('Loading secrets')
+
+  // Load secrets after deploy hooks are loaded.
+  // This lets deploy plugins add sources to load secrets from.
+  if (await context.secretHub.load()) {
+    task?.finish()
+    return
+  }
+
+  task?.finish()
+  task = task && startTask('Planning deployment')
 
   const targetsFile = context.files.get('targets.yaml')
   const pluginsByHook = new Map<DeployHook, DeployPlugin>()
@@ -293,48 +280,6 @@ async function pushCachedTargets({ root, files }: DeployContext) {
   if (await files.commit(lastCommitMsg)) {
     await files.push()
   }
-}
-
-async function pullCachedTargets(
-  cacheDir: string,
-  targetBranch: string,
-  { gitRepo }: DeployContext
-) {
-  if (!fs.existsSync(path.join(cacheDir, '.git'))) {
-    await exec('git init', { cwd: cacheDir })
-    await exec('git remote add', [gitRepo.name, gitRepo.url], {
-      cwd: cacheDir,
-    })
-  }
-  try {
-    await exec('git pull', [gitRepo.name, targetBranch], { cwd: cacheDir })
-  } catch (e: any) {
-    if (!/Couldn't find remote ref/.test(e.message)) {
-      throw e
-    }
-    await exec('git commit -m "init" --allow-empty', { cwd: cacheDir })
-    await exec('git push -u', [gitRepo.name, 'master:' + targetBranch], {
-      cwd: cacheDir,
-    })
-  }
-}
-
-async function getGitRepoByName(name: string, context: DeployContext) {
-  const remotes = parseRemotes(
-    await exec('git remote -v', { cwd: context.root })
-  )
-  const repo = remotes.find(repo => repo.type == 'push' && repo.name == name)
-  if (!repo) {
-    throw Error('[saus] Repository not found: ' + name)
-  }
-  return repo
-}
-
-function parseRemotes(text: string) {
-  return text.split('\n').map(line => {
-    const [name, url, type] = line.split(/\s+/)
-    return { type: type.slice(1, -1) as 'fetch' | 'push', name, url }
-  })
 }
 
 function logActionCounts(

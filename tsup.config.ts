@@ -16,6 +16,7 @@ export default defineConfig({
     'src/bundle.ts',
     'src/deploy.ts',
     'src/dev.ts',
+    'src/secrets.ts',
   ],
   format: ['cjs'],
   target: 'node16',

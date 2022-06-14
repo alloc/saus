@@ -80,6 +80,8 @@ export async function bundle(
   options: BundleOptions,
   context: BundleContext
 ): Promise<OutputBundle> {
+  await context.loadRoutes()
+
   const { functions, functionImports, routeImports, runtimeConfig } =
     await prepareFunctions(context)
 

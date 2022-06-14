@@ -1,9 +1,7 @@
 import path from 'path'
 import { Changed, Promisable } from '../utils/types'
 import { injectNodeModule } from '../vm/nodeModules'
-import { BundleContext } from './bundle'
-import { GitFiles } from './deploy/files'
-import { SecretHub } from './deploy/secrets'
+import { DeployContext } from './deploy'
 import { deployModule } from './global'
 
 const contextPath = path.resolve(__dirname, '../core/context.cjs')
@@ -16,19 +14,9 @@ export function injectDeployContext(context: DeployContext) {
   injectNodeModule(contextPath, context)
 }
 
-export interface DeployContext extends BundleContext {
-  files: GitFiles
-  secretHub: SecretHub
-  secrets: Record<string, any>
-  /** For git operations, deploy to this repository. */
-  gitRepo: { name: string; url: string }
-  /** When true, skip any real deployment. */
-  dryRun: boolean
-}
-
 export function addDeployTarget<T extends object>(
   hook: DeployHook<T>,
-  target: T & DeployTarget
+  target: Promisable<T & DeployTarget>
 ): void {
   let targets = deployModule.deployHooks.get(hook)
   if (!targets) {
@@ -41,7 +29,7 @@ export function addDeployTarget<T extends object>(
 export type DeployHooks = Map<DeployHook, DeployTarget[]>
 
 export interface DeployModule {
-  deployHooks: DeployHooks
+  deployHooks: Map<DeployHook, Promisable<DeployTarget>[]>
 }
 
 export type DeployHook<T extends object = any> = (
@@ -99,3 +87,7 @@ export type RevertFn = () => Promisable<void>
 export interface DeployTarget {
   _id?: string
 }
+
+export { DeployContext } from './deploy/context'
+export * from './deploy/files'
+export * from './deploy/secrets'

@@ -30,6 +30,8 @@ export interface BundleConfig
 }
 
 export interface BundleContext extends BaseContext {
+  command: 'build'
+  loadRoutes: () => Promise<void>
   bundle: BundleConfig
   /** The virtual module ID of the SSR bundle. */
   bundleModuleId: string
@@ -105,22 +107,29 @@ export async function loadBundleContext(
     debugBase,
   }
 
-  const { pluginContainer } = await vite.createTransformContext(
-    context.config,
-    false
-  )
+  context.loadRoutes = () => {
+    const loading = (async () => {
+      const { pluginContainer } = await vite.createTransformContext(
+        context.config,
+        false
+      )
 
-  const loading = startTask('Loading routes...')
-  await loadRoutes(context, (id, importer) =>
-    pluginContainer.resolveId(id, importer!, { ssr: true })
-  )
-  const routeCount =
-    context.routes.length +
-    (context.defaultRoute ? 1 : 0) +
-    (context.catchRoute ? 1 : 0)
+      const loading = startTask('Loading routes...')
+      await loadRoutes(context, (id, importer) =>
+        pluginContainer.resolveId(id, importer!, { ssr: true })
+      )
+      const routeCount =
+        context.routes.length +
+        (context.defaultRoute ? 1 : 0) +
+        (context.catchRoute ? 1 : 0)
 
-  loading.finish(`${plural(routeCount, 'route')} loaded.`)
-  await pluginContainer.close()
+      loading.finish(`${plural(routeCount, 'route')} loaded.`)
+      await pluginContainer.close()
+    })()
+
+    context.loadRoutes = () => loading
+    return loading
+  }
 
   context.bundleModuleId = '\0saus/main.js'
   context.bundlePlugins = [

@@ -9,5 +9,4 @@ export default defineConfig({
   }),
   format: ['cjs', 'esm'],
   bundle: false,
-  dts: true,
 })

@@ -4,12 +4,11 @@ import { createAsyncRequire } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { formatAsyncStack } from '../vm/formatAsyncStack'
 import { ModuleMap } from '../vm/types'
-import { BundleContext } from './bundle'
-import { DeployHooks } from './deploy'
+import { DeployContext, DeployHook, DeployHooks, DeployTarget } from './deploy'
 import { setDeployModule } from './global'
 
-export async function loadDeployHooks(
-  context: BundleContext
+export async function loadDeployFile(
+  context: DeployContext
 ): Promise<DeployHooks> {
   let {
     filterStack,
@@ -33,7 +32,7 @@ export async function loadDeployHooks(
         fs.readFileSync(id, 'utf8'),
         id,
         require,
-        null,
+        context.compileCache,
         context.config.env
       )
     },
@@ -50,5 +49,12 @@ export async function loadDeployHooks(
   } finally {
     setDeployModule(null)
   }
-  return deployConfig.deployHooks
+
+  const deployHooks = new Map<DeployHook, DeployTarget[]>()
+  await Promise.all(
+    Array.from(deployConfig.deployHooks, async ([hook, targets]) => {
+      deployHooks.set(hook, await Promise.all(targets))
+    })
+  )
+  return deployHooks
 }
