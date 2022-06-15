@@ -11,8 +11,7 @@ import { SecretHub } from './secrets'
 export interface DeployContext extends Omit<BundleContext, 'command'> {
   command: 'deploy' | 'secrets'
   files: GitFiles
-  secretHub: SecretHub
-  secrets: Record<string, any>
+  secrets: SecretHub
   /** For git operations, deploy to this repository. */
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
@@ -34,13 +33,8 @@ export async function prepareDeployContext(
 
   context.command = options.command || 'deploy'
   context.files = new GitFiles(cacheDir, options.dryRun)
+  context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
-
-  const secretHub = new SecretHub()
-  context.secretHub = secretHub
-  Object.defineProperty(context, 'secrets', {
-    get: secretHub.toJSON.bind(secretHub),
-  })
 
   injectDeployContext(context)
   return context

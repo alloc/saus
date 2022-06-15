@@ -18,10 +18,12 @@
     "saus": "*"
   },
   "devDependencies": {
+    "@types/aws4": "^1.11.2",
     "recrawl-sync": "^2.2.1",
     "saus": "*"
   },
   "dependencies": {
+    "aws4": "^1.11.0",
     "cloudform-types": "^7.3.0",
     "type-fest": "^2.13.0"
   }

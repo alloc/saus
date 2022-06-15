@@ -10,7 +10,7 @@ export function urlToHttpOptions(url: URL) {
     hash: url.hash,
     search: url.search,
     pathname: url.pathname,
-    path: `${url.pathname || ''}${url.search || ''}`,
+    path: `${url.pathname}${url.search}`,
     href: url.href,
   }
   if (url.port !== '') {

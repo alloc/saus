@@ -3,6 +3,7 @@ import { IntrinsicFunction, ResourceBase, Value } from 'cloudform-types'
 import { Promisable } from 'type-fest'
 
 export interface Stack {
+  id?: string
   name: string
   resources: Record<string, ResourceBase>
   outputs?: Record<string, Value<any>>

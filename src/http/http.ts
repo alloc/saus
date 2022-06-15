@@ -7,7 +7,13 @@ import { urlToHttpOptions } from './internal/urlToHttpOptions'
 import { Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
-type ForwardedKeys = 'agent' | 'allowBadStatus' | 'signal' | 'sink' | 'timeout'
+type ForwardedKeys =
+  | 'agent'
+  | 'allowBadStatus'
+  | 'beforeSend'
+  | 'signal'
+  | 'sink'
+  | 'timeout'
 
 export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
   body?: Endpoint.ResponseBody
@@ -26,6 +32,10 @@ export function http(
   return new Promise<Response>((resolve, reject) => {
     const req = createRequest(url, opts)
     req.method = method
+
+    if (opts?.beforeSend) {
+      opts.beforeSend(req, opts.body)
+    }
 
     Promise.resolve(requestHook.current(req)).then(resp => {
       const onResponse = (resp: Response) =>
@@ -71,7 +81,7 @@ function createRequest(url: string | URL, opts?: HttpRequestOptions) {
   }
   const req = urlToHttpOptions(url)
   if (opts) {
-    const { body, ...assignedOpts } = opts
+    const { body, beforeSend, ...assignedOpts } = opts
     Object.assign(req, assignedOpts)
   }
   return req

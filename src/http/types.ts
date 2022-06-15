@@ -1,6 +1,7 @@
 import http, { Agent } from 'http'
+import type { Endpoint } from '../core/endpoint'
 import { httpMethods } from '../utils/httpMethods'
-import type { Headers } from './response'
+import type { Headers } from './headers'
 
 export type { BufferLike } from '../app/types'
 
@@ -13,13 +14,18 @@ export interface HttpOptions {
    * resolve the promise normally instead of rejecting it.
    */
   allowBadStatus?: boolean
-  hash?: string
+  auth?: string
+  beforeSend?: (req: HttpOptions, body?: Endpoint.ResponseBody) => void
+  hash: string
   headers?: Headers
-  href?: string
+  hostname: string
+  href: string
   method?: string
-  pathname?: string
-  protocol?: string
-  search?: string
+  path: string
+  pathname: string
+  port?: number | string
+  protocol: string
+  search: string
   signal?: AbortSignal | undefined
   /**
    * Instead of buffering the response data into memory, this

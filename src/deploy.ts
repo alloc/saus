@@ -30,12 +30,20 @@ export async function deploy(
   bundleContext?: Promisable<BundleContext>
 ) {
   const context = await prepareDeployContext(options, bundleContext)
-  const { logger } = context
+  const { files, logger } = context
 
   const gitStatus = await exec('git status --porcelain', { cwd: context.root })
   if (!options.dryRun && gitStatus) {
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
+
+  const deployLockfile = files.get('deploy.lock')
+  if (!options.dryRun && deployLockfile.exists) {
+    throw Error('[saus] A deployment is already in progress')
+  }
+
+  // Prevent parallel runs of `saus deploy`.
+  deployLockfile.setBuffer(Buffer.alloc(1))
 
   let task = logger.isLogged('info')
     ? startTask('Loading deployment targets')
@@ -48,7 +56,7 @@ export async function deploy(
 
   // Load secrets after deploy hooks are loaded.
   // This lets deploy plugins add sources to load secrets from.
-  if (await context.secretHub.load()) {
+  if (await context.secrets.load()) {
     task?.finish()
     return
   }
@@ -56,7 +64,7 @@ export async function deploy(
   task?.finish()
   task = task && startTask('Planning deployment')
 
-  const targetsFile = context.files.get('targets.yaml')
+  const targetsFile = files.get('targets.yaml')
   const pluginsByHook = new Map<DeployHook, DeployPlugin>()
   const actionsByPlugin = await generateActions(
     targetsFile,
@@ -165,6 +173,7 @@ export async function deploy(
       for (const revert of revertFns.reverse()) {
         await revert()
       }
+    deployLockfile.delete()
     throw e
   }
 
@@ -175,6 +184,8 @@ export async function deploy(
     const { name } = pluginsByHook.get(hook)!
     targetsByPlugin[name] = targets
   }
+
+  deployLockfile.delete()
 
   if (options.dryRun) {
     const debugFile = path.resolve(context.root, 'targets.debug.yaml')

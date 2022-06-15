@@ -17,12 +17,12 @@ export async function addSecrets() {
   const { logger } = context
   logger.isLogged('info') && success('Plugins loaded!')
 
-  const sources = context.secretHub.getMutableSources()
+  const sources = context.secrets.getMutableSources()
   if (!sources.length) {
     throw Error('[saus] None of your deploy plugins allow adding secrets.')
   }
 
-  const missing = await context.secretHub.load()
+  const missing = await context.secrets.load()
   if (!missing) {
     throw Error('[saus] Every expected secret is already set.')
   }
