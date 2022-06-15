@@ -1,6 +1,5 @@
 import exec from '@cush/exec'
 import fs from 'fs'
-import { yellow } from 'kleur/colors'
 import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -9,16 +8,16 @@ import { plural } from './core'
 import { BundleContext } from './core/bundle'
 import {
   DeployContext,
-  DeployHook,
-  DeployHooks,
+  DeployFile,
+  DeployHookRef,
   DeployPlugin,
   DeployTarget,
   RevertFn,
 } from './core/deploy'
-import { prepareDeployContext } from './core/deploy/context'
-import { YamlFile } from './core/deploy/files'
+import { DeployTargetArgs, prepareDeployContext } from './core/deploy/context'
+import { loadDeployFile, loadDeployPlugin } from './core/deploy/loader'
 import { DeployOptions } from './core/deploy/options'
-import { loadDeployFile } from './core/loadDeployFile'
+import { defer } from './utils/defer'
 import { toObjectHash } from './utils/objectHash'
 import { Promisable } from './utils/types'
 
@@ -49,60 +48,26 @@ export async function deploy(
     ? startTask('Loading deployment targets')
     : null
 
-  const targetsByHook = await loadDeployFile(context)
-
-  task?.finish()
-  task = task && startTask('Loading secrets')
-
-  // Load secrets after deploy hooks are loaded.
-  // This lets deploy plugins add sources to load secrets from.
-  if (await context.secrets.load()) {
-    task?.finish()
-    return
-  }
-
-  task?.finish()
-  task = task && startTask('Planning deployment')
-
   const targetsFile = files.get('targets.yaml')
-  const pluginsByHook = new Map<DeployHook, DeployPlugin>()
-  const actionsByPlugin = await generateActions(
-    targetsFile,
-    targetsByHook,
-    pluginsByHook,
-    context
-  )
+  const targetCache = targetsFile.getData() as DeployFile
 
-  task?.finish()
-
-  if (!actionsByPlugin.size) {
-    return logger.info(
-      '\nNo deployment actions were required.' +
-        '\nIf you expected otherwise, you might have a deploy target' +
-        " that's missing necessary metadata to detect changes."
-    )
-  }
-
-  task = task && startTask('Building targets')
-
-  const buildPromises: Promisable<void>[] = []
-  for (const [plugin, actions] of actionsByPlugin) {
-    if (!plugin.build) continue
-    for (const action of actions) {
-      if (action.type == 'kill') continue
-      buildPromises.push(
-        plugin.build(
-          action.target,
-          action.type == 'update' ? action.changed : undefined
-        )
+  const savedTargetsByPlugin = new Map<DeployPlugin, DeployTarget[]>()
+  const findSavedTarget = async (
+    target: DeployTarget,
+    plugin: DeployPlugin
+  ) => {
+    let savedTargets = savedTargetsByPlugin.get(plugin)
+    if (!savedTargets) {
+      savedTargets = targetCache[plugin.name].targets
+      await Promise.all(
+        savedTargets.map(async savedTarget => {
+          defineTargetId(savedTarget, await plugin.identify(savedTarget))
+        })
       )
+      savedTargetsByPlugin.set(plugin, savedTargets)
     }
+    return savedTargets.find(savedTarget => savedTarget._id == target._id)
   }
-
-  await Promise.all(buildPromises)
-
-  task?.finish()
-  task = task && startTask('Deploying targets')
 
   const revertFns: RevertFn[] = []
   const addRevertFn = (
@@ -121,48 +86,111 @@ export async function deploy(
     }
   }
 
-  let spawnCount = 0
-  let updateCount = 0
-  let killCount = 0
+  const reusedTargets = new Set<DeployTarget>()
+  const updatedTargets: DeployTarget[] = []
+  const addedTargets: DeployTarget[] = []
+  const targets: DeployTargetArgs[] = []
+  let targetIndex = 0
+
+  const addTarget = async (
+    hook: DeployHookRef,
+    target: Promisable<DeployTarget>
+  ) => {
+    const index = targetIndex
+
+    await loadingPlugins
+    const plugin = hook.plugin!
+
+    target = await target
+    if (plugin.pull) {
+      const pulled = await plugin.pull(target)
+      if (pulled) {
+        Object.assign(target, pulled)
+      }
+    }
+
+    defineTargetId(target, await plugin.identify(target))
+
+    let changed: Record<string, any> | undefined
+
+    const savedTarget = await findSavedTarget(target, plugin)
+    if (savedTarget) {
+      reusedTargets.add(savedTarget)
+      changed = {}
+      if (!diffObjects(savedTarget, target, changed)) {
+        return target // Nothing changed.
+      }
+    }
+
+    let revert: RevertFn | void
+    if (savedTarget) {
+      if (plugin.update) {
+        revert = await plugin.update(target, changed!)
+        addRevertFn(revert, plugin, 'update')
+      } else {
+        revert = await plugin.kill(savedTarget)
+        addRevertFn(revert, plugin, 'kill')
+        revert = await plugin.spawn(target)
+        addRevertFn(revert, plugin, 'spawn')
+      }
+      updatedTargets.push(target)
+    } else {
+      revert = await plugin.spawn(target)
+      addRevertFn(revert, plugin, 'spawn')
+      addedTargets.push(target)
+    }
+
+    if (index == targetIndex && ++targetIndex < targets.length) {
+      queueMicrotask(() => {
+        const [hook, target, resolve] = targets[targetIndex]
+        resolve(addTarget(hook, target))
+      })
+    }
+    return target
+  }
+
+  context.addTarget = (...args) => {
+    if (targetIndex == targets.length) {
+      const [hook, target, resolve] = args
+      resolve(addTarget(hook, target))
+    }
+    targets.push(args)
+  }
+
+  const loadingPlugins = defer<void>()
+  await loadDeployFile(context, loadingPlugins.resolve)
+
+  task?.finish()
+  task = task && startTask('Killing unused targets...')
+
+  let killedTargets: Awaited<ReturnType<typeof getKillableTargets>>
+  try {
+    killedTargets = await getKillableTargets(
+      targetCache,
+      reusedTargets,
+      context
+    )
+    for (const [plugin, target] of killedTargets) {
+      const revert = await plugin.kill(target)
+      addRevertFn(revert, plugin, 'kill')
+    }
+  } finally {
+    task?.finish()
+  }
+
+  const numChanged =
+    killedTargets.length + updatedTargets.length + addedTargets.length
+
+  if (numChanged == 0) {
+    return logger.info(
+      '\nNo deployment actions were required.' +
+        '\nIf you expected otherwise, you might have a deploy target' +
+        " that's missing necessary metadata to detect changes."
+    )
+  }
 
   let currentPlugin!: DeployPlugin
   try {
-    for (const [plugin, actions] of actionsByPlugin) {
-      currentPlugin = plugin
-      for (const action of actions) {
-        const { target } = action
-        let revert: RevertFn | void
-        if (action.type == 'update') {
-          if (plugin.update) {
-            revert = await plugin.update(target, action.changed)
-            addRevertFn(revert, plugin, 'update')
-          } else {
-            revert = await plugin.kill(target)
-            addRevertFn(revert, plugin, 'kill')
-            revert = await plugin.spawn(target)
-            addRevertFn(revert, plugin, 'spawn')
-          }
-          updateCount++
-        } else if (action.type == 'spawn') {
-          revert = await plugin.spawn(target)
-          addRevertFn(revert, plugin, 'spawn')
-          spawnCount++
-        } else {
-          revert = await plugin.kill(target)
-          addRevertFn(revert, plugin, 'kill')
-          killCount++
-        }
-      }
-    }
-    for (const plugin of actionsByPlugin.keys()) {
-      if (plugin.finalize) {
-        currentPlugin = plugin
-        const revert = await plugin.finalize()
-        if (revert) {
-          revertFns.push(revert)
-        }
-      }
-    }
   } catch (e: any) {
     logger.error(e, { error: e })
     logger.info(
@@ -179,9 +207,9 @@ export async function deploy(
 
   task?.finish()
 
-  const targetsByPlugin: Record<string, DeployTarget[]> = {}
-  for (const [hook, targets] of targetsByHook) {
-    const { name } = pluginsByHook.get(hook)!
+  const newTargetCache: DeployFile = {}
+  for (const [hook, target] of targets) {
+    const name = hook.plugin!.name
     targetsByPlugin[name] = targets
   }
 
@@ -204,75 +232,24 @@ export async function deploy(
   }
 }
 
-type DeployAction =
-  | { type: 'spawn'; target: DeployTarget }
-  | { type: 'update'; target: DeployTarget; changed: Record<string, any> }
-  | { type: 'kill'; target: DeployTarget }
-
-async function generateActions(
-  targetsFile: YamlFile,
-  targetsByHook: DeployHooks,
-  pluginsByHook: Map<DeployHook, DeployPlugin>,
+async function getKillableTargets(
+  targetsFile: DeployFile,
+  reusedTargets: Set<DeployTarget>,
   context: DeployContext
 ) {
-  const hooksByPlugin = new Map<DeployPlugin, DeployHook>()
-  const plugins: Record<string, DeployPlugin> = {}
-  for (const hook of targetsByHook.keys()) {
-    const plugin = await hook(context)
-    plugins[plugin.name] = plugin
-    pluginsByHook.set(hook, plugin)
-    hooksByPlugin.set(plugin, hook)
-  }
-  const actionsByPlugin = new Map<DeployPlugin, DeployAction[]>()
-  const pushAction = (plugin: DeployPlugin, action: DeployAction) => {
-    let actions = actionsByPlugin.get(plugin)
-    if (!actions) {
-      actions = []
-      actionsByPlugin.set(plugin, actions)
-    }
-    actions.push(action)
-  }
-  if (targetsFile.exists) {
-    const cachedTargets = targetsFile.getData() as {
-      [name: string]: DeployTarget[]
-    }
-    for (const name in cachedTargets) {
-      const plugin = plugins[name]
-      if (plugin) {
-        const hook = hooksByPlugin.get(plugin)!
-        const targets = targetsByHook.get(hook)!
-        const targetsById: Record<string, DeployTarget> = {}
-        for (const target of targets) {
-          defineTargetId(target, await plugin.identify(target))
-          targetsById[target._id] = target
-        }
-        for (const cachedTarget of cachedTargets[name]) {
-          defineTargetId(cachedTarget, await plugin.identify(cachedTarget))
-          const target = targetsById[cachedTarget._id]
-          if (!target) {
-            pushAction(plugin, { type: 'kill', target: cachedTarget })
-          } else {
-            const changed: Record<string, any> = {}
-            if (diffObjects(cachedTarget, target, changed)) {
-              pushAction(plugin, { type: 'update', target, changed })
-            }
-          }
-        }
-      } else {
-        context.logger.warn(
-          yellow(`[saus] Deployed target is missing its plugin: ${name}`)
-        )
+  const killables: [DeployPlugin, DeployTarget][] = []
+  for (const [name, state] of Object.entries(targetsFile)) {
+    const plugin =
+      context.deployPlugins[name] ||
+      (await loadDeployPlugin(state.hook, context))
+
+    for (const target of state.targets) {
+      if (!reusedTargets.has(target)) {
+        killables.push([plugin, target])
       }
     }
-  } else {
-    targetsByHook.forEach((targets, hook) => {
-      const plugin = pluginsByHook.get(hook)!
-      for (const target of targets) {
-        pushAction(plugin, { type: 'spawn', target })
-      }
-    })
   }
-  return actionsByPlugin
+  return killables
 }
 
 function defineTargetId(

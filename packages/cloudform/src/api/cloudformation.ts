@@ -3932,8 +3932,4 @@ export namespace CloudFormation {
   export type Version = string
   export type VersionBump = 'MAJOR' | 'MINOR' | string
   export type Visibility = 'PUBLIC' | 'PRIVATE' | string
-  /**
-   * Contains interfaces for use with the CloudFormation client.
-   */
-  export import Types = CloudFormation
 }

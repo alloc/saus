@@ -43,7 +43,8 @@ export async function signedRequest<Action extends keyof Actions>(
 
   params.Version ||= '2010-05-15'
   const url =
-    `https://cloudformation.${region}.amazonaws.com?` + qs.stringify(params)
+    `https://cloudformation.${region}.amazonaws.com?` +
+    qs.stringify(params as any)
 
   const res = await http('get', url, opts)
   return res.toJSON()

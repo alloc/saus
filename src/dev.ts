@@ -176,7 +176,7 @@ async function startServer(
   context.linkedModules = {}
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
-  Object.assign(context, getRequireFunctions(context, resolveId))
+  Object.assign(context, getRequireFunctions(context))
   setupClientInjections(context)
 
   // Force all node_modules to be reloaded

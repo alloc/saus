@@ -4,76 +4,41 @@ import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
 import {
-  addDeployTarget,
+  defineDeployHook,
   DeployContext,
-  DeployHook,
-  getDeployContext,
-} from 'saus'
-import {
   emptyDir,
   esbuild,
+  getDeployContext,
   getViteTransform,
   SourceMap,
   toDevPath,
   toInlineSourceMap,
   toObjectHash,
 } from 'saus/core'
+import { Props } from './types'
 
-interface Options {
-  /** Relative globs and/or paths to the API functions. */
-  entries?: string[]
-  /** All entries are relative to this directory. */
-  functionDir: string
-  /**
-   * The branch that Vercel is watching. \
-   * This must not be used by another deployment.
-   */
-  gitBranch: string
-  minify?: boolean
-}
-
-export function pushVercelFunctions(options: Options) {
-  const { command, root } = getDeployContext()
-  if (command !== 'deploy') {
-    return
-  }
-  const functionDir = path.resolve(root, options.functionDir)
-  const entries = crawl(functionDir, {
-    only: options.entries || ['*.ts'],
-    skip: ['_*', 'node_modules', '.git'],
-  })
-  addDeployTarget(deployHook, {
-    gitBranch: options.gitBranch,
-    functionDir: path.relative(root, functionDir),
-    entries: entries.map(entry => path.relative(root, entry)),
-    minify: options.minify,
-    // Set later on by build method.
-    buildHash: '',
-  })
-}
-
-interface Target extends Options {
-  /** Resolved entries, relative to the `functionDir` option. */
+interface Target extends Props {
   entries: string[]
-  /** A hash of the esbuild output files. */
-  buildHash: string
 }
 
-const deployHook: DeployHook<Target> = context => ({
+export default defineDeployHook(context => ({
   name: 'vercel/functions',
-  identify: target => ({
-    branch: target.gitBranch,
-  }),
-  async build(target) {
-    const { gitRepo } = context
-    const deployDir = getDeployDir(target)
+  async pull(props: Props) {
+    const { gitRepo, root } = context
+    const deployDir = getDeployDir(props)
     const git = bindExec('git', { cwd: deployDir })
 
-    await prepareDeployDir(deployDir, target, context, git)
-    await git('reset --hard', [gitRepo.name + '/' + target.gitBranch])
+    await prepareDeployDir(deployDir, props, context, git)
+    await git('reset --hard', [gitRepo.name + '/' + props.gitBranch])
     emptyDir(deployDir, ['.git'])
 
-    const files = await bundleFunctions(target, context)
+    const entries = crawl(path.resolve(root, props.functionDir), {
+      only: props.entries || ['*.ts'],
+      skip: ['_*', 'node_modules', '.git'],
+      absolute: true,
+    }).map(entry => path.relative(root, entry))
+
+    const files = await bundleFunctions(entries, props, context)
     const modules: Record<string, string> = {}
     for (const file of files) {
       fs.mkdirSync(path.dirname(file.path), { recursive: true })
@@ -83,8 +48,15 @@ const deployHook: DeployHook<Target> = context => ({
         modules[fileName] = file.text
       }
     }
-    target.buildHash = toObjectHash(modules, 16)
+    return {
+      buildHash: toObjectHash(modules, 16),
+      /** Resolved entries, relative to the `functionDir` option. */
+      entries,
+    }
   },
+  identify: target => ({
+    branch: target.gitBranch,
+  }),
   async spawn(target) {
     if (context.dryRun) return
     await pushFunctions(target, context)
@@ -107,11 +79,11 @@ const deployHook: DeployHook<Target> = context => ({
       fs.unlinkSync(deployDir)
     } catch {}
   },
-})
+}))
 
 async function prepareDeployDir(
   deployDir: string,
-  target: Target,
+  props: Props,
   { gitRepo }: DeployContext,
   git: exec.Exec
 ) {
@@ -122,14 +94,7 @@ async function prepareDeployDir(
     fs.mkdirSync(path.dirname(deployDir), { recursive: true })
     await exec(
       'git clone',
-      [
-        gitRepo.url,
-        target.gitBranch,
-        '-o',
-        gitRepo.name,
-        '-b',
-        target.gitBranch,
-      ],
+      [gitRepo.url, props.gitBranch, '-o', gitRepo.name, '-b', props.gitBranch],
       { cwd: path.dirname(deployDir) }
     )
   } catch (e: any) {
@@ -139,7 +104,7 @@ async function prepareDeployDir(
     fs.mkdirSync(deployDir)
     await git('init')
     await git('remote add', [gitRepo.name, gitRepo.url])
-    await git('checkout -b', [target.gitBranch])
+    await git('checkout -b', [props.gitBranch])
   }
 }
 
@@ -168,12 +133,16 @@ async function getDeployCommitMessage(context: DeployContext) {
   return 'v' + pkgVersion + '-' + lastCommitHash
 }
 
-function getDeployDir(target: Target) {
+function getDeployDir(props: Props) {
   const context = getDeployContext()
-  return path.join(context.root, 'node_modules/.vercel', target.gitBranch)
+  return path.join(context.root, 'node_modules/.vercel', props.gitBranch)
 }
 
-async function bundleFunctions(target: Target, context: DeployContext) {
+async function bundleFunctions(
+  entries: string[],
+  props: Props,
+  context: DeployContext
+) {
   const config = await context.resolveConfig('build', {
     plugins: context.bundlePlugins,
   })
@@ -237,19 +206,19 @@ async function bundleFunctions(target: Target, context: DeployContext) {
     },
   }
 
-  const outBase = path.join(context.root, target.functionDir)
-  const outDir = path.join(getDeployDir(target), 'api')
+  const outBase = path.join(context.root, props.functionDir)
+  const outDir = path.join(getDeployDir(props), 'api')
 
   const { outputFiles } = await esbuild.build({
     absWorkingDir: context.root,
     bundle: true,
     chunkNames: '_chunk.[hash]',
     entryNames: '[dir]/[name]',
-    entryPoints: target.entries.map(entry => path.join(outBase, entry)),
+    entryPoints: entries.map(entry => path.join(outBase, entry)),
     format: 'esm',
     logLevel: 'error',
     metafile: true,
-    minify: target.minify,
+    minify: props.minify,
     outbase: outBase,
     outdir: outDir,
     plugins: [esbuildVite],

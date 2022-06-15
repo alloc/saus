@@ -4,7 +4,8 @@ import { success } from 'misty'
 import { loadBundleContext } from './core/bundle'
 import { MutableSecretSource, SecretMap } from './core/deploy'
 import { prepareDeployContext } from './core/deploy/context'
-import { loadDeployFile } from './core/loadDeployFile'
+import { loadDeployFile } from './core/deploy/loader'
+import { defer } from './utils/defer'
 
 export async function addSecrets() {
   const context = await prepareDeployContext(
@@ -12,7 +13,9 @@ export async function addSecrets() {
     loadBundleContext()
   )
 
-  await loadDeployFile(context)
+  const loadingPlugins = defer<void>()
+  loadDeployFile(context, loadingPlugins.resolve)
+  await loadingPlugins
 
   const { logger } = context
   logger.isLogged('info') && success('Plugins loaded!')

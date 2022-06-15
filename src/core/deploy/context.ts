@@ -2,11 +2,23 @@ import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
 import { Promisable } from 'type-fest'
+import { noop } from '../../utils/noop'
+import { injectNodeModule } from '../../vm/nodeModules'
+import { ModuleMap, RequireAsync, ResolveIdHook } from '../../vm/types'
 import { BundleContext, loadBundleContext } from '../bundle'
-import { injectDeployContext } from '../deploy'
+import { DeployTarget } from '../deploy'
+import { getRequireFunctions } from '../getRequireFunctions'
+import { getViteTransform } from '../viteTransform'
 import { GitFiles } from './files'
 import { DeployOptions } from './options'
 import { SecretHub } from './secrets'
+import { DeployHookRef, DeployPlugin } from './types'
+
+export type DeployTargetArgs = [
+  hook: DeployHookRef,
+  target: Promisable<DeployTarget>,
+  resolve: (outputs: any) => void
+]
 
 export interface DeployContext extends Omit<BundleContext, 'command'> {
   command: 'deploy' | 'secrets'
@@ -16,6 +28,16 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
   dryRun: boolean
+  deployHooks: DeployHookRef[]
+  deployPlugins: Record<string, DeployPlugin>
+  addTarget: (...args: DeployTargetArgs) => void
+  //
+  // Module context
+  //
+  moduleMap: ModuleMap
+  resolveId: ResolveIdHook
+  require: RequireAsync
+  ssrRequire: RequireAsync
 }
 
 export async function prepareDeployContext(
@@ -35,9 +57,29 @@ export async function prepareDeployContext(
   context.files = new GitFiles(cacheDir, options.dryRun)
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
+  context.deployHooks = []
+  context.addTarget = noop
+
+  const { pluginContainer } = await getViteTransform(context.config)
+
+  context.moduleMap = {}
+  context.resolveId = (id, importer) =>
+    pluginContainer.resolveId(id, importer!, { ssr: true })
+
+  Object.assign(context, getRequireFunctions(context))
 
   injectDeployContext(context)
   return context
+}
+
+const contextPath = path.resolve(__dirname, '../core/context.cjs')
+
+export function getDeployContext() {
+  return (void 0, require)(contextPath) as DeployContext
+}
+
+export function injectDeployContext(context: DeployContext) {
+  injectNodeModule(contextPath, context)
 }
 
 async function pullCachedTargets(

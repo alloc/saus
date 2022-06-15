@@ -3,12 +3,11 @@ import { createAsyncRequire } from '../vm/asyncRequire'
 import { compileNodeModule } from '../vm/compileNodeModule'
 import { compileSsrModule } from '../vm/compileSsrModule'
 import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
-import { ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 
 export function getRequireFunctions(
-  context: SausContext,
-  resolveId: ResolveIdHook,
+  context: Omit<SausContext, 'command'>,
+  resolveId = context.resolveId!,
   moduleMap = context.moduleMap || {}
 ) {
   const {

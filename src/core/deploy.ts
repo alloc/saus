@@ -1,93 +1,58 @@
-import path from 'path'
-import { Changed, Promisable } from '../utils/types'
-import { injectNodeModule } from '../vm/nodeModules'
-import { DeployContext } from './deploy'
-import { deployModule } from './global'
-
-const contextPath = path.resolve(__dirname, '../core/context.cjs')
-
-export function getDeployContext() {
-  return (void 0, require)(contextPath) as DeployContext
-}
-
-export function injectDeployContext(context: DeployContext) {
-  injectNodeModule(contextPath, context)
-}
-
-export function addDeployTarget<T extends object>(
-  hook: DeployHook<T>,
-  target: Promisable<T & DeployTarget>
-): void {
-  let targets = deployModule.deployHooks.get(hook)
-  if (!targets) {
-    targets = []
-    deployModule.deployHooks.set(hook, targets)
-  }
-  targets.push(target)
-}
-
-export type DeployHooks = Map<DeployHook, DeployTarget[]>
-
-export interface DeployModule {
-  deployHooks: Map<DeployHook, Promisable<DeployTarget>[]>
-}
-
-export type DeployHook<T extends object = any> = (
-  context: DeployContext
-) => Promisable<DeployPlugin<T>>
-
-export interface DeployPlugin<T extends object = any> {
-  /**
-   * A globally unique namespace that deployed target
-   * metadata is stored within.
-   */
-  name: string
-  /**
-   * Return data that identifies the target. \
-   * Exclude data that only configures behavior.
-   */
-  identify(this: DeployPlugin<T>, target: T): Promisable<Record<string, any>>
-  /**
-   * Prepare the given target for deployment.
-   */
-  build?(
-    this: DeployPlugin<T>,
-    target: T,
-    changed?: Changed<T>
-  ): Promisable<void>
-  /**
-   * Deploy the given target.
-   */
-  spawn(this: DeployPlugin<T>, target: T): Promisable<RevertFn | void>
-  /**
-   * Update the configuration of the given target. \
-   * If undefined, a changed target will be killed and respawned.
-   */
-  update?(
-    this: DeployPlugin<T>,
-    target: T,
-    changed: Changed<T>
-  ): Promisable<RevertFn | void>
-  /**
-   * Destroy the given target.
-   */
-  kill(this: DeployPlugin<T>, target: T): Promisable<RevertFn | void>
-  /**
-   * Called after all targets are spawned, updated, or killed.
-   */
-  finalize?(this: DeployPlugin<T>): Promisable<RevertFn | void>
-}
-
-export type RevertFn = () => Promisable<void>
+import callerPath from 'caller-path'
+import { Promisable } from 'type-fest'
+import { defer } from '../utils/defer'
+import { DeployContext, getDeployContext } from './deploy/context'
+import type {
+  DefineDeployHook,
+  DeployHookModule,
+  DeployHookRef,
+} from './deploy/types'
 
 /**
- * Deploy targets are plugin-specific data records that track which
- * cloud infrastructure should be spawned or killed.
+ * This enables static typing for deploy hook declarations.
+ *
+ * When a deploy hook has no `pull` method, its `Props` type must be
+ * defined through the callsite (as seen below). The "props" are user-defined
+ * metadata given to the hook for deployment purposes.
+ *
+ *     defineDeployHook<Props>(...)
+ *
+ * When the `pull` method is defined, you must have an explicit parameter
+ * type, but the return type will be inferred. In this example, the `pulled`
+ * property is automatically exposed on the other methods' `target` object.
+ *
+ *     async pull(target: Target) {
+ *       return { pulled: true }
+ *     }
  */
-export interface DeployTarget {
-  _id?: string
+export const defineDeployHook: DefineDeployHook = (hook: any) => {
+  hook.file = callerPath()
+  return hook
 }
 
-export { DeployContext } from './deploy/context'
+export function addDeployHook<State extends object, PulledState extends object>(
+  load: () => Promise<DeployHookModule<State, PulledState>>
+): DeployHookRef<State, PulledState> {
+  const { deployHooks } = getDeployContext()
+  const hookRef: DeployHookRef = { load }
+  deployHooks.push(hookRef)
+  return hookRef
+}
+
+export function addDeployTarget<
+  State extends object,
+  PulledState extends object
+>(
+  hook: DeployHookRef<State, PulledState>,
+  state: Promisable<Omit<State, keyof PulledState> & Partial<PulledState>>
+): Promise<State> {
+  const { promise, resolve } = defer<State>()
+  const { addTarget } = getDeployContext()
+  addTarget(hook, state, resolve)
+  return promise
+}
+
 export * from './deploy/files'
 export * from './deploy/secrets'
+export * from './deploy/types'
+export { DeployContext, getDeployContext }

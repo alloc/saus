@@ -19,15 +19,16 @@ import { Route } from './routes'
 
 export async function loadRoutes(
   context: SausContext,
-  resolveId: ResolveIdHook
+  resolveId = context.resolveId!
 ) {
   const time = Date.now()
   const moduleMap = context.moduleMap || {}
 
-  const { require, ssrRequire } =
-    context.command == 'build'
-      ? getRequireFunctions(context, resolveId, moduleMap)
-      : context
+  const { require, ssrRequire } = context.ssrRequire
+    ? (context as { require: RequireAsync; ssrRequire: RequireAsync })
+    : context.command == 'build'
+    ? getRequireFunctions(context, resolveId, moduleMap)
+    : context
 
   const routesModule =
     moduleMap[context.routesPath] ||

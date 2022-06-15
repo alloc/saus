@@ -19,7 +19,7 @@ import { CompiledModule, Script } from './types'
 
 export async function compileSsrModule(
   id: string,
-  context: SausContext
+  context: Omit<SausContext, 'command'>
 ): Promise<CompiledModule | null> {
   const { config, server } = context
   const { pluginContainer } = server!
