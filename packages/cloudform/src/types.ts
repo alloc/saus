@@ -5,13 +5,14 @@ import { Promisable } from 'type-fest'
 export interface Stack {
   id?: string
   name: string
+  region: string
   resources: Record<string, ResourceBase>
   outputs?: Record<string, Value<any>>
 }
 
 export type StackTemplate<Outputs extends object | void = void> = (
   ref: ResourceRef.Factory,
-  types: typeof CloudForm
+  aws: typeof CloudForm
 ) => Promisable<Outputs>
 
 export interface AttributeRef<T = any> extends IntrinsicFunction {

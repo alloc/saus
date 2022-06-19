@@ -1,3 +1,4 @@
+import { Simplify, UnionToIntersection } from 'type-fest'
 import type { App } from '../app/types'
 import type { Buffer } from '../client'
 import type {
@@ -120,18 +121,20 @@ export namespace Endpoint {
   export type Response = {
     status: number
     headers: OutgoingHeaders
-    body?: ResponseBody
+    body?: Body
   }
 
   export type ResponseTuple = [
     status?: number,
-    body?: ResponseBody & { headers?: Headers | null }
+    body?: Body & { headers?: Headers | null }
   ]
 
-  export type ResponseBody =
+  export type Body =
     | { buffer: Buffer }
     | { stream: NodeJS.ReadableStream }
     | { text: string }
     | { json: any }
     | {}
+
+  export type AnyBody = Simplify<Partial<UnionToIntersection<Body>>>
 }

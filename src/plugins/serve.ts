@@ -126,7 +126,7 @@ function renderError(
   error: any,
   responseType: string,
   root: string
-): Endpoint.ResponseBody | undefined {
+): Endpoint.Body | undefined {
   if (responseType == 'text/html')
     return {
       text: renderErrorFallback(error, {

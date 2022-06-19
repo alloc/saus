@@ -119,8 +119,8 @@ export class JsonFile<T = any> extends File {
     const text = this.getBuffer('utf8')
     return text ? JSON.parse(text) : undefined
   }
-  setData(json: T, replacer?: Replacer) {
-    const text = JSON.stringify(json, replacer, 2)
+  setData(data: T, replacer?: Replacer) {
+    const text = JSON.stringify(data, replacer, 2)
     this.setBuffer(Buffer.from(text))
   }
 }
@@ -130,8 +130,8 @@ export class YamlFile<T = any> extends File {
     const text = this.getBuffer('utf8')
     return text ? yaml.parse(text) : undefined
   }
-  setData(json: T, replacer?: Replacer) {
-    const text = yaml.stringify(json, replacer, 2)
+  setData(data: T, replacer?: Replacer) {
+    const text = yaml.stringify(data, replacer, 2)
     this.setBuffer(Buffer.from(text))
   }
 }

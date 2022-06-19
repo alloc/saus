@@ -1,11 +1,13 @@
 import path from 'path'
+import { noop } from '../../utils/noop'
 import { formatAsyncStack } from '../../vm/formatAsyncStack'
 import { DeployContext } from './context'
 import type { DeployHookRef } from './types'
 
 export async function loadDeployFile(
   context: DeployContext,
-  onPluginsLoaded: () => void
+  secretsPromise?: PromiseLike<void>,
+  onPluginsLoaded: () => void = noop
 ) {
   let { deploy: execPath } = context.config.saus
   if (!execPath) {
@@ -13,18 +15,7 @@ export async function loadDeployFile(
   }
   execPath = path.resolve(context.root, execPath)
   try {
-    const promise = context.require(execPath)
-    // Secret sources must be added synchronously, since they need
-    // to be loaded before hooks/plugins.
-    await context.secrets.load()
-    if (context.command == 'deploy')
-      await Promise.all(
-        Object.values(context.deployHooks).map(hookRef =>
-          loadDeployPlugin(hookRef, context)
-        )
-      )
-    onPluginsLoaded()
-    await promise
+    await context.require(execPath)
   } catch (error: any) {
     formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
     throw error

@@ -7,12 +7,10 @@ export interface KnownSecrets {}
 
 export type SecretMap = Record<string, any> & KnownSecrets
 
-type ExpectedSecrets = [readonly string[], (secrets: string[]) => void]
-
 export class SecretHub {
   private _sources: SecretSource[] = []
   private _secrets: SecretMap = {}
-  private _expected: ExpectedSecrets[] = []
+  private _expected = new Set<string>()
   private _loaded = defer<Set<string> | undefined>()
   private _loading = false
 
@@ -32,22 +30,28 @@ export class SecretHub {
   }
 
   /** Throw if any of these secret names are not defined. */
-  expect(names: readonly string[]) {
-    if (this._loaded.settled) {
-      return this._loaded.then(() => {
-        return names.map(name => {
-          const secret = this._secrets[name]
-          if (!secret) {
-            throw Error(`Secret not found: ${name}`)
-          }
-          return secret
-        })
-      })
-    } else {
-      const { promise, resolve } = defer<string[]>()
-      this._expected.push([names, resolve])
-      return promise
+  expect(expected: string[]): Promise<string[]>
+  expect<T extends Record<string, string>>(
+    expected: T
+  ): Promise<{ [P in keyof T]: string }>
+  async expect(expected: string[] | Record<string, string>) {
+    const names = Array.isArray(expected) ? expected : Object.values(expected)
+    names.forEach(name => this._expected.add(name))
+    await this._loaded
+    const values = names.map(name => {
+      const secret = this._secrets[name]
+      if (!secret) {
+        throw Error(`Secret not found: ${name}`)
+      }
+      return secret
+    })
+    if (Array.isArray(expected)) {
+      return values
     }
+    return Object.keys(expected).reduce((secrets, key, i) => {
+      secrets[key] = values[i]
+      return secrets
+    }, {} as any)
   }
 
   /** Add a source to load secrets from. */
@@ -67,23 +71,13 @@ export class SecretHub {
     for (const source of this._sources) {
       source.loaded = await source.load()
       for (const [name, secret] of Object.entries(source.loaded)) {
-        if (!secret) continue
-        this._secrets[name] = secret
+        if (secret) this._secrets[name] = secret
       }
     }
     const missing = new Set<string>()
-    for (const [expected, resolve] of this._expected) {
-      let failed = false
-      const secrets = expected.map(name => {
-        const secret = this._secrets[name]
-        if (!secret) {
-          failed = true
-          missing.add(name)
-        }
-        return secret
-      })
-      if (!failed) {
-        resolve(secrets)
+    for (const name of this._expected) {
+      if (!this._secrets[name]) {
+        missing.add(name)
       }
     }
     if (missing.size) {

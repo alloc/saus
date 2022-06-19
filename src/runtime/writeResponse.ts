@@ -8,7 +8,7 @@ export function writeResponse(
   res: ServerResponse,
   status: number,
   headers?: Headers | OutgoingHeaders | null,
-  body?: Endpoint.ResponseBody
+  body?: Endpoint.Body
 ) {
   if (headers) {
     headers =

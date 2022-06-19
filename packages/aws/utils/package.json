@@ -1,7 +1,7 @@
 {
-  "name": "@saus/cloudform",
+  "name": "@saus/aws-utils",
   "version": "0.1.0",
-  "description": "Manage your AWS infra with CloudFormation",
+  "description": "Common functions for AWS-specific Saus packages",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -19,12 +19,10 @@
     "saus": "*"
   },
   "devDependencies": {
-    "recrawl-sync": "^2.2.1",
+    "@types/aws4": "^1.11.2",
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "*",
-    "cloudform-types": "^7.3.0",
-    "type-fest": "^2.13.0"
+    "aws4": "^1.11.0"
   }
 }

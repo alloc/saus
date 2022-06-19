@@ -2,7 +2,6 @@ import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
 import { Promisable } from 'type-fest'
-import { noop } from '../../utils/noop'
 import { injectNodeModule } from '../../vm/nodeModules'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../../vm/types'
 import { BundleContext, loadBundleContext } from '../bundle'
@@ -58,7 +57,6 @@ export async function prepareDeployContext(
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
   context.deployHooks = []
-  context.addTarget = noop
 
   const { pluginContainer } = await getViteTransform(context.config)
 

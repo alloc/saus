@@ -1,3 +1,4 @@
+import { Endpoint } from '../core'
 import { noop } from '../utils/noop'
 import { Response } from './response'
 import { HttpOptions } from './types'
@@ -7,7 +8,11 @@ export const responseHook = { current: noop as ResponseHook }
 
 type Promisable<T> = T | PromiseLike<T>
 
-export type RequestHook = (req: HttpOptions) => Promisable<Response | void>
+export type RequestHook = (
+  req: HttpOptions,
+  body?: Endpoint.Body
+) => Promisable<Response | void>
+
 export type ResponseHook = (
   req: Readonly<HttpOptions>,
   res: Response

@@ -16,7 +16,7 @@ type ForwardedKeys =
   | 'timeout'
 
 export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
-  body?: Endpoint.ResponseBody
+  body?: Endpoint.Body
   headers?: Headers
 }
 
@@ -37,7 +37,7 @@ export function http(
       opts.beforeSend(req, opts.body)
     }
 
-    Promise.resolve(requestHook.current(req)).then(resp => {
+    Promise.resolve(requestHook.current(req, opts?.body)).then(resp => {
       const onResponse = (resp: Response) =>
         Promise.resolve(responseHook.current(req, resp)).then(
           () => resolve(resp),

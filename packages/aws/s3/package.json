@@ -1,7 +1,7 @@
 {
-  "name": "@saus/cloudform",
+  "name": "@saus/aws-s3",
   "version": "0.1.0",
-  "description": "Manage your AWS infra with CloudFormation",
+  "description": "Manage your Amazon S3 buckets",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -19,12 +19,9 @@
     "saus": "*"
   },
   "devDependencies": {
-    "recrawl-sync": "^2.2.1",
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "*",
-    "cloudform-types": "^7.3.0",
-    "type-fest": "^2.13.0"
+    "@saus/aws-utils": "*"
   }
 }

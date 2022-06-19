@@ -1,7 +1,7 @@
 {
-  "name": "@saus/vercel",
+  "name": "@saus/cloudflare-dns",
   "version": "0.1.0",
-  "description": "Deploy a Saus app to Vercel",
+  "description": "Manage DNS records with Cloudflare",
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

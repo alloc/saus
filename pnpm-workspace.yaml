@@ -1,5 +1,7 @@
 packages:
   - 'packages/*'
+  - 'packages/aws/*'
+  - 'packages/cloudflare/*'
   - '!packages/repng'
   - '!packages/imagetools'
   - 'examples/*'

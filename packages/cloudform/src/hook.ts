@@ -5,7 +5,7 @@ import { Stack } from './types'
 export default defineDeployHook(ctx => ({
   name: '@saus/cloudform',
   async pull(stack: Stack) {
-    const { Stacks: [state] = [] } = await signedRequest({
+    const { Stacks: [state] = [] } = await signedRequest(stack.region)({
       Action: 'DescribeStacks',
       StackName: stack.name,
     })
@@ -19,7 +19,7 @@ export default defineDeployHook(ctx => ({
   }),
   async spawn(stack) {
     const spawned = await spawnStack(
-      stack.name,
+      stack,
       JSON.stringify({
         Resources: stack.resources,
         Outputs: stack.outputs,
@@ -31,31 +31,35 @@ export default defineDeployHook(ctx => ({
     }
   },
   async update(stack) {
-    const stackId = stack.id!
-    const prevTemplate = await getTemplate(stackId)
+    if (!stack.id) {
+      throw Error('Expected stack.id to exist')
+    }
+    const prevTemplate = await getTemplate(stack)
     if (!prevTemplate) {
       throw Error(
         `Previous template not found for existing stack: ${stack.name}`
       )
     }
-    await signedRequest({
+    await signedRequest(stack.region)({
       Action: 'UpdateStack',
-      StackName: stackId,
+      StackName: stack.id,
       TemplateBody: JSON.stringify({
         Resources: stack.resources,
         Outputs: stack.outputs,
       }),
     })
     return async () => {
-      const spawned = await spawnStack(stack.name, prevTemplate)
+      const spawned = await spawnStack(stack, prevTemplate)
       stack.id = spawned.StackId
     }
   },
   async kill(stack) {
-    const stackId = stack.id!
-    await signedRequest({
+    if (!stack.id) {
+      throw Error('Expected stack.id to exist')
+    }
+    await signedRequest(stack.region)({
       Action: 'DeleteStack',
-      StackName: stackId,
+      StackName: stack.id,
     })
     return () => {
       this.spawn(stack)
@@ -63,18 +67,18 @@ export default defineDeployHook(ctx => ({
   },
 }))
 
-async function spawnStack(name: string, body: string) {
-  return signedRequest({
+async function spawnStack(stack: Stack, body: string) {
+  return signedRequest(stack.region)({
     Action: 'CreateStack',
-    StackName: name,
+    StackName: stack.name,
     TemplateBody: body,
   })
 }
 
-async function getTemplate(stackId: string) {
-  const resp = await signedRequest({
+async function getTemplate(stack: Stack) {
+  const resp = await signedRequest(stack.region)({
     Action: 'GetTemplate',
-    StackName: stackId,
+    StackName: stack.id || stack.name,
   })
   return resp.TemplateBody
 }

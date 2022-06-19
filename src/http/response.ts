@@ -4,6 +4,7 @@ import { normalizeHeaders } from './normalizeHeaders'
 
 export class Response {
   readonly headers: Headers
+  readonly ok: boolean
 
   constructor(
     readonly data: Buffer,
@@ -11,6 +12,7 @@ export class Response {
     headers: Headers
   ) {
     this.headers = normalizeHeaders(headers)
+    this.ok = status >= 200 && status < 400
   }
 
   toString(encoding?: string) {

@@ -13,11 +13,17 @@ export async function addSecrets() {
     loadBundleContext()
   )
 
-  const loadingPlugins = defer<void>()
-  loadDeployFile(context, loadingPlugins.resolve)
-  await loadingPlugins
-
   const { logger } = context
+  logger.isLogged('info') && success('Context loaded!')
+
+  // Use the `addTarget` function to detect when to
+  // start loading from our secret sources.
+  const loading = defer<void>()
+  context.addTarget = () => loading.resolve()
+
+  loadDeployFile(context)
+  await loading
+
   logger.isLogged('info') && success('Plugins loaded!')
 
   const sources = context.secrets.getMutableSources()

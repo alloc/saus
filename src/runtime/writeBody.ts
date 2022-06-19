@@ -1,10 +1,7 @@
 import { Endpoint } from '../core'
 import { unwrapBuffer } from '../core/buffer'
 
-export function writeBody(
-  res: NodeJS.WritableStream,
-  body: Endpoint.ResponseBody
-) {
+export function writeBody(res: NodeJS.WritableStream, body: Endpoint.Body) {
   if ('stream' in body) {
     body.stream.pipe(res, { end: true })
   } else {

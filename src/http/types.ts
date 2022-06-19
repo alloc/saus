@@ -15,7 +15,7 @@ export interface HttpOptions {
    */
   allowBadStatus?: boolean
   auth?: string
-  beforeSend?: (req: HttpOptions, body?: Endpoint.ResponseBody) => void
+  beforeSend?: (req: HttpOptions, body?: Endpoint.AnyBody) => void
   hash: string
   headers?: Headers
   hostname: string

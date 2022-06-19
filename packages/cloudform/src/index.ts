@@ -5,17 +5,24 @@ import { AttributeRef, ResourceRef, Stack, StackTemplate } from './types'
 
 const hook = addDeployHook(() => import('./hook'))
 
+export type StackOptions<Outputs extends object | void = any> = {
+  name: string
+  region: string
+  template: StackTemplate<Outputs>
+}
+
 /**
  * Declare a AWS CloudFormation stack.
  */
-export function useCloudFormation(name: string, template: StackTemplate) {
-  return addDeployTarget(hook, defineStack(name, template))
-}
+export const useCloudFormation = <Outputs extends object | void>(
+  options: StackOptions<Outputs>
+) => addDeployTarget(hook, defineStack(options))
 
-async function defineStack(
-  name: string,
-  template: StackTemplate<any>
-): Promise<Stack> {
+async function defineStack({
+  name,
+  region,
+  template,
+}: StackOptions): Promise<Stack> {
   const resources: Record<string, ResourceBase> = {}
   const makeRef: ResourceRef.Factory = (id, resource) => {
     resources[id] = resource
@@ -41,6 +48,7 @@ async function defineStack(
 
   return {
     name,
+    region,
     resources,
     outputs,
   }
