@@ -1,0 +1,25 @@
+{
+  "name": "@saus/bump",
+  "version": "0.1.0",
+  "description": "Increment the project version on deploy",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup --clean",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*"
+  },
+  "dependencies": {}
+}
