@@ -6,6 +6,7 @@ import type {
   DefineDeployHook,
   DeployHookModule,
   DeployHookRef,
+  RevertFn,
 } from './deploy/types'
 
 /**
@@ -51,6 +52,8 @@ export function addDeployTarget<
   addTarget(hook, state, resolve)
   return promise
 }
+
+export function addDeployAction(action: () => Promisable<RevertFn>) {}
 
 export * from './deploy/files'
 export * from './deploy/secrets'
