@@ -1,7 +1,7 @@
 export function diffObjects(
   oldValues: any,
   values: any,
-  changed: Record<string, any>
+  changed: Record<string, any> = {}
 ) {
   let differs = false
   const diff = (key: string, oldValue: any, value: any) => {

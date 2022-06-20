@@ -9,7 +9,7 @@ export function createRequestFn(config: {
     method: HttpMethod,
     uri: string,
     opts?: HttpRequestOptions
-  ) => {
+  ): Promise<T> => {
     const url = joinUrl('https://api.cloudflare.com/client/v4', uri)
     const resp = await http(method, url, {
       ...opts,

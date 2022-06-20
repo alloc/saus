@@ -212,27 +212,8 @@ importers:
 
   packages/cloudflare/dns:
     specifiers:
-      '@cush/exec': ^1.7.1
-      '@cush/relative': ^1.0.0
-      '@types/debug': ^4.1.7
-      '@types/node': ^16.10.2
-      css-what: ^6.0.1
-      debug: ^4.3.2
-      magic-string: ^0.25.7
-      misty: ^1.6.2
-      recrawl-sync: ^2.2.1
       saus: '*'
-    dependencies:
-      '@cush/exec': 1.7.1
-      '@cush/relative': 1.0.0
-      css-what: 6.1.0
-      debug: 4.3.4
-      magic-string: 0.25.9
-      misty: 1.6.9
     devDependencies:
-      '@types/debug': 4.1.7
-      '@types/node': 16.11.40
-      recrawl-sync: 2.2.1
       saus: link:../../..
 
   packages/cloudform:
