@@ -1,6 +1,6 @@
 import { Endpoint } from '../core'
 import { writeBody } from '../runtime/writeBody'
-import { Headers } from './headers'
+import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
 import { urlToHttpOptions } from './internal/urlToHttpOptions'
@@ -17,7 +17,7 @@ type ForwardedKeys =
 
 export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
   body?: Endpoint.Body
-  headers?: Headers
+  headers?: RequestHeaders
 }
 
 /**

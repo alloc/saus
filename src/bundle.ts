@@ -50,6 +50,7 @@ export interface BundleOptions {
   isBuild?: boolean
   minify?: boolean
   preferExternal?: boolean
+  appVersion?: string
 }
 
 export interface OutputBundle {
@@ -77,8 +78,8 @@ export interface OutputBundle {
 }
 
 export async function bundle(
-  options: BundleOptions,
-  context: BundleContext
+  context: BundleContext,
+  options: BundleOptions = {}
 ): Promise<OutputBundle> {
   await context.loadRoutes()
 

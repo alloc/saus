@@ -84,7 +84,7 @@ export async function loadBundle({
   }
   if (!bundleResult) {
     const { bundle } = require('../bundle') as typeof import('../bundle')
-    bundleResult = await bundle(bundleOptions, context)
+    bundleResult = await bundle(context, bundleOptions)
   }
 
   let { code, map, cached } = bundleResult

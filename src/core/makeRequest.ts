@@ -1,5 +1,5 @@
 import { emptyHeaders } from '../app/global'
-import type { Headers } from '../http'
+import type { RequestHeaders } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
 import { defer } from '../utils/defer'
 import type { Endpoint } from './endpoint'
@@ -14,7 +14,7 @@ const emptyRead = async () => emptyBody
 export function makeRequestUrl<Params extends {}>(
   url: ParsedUrl<Params>,
   method: string,
-  headers: Headers = emptyHeaders,
+  headers: Readonly<RequestHeaders> = emptyHeaders,
   read = emptyRead
 ): Endpoint.RequestUrl<Params> {
   if (isRequestUrl(url)) {

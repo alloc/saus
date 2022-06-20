@@ -18,7 +18,7 @@ import { RoutesModule } from './routes'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { Cache, withCache } from './withCache'
 
-type Command = 'build' | 'serve'
+type Command = 'build' | 'deploy' | 'serve'
 
 /**
  * This context exists in both serve and build mode.
@@ -157,7 +157,7 @@ function getConfigResolver(
   getContext: (config: ResolvedConfig) => BaseContext
 ) {
   return async (command: Command, inlineConfig?: vite.InlineConfig) => {
-    const isBuild = command == 'build'
+    const isBuild = command !== 'serve'
     const sausDefaults: vite.InlineConfig = {
       configFile: false,
       server: {
@@ -185,8 +185,9 @@ function getConfigResolver(
     )
 
     const defaultMode = isBuild ? 'production' : 'development'
+    const viteCommand = isBuild ? 'build' : command
     const configEnv: vite.ConfigEnv = {
-      command,
+      command: viteCommand,
       mode: inlineConfig.mode || defaultMode,
     }
 
@@ -249,7 +250,7 @@ function getConfigResolver(
 
     const config = (await vite.resolveConfig(
       userConfig,
-      command,
+      viteCommand,
       defaultMode
     )) as ResolvedConfig
 

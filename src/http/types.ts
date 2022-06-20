@@ -1,7 +1,7 @@
 import http, { Agent } from 'http'
 import type { Endpoint } from '../core/endpoint'
 import { httpMethods } from '../utils/httpMethods'
-import type { Headers } from './headers'
+import type { RequestHeaders } from './headers'
 
 export type { BufferLike } from '../app/types'
 
@@ -17,7 +17,7 @@ export interface HttpOptions {
   auth?: string
   beforeSend?: (req: HttpOptions, body?: Endpoint.AnyBody) => void
   hash: string
-  headers?: Headers
+  headers?: RequestHeaders
   hostname: string
   href: string
   method?: string

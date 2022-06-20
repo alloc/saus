@@ -2,6 +2,11 @@ import { Promisable } from 'type-fest'
 import { Changed } from '../../utils/types'
 import { DeployContext } from './context'
 
+export type DeployAction<T = any> = (
+  context: DeployContext & { command: 'deploy' },
+  onRevert: (revertFn: RevertFn) => void
+) => Promisable<T>
+
 export type DeployFile = {
   /** Name of deploy plugin */
   [name: string]: DeployPluginState

@@ -1,13 +1,13 @@
 import type { ServerResponse } from 'http'
 import type { Endpoint } from '../core/endpoint'
-import type { Headers, OutgoingHeaders } from '../http/headers'
+import type { DeclaredHeaders, Headers } from '../http/headers'
 import { writeBody } from './writeBody'
 import { writeHeaders } from './writeHeaders'
 
 export function writeResponse(
   res: ServerResponse,
   status: number,
-  headers?: Headers | OutgoingHeaders | null,
+  headers?: Headers | DeclaredHeaders | null,
   body?: Endpoint.Body
 ) {
   if (headers) {

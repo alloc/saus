@@ -4,9 +4,9 @@ import { defer } from '../utils/defer'
 import { DeployContext, getDeployContext } from './deploy/context'
 import type {
   DefineDeployHook,
+  DeployAction,
   DeployHookModule,
   DeployHookRef,
-  RevertFn,
 } from './deploy/types'
 
 /**
@@ -53,7 +53,15 @@ export function addDeployTarget<
   return promise
 }
 
-export function addDeployAction(action: () => Promisable<RevertFn>) {}
+/**
+ * Deploy actions only run when `saus deploy` is used.
+ * They should return a rollback function in case deployment
+ * fails after this action is completed.
+ */
+export function onDeploy<T>(action: DeployAction<T>) {
+  const ctx = getDeployContext()
+  return ctx.addDeployAction(action)
+}
 
 export * from './deploy/files'
 export * from './deploy/secrets'

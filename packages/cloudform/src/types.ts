@@ -2,6 +2,8 @@ import * as CloudForm from 'cloudform-types'
 import { IntrinsicFunction, ResourceBase, Value } from 'cloudform-types'
 import { Promisable } from 'type-fest'
 
+export { CloudForm }
+
 export interface Stack {
   id?: string
   name: string

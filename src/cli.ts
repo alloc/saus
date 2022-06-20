@@ -145,7 +145,7 @@ cli
         logLevel: noWrite ? 'silent' : undefined,
         build: { sourcemap: options.sourcemap },
       })
-      let { code, map } = await bundle(options, context)
+      let { code, map } = await bundle(context, options)
       if (noWrite) {
         if (map) {
           const { toInlineSourceMap } =

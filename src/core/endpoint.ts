@@ -2,10 +2,11 @@ import { Simplify, UnionToIntersection } from 'type-fest'
 import type { App } from '../app/types'
 import type { Buffer } from '../client'
 import type {
-  Headers,
+  DeclaredHeaders,
   HttpRedirect,
-  OutgoingHeaders,
+  RequestHeaders,
   Response as HttpResponse,
+  ResponseHeaders,
 } from '../http'
 import type { httpMethods } from '../utils/httpMethods'
 import type { Falsy, Promisable } from '../utils/types'
@@ -62,13 +63,13 @@ export namespace Endpoint {
    */
   export type JsonFunction<Params extends {} = {}> = (
     request: Request<Params>,
-    responseHeaders: OutgoingHeaders,
+    responseHeaders: DeclaredHeaders,
     app: App
   ) => Promisable<any>
 
   export type Function<Params extends {} = {}> = (
     request: Request<Params>,
-    responseHeaders: OutgoingHeaders,
+    responseHeaders: DeclaredHeaders,
     app: App
   ) => Promisable<Result>
 
@@ -84,7 +85,7 @@ export namespace Endpoint {
 
   export interface ResponseStream extends NodeJS.ReadableStream {
     statusCode?: number
-    headers?: Headers
+    headers?: ResponseHeaders
   }
 
   export type ResponsePromise = Promise<ResponseTuple | [ResponseStream] | null>
@@ -99,7 +100,7 @@ export namespace Endpoint {
   export interface RequestUrl<RouteParams extends {} = Record<string, string>>
     extends ParsedUrl<RouteParams> {
     readonly method: string
-    readonly headers: Readonly<Headers>
+    readonly headers: Readonly<RequestHeaders>
     readonly read: () => Promise<Buffer>
     /**
      * The platform-specific request object related to this URL. \
@@ -120,13 +121,13 @@ export namespace Endpoint {
 
   export type Response = {
     status: number
-    headers: OutgoingHeaders
+    headers: DeclaredHeaders
     body?: Body
   }
 
   export type ResponseTuple = [
     status?: number,
-    body?: Body & { headers?: Headers | null }
+    body?: Body & { headers?: ResponseHeaders | null }
   ]
 
   export type Body =

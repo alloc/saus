@@ -18,6 +18,7 @@ import { DeployTargetArgs, prepareDeployContext } from './core/deploy/context'
 import { loadDeployFile, loadDeployPlugin } from './core/deploy/loader'
 import { DeployOptions } from './core/deploy/options'
 import { defer, Deferred } from './utils/defer'
+import { diffObjects } from './utils/diffObjects'
 import { toObjectHash } from './utils/objectHash'
 import { Promisable } from './utils/types'
 
@@ -70,12 +71,12 @@ export async function deploy(
   const revertFns: RevertFn[] = []
   const addRevertFn = (
     revert: RevertFn | void,
-    plugin: DeployPlugin,
-    action: string
+    plugin?: DeployPlugin,
+    action?: string
   ) => {
     if (typeof revert == 'function') {
       revertFns.push(revert)
-    } else if (!options.dryRun) {
+    } else if (plugin && !options.dryRun) {
       logger.warnOnce(
         `Beware: Plugin "${plugin.name}" did not return a rollback function ` +
           `for its "${action}" action. If an error happens while deploying, its ` +
@@ -173,9 +174,21 @@ export async function deploy(
     }
   }
 
+  let actions: Promise<any>[] = []
+  context.addDeployAction = action => {
+    const promise = new Promise<any>(resolve => {
+      if (context.command == 'deploy') {
+        resolve(action(context as any, addRevertFn))
+      }
+    })
+    actions.push(promise)
+    return promise
+  }
+
   try {
     await loadDeployFile(context)
     await (deploying = defer())
+    await Promise.all(actions)
 
     const killedTargets = await getKillableTargets(
       targetCache,
@@ -294,60 +307,4 @@ function logActionCounts(
   spawnCount && success(plural(spawnCount, 'target'), 'spawned.')
   updateCount && success(plural(updateCount, 'target'), 'updated.')
   killCount && success(plural(killCount, 'target'), 'killed.')
-}
-
-function diffObjects(
-  oldValues: any,
-  values: any,
-  changed: Record<string, any>
-) {
-  let differs = false
-  const diff = (key: string, oldValue: any, value: any) => {
-    if (isPlainObject(oldValue) && isPlainObject(value)) {
-      if (diffObjects(oldValue, value, (changed[key] = {}))) {
-        differs = true
-      }
-    } else if (Array.isArray(oldValue) && Array.isArray(value)) {
-      if (!equalArrays(oldValue, value)) {
-        changed[key] = differs = true
-      }
-    } else if (oldValue !== value) {
-      changed[key] = differs = true
-    }
-  }
-  for (const key in values) {
-    diff(key, oldValues[key], values[key])
-  }
-  for (const key in oldValues) {
-    if (!(key in values)) {
-      diff(key, oldValues[key], values[key])
-    }
-  }
-  return differs
-}
-
-function equalArrays(oldValues: any[], values: any[]) {
-  if (oldValues.length !== values.length) {
-    return false
-  }
-  for (let i = 0; i < values.length; i++) {
-    const value = values[i]
-    const oldValue = oldValues[i]
-    if (isPlainObject(oldValue) && isPlainObject(value)) {
-      if (diffObjects(oldValue, value, {})) {
-        return false
-      }
-    } else if (Array.isArray(oldValue) && Array.isArray(value)) {
-      if (!equalArrays(oldValue, value)) {
-        return false
-      }
-    } else if (oldValue !== value) {
-      return false
-    }
-  }
-  return true
-}
-
-function isPlainObject(value: any): value is object {
-  return value !== null && typeof value == 'object'
 }

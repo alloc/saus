@@ -1,15 +1,21 @@
 import { UserConfig, vite } from './core'
 
 export * from './api'
+export { onDeploy, Plugin, UserConfig, vite } from './core'
 export * from './plugins/publicDir'
-export { Plugin, UserConfig, vite } from './core'
 
 type BuildFactory = typeof import('./build').build
+type BundleFactory = typeof import('./bundle').bundle
 type ServerFactory = typeof import('./dev').createServer
 
 export const build: BuildFactory = async inlineConfig => {
   const { build } = await import('./build')
   return build(inlineConfig)
+}
+
+export const generateBundle: BundleFactory = async (config, options) => {
+  const { bundle } = await import('./bundle')
+  return bundle(config, options)
 }
 
 export const createServer: ServerFactory = async inlineConfig => {

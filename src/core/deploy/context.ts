@@ -2,6 +2,7 @@ import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
 import { Promisable } from 'type-fest'
+import { noop } from '../../utils/noop'
 import { injectNodeModule } from '../../vm/nodeModules'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../../vm/types'
 import { BundleContext, loadBundleContext } from '../bundle'
@@ -11,7 +12,7 @@ import { getViteTransform } from '../viteTransform'
 import { GitFiles } from './files'
 import { DeployOptions } from './options'
 import { SecretHub } from './secrets'
-import { DeployHookRef, DeployPlugin } from './types'
+import { DeployAction, DeployHookRef, DeployPlugin } from './types'
 
 export type DeployTargetArgs = [
   hook: DeployHookRef,
@@ -30,6 +31,7 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   deployHooks: DeployHookRef[]
   deployPlugins: Record<string, DeployPlugin>
   addTarget: (...args: DeployTargetArgs) => void
+  addDeployAction: <T>(action: DeployAction<T>) => Promise<T>
   //
   // Module context
   //
@@ -57,6 +59,11 @@ export async function prepareDeployContext(
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
   context.deployHooks = []
+
+  // By default, a deployment action will never resolve.
+  // This affects `saus secrets add` for example, so unnecessary
+  // calls are avoided.
+  context.addDeployAction = () => new Promise(noop)
 
   const { pluginContainer } = await getViteTransform(context.config)
 

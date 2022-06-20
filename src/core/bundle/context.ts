@@ -30,7 +30,7 @@ export interface BundleConfig
 }
 
 export interface BundleContext extends BaseContext {
-  command: 'build'
+  command: 'build' | 'deploy'
   loadRoutes: () => Promise<void>
   bundle: BundleConfig
   /** The virtual module ID of the SSR bundle. */

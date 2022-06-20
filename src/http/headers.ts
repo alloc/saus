@@ -3,7 +3,16 @@ import { CamelCase } from 'type-fest'
 import { writeHeaders } from '../runtime/writeHeaders'
 import { normalizeHeaders } from './normalizeHeaders'
 
-export interface CommonHeaders {
+export interface CommonHeaders
+  extends CommonRequestHeaders,
+    CommonResponseHeaders {}
+
+export interface CommonRequestHeaders {
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization */
+  authorization: string
+}
+
+export interface CommonResponseHeaders {
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control */
   'cache-control': string
   /** @link https://developers.cloudflare.com/cache/about/cdn-cache-control */
@@ -34,7 +43,12 @@ export interface CommonHeaders {
   vary: string
 }
 
-export type Headers = Partial<CommonHeaders> &
+export type Headers = RequestHeaders | ResponseHeaders
+
+export type RequestHeaders = Partial<CommonRequestHeaders> &
+  Record<string, string | string[] | undefined>
+
+export type ResponseHeaders = Partial<CommonResponseHeaders> &
   Record<string, string | string[] | undefined>
 
 export interface ContentHeaders {
@@ -74,27 +88,27 @@ export interface ShortcutHeaders {
   content: ContentHeaders
 }
 
-export type OutgoingHeaders<T = Headers | null> = {
+export type DeclaredHeaders<T = Headers | null> = {
   readonly [P in keyof CommonHeaders as CamelCase<P>]: (
     value: CommonHeaders[P] | undefined
-  ) => OutgoingHeaders<T>
+  ) => DeclaredHeaders<T>
 } & {
   readonly [P in keyof ShortcutHeaders]: (
     value: ShortcutHeaders[P] | undefined
-  ) => OutgoingHeaders<T>
+  ) => DeclaredHeaders<T>
 } & {
   readonly [name: string]: (
     value: string | string[] | undefined
-  ) => OutgoingHeaders<T>
+  ) => DeclaredHeaders<T>
 } & {
   /** Apply defined headers to the given response. */
   readonly apply: (response: {
     setHeader(name: string, value: any): void
   }) => void
   /** Merge headers defined in the given object. */
-  readonly merge: (headers: Headers | null | undefined) => OutgoingHeaders<T>
+  readonly merge: (headers: Headers | null | undefined) => DeclaredHeaders<T>
   /** The next calls will be skipped if the header is already defined. */
-  readonly defaults: OutgoingHeaders<T>
+  readonly defaults: DeclaredHeaders<T>
   /** Coerce to a `Headers` object or null. */
   readonly toJSON: () => T
 }
@@ -109,14 +123,14 @@ const toDashCase = (input: string) =>
  * functional style via this-chaining. The methods mutate the given
  * `headers` object, so chaining the calls is not strictly required.
  */
-export function makeOutgoingHeaders<T extends Headers | null>(
+export function makeDeclaredHeaders<T extends Headers | null>(
   init: T | undefined,
   filter: (
     name: string,
     newValue: string | string[] | undefined,
     headers: Headers
   ) => boolean = () => true
-): OutgoingHeaders<T> {
+): DeclaredHeaders<T> {
   const headers = (init || {}) as Headers
   return new Proxy(headers as any, {
     get(_, key: string, proxy) {
@@ -142,7 +156,7 @@ export function makeOutgoingHeaders<T extends Headers | null>(
         }
       }
       if (key == 'defaults') {
-        return makeOutgoingHeaders(headers, name => {
+        return makeDeclaredHeaders(headers, name => {
           return headers[name] === undefined
         })
       }

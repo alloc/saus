@@ -1,4 +1,6 @@
-export function pick<T extends object, P extends (keyof T)[]>(
+type PossibleKeys<T> = T extends any ? keyof T : never
+
+export function pick<T extends object, P extends PossibleKeys<T>[]>(
   obj: T,
   keys: P,
   filter: (value: any, key: P[number]) => boolean = () => true
@@ -13,7 +15,7 @@ export function pick<T extends object, P extends (keyof T)[]>(
   return picked
 }
 
-export function pickAllExcept<T extends object, P extends (keyof T)[]>(
+export function pickAllExcept<T extends object, P extends PossibleKeys<T>[]>(
   obj: T,
   keys: P
 ) {

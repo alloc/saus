@@ -201,6 +201,15 @@ importers:
       '@types/aws4': 1.11.2
       saus: link:../../..
 
+  packages/bump:
+    specifiers:
+      '@saus/deploy-utils': '*'
+      saus: '*'
+    dependencies:
+      '@saus/deploy-utils': link:../deploy-utils
+    devDependencies:
+      saus: link:../..
+
   packages/cloudflare/dns:
     specifiers:
       '@cush/exec': ^1.7.1
