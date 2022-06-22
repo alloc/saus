@@ -50,6 +50,7 @@ export function bumpProjectVersion() {
       (_, key) => key + JSON.stringify(newVersion)
     )
 
+    ctx.rootPackage.version = newVersion
     writeFileSync(pkgPath, newPkgText)
     onRevert(() => {
       writeFileSync(pkgPath, pkgText)

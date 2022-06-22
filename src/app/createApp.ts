@@ -15,7 +15,7 @@ import {
   RouteIncludeOption,
 } from '../core/routes'
 import { RuntimeHook } from '../core/setup'
-import { DeclaredHeaders, Headers, makeDeclaredHeaders } from '../http/headers'
+import { DeclaredHeaders, ResponseHeaders } from '../http/headers'
 import { HttpRedirect } from '../http/redirect'
 import { toArray } from '../utils/array'
 import { baseToRegex, prependBase } from '../utils/base'
@@ -218,7 +218,7 @@ export function createApp(
   ) => {
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.Response | undefined
-    let headers = makeDeclaredHeaders(null as Headers | null)
+    let headers = new DeclaredHeaders(null as ResponseHeaders | null)
     let request = makeRequest(
       url,
       function respondWith(arg1, body?: Endpoint.ResponseTuple[1]) {
@@ -320,6 +320,7 @@ function createResponse(
     body = { stream: arg1 }
   }
   return {
+    ok: status >= 200 && status < 400,
     status,
     headers,
     body,

@@ -1,4 +1,4 @@
-type PossibleKeys<T> = T extends any ? keyof T : never
+export type PossibleKeys<T> = T extends any ? string & keyof T : never
 
 export function pick<
   T extends object,

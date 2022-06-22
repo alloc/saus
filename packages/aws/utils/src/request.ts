@@ -7,8 +7,20 @@ import {
   HttpRequestOptions,
   Response,
 } from 'saus/http'
-import { CamelCasedPropertiesDeep } from 'type-fest'
-import { addXmlOptions, parseXmlResponse } from './response'
+import {
+  AmzError,
+  cacheParsedXml,
+  normalizeObjectResponse,
+  parseXmlResponse,
+} from './response'
+import { CamelCasedPropertiesDeep } from './types'
+import {
+  camelize,
+  isObject,
+  pascalize,
+  rewriteKeys,
+  rewriteObjectKeys,
+} from './utils'
 import { XmlParserOptions } from './xml/parse'
 
 interface ActionMap {
@@ -99,7 +111,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
         ? Response
         : T extends object
         ? CamelCasedPropertiesDeep<T> & { _status: number; _headers: Headers }
-        : CamelCasedPropertiesDeep<T>
+        : T
       : never
     : any
 
@@ -114,7 +126,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       ...opts
     }: AmzSendOptions<Actions, Action> = {}
   ): Promise<ActionResult<Action>> {
-    params.Version ||= config.apiVersion
+    const trace = new Error() as AmzError
 
     const subdomains = [config.service]
     if (config.region) {
@@ -126,6 +138,8 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     let headers = opts.headers
     let body = opts.body
     let xmlOptions: XmlParserOptions | undefined
+
+    params.Version ||= config.apiVersion
 
     if (coerceRequest) {
       const derived = coerceRequest(params as any)
@@ -198,21 +212,25 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       allowBadStatus: true,
     })
 
-    if (!res.ok) {
-      console.error(
-        `${params.Action} action ended with ${res.status} status code:`,
-        res.data.toString('utf8')
-      )
-      throw res
+    if (res.headers['content-type'] == 'application/xml') {
+      const xmlRes = parseXmlResponse(res, (xmlOptions ||= {}))
+      if (xmlRes.Error) {
+        const props = { ...xmlRes.Error, params }
+        Object.assign(trace, normalizeObjectResponse(props, res))
+        throw trace
+      }
+      if (!coerceResponse) {
+        return normalizeObjectResponse(xmlRes, res)
+      }
+      if (res.ok) {
+        cacheParsedXml(res, xmlOptions, xmlRes)
+      }
     }
 
-    if (res.headers['content-type'] == 'application/xml') {
-      if (!coerceResponse) {
-        return rewriteKeys(parseXmlResponse(res, xmlOptions), camelize)
-      }
-      if (xmlOptions) {
-        addXmlOptions(res, xmlOptions)
-      }
+    if (!res.ok) {
+      Object.assign(trace, normalizeObjectResponse({ params }, res))
+      trace.message = `${params.Action} action ended with ${res.status} status`
+      throw trace
     }
 
     if (coerceResponse) {
@@ -224,9 +242,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
             coercedRes[name] = value
           }
         }
-        coercedRes = rewriteObjectKeys(coercedRes, camelize)
-        coercedRes._status = res.status
-        coercedRes._headers = res.headers
+        coercedRes = normalizeObjectResponse(coercedRes, res)
       } else {
         coercedRes = rewriteKeys(coercedRes, camelize)
       }
@@ -257,37 +273,6 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     }
 
   return send
-}
-
-// fooBar -> FooBar
-function pascalize(key: string) {
-  return key[0].toUpperCase() + key.slice(1)
-}
-
-// FooBar -> fooBar
-function camelize(key: string) {
-  return key.replace(/^([A-Z]+)([A-Z][a-z]|$)/, (_, k) => k.toLowerCase())
-}
-
-function rewriteKeys(value: any, rewriteKey: (key: string) => string): any {
-  return Array.isArray(value)
-    ? value.map(item => rewriteKeys(item, rewriteKey))
-    : isObject(value)
-    ? rewriteObjectKeys(value, rewriteKey)
-    : value
-}
-
-function rewriteObjectKeys(props: any, rewriteKey: (key: string) => string) {
-  const out: any = {}
-  for (const [key, value] of Object.entries(props)) {
-    const outKey = rewriteKey(key)
-    out[outKey] = rewriteKeys(value, rewriteKey)
-  }
-  return out
-}
-
-function isObject(o: any): o is object {
-  return !!o && typeof o == 'object' && !Array.isArray(o)
 }
 
 function coerceAmazonHeader(name: string) {

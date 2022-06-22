@@ -1,3 +1,4 @@
+import { Writable } from 'type-fest'
 import { emptyHeaders } from '../app/global'
 import type { RequestHeaders } from '../http'
 import { assignDefaults } from '../utils/assignDefaults'
@@ -20,15 +21,17 @@ export function makeRequestUrl<Params extends {}>(
   if (isRequestUrl(url)) {
     return url
   }
-  const requestUrl = url as ParsedUrl<Params> & {
-    method: typeof method
-    headers: typeof headers
-    read: typeof read
-  }
+  const requestUrl = url as Writable<Endpoint.RequestUrl<Params>>
   requestUrl.method = method
   requestUrl.headers = headers
   requestUrl.read = read
+  requestUrl.json = readJson
   return requestUrl
+}
+
+async function readJson(this: Endpoint.RequestUrl) {
+  const data = await this.read()
+  return JSON.parse(data.toString())
 }
 
 function isRequestUrl<T extends {} = any>(

@@ -7,7 +7,11 @@ import kleur from 'kleur'
 import { warnOnce } from 'misty'
 import path from 'path'
 import { getBabelConfig, MagicString, t } from './babel'
-import type { ClientModuleMap } from './bundle/types'
+import type {
+  ClientModuleMap,
+  OutputBundle,
+  PublicDirMode,
+} from './bundle/types'
 import {
   ClientFunction,
   ClientFunctions,
@@ -28,10 +32,10 @@ import {
 import { preferExternal } from './core/bundle/preferExternal'
 import type { RuntimeConfig } from './core/config'
 import { debug } from './core/debug'
+import { getGitRepoByName } from './core/git'
 import { bundleDir, clientDir, httpDir } from './core/paths'
 import { vite } from './core/vite'
 import { getViteTransform } from './core/viteTransform'
-import { BufferLike } from './http/types'
 import { debugForbiddenImports } from './plugins/debug'
 import { rewriteHttpImports } from './plugins/httpImport'
 import { createModuleProvider } from './plugins/moduleProvider'
@@ -51,30 +55,21 @@ export interface BundleOptions {
   minify?: boolean
   preferExternal?: boolean
   appVersion?: string
-}
-
-export interface OutputBundle {
-  /** Where the bundle is saved to disk. */
-  path: string | undefined
-  /** This code generates and serves the application. */
-  code: string
-  /** The collapsed sourcemap for this bundle. */
-  map: SourceMap | undefined
   /**
-   * These files are written to the `build.outDir` directory, but
-   * only if the bundle has a defined `path`. More files can be
-   * added by plugins in the `saus.receiveBundle` hook.
+   * Control how the `publicDir` is handled.
+   *
+   * - `write` \
+   *   Write files in `publicDir` into the `build.outDir` directory. \
+   *   This is the default value when `copyPublicDir` plugin is used.
+   * - `cache` \
+   *   Skip writing but still cache the public files in memory for use
+   *   by other plugins.
+   * - `skip` \
+   *   Skip writing, scanning, and transformation of public files. \
+   *   This is always used when `copyPublicDir` plugin is missing.
    */
-  files: Record<string, BufferLike>
-  /**
-   * The client runtime and any user code; split into "chunks"
-   * so that routes only load what they use.
-   */
-  clientModules: ClientModuleMap
-  /**
-   * Assets loaded by the client.
-   */
-  clientAssets: Record<string, Buffer>
+  publicDirMode?: PublicDirMode
+  onPublicFile?: (name: string, data: Buffer) => void
 }
 
 export async function bundle(
@@ -82,6 +77,7 @@ export async function bundle(
   options: BundleOptions = {}
 ): Promise<OutputBundle> {
   await context.loadRoutes()
+  await callPlugins(context.plugins, 'receiveBundleOptions', options)
 
   const { functions, functionImports, routeImports, runtimeConfig } =
     await prepareFunctions(context)
@@ -126,7 +122,7 @@ export async function bundle(
     clientAssets: assetMap,
   }
 
-  await callPlugins(context.plugins, 'receiveBundle', bundle)
+  await callPlugins(context.plugins, 'receiveBundle', bundle, options)
 
   if (bundle.path) {
     context.logger.info(
@@ -334,6 +330,7 @@ async function prepareFunctions(context: BundleContext) {
     debugBase: context.bundle.debugBase,
     defaultPath: context.defaultPath,
     delayModulePreload: config.saus.delayModulePreload,
+    githubRepo: (await getGitRepoByName('origin', context)).url,
     htmlTimeout: config.saus.htmlTimeout,
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
@@ -547,6 +544,17 @@ async function generateSsrBundle(
   if (!options.preferExternal) {
     config.ssr!.noExternal = /./
     config.ssr!.external = bundleConfig.external
+  }
+
+  let publicFiles: Record<string, Buffer> | undefined
+  if (options.publicDirMode == 'cache') {
+    const { onPublicFile } = options
+
+    publicFiles = {}
+    options.onPublicFile = (name, data) => {
+      publicFiles![name] = data
+      return onPublicFile && onPublicFile(name, data)
+    }
   }
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild

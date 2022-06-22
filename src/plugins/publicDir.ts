@@ -4,7 +4,9 @@ import fs from 'fs'
 import { green } from 'kleur/colors'
 import { success } from 'misty'
 import path from 'path'
-import { dataToEsm, endent, Plugin, vite } from '../core'
+import { Promisable } from 'type-fest'
+import { OutputBundle } from '../bundle/types'
+import { dataToEsm, endent, Plugin, SausPlugin, vite } from '../core'
 
 const isDebug = !!process.env.DEBUG
 const debug = createDebug('saus:publicDir')
@@ -20,6 +22,11 @@ export type CopyPublicOptions = {
   exclude?: string | RegExp | (string | RegExp)[]
 }
 
+export const cachedPublicFiles = new WeakMap<
+  OutputBundle,
+  Record<string, Buffer>
+>()
+
 /**
  * Copy files from `publicDir` into the `build.outDir` directory,
  * as defined in your Vite config.
@@ -28,32 +35,6 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
   let plugins: readonly vite.Plugin[]
   let publicDir: string
   let outDir: string
-
-  const copiedFiles = new Map<string, string>()
-  const writtenFiles = new Map<string, Buffer>()
-  const renamedFiles = new Map<string, string>()
-
-  function commitFiles() {
-    if (!publicDir) {
-      return
-    }
-    for (const [srcPath, destPath] of copiedFiles) {
-      mkdirSync(path.dirname(destPath))
-      fs.copyFileSync(srcPath, destPath)
-    }
-    for (const [destPath, buffer] of writtenFiles) {
-      mkdirSync(path.dirname(destPath))
-      fs.writeFileSync(destPath, buffer)
-    }
-    success(
-      `${copiedFiles.size + writtenFiles.size} files copied from ${green(
-        path
-          .relative(process.cwd(), publicDir)
-          .replace(/^([^.])/, './$1')
-          .replace(/([^/])$/, '$1/')
-      )}`
-    )
-  }
 
   const isExcluded = createFilter(options.exclude || /^$/, undefined, {
     resolve: false,
@@ -71,111 +52,183 @@ export function copyPublicDir(options: CopyPublicOptions = {}) {
     configResolved(config) {
       plugins = config.plugins
     },
-    async saus(context) {
-      const baseOutDir = path.resolve(context.root, context.config.build.outDir)
-      outDir = path.resolve(baseOutDir, options.prefix || '')
-      publicDir = context.config.publicDir
-      if (publicDir) {
-        publicDir = path.resolve(context.root, publicDir)
-      }
+    saus: context => ({
+      async receiveBundleOptions({ publicDirMode = 'write' }) {
+        if (!publicDir || publicDirMode == 'skip') return
 
-      const transformers = context.plugins
-        .filter(p => p.transformPublicFile)
-        .map(p => p.transformPublicFile) as PublicFileTransform[]
+        const cache: Record<string, Buffer> | null =
+          publicDirMode == 'cache' ? {} : null
 
-      if (options.transform) {
-        transformers.push(options.transform)
-      }
+        const copiedFiles = new Map<string, string>()
+        const writtenFiles = new Map<string, Buffer>()
+        const renamedFiles = new Map<string, string>()
 
-      let transform: PublicFileTransform | undefined
-      if (transformers.length) {
-        transform = async file => {
-          const { name } = file
-          for (const transform of transformers) {
-            await transform(file)
+        const commitFiles = async (
+          bundle?: OutputBundle,
+          onPublicFile?: (name: string, data: Buffer) => Promisable<void>
+        ): Promise<void> => {
+          if (bundle && cache) {
+            cachedPublicFiles.set(bundle, cache)
           }
-          if (name !== file.name) {
-            renamedFiles.set(name, file.name)
+          const processing: any[] = []
+          for (const [srcPath, destPath] of copiedFiles) {
+            const name =
+              cache || onPublicFile ? path.relative(outDir, destPath) : null!
+            const buffer =
+              cache || onPublicFile ? fs.readFileSync(srcPath) : null!
+            if (onPublicFile) {
+              processing.push(onPublicFile(name, buffer))
+            }
+            if (publicDirMode == 'write') {
+              mkdirSync(path.dirname(destPath))
+              fs.copyFileSync(srcPath, destPath)
+            } else if (cache) {
+              cache[name] = buffer
+            }
           }
+          for (const [destPath, buffer] of writtenFiles) {
+            const name =
+              cache || onPublicFile ? path.relative(outDir, destPath) : null!
+            if (onPublicFile) {
+              processing.push(onPublicFile(name, buffer))
+            }
+            if (publicDirMode == 'write') {
+              mkdirSync(path.dirname(destPath))
+              fs.writeFileSync(destPath, buffer)
+            } else if (cache) {
+              cache[name] = buffer
+            }
+          }
+          await Promise.all(processing)
+          success(
+            `${copiedFiles.size + writtenFiles.size} files copied from ${green(
+              path
+                .relative(process.cwd(), publicDir)
+                .replace(/^([^.])/, './$1')
+                .replace(/([^/])$/, '$1/')
+            )}`
+          )
         }
-      }
 
-      if (publicDir && fs.existsSync(publicDir)) {
-        await collectFiles(
-          publicDir,
-          outDir,
-          copiedFiles,
-          writtenFiles,
-          isExcluded,
-          transform
+        const baseOutDir = path.resolve(
+          context.root,
+          context.config.build.outDir
         )
-      }
+        outDir = path.resolve(baseOutDir, options.prefix || '')
+        publicDir = context.config.publicDir
+        if (publicDir) {
+          publicDir = path.resolve(context.root, publicDir)
+        }
 
-      const renamedFileMap = Object.fromEntries(renamedFiles.entries())
+        const transformers = context.plugins
+          .filter(p => p.transformPublicFile)
+          .map(p => p.transformPublicFile) as PublicFileTransform[]
 
-      // Rewrite JS imports of public files.
-      if (renamedFiles.size) {
-        const originalFileMap: Record<string, string> = {}
+        if (options.transform) {
+          transformers.push(options.transform)
+        }
 
-        resolver.resolveId = id => {
-          if (id[0] == '/') {
-            const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
-            const newId = renamedFileMap[cleanedId]
-            if (newId) {
-              originalFileMap[newId] = cleanedId
-              return '/' + newId + suffix
+        let transform: PublicFileTransform | undefined
+        if (transformers.length) {
+          transform = async file => {
+            const { name } = file
+            for (const transform of transformers) {
+              await transform(file)
+            }
+            if (name !== file.name) {
+              renamedFiles.set(name, file.name)
             }
           }
         }
 
-        resolver.load = async function (id, options) {
-          if (id[0] == '/') {
-            const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
-            const originalId = originalFileMap[cleanedId]
-            if (!originalId) {
-              return
-            }
-            const originalUrl = '/' + originalId + suffix
-            for (const plugin of plugins) {
-              if (!plugin.load || plugin == resolver) {
-                continue
+        if (publicDir && fs.existsSync(publicDir)) {
+          await collectFiles(
+            publicDir,
+            outDir,
+            copiedFiles,
+            writtenFiles,
+            isExcluded,
+            transform
+          )
+        }
+
+        const renamedFileMap = Object.fromEntries(renamedFiles.entries())
+
+        // Rewrite JS imports of public files.
+        if (renamedFiles.size) {
+          const originalFileMap: Record<string, string> = {}
+
+          resolver.resolveId = id => {
+            if (id[0] == '/') {
+              const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
+              const newId = renamedFileMap[cleanedId]
+              if (newId) {
+                originalFileMap[newId] = cleanedId
+                return '/' + newId + suffix
               }
-              const loadResult = await plugin.load.call(
-                this,
-                originalUrl,
-                options
-              )
-              if (loadResult != null) {
-                return loadResult
+            }
+          }
+
+          resolver.load = async function (id, options) {
+            if (id[0] == '/') {
+              const [cleanedId, suffix = ''] = id.slice(1).split(/([#?].*$)/)
+              const originalId = originalFileMap[cleanedId]
+              if (!originalId) {
+                return
+              }
+              const originalUrl = '/' + originalId + suffix
+              for (const plugin of plugins) {
+                if (!plugin.load || plugin == resolver) {
+                  continue
+                }
+                const loadResult = await plugin.load.call(
+                  this,
+                  originalUrl,
+                  options
+                )
+                if (loadResult != null) {
+                  return loadResult
+                }
               }
             }
           }
         }
-      }
 
-      return {
-        onRuntimeConfig(config) {
-          config.publicDir = path.relative(baseOutDir, outDir) || './'
-        },
-        async fetchBundleImports(modules) {
-          if (renamedFiles.size) {
-            // Rewrite HTML references of public files.
-            const renamer = modules.addModule({
-              id: '@saus/copyPublicDir/renamer.js',
-              code: endent`
+        const assign = Object.assign as <T>(target: T, props: Partial<T>) => T
+        assign(this as SausPlugin, {
+          onRuntimeConfig(config) {
+            config.publicDir = path.relative(baseOutDir, outDir) || './'
+          },
+          async fetchBundleImports(modules) {
+            if (renamedFiles.size) {
+              // Rewrite HTML references of public files.
+              const renamer = modules.addModule({
+                id: '@saus/copyPublicDir/renamer.js',
+                code: endent`
                 import {resolveHtmlImports} from "@saus/html"
                 ${dataToEsm(renamedFileMap, 'const renameMap')}
                 resolveHtmlImports(id => renameMap[id])
               `,
-            })
+              })
 
-            return [renamer.id]
-          }
-        },
-        receiveBundle: bundle => (bundle.path ? commitFiles() : void 0),
-        onWritePages: commitFiles,
-      }
-    },
+              return [renamer.id]
+            }
+          },
+          // Only write if a bundle path is present or when the `onPublicFile`
+          // option is defined.
+          receiveBundle: (bundle, options) => {
+            if (options.onPublicFile) {
+              return commitFiles(bundle, options.onPublicFile)
+            }
+            if (bundle.path) {
+              return commitFiles(bundle)
+            }
+          },
+          // Always write to disk when `saus build` runs.
+          onWritePages: () => commitFiles(),
+        })
+      },
+    }),
   }
 
   return [resolver, copier]

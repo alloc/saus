@@ -1,6 +1,6 @@
-import { ServerResponse } from 'http'
 import { CamelCase } from 'type-fest'
 import { writeHeaders } from '../runtime/writeHeaders'
+import { pick } from '../utils/pick'
 import { normalizeHeaders } from './normalizeHeaders'
 
 export interface CommonHeaders
@@ -88,7 +88,138 @@ export interface ShortcutHeaders {
   content: ContentHeaders
 }
 
-export type DeclaredHeaders<T = Headers | null> = {
+const toDashCase = (input: string) =>
+  input
+    .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
+    .toLowerCase()
+
+type WrappedHeaders = ResponseHeaders | null
+
+/**
+ * This function provides a builder for defining headers in a more
+ * functional style via this-chaining. The methods mutate the given
+ * `headers` object, so chaining the calls is not strictly required.
+ */
+export class DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders> {
+  private proxy: DeclaredHeaders<T>
+  private headers: Record<string, string | string[]> | null
+  constructor(
+    headers: T,
+    private filter: (
+      name: string,
+      newValue: string | string[] | undefined,
+      headers: Exclude<T, null>
+    ) => boolean = () => true
+  ) {
+    this.headers = headers as any
+    return (this.proxy = new Proxy(this, {
+      get(self: any, key: string, proxy: any) {
+        if (self[key]) {
+          return self[key]
+        }
+        if (shortcutHeaderNames.includes(key as any)) {
+          const scope = toDashCase(key)
+          return (props: any) => {
+            if (props == null) {
+              return proxy
+            }
+            const headers: any = (self.headers ||= {})
+            for (const prop in props) {
+              const name = scope + '-' + prop
+              const newValue = props[prop]
+              if (!filter(name, newValue, headers)) {
+                continue
+              }
+              headers[name] =
+                newValue != null
+                  ? Array.isArray(newValue)
+                    ? commaDelimitedNames.includes(prop)
+                      ? newValue.join(', ')
+                      : newValue
+                    : newValue === false && omitFalseNames.includes(prop)
+                    ? undefined
+                    : '' + newValue
+                  : undefined
+            }
+            return proxy
+          }
+        }
+        return self.set.bind(self, toDashCase(key))
+      },
+    }))
+  }
+  /** Coerce to a `Headers` object or null. */
+  toJSON() {
+    return this.headers
+  }
+  /** Get a new object with only the given header names. */
+  pick<P extends string & keyof T>(names: P[]): Pick<T, P> {
+    return pick(this.headers || {}, names, Boolean) as any
+  }
+  /**
+   * Returns true if the `name` header is defined. \
+   * Can also check the header value.
+   */
+  has(name: string, value?: string | RegExp) {
+    const current = this.headers?.[name]
+    if (current !== undefined) {
+      if (value !== undefined) {
+        const test =
+          typeof value == 'string'
+            ? (current: string) => value === current
+            : (current: string) => value.test(current)
+
+        return Array.isArray(current) ? current.some(test) : test(current)
+      }
+      return true
+    }
+    return false
+  }
+  /**
+   * Set any header.
+   */
+  set(name: string, value: string | string[] | undefined) {
+    if (value !== undefined) {
+      const headers: any = this.headers || {}
+      if (this.filter(name, value, headers)) {
+        this.headers ||= headers
+        headers[name] = value
+      }
+    }
+    return this.proxy
+  }
+  /** Merge headers defined in the given object. */
+  merge(values: RequestHeaders | null | undefined) {
+    if (values) {
+      values = normalizeHeaders(values)
+      for (const [key, value] of Object.entries(values)) {
+        if (value !== undefined) {
+          this.headers ||= {}
+          this.headers[key] = value
+        }
+      }
+    }
+    return this.proxy
+  }
+  /** Apply defined headers to the given response. */
+  apply(response: { setHeader(name: string, value: any): void }) {
+    if (this.headers) {
+      writeHeaders(response, this.headers)
+    }
+  }
+  /** The next calls will be skipped if the header is already defined. */
+  get defaults() {
+    const headers = (this.headers ||= {})
+    return new DeclaredHeaders(headers, name => {
+      return headers[name] === undefined
+    })
+  }
+}
+
+export interface DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders>
+  extends GeneratedMethods<T> {}
+
+type GeneratedMethods<T extends WrappedHeaders = WrappedHeaders> = {
   readonly [P in keyof CommonHeaders as CamelCase<P>]: (
     value: CommonHeaders[P] | undefined
   ) => DeclaredHeaders<T>
@@ -96,101 +227,4 @@ export type DeclaredHeaders<T = Headers | null> = {
   readonly [P in keyof ShortcutHeaders]: (
     value: ShortcutHeaders[P] | undefined
   ) => DeclaredHeaders<T>
-} & {
-  readonly [name: string]: (
-    value: string | string[] | undefined
-  ) => DeclaredHeaders<T>
-} & {
-  /** Apply defined headers to the given response. */
-  readonly apply: (response: {
-    setHeader(name: string, value: any): void
-  }) => void
-  /** Merge headers defined in the given object. */
-  readonly merge: (headers: Headers | null | undefined) => DeclaredHeaders<T>
-  /** The next calls will be skipped if the header is already defined. */
-  readonly defaults: DeclaredHeaders<T>
-  /** Coerce to a `Headers` object or null. */
-  readonly toJSON: () => T
-}
-
-const toDashCase = (input: string) =>
-  input
-    .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
-    .toLowerCase()
-
-/**
- * This function provides a builder for defining headers in a more
- * functional style via this-chaining. The methods mutate the given
- * `headers` object, so chaining the calls is not strictly required.
- */
-export function makeDeclaredHeaders<T extends Headers | null>(
-  init: T | undefined,
-  filter: (
-    name: string,
-    newValue: string | string[] | undefined,
-    headers: Headers
-  ) => boolean = () => true
-): DeclaredHeaders<T> {
-  const headers = (init || {}) as Headers
-  return new Proxy(headers as any, {
-    get(_, key: string, proxy) {
-      if (key == 'toJSON') {
-        return () => normalizeHeaders(headers)
-      }
-      if (key == 'merge') {
-        return (values: any) => {
-          if (values) {
-            values = normalizeHeaders(values)
-            for (const key in values) {
-              if (values[key] !== undefined) {
-                headers[key] = values[key]
-              }
-            }
-          }
-          return proxy
-        }
-      }
-      if (key == 'apply') {
-        return (response: ServerResponse) => {
-          writeHeaders(response, headers)
-        }
-      }
-      if (key == 'defaults') {
-        return makeDeclaredHeaders(headers, name => {
-          return headers[name] === undefined
-        })
-      }
-      if (shortcutHeaderNames.includes(key as any)) {
-        const scope = toDashCase(key)
-        return (props: any) => {
-          if (props == null) return proxy
-          for (const prop in props) {
-            const name = scope + '-' + prop
-            const newValue = props[prop]
-            if (!filter(name, newValue, headers)) {
-              continue
-            }
-            headers[name] =
-              newValue != null
-                ? Array.isArray(newValue)
-                  ? commaDelimitedNames.includes(prop)
-                    ? newValue.join(', ')
-                    : newValue
-                  : newValue === false && omitFalseNames.includes(prop)
-                  ? undefined
-                  : '' + newValue
-                : undefined
-          }
-          return proxy
-        }
-      }
-      return (value: any) => {
-        const name = toDashCase(key)
-        if (filter(name, value, headers)) {
-          headers[name] = value
-        }
-        return proxy
-      }
-    },
-  })
 }

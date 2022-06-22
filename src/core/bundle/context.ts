@@ -40,6 +40,11 @@ export interface BundleContext extends BaseContext {
    * that could import from the `saus` package.
    */
   bundlePlugins: vite.Plugin[]
+  /**
+   * Instead of writing public files to `build.outDir`,
+   * call this function with each public file.
+   */
+  onPublicFile?: (name: string, data: Buffer) => void
 }
 
 export async function loadBundleContext(

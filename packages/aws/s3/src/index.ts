@@ -1,3 +1,5 @@
+export * from './copyObject'
 export * from './deleteObjects'
 export * from './listObjects'
+export * from './moveObjects'
 export * from './putObject'

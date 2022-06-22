@@ -4,13 +4,27 @@ import { Promisable } from 'type-fest'
 
 export { CloudForm }
 
-export interface Stack {
+export interface Stack<Outputs extends object | void = any> {
   id?: string
   name: string
   region: string
   resources: Record<string, ResourceBase>
-  outputs?: Record<string, Value<any>>
+  outputs: Outputs extends any
+    ? undefined extends Outputs
+      ? undefined
+      : {
+          [P in keyof Outputs]: ResolveOutputs<Outputs[P]>
+        }
+    : never
 }
+
+type ResolveOutputs<T> = T extends ResourceRef
+  ? string
+  : T extends AttributeRef<infer U>
+  ? U
+  : T extends object
+  ? { [P in keyof T]: ResolveOutputs<T[P]> }
+  : T
 
 export type StackTemplate<Outputs extends object | void = void> = (
   ref: ResourceRef.Factory,

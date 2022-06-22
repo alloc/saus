@@ -46,6 +46,8 @@ export interface RuntimeConfig {
   debugBase?: string
   defaultPath: string
   delayModulePreload?: boolean
+  githubRepo: string
+  githubToken?: string
   htmlTimeout?: number
   minify: boolean
   mode: string

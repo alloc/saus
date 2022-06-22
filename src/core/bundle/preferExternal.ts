@@ -2,18 +2,18 @@ import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
-import { bareImportRE } from '../../utils/importRegex'
 import { findPackage } from '../../utils/findPackage'
-import { SausContext } from '../context'
+import { bareImportRE } from '../../utils/importRegex'
 import { debug } from '../debug'
 import { vite } from '../vite'
+import { BundleContext } from './context'
 
 type ExternalDictation = { external: boolean; msg?: string }
 type PreferExternal = vite.Plugin & {
   isExternal(id: string): ExternalDictation
 }
 
-export function preferExternal(context: SausContext): PreferExternal {
+export function preferExternal(context: BundleContext): PreferExternal {
   const externalCache = new Map<string, boolean>()
   const cjsResolve = context.config.createResolver({
     asSrc: false,

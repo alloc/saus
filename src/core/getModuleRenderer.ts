@@ -26,7 +26,6 @@ export interface ModuleRenderer {
    */
   renderPageState(
     { path, props, stateModules, head }: RenderedPage,
-    helpersId: string,
     preloadUrls?: string[]
   ): string
   /**
@@ -36,7 +35,7 @@ export interface ModuleRenderer {
    * the `StateModule#get` method.
    */
   renderStateModule(
-    stateModuleId: string,
+    cacheKey: string,
     cachedState: CacheEntry<any>,
     inline?: boolean
   ): string
@@ -44,10 +43,11 @@ export interface ModuleRenderer {
 
 export function getModuleRenderer(context: AppContext): ModuleRenderer {
   const { config: runtimeConfig } = context
+  const { debugBase = '' } = runtimeConfig
 
   const self: ModuleRenderer = {
-    renderPageState(page, helpersId, preloadUrls) {
-      const { path, props, stateModules, head } = page
+    renderPageState(page, preloadUrls) {
+      const { path, props, stateModules, head, isDebug } = page
 
       const { base, stateModuleBase } = runtimeConfig
       const toStateUrl = (id: string) =>
@@ -154,7 +154,9 @@ export function getModuleRenderer(context: AppContext): ModuleRenderer {
       }
 
       if (helpers.length) {
-        imports.set(base + helpersId, helpers)
+        const helpersId =
+          base + (isDebug ? debugBase.slice(1) : '') + context.helpersId
+        imports.set(helpersId, helpers)
       }
 
       if (imports.size) {
@@ -172,11 +174,11 @@ export function getModuleRenderer(context: AppContext): ModuleRenderer {
 
       return code
     },
-    renderStateModule(stateModuleId, [state, ...config], inline) {
+    renderStateModule(cacheKey, [state, ...config], inline) {
       let lines: string[]
       if (inline) {
         const cacheEntry = dataToEsm([state, ...config], '')
-        lines = [`"${stateModuleId}": ${cacheEntry},`]
+        lines = [`"${cacheKey}": ${cacheEntry},`]
       } else {
         const cacheEntry = 'state' + commaDelimited(config)
         const stateCacheUrl = prependBase(
@@ -186,11 +188,11 @@ export function getModuleRenderer(context: AppContext): ModuleRenderer {
         lines = [
           `import { globalCache } from "${stateCacheUrl}"`,
           dataToEsm(state, 'state'),
-          `globalCache.loaded["${stateModuleId}"] = [${cacheEntry}]`,
+          `globalCache.loaded["${cacheKey}"] = [${cacheEntry}]`,
           `export default state`,
         ]
       }
-      const args = stateModuleArguments.get(stateModuleId)
+      const args = stateModuleArguments.get(cacheKey)
       const argsComment = args ? `/* ${JSON.stringify(args)} */\n` : ``
       return argsComment + lines.join('\n')
     },

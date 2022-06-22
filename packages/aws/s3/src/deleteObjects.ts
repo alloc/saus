@@ -6,8 +6,7 @@ import { signedRequest } from './api/request'
 import { pickAllExcept } from './utils/pick'
 
 export function deleteObjects(region: string) {
-  const send = signedRequest(region)
-  return send.action('DeleteObjects', {
+  return signedRequest(region).action('DeleteObjects', {
     coerceRequest(params) {
       const { ChecksumAlgorithm: checksumAlgo, ...headerParams } =
         pickAllExcept(params, ['Delete', ...commonParamKeys])

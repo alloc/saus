@@ -11,9 +11,9 @@ import {
   resolveMapSources,
   SourceMap,
 } from '../../utils/sourceMap'
-import { SausContext } from '../context'
 import { bundleDir, clientDir, httpDir, toSausPath } from '../paths'
 import { vite } from '../vite'
+import { BundleContext } from './context'
 import { internalRedirects } from './moduleRedirects'
 
 const sausRoot = toSausPath('src/')
@@ -51,7 +51,7 @@ function buildEntryMap(entries: Record<string, string>) {
 }
 
 export async function preBundleSsrRuntime(
-  context: SausContext
+  context: BundleContext
 ): Promise<vite.Plugin> {
   const entryMap = buildEntryMap({
     // "saus" entry point

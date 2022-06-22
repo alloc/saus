@@ -1,0 +1,28 @@
+{
+  "name": "@saus/aws-s3-website",
+  "version": "0.1.0",
+  "description": "Deploy your Saus website to S3",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup --clean",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*"
+  },
+  "dependencies": {
+    "@saus/aws-s3": "*",
+    "@saus/cloudform": "*"
+  }
+}

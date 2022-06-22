@@ -6,6 +6,7 @@ import type { Route } from '../core/routes'
 import type { Headers } from '../http'
 import { route } from '../routes'
 import { globalCache } from '../runtime/cache'
+import { CachePlugin } from '../runtime/cachePlugin'
 import { getCachedState } from '../runtime/getCachedState'
 import { stateModulesById } from '../runtime/stateModules'
 import { prependBase } from '../utils/base'
@@ -61,7 +62,7 @@ export function defineBuiltinRoutes(
         const module = `throw Object.assign(Error(), ${JSON.stringify(props)})`
         sendModule(req, module)
       } else if (page?.props) {
-        const module = renderer.renderPageState(page, context.helpersId)
+        const module = renderer.renderPageState(page)
         sendModule(req, module)
       }
     }
@@ -70,13 +71,31 @@ export function defineBuiltinRoutes(
   // State modules
   route(`${context.config.stateModuleBase}*.js`)
     .get(async req => {
-      const stateModuleId = req.wild
-      await getCachedState(stateModuleId, globalCache.loaders[stateModuleId])
+      const cacheKey = req.wild
+      const id = cacheKey.slice(0, cacheKey.lastIndexOf('.'))
 
-      const stateEntry = globalCache.loaded[stateModuleId]
-      if (stateEntry) {
-        const module = renderer.renderStateModule(stateModuleId, stateEntry)
-        sendModule(req, module)
+      const stateModule = stateModulesById.get(id)
+      if (stateModule) {
+        await getCachedState(cacheKey, async cacheControl => {
+          let result: any
+          if (CachePlugin.loader) {
+            result = await CachePlugin.loader(cacheKey, cacheControl)
+          }
+          if (result !== undefined) {
+            return result
+          }
+          const loader = globalCache.loaders[cacheKey]
+          if (loader) {
+            return loader(cacheControl)
+          }
+          cacheControl.maxAge = 0
+        })
+
+        const stateEntry = globalCache.loaded[cacheKey]
+        if (stateEntry) {
+          const module = renderer.renderStateModule(cacheKey, stateEntry)
+          sendModule(req, module)
+        }
       }
     })
     // Ensure a state module is generated.

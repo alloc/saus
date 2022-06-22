@@ -1,13 +1,14 @@
 import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
-import { Promisable } from 'type-fest'
+import { PackageJson, Promisable } from 'type-fest'
 import { noop } from '../../utils/noop'
 import { injectNodeModule } from '../../vm/nodeModules'
 import { ModuleMap, RequireAsync, ResolveIdHook } from '../../vm/types'
 import { BundleContext, loadBundleContext } from '../bundle'
 import { DeployTarget } from '../deploy'
 import { getRequireFunctions } from '../getRequireFunctions'
+import { getGitRepoByName } from '../git'
 import { getViteTransform } from '../viteTransform'
 import { GitFiles } from './files'
 import { DeployOptions } from './options'
@@ -24,6 +25,10 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   command: 'deploy' | 'secrets'
   files: GitFiles
   secrets: SecretHub
+  /** The `package.json` file found in project root. */
+  rootPackage: PackageJson
+  /** The HEAD commit of the project repository. */
+  lastCommitHash: string
   /** For git operations, deploy to this repository. */
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
@@ -47,8 +52,16 @@ export async function prepareDeployContext(
 ): Promise<DeployContext> {
   const context: DeployContext = (await bundleContext) as any
 
+  context.rootPackage = JSON.parse(
+    fs.readFileSync(path.join(context.root, 'package.json'), 'utf8')
+  )
+
   context.gitRepo =
     options.gitRepo || (await getGitRepoByName('origin', context))
+
+  context.lastCommitHash = await exec('git rev-parse --short head', {
+    cwd: context.root,
+  })
 
   const cacheDir = path.resolve(context.root, 'node_modules/.saus/deployed')
   fs.mkdirSync(cacheDir, { recursive: true })
@@ -109,22 +122,4 @@ async function pullCachedTargets(
       cwd: cacheDir,
     })
   }
-}
-
-async function getGitRepoByName(name: string, context: DeployContext) {
-  const remotes = parseRemotes(
-    await exec('git remote -v', { cwd: context.root })
-  )
-  const repo = remotes.find(repo => repo.type == 'push' && repo.name == name)
-  if (!repo) {
-    throw Error('[saus] Repository not found: ' + name)
-  }
-  return repo
-}
-
-function parseRemotes(text: string) {
-  return text.split('\n').map(line => {
-    const [name, url, type] = line.split(/\s+/)
-    return { type: type.slice(1, -1) as 'fetch' | 'push', name, url }
-  })
 }

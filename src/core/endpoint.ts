@@ -102,6 +102,7 @@ export namespace Endpoint {
     readonly method: string
     readonly headers: Readonly<RequestHeaders>
     readonly read: () => Promise<Buffer>
+    readonly json: <T = any>() => Promise<T>
     /**
      * The platform-specific request object related to this URL. \
      * For example, it's an `IncomingMessage` instance when using a
@@ -120,9 +121,10 @@ export namespace Endpoint {
   }
 
   export type Response = {
+    ok: boolean
     status: number
-    headers: DeclaredHeaders
-    body?: Body
+    headers: DeclaredHeaders<ResponseHeaders>
+    body?: AnyBody
   }
 
   export type ResponseTuple = [

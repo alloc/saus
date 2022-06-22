@@ -1,10 +1,11 @@
 import type { StateModule } from '../runtime/stateModules'
-import { OneOrMany } from '../utils/types'
+import type { OneOrMany } from '../utils/types'
 import type { RequireAsync } from '../vm/types'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
 import type { RuntimeHook } from './setup'
+import type { StateCache } from './StateCache'
 
 // Lifted from https://github.com/lukeed/regexparam
 export type InferRouteParams<T extends string> =
@@ -192,6 +193,7 @@ export interface RoutesModule extends HtmlContext {
   ssrRequire?: RequireAsync
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
+  stateCache?: StateCache
 }
 
 type RoutePathHandlers = {

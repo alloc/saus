@@ -16,13 +16,13 @@ export type StackOptions<Outputs extends object | void = any> = {
  */
 export const useCloudFormation = <Outputs extends object | void>(
   options: StackOptions<Outputs>
-) => addDeployTarget(hook, defineStack(options))
+): Promise<Stack<Outputs>> => addDeployTarget(hook, defineStack(options))
 
-async function defineStack({
+async function defineStack<Outputs extends object | void>({
   name,
   region,
   template,
-}: StackOptions): Promise<Stack> {
+}: StackOptions<Outputs>): Promise<Stack<Outputs>> {
   const resources: Record<string, ResourceBase> = {}
   const makeRef: ResourceRef.Factory = (id, resource) => {
     resources[id] = resource

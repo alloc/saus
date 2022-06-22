@@ -1,5 +1,7 @@
 import { createApp as create } from '../app/createApp'
 import type { App, AppContext, PageContext } from '../app/types'
+import { loadDeployedEnv } from '../core/deployedEnv'
+import { setRequestMetadata } from '../runtime/requestMetadata'
 import { prependBase } from '../utils/base'
 import { LazyPromise } from '../utils/LazyPromise'
 import { context } from './context'
@@ -18,6 +20,7 @@ const routeSetup = new LazyPromise(resolve => {
 })
 
 export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
+  await loadDeployedEnv(config)
   await routeSetup
   return create(context, [
     isolatePages(context),
@@ -67,7 +70,9 @@ function createPageEndpoint(context: AppContext): App.Plugin {
       route.moduleId !== null &&
       method == 'GET' &&
       (async (req, headers) => {
-        const page = await app.renderPageBundle(req, route)
+        const page = await app.renderPageBundle(req, route, {
+          receivePage: page => page && setRequestMetadata(req, { page }),
+        })
         if (page) {
           headers.content({
             type: 'text/html; charset=utf-8',

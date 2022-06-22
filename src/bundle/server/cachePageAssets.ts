@@ -2,7 +2,6 @@ import type { App } from '../../app/types'
 import { Headers, normalizeHeaders } from '../../http'
 import { onResponse } from '../../routes'
 import { prependBase } from '../../utils/base'
-import { pick } from '../../utils/pick'
 import config from '../runtimeConfig'
 import type { PageBundle } from '../types'
 import type { FileCache } from './fileCache'
@@ -29,27 +28,25 @@ export const cachePageAssets = (cache: FileCache): App.Plugin => {
   )
 
   const recentPages = new Map<string, PageBundle>()
-  onResponse(1e3, (req, [status, headers]) => {
+  onResponse(1e3, (req, { status, headers }) => {
     if (status == 200) {
       const page = recentPages.get(req.path)
       if (page) {
         recentPages.delete(req.path)
 
-        const pageCacheRules =
-          headers &&
-          pick(
-            headers,
-            ['cache-control', 'cdn-cache-control', 'expires'],
-            Boolean
-          )
+        const pageCacheRules = headers.pick([
+          'cache-control',
+          'cdn-cache-control',
+          'expires',
+        ])
 
         const getHeaders = (url: string) => {
           if (url.endsWith('.html.js')) {
-            const headers = pageCacheRules && { ...pageCacheRules }
+            const headers = { ...pageCacheRules }
 
             // If the Expires header exists, use it to refresh the max-age and
             // s-maxage values in the Cache-Control and CDN-Cache-Control headers.
-            if (headers?.expires) {
+            if (headers.expires) {
               const expires = new Date(headers.expires)
               const maxAge = Math.floor((expires.getTime() - Date.now()) / 1e3)
               const replaceMaxAge = (key: keyof typeof headers) => {

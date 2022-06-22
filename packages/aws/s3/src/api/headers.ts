@@ -1,4 +1,26 @@
-import { Headers } from 'saus/http'
+import { RequestHeaders } from 'saus/http'
+import { pick, pickAllExcept } from '../utils/pick'
+import { commonParamKeys } from './params'
+
+/**
+ * Convert pascal-cased API params into HTTP headers. \
+ * Unknown headers have `x-amz-` prepended to them.
+ */
+export function paramsToHeaders<Params extends object>(
+  params: Params,
+  ignore: (string & keyof Params)[] = []
+): RequestHeaders {
+  return {
+    ...pick(params, httpHeaderParams),
+    ...formatAmzHeaders(
+      pickAllExcept(params, [
+        ...ignore,
+        ...commonParamKeys,
+        ...httpHeaderParams,
+      ])
+    ),
+  }
+}
 
 export function formatAmzHeaders(values: Record<string, any>) {
   return formatHeaders(values, key => 'x-amz-' + toDashCase(key))
@@ -8,7 +30,7 @@ export function formatHeaders(
   values: Record<string, any>,
   transformKey: (key: string) => string = toDashCase
 ) {
-  const headers: Headers = {}
+  const headers: RequestHeaders = {}
   for (const key in values) {
     const value = values[key]
     if (value !== undefined) {
@@ -22,3 +44,14 @@ const toDashCase = (input: string) =>
   input
     .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
     .toLowerCase()
+
+const httpHeaderParams = [
+  'CacheControl',
+  'ContentDisposition',
+  'ContentEncoding',
+  'ContentLanguage',
+  'ContentLength',
+  'ContentMD5',
+  'ContentType',
+  'Expires',
+] as const

@@ -4,7 +4,6 @@ import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
-import { plural } from './core'
 import { BundleContext } from './core/bundle'
 import {
   DeployContext,
@@ -17,9 +16,11 @@ import {
 import { DeployTargetArgs, prepareDeployContext } from './core/deploy/context'
 import { loadDeployFile, loadDeployPlugin } from './core/deploy/loader'
 import { DeployOptions } from './core/deploy/options'
+import { deployedEnv } from './core/deployedEnv'
 import { defer, Deferred } from './utils/defer'
 import { diffObjects } from './utils/diffObjects'
 import { toObjectHash } from './utils/objectHash'
+import { plural } from './utils/plural'
 import { Promisable } from './utils/types'
 
 /**
@@ -32,7 +33,7 @@ export async function deploy(
   const context = await prepareDeployContext(options, bundleContext)
   const { files, logger } = context
 
-  const gitStatus = await exec('git status --porcelain', { cwd: context.root })
+  let gitStatus = await exec('git status --porcelain', { cwd: context.root })
   if (!options.dryRun && gitStatus) {
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
@@ -253,10 +254,19 @@ export async function deploy(
   } else {
     task = startTask('Saving deployment state')
     try {
+      files.get('env.json').setData(deployedEnv)
       targetsFile.setData(newTargetCache)
       await pushCachedTargets(context)
     } finally {
       task?.finish()
+    }
+    gitStatus = await exec('git status --porcelain', { cwd: context.root })
+    if (gitStatus) {
+      const { version = '0.0.0' } = context.rootPackage
+      await exec('git add -A', { cwd: context.root })
+      await exec(`git commit -m "v${version}-${context.lastCommitHash}"`, {
+        cwd: context.root,
+      })
     }
   }
 }

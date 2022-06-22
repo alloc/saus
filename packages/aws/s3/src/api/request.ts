@@ -15,6 +15,10 @@ export const signedRequest = (region: string) =>
       params: S3.DeleteObjectsRequest
       result: S3.DeleteObjectsOutput
     }
+    CopyObject: {
+      params: S3.CopyObjectRequest
+      result: S3.CopyObjectResult
+    }
   }>({
     region,
     service: 's3',

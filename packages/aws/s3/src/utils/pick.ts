@@ -1,4 +1,4 @@
-export function pick<T extends object, P extends (keyof T)[]>(
+export function pick<T extends object, P extends ReadonlyArray<keyof T>>(
   obj: T,
   keys: P,
   filter: (value: any, key: P[number]) => boolean = () => true
@@ -13,16 +13,16 @@ export function pick<T extends object, P extends (keyof T)[]>(
   return picked
 }
 
-export function pickAllExcept<T extends object, P extends (keyof T)[]>(
-  obj: T,
-  keys: P
-): Pick<T, Exclude<keyof T, P[number]>>
+export function pickAllExcept<
+  T extends object,
+  P extends ReadonlyArray<keyof T>
+>(obj: T, keys: P): Pick<T, Exclude<keyof T, P[number]>>
 
 export function pickAllExcept(
   obj: Record<string, any>,
-  keys: string[]
+  keys: readonly string[]
 ): Record<string, any>
 
-export function pickAllExcept(obj: any, keys: (keyof any)[]) {
+export function pickAllExcept(obj: any, keys: readonly (keyof any)[]) {
   return pick(obj, Object.keys(obj) as any, (_, key) => !keys.includes(key))
 }

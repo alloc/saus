@@ -71,6 +71,10 @@ export const createPageFactory: App.Plugin = app => {
         renderFinish: undefined,
       })
 
+      if (page) {
+        page.isDebug = isDebug
+      }
+
       options.receivePage?.(page, error)
 
       if (error) {
@@ -289,11 +293,7 @@ export const createPageFactory: App.Plugin = app => {
           if (page.props) {
             modules.add({
               id: pageStateId,
-              text: renderPageState(
-                page,
-                baseDir + moduleMap.helpers,
-                preloadList
-              ),
+              text: renderPageState(page, preloadList),
               exports: ['default'],
             })
 

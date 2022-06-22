@@ -2,6 +2,7 @@
 export { default as endent } from 'endent'
 export * from '../utils/controlExecution'
 export * from '../utils/dataToEsm'
+export * from '../utils/defer'
 export * from '../utils/diffObjects'
 export * from '../utils/escape'
 export * from '../utils/getPageFilename'

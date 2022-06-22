@@ -73,6 +73,7 @@ export type RenderedPage = {
   routeModuleId: string
   stateModules: string[]
   client?: Client
+  isDebug?: boolean
 }
 
 export type ProfiledEvent = {

@@ -68,6 +68,7 @@ const createPageEndpoint =
         route.moduleId !== null &&
         (async (req, headers) => {
           let [page, error] = await app.renderPage(req, route, {
+            // Skip default route if an extension is present.
             defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,
           })
 

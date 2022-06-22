@@ -122,15 +122,8 @@ async function pushFunctions(
 }
 
 async function getDeployCommitMessage(context: DeployContext) {
-  const pkgVersion: string =
-    JSON.parse(fs.readFileSync(path.join(context.root, 'package.json'), 'utf8'))
-      .version || '0.0.0'
-
-  const lastCommitHash = await exec('git rev-parse --short head', {
-    cwd: context.root,
-  })
-
-  return 'v' + pkgVersion + '-' + lastCommitHash
+  const version = context.rootPackage.version || '0.0.0'
+  return 'v' + version + '-' + context.lastCommitHash
 }
 
 function getDeployDir(props: Props) {

@@ -28,8 +28,9 @@ import { toDevPath } from '../../utils/toDevPath'
 import { compileEsm, exportsId, requireAsyncId } from '../../vm/compileEsm'
 import { ForceLazyBindingHook } from '../../vm/types'
 import { debug } from '../debug'
-import { extractClientFunctions, SausContext, vite } from '../index'
+import { extractClientFunctions, vite } from '../index'
 import { getViteTransform } from '../viteTransform'
+import { BundleContext } from './context'
 import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
 import { createRendererChunk } from './rendererChunk'
 import { RouteImports } from './routeModules'
@@ -50,7 +51,7 @@ export type IsolatedModule = {
  * The `isolatedModules` object is populated by this function.
  */
 export async function isolateRoutes(
-  context: SausContext,
+  context: BundleContext,
   routeImports: RouteImports,
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {

@@ -1,6 +1,6 @@
 import * as vite from 'vite'
 import { App } from '../app/types'
-import type { OutputBundle } from '../bundle'
+import type { BundleOptions, OutputBundle } from '../bundle'
 import type { PageBundle } from '../bundle/types'
 import type { ModuleProvider } from '../plugins/moduleProvider'
 import type { PublicFile } from '../plugins/publicDir'
@@ -92,9 +92,19 @@ export interface SausConfig {
    */
   render: string
   /**
-   * Path to the module that declares deploy targets.
+   * Configure the `saus deploy` command.
    */
-  deploy?: string
+  deploy?: {
+    /**
+     * Path to the module that declares deploy targets.
+     */
+    entry: string
+    /**
+     * Which remote repository to use for the deployment cache.
+     * @default "origin"
+     */
+    repository?: string
+  }
   /**
    * How many pages can be rendered at once.
    * @default os.cpus().length
@@ -267,7 +277,16 @@ export interface SausPlugin {
    *
    * ⚠︎ This is only called when `saus bundle` is used.
    */
-  receiveBundle?: (bundle: OutputBundle) => Promisable<void>
+  receiveBundle?: (
+    bundle: OutputBundle,
+    options: Readonly<BundleOptions>
+  ) => Promisable<void>
+  /**
+   * Called before the SSR bundle is generated.
+   *
+   * ⚠︎ This is only called when `saus bundle` is used.
+   */
+  receiveBundleOptions?: (options: BundleOptions) => Promisable<void>
   /**
    * Called before rendered pages are written to disk.
    *

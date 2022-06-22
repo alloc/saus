@@ -1,7 +1,9 @@
-import type { ServerResponse } from 'http'
-import type { Headers } from '../http/headers'
+type ResponseLike = { setHeader(name: string, value: string | string[]): void }
 
-export function writeHeaders(res: ServerResponse, headers: Headers) {
+export function writeHeaders(
+  res: ResponseLike,
+  headers: Record<string, string | string[] | undefined>
+) {
   for (const name in headers) {
     const value = headers[name]
     if (value !== undefined) {

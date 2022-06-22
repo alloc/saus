@@ -1,7 +1,8 @@
 import { UserConfig, vite } from './core'
 
 export * from './api'
-export { onDeploy, Plugin, UserConfig, vite } from './core'
+export type { OutputBundle } from './bundle/types'
+export { deployedEnv, onDeploy, Plugin, UserConfig, vite } from './core'
 export * from './plugins/publicDir'
 
 type BuildFactory = typeof import('./build').build
