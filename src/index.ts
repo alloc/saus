@@ -1,32 +1,29 @@
+import { Promisable } from 'type-fest'
 import { UserConfig, vite } from './core'
 
-export * from './api'
+export * from './bundle/runtime/api'
 export type { OutputBundle } from './bundle/types'
-export { deployedEnv, onDeploy, Plugin, UserConfig, vite } from './core'
-export * from './plugins/publicDir'
+export { Plugin, UserConfig, vite } from './core'
+export * from './publicDir'
 
-type BuildFactory = typeof import('./build').build
-type BundleFactory = typeof import('./bundle').bundle
-type ServerFactory = typeof import('./dev').createServer
+export const build = importWhenCalled('build', () => import('./build/api')),
+  deploy = importWhenCalled('deploy', () => import('./deploy/api')),
+  generateBundle = importWhenCalled('bundle', () => import('./bundle/api')),
+  createServer = importWhenCalled('createServer', () => import('./dev/api'))
 
-export const build: BuildFactory = async inlineConfig => {
-  const { build } = await import('./build')
-  return build(inlineConfig)
-}
-
-export const generateBundle: BundleFactory = async (config, options) => {
-  const { bundle } = await import('./bundle')
-  return bundle(config, options)
-}
-
-export const createServer: ServerFactory = async inlineConfig => {
-  const { createServer } = await import('./dev')
-  return createServer(inlineConfig)
-}
-
-type Promisable<T> = T | Promise<T>
-
-// Ensure the "saus" property is required.
+// The type-casting below ensures the "saus" config is type-checked.
 export const defineConfig = vite.defineConfig as (
   config: UserConfig | ((env: vite.ConfigEnv) => Promisable<UserConfig>)
 ) => vite.UserConfigExport
+
+function importWhenCalled<T, P extends string, Module extends { [K in P]: T }>(
+  name: P,
+  importFn: () => Promise<Module>
+): P extends keyof Module ? Function & Module[P] : never {
+  let exports: any
+  const wrapper = async (...args: any[]) => {
+    const { [name]: fn } = await (exports ||= importFn())
+    return fn(...args)
+  }
+  return wrapper as any
+}

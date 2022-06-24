@@ -1,6 +1,6 @@
 {
-  "include": ["src", "client"],
-  "exclude": ["src/client"],
+  "include": ["src", "*/*.d.ts"],
+  "exclude": ["src/core/client"],
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,

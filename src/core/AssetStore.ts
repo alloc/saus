@@ -1,9 +1,10 @@
-import { ResponseHeaders } from '../http'
+import { ResponseHeaders } from './http'
 
 /**
  * The `AssetStore` is a normalized object storage layer.
  */
 export interface AssetStore {
+  supportedHeaders?: string[]
   /**
    * Upsert an asset by its name.
    */

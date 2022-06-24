@@ -2,17 +2,17 @@ import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { BundleOptions } from '../bundle'
-import { callPlugins } from '../utils/callPlugins'
-import { md5Hex } from '../utils/md5-hex'
-import { pick } from '../utils/pick'
-import { SourceMap } from '../utils/sourceMap'
 import {
   BundleConfig,
   BundleContext,
   InlineBundleConfig,
   loadBundleContext,
-} from './bundle'
-import { MutableRuntimeConfig, RuntimeConfig } from './config'
+} from '../bundle/context'
+import { SourceMap } from './node/sourceMap'
+import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
+import { callPlugins } from './utils/callPlugins'
+import { md5Hex } from './utils/md5-hex'
+import { pick } from './utils/pick'
 import { vite } from './vite'
 
 type RuntimeConfigFn = (context: BundleContext) => Partial<RuntimeConfig>
@@ -83,7 +83,8 @@ export async function loadBundle({
     }
   }
   if (!bundleResult) {
-    const { bundle } = require('../bundle') as typeof import('../bundle')
+    const { bundle } =
+      require('../bundle/api') as typeof import('../bundle/api')
     bundleResult = await bundle(context, bundleOptions)
   }
 

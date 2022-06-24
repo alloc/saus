@@ -1,37 +1,17 @@
-import * as S3 from '@saus/aws-s3'
 import { ResourceRef, useCloudFormation } from '@saus/cloudform'
 import { OutputBundle } from 'saus'
-import { getDeployContext, md5Hex, onDeploy } from 'saus/core'
+import { getDeployContext } from 'saus/deploy'
+import { useBundleSync } from './sync'
+import { WebsiteConfig } from './types'
 
-interface Config {
-  /** The GUID of the CloudFormation stack. */
-  name: string
-  /** The region to deploy the CloudFormation stack. */
-  region: string
-  /** The domain to forward uncached requests to. */
-  origin: string
-  /** Configure the various buckets */
-  buckets?: {
-    /**
-     * Enable a bucket for hosting pre-rendered pages. \
-     * This bucket must be populated manually.
-     */
-    popularPages?: boolean
-    /**
-     * Enable a bucket that acts as an indefinite cache for
-     * pages generated just-in-time. This is perfect for reducing
-     * load on the origin server.
-     *
-     * This bucket must be populated manually.
-     */
-    onDemandPages?: boolean | { expirationInDays?: number }
-  }
-}
-
-export async function useS3Website(bundle: OutputBundle, config: Config) {
-  const { files, bundle: bundleConfig, config: viteConfig } = getDeployContext()
-  const { debugBase = '' } = bundleConfig
-  const { assetsDir } = viteConfig.build
+export async function useS3Website(
+  bundle: OutputBundle,
+  config: WebsiteConfig
+) {
+  const ctx = getDeployContext()
+  const { debugBase = '' } = ctx.bundle
+  const { assetsDir } = ctx.config.build
+  const bucketConfig = config.buckets || {}
 
   const awsInfra = await useCloudFormation({
     name: config.name,
@@ -66,8 +46,6 @@ export async function useS3Website(bundle: OutputBundle, config: Config) {
           },
         })
       )
-
-      const bucketConfig = config.buckets || {}
 
       // This bucket holds pre-rendered pages, which tend to be
       // the most popular pages (hence the name).
@@ -212,108 +190,18 @@ export async function useS3Website(bundle: OutputBundle, config: Config) {
     },
   })
 
-  type AssetList = string[]
-  type ContentHash = string
-  type PublicFileHashes = { [name: string]: ContentHash }
+  await useBundleSync(
+    bundle,
+    ctx.files,
+    config,
+    awsInfra.outputs.buckets,
+    debugBase
+  )
 
-  const { buckets } = awsInfra.outputs
-
-  const syncAssets = () => {
-    const memory = files.get<AssetList>('s3-website/assets.json')
-    const oldAssetNames = memory.getData() || []
-    const assetNames: AssetList = []
-    const uploading: Promise<any>[] = []
-
-    return {
-      upload(name: string, data: string | Buffer) {
-        assetNames.push(name)
-
-        // Assets are content-hashed, so we can bail on name alone.
-        if (!oldAssetNames.includes(name)) {
-          uploading.push(
-            S3.putObject(config.region)({
-              bucket: buckets.assets,
-              key: name,
-              cacheControl: 'public, max-age=2592000',
-              body: data,
-            })
-          )
-        }
-      },
-      async finalize() {
-        await Promise.all(uploading)
-        const missingAssets = oldAssetNames.filter(
-          name => !assetNames.includes(name)
-        )
-        if (missingAssets.length)
-          await S3.moveObjects(config.region)(
-            buckets.assets,
-            missingAssets,
-            buckets.oldAssets
-          )
-        memory.setData(assetNames)
-      },
-    }
+  return {
+    ...awsInfra.outputs,
+    awsRegion: config.region,
   }
-
-  const syncPublicDir = () => {
-    const memory = files.get<PublicFileHashes>('s3-website/public.json')
-    const oldHashes = memory.getData() || {}
-    const hashes: PublicFileHashes = {}
-    const uploading: Promise<any>[] = []
-
-    return {
-      upload(name: string, data: Buffer) {
-        const hash = (hashes[name] = md5Hex(data).slice(0, 8))
-        const oldHash = oldHashes[name]
-        if (hash !== oldHash) {
-          uploading.push(
-            S3.putObject(config.region)({
-              bucket: buckets.publicDir,
-              key: name,
-              body: data,
-              cacheControl: 'public, max-age=',
-            })
-          )
-        }
-      },
-      /** Move old public files into the "oldAssets" bucket. */
-      async finalize() {
-        await Promise.all(uploading)
-        const missingFiles = Object.keys(oldHashes).filter(
-          name => !hashes[name]
-        )
-        if (missingFiles.length)
-          await S3.moveObjects(config.region)(
-            buckets.publicDir,
-            missingFiles,
-            buckets.oldAssets
-          )
-        memory.setData(hashes)
-      },
-    }
-  }
-
-  await onDeploy(async () => {
-    const assetSync = syncAssets()
-    const publicSync = syncPublicDir()
-    for (const [name, asset] of Object.entries(bundle.clientAssets)) {
-      assetSync.upload(name, asset)
-    }
-    for (const [name, mod] of Object.entries(bundle.clientModules)) {
-      assetSync.upload(name, mod.text)
-      if (debugBase && mod.debugText) {
-        assetSync.upload(debugBase.slice(1) + name, mod.debugText)
-      }
-    }
-
-    await Promise.all([
-      assetSync.finalize(), //
-      publicSync.finalize(),
-    ])
-  })
-
-  return awsInfra.outputs
 }
 
 function items<T>(items: T[]) {

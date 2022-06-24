@@ -1,1 +1,1 @@
-export * from '../src/babel'
+export * from '@/babel'

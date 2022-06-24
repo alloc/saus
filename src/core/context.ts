@@ -1,22 +1,29 @@
 import arrify from 'arrify'
 import { resolve } from 'path'
-import type { RenderPageResult } from '../app/types'
-import { loadResponseCache, setResponseCache } from '../http/responseCache'
-import { clearCachedState } from '../runtime/clearCachedState'
-import { getCachedState } from '../runtime/getCachedState'
-import { CompileCache } from '../utils/CompileCache'
-import { relativeToCwd } from '../utils/relativeToCwd'
-import { ConfigHook, ConfigHookRef } from './config'
+import type { DevContext } from '../dev/context'
+import type { RenderPageResult } from './app/types'
+import { ConfigHook, ConfigHookRef } from './configHooks'
 import { debug } from './debug'
-import { DevContext } from './dev/context'
 import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
+import { loadResponseCache, setResponseCache } from './http/responseCache'
 import { loadConfigHooks } from './loadConfigHooks'
+import { CompileCache } from './node/compileCache'
+import { relativeToCwd } from './node/relativeToCwd'
 import { toSausPath } from './paths'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
-import { Cache, withCache } from './withCache'
+import { clearCachedState } from './runtime/clearCachedState'
+import { getCachedState } from './runtime/getCachedState'
+import { Cache, withCache } from './runtime/withCache'
+import {
+  Plugin,
+  ResolvedConfig,
+  SausConfig,
+  SausPlugin,
+  UserConfig,
+  vite,
+} from './vite'
 
 type Command = 'build' | 'deploy' | 'serve'
 
@@ -239,7 +246,7 @@ function getConfigResolver(
           `[saus] Config hook must export a function: ${hookRef.path}`
         )
 
-      const result = await configHook(userConfig, configEnv)
+      const result = await configHook(userConfig as UserConfig, configEnv)
       if (result) {
         userConfig = vite.mergeConfig(userConfig, result)
       }

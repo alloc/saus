@@ -1,10 +1,10 @@
 import path from 'path'
 
+export const bundleDir = toSausPath('src/bundle/runtime')
+export const clientDir = toSausPath('src/core/client')
 export const coreDir = toSausPath('src/core')
-export const httpDir = toSausPath('src/http')
-export const bundleDir = toSausPath('src/bundle')
-export const clientDir = toSausPath('src/client')
-export const runtimeDir = toSausPath('src/runtime')
+export const httpDir = toSausPath('src/core/http')
+export const runtimeDir = toSausPath('src/core/runtime')
 export const globalCachePath = path.join(runtimeDir, 'cache.ts')
 
 export function toSausPath(file: string) {

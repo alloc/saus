@@ -13,6 +13,16 @@ export function createStore(bucket: string, region: string): AssetStore {
   }
 
   return {
+    supportedHeaders: [
+      'cache-control',
+      'content-disposition',
+      'content-encoding',
+      'content-language',
+      'content-length',
+      'content-md5',
+      'content-type',
+      'expires',
+    ],
     async put(name, data, headers) {
       await putObject(region)({
         bucket,

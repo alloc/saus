@@ -1,4 +1,4 @@
-import { limitTime } from 'saus/core'
+import { HtmlProcessorState, limitTime } from 'saus/core'
 import { HtmlTagPath } from '../path'
 import { kRemovedNode } from '../symbols'
 import { HtmlVisitor, HtmlVisitorState } from '../types'
@@ -253,7 +253,8 @@ const keywords = ['open', 'close', 'html', 'head', 'body']
 
 const kVisitedTags = Symbol.for('html.visitedTags')
 
-type HtmlTagVisitor<T = any> = HtmlVisitor<T> & { [kVisitedTags]?: string[] }
+type HtmlTagVisitor<T extends Partial<HtmlProcessorState> = any> =
+  HtmlVisitor<T> & { [kVisitedTags]?: string[] }
 
 function isTagVisitor(visitor: HtmlTagVisitor) {
   let visitedTags = visitor[kVisitedTags]

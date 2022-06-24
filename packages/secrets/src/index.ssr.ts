@@ -1,12 +1,21 @@
 import { AESEncryption } from 'aes-password'
-import { deployedEnv, getRawGitHubUrl } from 'saus/core'
+import { deployedEnv } from 'saus'
+import { getRawGitHubUrl } from 'saus/core'
 import { http } from 'saus/http'
 
+// This function only exists in SSR bundle.
 export async function loadGitHubSecrets(
   repoId: string,
-  authToken: string,
-  password: string
+  authToken = deployedEnv.githubToken,
+  password = deployedEnv.password
 ) {
+  if (!authToken) {
+    throw Error('Missing github token')
+  }
+  if (!password) {
+    throw Error('Missing project password')
+  }
+
   const secretsUrl = getRawGitHubUrl({
     file: 'secrets.aes',
     repo: repoId,

@@ -1,6 +1,9 @@
 # @saus/secrets
 
+## Save encrypted secrets to git
 
+The `useGitSecrets` function will store your secrets in a AES-256 encrypted file
+and push it to the `deployed` branch in your origin repository.
 
 ## Load secrets at runtime
 
@@ -12,8 +15,8 @@ other modules can access them transparently.
 
 ```ts
 // ./src/routes.ts
-import { deployedEnv } from 'saus/core'
 import { loadGitHubSecrets } from '@saus/secrets'
+import { deployedEnv } from 'saus/core'
 
 // Before using packages that rely on `deployedEnv` object.
 await loadGitHubSecrets(repoId, authToken, password)

@@ -1,6 +1,6 @@
+import { removeSourceMapUrls } from '@/node/sourceMap'
 import path from 'path'
 import vm from 'vm'
-import { removeSourceMapUrls } from '../utils/sourceMap'
 
 export function runBundle({
   code,
@@ -19,5 +19,5 @@ export function runBundle({
 
   const exports: any = {}
   initialize(exports, require)
-  return exports as typeof import('../bundle/main')
+  return exports as typeof import('../bundle/runtime/bundle/api')
 }

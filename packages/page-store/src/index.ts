@@ -1,29 +1,32 @@
 import { onResponse, route } from 'saus'
 import {
   AssetStore,
+  assignDefaults,
   Endpoint,
   getPageFilename,
   getRequestMetadata,
+  pick,
   setup,
   toRawBody,
 } from 'saus/core'
 import { ResponseHeaders } from 'saus/http'
+
+export interface PageRule {
+  pathPattern: RegExp
+  headers: (req: Endpoint.Request) => ResponseHeaders
+}
 
 export interface PageStoreConfig {
   store: AssetStore
   routes?: {
     /**
      * Leave this undefined if you don't plan to purge files
-     * by sending a request to this route.
+     * by sending a POST request to this route.
      */
     purge?: string
   }
   skipAuthorized?: boolean
-  /**
-   * Define headers to be stored alongside the file associated
-   * with the given request.
-   */
-  headers?: (req: Endpoint.Request) => ResponseHeaders
+  pageRules?: PageRule[]
 }
 
 export function setupPageStore(config: PageStoreConfig) {
@@ -44,12 +47,27 @@ export function setupPageStore(config: PageStoreConfig) {
         if (!html) {
           return // HTML streams are not supported.
         }
+
         const { page } = getRequestMetadata(req)
         if (!page) {
           return // HTML not rendered with Saus.
         }
+
+        let headers = res.headers.toJSON() || {}
+        if (config.store.supportedHeaders) {
+          headers = pick(headers, config.store.supportedHeaders)
+        }
+
+        const pageRules = config.pageRules?.filter(rule =>
+          rule.pathPattern.test(req.path)
+        )
+        if (pageRules?.length) {
+          pageRules.forEach(rule => {
+            assignDefaults(headers, rule.headers)
+          })
+        }
+
         const file = getPageFilename(req.path)
-        const headers = config.headers?.(req)
         config.store.put(file, html, headers)
         config.store.put(file + '.js', app.renderPageState(page), headers)
       }

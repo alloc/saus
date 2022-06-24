@@ -4,6 +4,7 @@ importers:
 
   .:
     specifiers:
+      '@': link:./src/core
       '@alloc/fast-rimraf': ^1.0.8
       '@alloc/prettier-config': ^1.0.0
       '@ampproject/remapping': ^2.1.2
@@ -11,6 +12,7 @@ importers:
       '@babel/core': ^7.16.7
       '@babel/helper-annotate-as-pure': ^7.15.4
       '@babel/plugin-syntax-typescript': ^7.14.5
+      '@babel/types': ^7.16.7
       '@cush/exec': ^1.7.1
       '@cush/relative': ^1.0.0
       '@rollup/pluginutils': ^4.1.2
@@ -30,7 +32,6 @@ importers:
       arrify: ^3.0.0
       builtin-modules: ^3.2.0
       cac: ^6.0.0
-      caller-path: ^3.0.1
       callsites: ^3.0.0
       catch-exit: ^1.2.2
       chokidar: ^3.5.2
@@ -50,8 +51,6 @@ importers:
       mrmime: ^1.0.0
       prettier: ^2.0.5
       quick-lru: ^6.1.1
-      react: ^17.0.2
-      react-dom: ^17.0.2
       rollup: npm:@aleclarson/rollup@^2.62.1
       rollup-plugin-dts: ^4.1.0
       shared-log: ^1.2.8
@@ -68,27 +67,26 @@ importers:
       vitest: '*'
       yaml: ^2.1.1
     dependencies:
+      '@': link:src/core
       '@ampproject/remapping': 2.2.0
       '@babel/code-frame': 7.16.7
       '@babel/core': 7.18.5
       '@babel/plugin-syntax-typescript': 7.17.12_@babel+core@7.18.5
-      '@cush/exec': 1.7.1
-      '@cush/relative': 1.0.0
+      '@babel/types': 7.18.4
       '@saus/deploy-utils': link:packages/deploy-utils
       '@saus/html': link:packages/html
       ansi-to-html: 0.7.2
       cac: 6.7.12
-      callsites: 3.1.0
       convert-source-map: 1.8.0
+      debug: 4.3.4
       endent: 2.1.0
       es-module-lexer: 0.9.3
       esbuild: 0.14.43
       etag: 1.8.1
-      klona: 2.0.5
+      kleur: 4.1.4
       magic-string: 0.25.9
       misty: 1.6.9
       mrmime: 1.0.1
-      quick-lru: 6.1.1
       rollup: /@aleclarson/rollup/2.62.1
       shared-log: 1.2.8
       strict-event-emitter-types: 2.0.0
@@ -101,6 +99,8 @@ importers:
       '@alloc/fast-rimraf': 1.0.8
       '@alloc/prettier-config': 1.0.0
       '@babel/helper-annotate-as-pure': 7.16.7
+      '@cush/exec': 1.7.1
+      '@cush/relative': 1.0.0
       '@rollup/pluginutils': 4.2.1
       '@types/babel__code-frame': 7.0.3
       '@types/babel__core': 7.1.19
@@ -114,17 +114,15 @@ importers:
       '@types/strip-comments': 2.0.1
       arrify: 3.0.0
       builtin-modules: 3.3.0
-      caller-path: 3.0.1
+      callsites: 3.1.0
       catch-exit: 1.2.2
       chokidar: 3.5.3
-      debug: 4.3.4
       elaps: 2.4.0
       escalade: 3.1.1
       is-plain-object: 5.0.0
-      kleur: 4.1.4
+      klona: 2.0.5
       prettier: 2.7.0
-      react: 17.0.2
-      react-dom: 17.0.2_react@17.0.2
+      quick-lru: 6.1.1
       rollup-plugin-dts: 4.2.2_0dbeca9aa442ebd6280cc8a7e668bb8a
       source-map: 0.6.1
       strip-comments: 2.0.1
@@ -144,19 +142,22 @@ importers:
       kleur: ^4.1.4
       misty: ^1.6.0
       navaid: ^1.2.0
+      react: ^17.0.2
+      react-dom: ^17.0.2
       saus: '*'
     dependencies:
       '@saus/html': link:../../packages/html
       '@saus/react': link:../../packages/react
       '@saus/test': link:../../packages/test
       '@saus/webp': link:../../packages/webp
+      '@types/node': 16.11.40
       has-flag: 5.0.1
       kleur: 4.1.4
       misty: 1.6.9
       navaid: 1.2.0
+      react: 17.0.2
+      react-dom: 17.0.2_react@17.0.2
       saus: link:../..
-    devDependencies:
-      '@types/node': 16.11.40
 
   packages/aws/s3:
     specifiers:
@@ -164,6 +165,17 @@ importers:
       saus: '*'
     dependencies:
       '@saus/aws-utils': link:../utils
+    devDependencies:
+      saus: link:../../..
+
+  packages/aws/s3-website:
+    specifiers:
+      '@saus/aws-s3': '*'
+      '@saus/cloudform': '*'
+      saus: '*'
+    dependencies:
+      '@saus/aws-s3': link:../s3
+      '@saus/cloudform': link:../../cloudform
     devDependencies:
       saus: link:../../..
 
@@ -240,6 +252,12 @@ importers:
       '@types/debug': 4.1.7
       '@types/node': 16.11.40
       recrawl-sync: 2.2.1
+      saus: link:../..
+
+  packages/page-store:
+    specifiers:
+      saus: '*'
+    devDependencies:
       saus: link:../..
 
   packages/react:
@@ -653,7 +671,6 @@ packages:
     dependencies:
       shell-quote: 1.7.3
       type-error: 1.0.3
-    dev: false
 
   /@cush/execall/1.0.0:
     resolution: {integrity: sha512-pbrDxZOGgTbyLunPdgDgTeJCVFctqlGMoS0yEzuYQbaBvnSCAgh//74/Elhmx/gKG6gkutPvPWs/UwdEHFGV7w==}
@@ -835,7 +852,6 @@ packages:
 
   /@types/node/16.11.40:
     resolution: {integrity: sha512-7bOWglXUO6f21NG3YDI7hIpeMX3M59GG+DzZuzX2EkFKYUnRoxq3EOg4R0KNv2hxryY9M3UUqG5akwwsifrukw==}
-    dev: true
 
   /@types/node/17.0.42:
     resolution: {integrity: sha512-Q5BPGyGKcvQgAMbsr7qEGN/kIPN6zZecYYABeTDBizOsau+2NMdSVTar9UQw21A2+JyA2KRNDYaYrPB0Rpk2oQ==}
@@ -1140,23 +1156,10 @@ packages:
       responselike: 1.0.2
     dev: false
 
-  /caller-callsite/4.1.0:
-    resolution: {integrity: sha512-99nnnGlJexTc41xwQTr+mWl15OI5PPczUJzM4YRE7QjkefMKCXGa5gfQjCOuVrD+1TjI/fevIDHg2nz3iYN5Ig==}
-    engines: {node: '>=8'}
-    dependencies:
-      callsites: 3.1.0
-    dev: true
-
-  /caller-path/3.0.1:
-    resolution: {integrity: sha512-fhmztL4wURO/BzwJUJ4aVRdnKEFskPBbrJ8fNgl7XdUiD1ygzzlt+nhPgUBSRq2ciEVubo6x+W8vJQzm55QLLQ==}
-    engines: {node: '>=8'}
-    dependencies:
-      caller-callsite: 4.1.0
-    dev: true
-
   /callsites/3.1.0:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
+    dev: true
 
   /camelcase-keys/2.1.0:
     resolution: {integrity: sha512-bA/Z/DERHKqoEOrp+qeGKw1QlvEQkGZSc0XaY6VnTxZr+Kv1G5zFwttpjv8qxZ/sBPT4nthwZaAcsAZTJlSKXQ==}
@@ -2502,11 +2505,12 @@ packages:
   /kleur/4.1.4:
     resolution: {integrity: sha512-8QADVssbrFjivHWQU7KkMgptGTl6WAcSdlbBPY4uNF+mWr6DGcKrvY2w4FQJoXch7+fKMjj0dRrL75vk3k23OA==}
     engines: {node: '>=6'}
+    dev: false
 
   /klona/2.0.5:
     resolution: {integrity: sha512-pJiBpiXMbt7dkzXe8Ghj/u4FfXOOa98fPW+bihOJ4SjnoijweJrNThJfd3ifXpXhREjpoF2mZVH1GfS9LV3kHQ==}
     engines: {node: '>= 8'}
-    dev: false
+    dev: true
 
   /lilconfig/2.0.5:
     resolution: {integrity: sha512-xaYmXZtTHPAw5m+xLN8ab9C+3a8YmV3asNSPOATITbtwrfbwaLJj8h66H1WMIpALCkqsIzK3h7oQ+PdX+LQ9Eg==}
@@ -2560,7 +2564,7 @@ packages:
     hasBin: true
     dependencies:
       js-tokens: 4.0.0
-    dev: true
+    dev: false
 
   /loud-rejection/1.6.0:
     resolution: {integrity: sha512-RPNliZOFkqFumDhvYqOaNY4Uz9oJM2K9tC6JWsJJsNdhuONW4LQHRBpb0qf4pJApVffI5N39SwzWZJuEhfd7eQ==}
@@ -3076,7 +3080,7 @@ packages:
   /quick-lru/6.1.1:
     resolution: {integrity: sha512-S27GBT+F0NTRiehtbrgaSE1idUAJ5bX8dPAQTdylEyNlrdcH5X4Lz7Edz3DYzecbsCluD5zO8ZNEe04z3D3u6Q==}
     engines: {node: '>=12'}
-    dev: false
+    dev: true
 
   /react-dom/17.0.2_react@17.0.2:
     resolution: {integrity: sha512-s4h96KtLDUQlsENhMn1ar8t2bEa+q/YAtj8pPPdIjPDGBDIVNsrD9aXNWqspUe6AzKCIG0C1HZZLqLV7qpOBGA==}
@@ -3087,7 +3091,7 @@ packages:
       object-assign: 4.1.1
       react: 17.0.2
       scheduler: 0.20.2
-    dev: true
+    dev: false
 
   /react-refresh/0.13.0:
     resolution: {integrity: sha512-XP8A9BT0CpRBD+NYLLeIhld/RqG9+gktUjW1FkE+Vm7OCinbG1SshcK5tb9ls4kzvjZr9mOQc7HYgBngEyPAXg==}
@@ -3100,7 +3104,7 @@ packages:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-    dev: true
+    dev: false
 
   /read-pkg-up/1.0.1:
     resolution: {integrity: sha512-WD9MTlNtI55IwYUS27iHh9tK3YoIVhxis8yKhLpTqWtml739uXc9NWTpxoHkfZf3+DkCCsXox94/VWZniuZm6A==}
@@ -3241,7 +3245,7 @@ packages:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-    dev: true
+    dev: false
 
   /seek-bzip/1.0.6:
     resolution: {integrity: sha512-e1QtP3YL5tWww8uKaOCQ18UxIT2laNBXHjV/S2WYCiK4udiv8lkG89KRIoCjUagnAmCBurjF4zEVX2ByBbnCjQ==}
@@ -3302,7 +3306,6 @@ packages:
 
   /shell-quote/1.7.3:
     resolution: {integrity: sha512-Vpfqwm4EnqGdlsBFNmHhxhElJYrdfcxPThu+ryKS5J8L/fhAwLazFZtq+S+TWZ9ANj2piSQLGj6NQg+lKPmxrw==}
-    dev: false
 
   /signal-exit/3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
@@ -3699,7 +3702,6 @@ packages:
 
   /type-error/1.0.3:
     resolution: {integrity: sha512-hlNA4NwwjtL9clb8nv+x/5C45uzxND+N+h+/y3z2dYdubGSmdtNtJjHVH4E68ZHR98Bkav4ACf1lmTZepc/4sg==}
-    dev: false
 
   /type-fest/2.13.0:
     resolution: {integrity: sha512-lPfAm42MxE4/456+QyIaaVBAwgpJb6xZ8PRu09utnhPdWwcyj9vgy6Sq0Z5yNbJ21EdxB5dRU/Qg8bsyAMtlcw==}

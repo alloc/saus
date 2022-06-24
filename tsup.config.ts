@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup'
+import { PackageJson } from 'type-fest'
+
+const pkgJson = require('./package.json') as PackageJson
 
 export default defineConfig({
   entry: [
@@ -6,22 +9,27 @@ export default defineConfig({
     'src/index.ts',
     // Submodules
     'src/core/index.ts',
-    'src/http/index.ts',
-    'src/client/index.node.ts',
-    'src/bundle/html.ts',
-    'src/babel/index.ts',
+    'src/core/babel/index.ts',
+    'src/core/client/node/api.ts',
+    'src/core/http/index.ts',
+    'src/build/failedPages.ts',
     'src/build/worker.ts',
-    // Commands
-    'src/build.ts',
-    'src/bundle.ts',
-    'src/deploy.ts',
-    'src/dev.ts',
-    'src/secrets.ts',
+    'src/bundle/html.ts',
+    'src/deploy/runtime.ts',
+    // Programmatic API
+    'src/build/api.ts',
+    'src/bundle/api.ts',
+    'src/deploy/api.ts',
+    'src/dev/api.ts',
+    'src/preview/api.ts',
+    'src/secrets/api.ts',
+    'src/test/api.ts',
   ],
   format: ['cjs'],
   target: 'node16',
   splitting: true,
   sourcemap: true,
-  external: Object.keys(require('./package.json').dependencies),
+  noExternal: ['@'],
+  define: { __VERSION__: JSON.stringify(pkgJson.version) },
   clean: true,
 })

@@ -5,6 +5,7 @@ import {
   Selector,
   SelectorType,
 } from 'css-what'
+import { HtmlProcessorState } from 'saus/core'
 import {
   HtmlAttribute,
   HtmlTagPath,
@@ -17,7 +18,7 @@ export type HtmlMatcher = (path: HtmlTagPath<any> | undefined) => boolean
 /**
  * Create an `HtmlVisitor` from a CSS selector list.
  */
-export function $<State>(
+export function $<State extends Partial<HtmlProcessorState>>(
   pattern: string,
   visitor: HtmlTagVisitor<State>
 ): HtmlVisitor<State>

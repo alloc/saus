@@ -8,10 +8,10 @@ import {
   removeSSR,
   resolveReferences,
   t,
-} from '../babel'
-import { renderIdentRE } from '../plugins/render'
-import type { ImportDescriptorMap } from '../utils/imports'
+} from './babel'
+import { renderIdentRE } from './plugins/render'
 import type { RouteParams } from './routes'
+import type { ImportDescriptorMap } from './utils/imports'
 
 /** A generated client module */
 export interface Client {

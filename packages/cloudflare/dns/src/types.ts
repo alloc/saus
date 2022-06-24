@@ -15,8 +15,9 @@ export interface DnsRecord {
   /**
    * Time to live (in seconds) \
    * Must be between 60 and 86400, or 1 for automatic.
+   * @default 1
    */
-  ttl: number
+  ttl?: number
   /**
    * Should the Cloudflare CDN be used? \
    * Must be true for Cloudflare workers to be triggered.

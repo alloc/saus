@@ -1,12 +1,12 @@
 import MagicString from 'magic-string'
-import { escape } from 'saus'
+import { escape, HtmlProcessorState } from 'saus/core'
 import { kRemovedNode, kTagPath } from './symbols'
 import { HtmlDocument, HtmlTag, HtmlVisitor, HtmlVisitorState } from './types'
 import { mergeVisitors } from './visitors/merge'
 
 const noop = () => {}
 
-function getTagPath<State>(
+function getTagPath<State extends Partial<HtmlProcessorState>>(
   node: HtmlTag,
   parentPath: HtmlTagPath<State>
 ): HtmlTagPath<State> {

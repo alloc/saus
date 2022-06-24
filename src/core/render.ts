@@ -1,8 +1,8 @@
-import { parseRoutePath } from '../utils/parseRoutePath'
 import type { ClientDescription } from './client'
 import { renderModule } from './global'
 import { DocumentHook, Renderer, RenderRequest } from './renderer'
 import { matchRoute, RouteParams } from './routes'
+import { parseRoutePath } from './utils/parseRoutePath'
 
 type Promisable<T> = T | PromiseLike<T>
 

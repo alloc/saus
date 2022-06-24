@@ -1,17 +1,17 @@
 import { Simplify, UnionToIntersection } from 'type-fest'
-import type { App } from '../app/types'
-import type { Buffer } from '../client'
+import type { App } from './app/types'
+import type { Buffer } from './client/buffer'
 import type {
   DeclaredHeaders,
   HttpRedirect,
   RequestHeaders,
   Response as HttpResponse,
   ResponseHeaders,
-} from '../http'
-import type { httpMethods } from '../utils/httpMethods'
-import type { Falsy, Promisable } from '../utils/types'
-import type { ParsedUrl } from '../utils/url'
+} from './http'
+import type { ParsedUrl } from './node/url'
 import type { InferRouteParams, Route, RouteParams } from './routes'
+import type { httpMethods } from './utils/httpMethods'
+import type { Falsy, Promisable } from './utils/types'
 
 export interface Endpoint<Params extends {} = {}>
   extends Endpoint.Function<Params> {
@@ -116,14 +116,18 @@ export namespace Endpoint {
   }
 
   export interface ResponseHook {
-    (request: Request, response: Response, app: App): Promisable<void>
+    (
+      request: Request<Record<string, string>>,
+      response: Response,
+      app: App
+    ): Promisable<void>
     priority?: number
   }
 
   export type Response = {
     ok: boolean
     status: number
-    headers: DeclaredHeaders<ResponseHeaders>
+    headers: DeclaredHeaders<ResponseHeaders | null>
     body?: AnyBody
   }
 

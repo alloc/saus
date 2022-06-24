@@ -1,13 +1,13 @@
-import { inlinedStateMap } from '../app/global'
-import type { AppContext, RenderedPage } from '../app/types'
-import { globalCache } from '../runtime/cache'
-import { stateModuleArguments } from '../runtime/loadStateModule'
-import { prependBase } from '../utils/base'
-import { dataToEsm } from '../utils/dataToEsm'
-import { ParsedHeadTag } from '../utils/parseHead'
+import { inlinedStateMap } from './app/global'
+import type { AppContext, RenderedPage } from './app/types'
 import type { CommonClientProps } from './client'
+import { globalCache } from './runtime/cache'
+import { stateModuleArguments } from './runtime/loadStateModule'
+import type { CacheEntry } from './runtime/withCache'
 import { INDENT, RETURN, SPACE } from './tokens'
-import type { CacheEntry } from './withCache'
+import { prependBase } from './utils/base'
+import { dataToEsm } from './utils/dataToEsm'
+import { ParsedHeadTag } from './utils/parseHead'
 
 export interface CommonServerProps extends CommonClientProps {
   _client: CommonClientProps

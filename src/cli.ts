@@ -1,15 +1,6 @@
-import arrify from 'arrify'
 import cac from 'cac'
-import { addExitCallback } from 'catch-exit'
 import * as inspector from 'inspector'
-import { cyan, gray, red } from 'kleur/colors'
-import { fatal, success } from 'misty'
-import { startTask } from 'misty/task'
-import log from 'shared-log'
-import { BuildOptions, vite } from './core'
-import { InlinePreviewConfig, startPreviewServer } from './preview'
-import { AbortController } from './utils/AbortController'
-import { onShortcut } from './utils/shortcuts'
+import { commandActions } from './cli/actions'
 
 declare const globalThis: any
 if (inspector.url()) {
@@ -28,15 +19,7 @@ cli
     '--force',
     `[boolean] force the optimizer to ignore the cache and re-bundle`
   )
-  .action(async (options: vite.ServerOptions) => {
-    const { createServer } = require('./dev') as typeof import('./dev')
-    await run(createServer, { server: options })
-  })
-
-type BuildFlags = BuildOptions & {
-  debug?: boolean
-  filter?: string | string[]
-}
+  .action(commandActions.dev)
 
 cli
   .command('build [cacheDir]')
@@ -54,69 +37,7 @@ cli
     '--emptyOutDir',
     `[boolean] force empty outDir when it's outside of root`
   )
-  .action(async (cacheDir: string, options: BuildFlags) => {
-    const { build } = require('./build') as typeof import('./build')
-    const { getFailedPages, setFailedPages } =
-      require('./build/failedPages') as typeof import('./build/failedPages')
-
-    if (process.stdin.isTTY) {
-      const ctrl = new AbortController()
-      options.abortSignal = ctrl.signal
-
-      ctrl.signal.onabort = () => {
-        // Exit the process if pressing Enter before rendering starts.
-        process.exit()
-      }
-
-      const shortcutFooter = startTask(
-        gray('» ') +
-          `Press ${cyan('Enter')} to stop rendering and print errors.`,
-        { footer: true, elapsed: false }
-      )
-      addExitCallback(() => {
-        shortcutFooter.finish()
-      })
-
-      onShortcut(process.stdin, (key, resume) => {
-        if (key == '\x03') {
-          process.exit()
-        } else if (key == '\r') {
-          ctrl.abort()
-        } else {
-          console.log('%O', key, Buffer.from(key))
-          resume()
-        }
-      })
-    }
-
-    await run(async () => {
-      if (options.debug) {
-        const failedPages = getFailedPages()
-        options.skip = pagePath => !failedPages.includes(pagePath)
-      } else if (options.filter) {
-        const filters = arrify(options.filter).map(
-          pattern => new RegExp('^' + pattern + '$')
-        )
-        options.skip = pagePath =>
-          !filters.some(filter => filter.test(pagePath))
-      }
-      options.cacheDir = cacheDir
-      const { pages, errors } = await build(options)
-      const failedPages: string[] = []
-      if (errors.length) {
-        log('')
-        for (const error of errors) {
-          failedPages.push(error.path)
-          log.error(red(`Failed to render`), error.path)
-          log.error(`  ` + gray(error.reason))
-          log('')
-        }
-      }
-      setFailedPages(failedPages)
-      success(`${pages.length} pages rendered.`)
-      process.exit(errors.length ? 1 : 0)
-    })
-  })
+  .action(commandActions.build)
 
 cli
   .command('bundle [outFile]')
@@ -127,38 +48,7 @@ cli
   .option('--entry [file]', `[string|boolean] set the bundle entry`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--sourcemap', `[boolean] enable/disable source maps`)
-  .action(async (outFile, options) => {
-    options.outFile = outFile
-
-    const noWrite = !process.stdout.isTTY && !process.env.CI
-    if (noWrite) {
-      options.write = false
-    }
-
-    const { bundle } = require('./bundle') as typeof import('./bundle')
-    const { loadBundleContext } =
-      require('./core/bundle/context') as typeof import('./core/bundle/context')
-
-    await run(async () => {
-      const context = await loadBundleContext(options, {
-        mode: options.mode,
-        logLevel: noWrite ? 'silent' : undefined,
-        build: { sourcemap: options.sourcemap },
-      })
-      let { code, map } = await bundle(context, options)
-      if (noWrite) {
-        if (map) {
-          const { toInlineSourceMap } =
-            require('./utils/sourceMap') as typeof import('./utils/sourceMap')
-
-          code += toInlineSourceMap(map)
-        }
-        process.stdout.write(code)
-      }
-      // Shamefully force exit since something unknown is keeping us alive.
-      process.exit(0)
-    })
-  })
+  .action(commandActions.bundle)
 
 cli
   .command('preview')
@@ -167,44 +57,22 @@ cli
   .option('--strictPort', `[boolean] exit if specified port is already in use`)
   .option('--https', `[boolean] use TLS + HTTP/2`)
   .option('--open [path]', `[boolean | string] open browser on startup`)
-  .action(async (options: InlinePreviewConfig) => {
-    const server = await startPreviewServer(options)
-    server.printUrls()
-  })
+  .action(commandActions.preview)
 
 cli
   .command('deploy')
   .option('--dry-run', `[boolean] generate deployment actions then bail out`)
-  .action(async options => {
-    const { deploy } = require('./deploy') as typeof import('./deploy')
-    await run(deploy, options)
-  })
+  .action(commandActions.deploy)
 
-cli.command('secrets add').action(async () => {
-  const { addSecrets } = require('./secrets') as typeof import('./secrets')
-  await run(addSecrets)
-})
+cli
+  .command('secrets add', 'Add secrets to use when deploying')
+  .action(commandActions['secrets add'])
 
-cli.command('test').action(async () => {
-  const { startTestServer } = require('./test') as typeof import('./test')
-  await run(startTestServer)
-})
+cli.command('test').action(commandActions.test)
+
+declare const __VERSION__: string
 
 cli.help()
-cli.version(require('../package.json').version)
+cli.version(__VERSION__)
 
 export default cli
-
-async function run<Args extends any[], Result>(
-  fn: (...args: Args) => Result,
-  ...args: Args
-): Promise<Awaited<Result>> {
-  try {
-    return await fn(...args)
-  } catch (e: any) {
-    if (e.message.startsWith('[saus]')) {
-      fatal(e.message)
-    }
-    throw e
-  }
-}

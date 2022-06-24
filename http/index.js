@@ -1,1 +1,1 @@
-Object.assign(exports, require('../dist/http'))
+Object.assign(exports, require('../dist/core/http'))

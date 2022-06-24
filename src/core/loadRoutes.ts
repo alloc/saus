@@ -2,33 +2,36 @@ import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import path from 'path'
-import { callPlugins } from '../utils/callPlugins'
-import { relativeToCwd } from '../utils/relativeToCwd'
-import { toDevPath } from '../utils/toDevPath'
-import { compileNodeModule } from '../vm/compileNodeModule'
-import { executeModule } from '../vm/executeModule'
-import { formatAsyncStack } from '../vm/formatAsyncStack'
-import { registerModuleOnceCompiled } from '../vm/moduleMap'
-import { injectNodeModule } from '../vm/nodeModules'
-import { ModuleMap, RequireAsync, ResolveIdHook } from '../vm/types'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
+import { relativeToCwd } from './node/relativeToCwd'
+import { toDevPath } from './node/toDevPath'
 import { Route } from './routes'
+import { callPlugins } from './utils/callPlugins'
+import { compileNodeModule } from './vm/compileNodeModule'
+import { executeModule } from './vm/executeModule'
+import { formatAsyncStack } from './vm/formatAsyncStack'
+import { registerModuleOnceCompiled } from './vm/moduleMap'
+import { injectNodeModule } from './vm/nodeModules'
+import { ModuleMap, RequireAsync, ResolveIdHook } from './vm/types'
 
 export async function loadRoutes(
-  context: SausContext,
+  context: Omit<SausContext, 'command'> & { command: string },
   resolveId = context.resolveId!
 ) {
   const time = Date.now()
   const moduleMap = context.moduleMap || {}
 
-  const { require, ssrRequire } = context.ssrRequire
-    ? (context as { require: RequireAsync; ssrRequire: RequireAsync })
-    : context.command == 'build'
-    ? getRequireFunctions(context, resolveId, moduleMap)
-    : context
+  const { require, ssrRequire } = (
+    !context.ssrRequire && context.command == 'build'
+      ? getRequireFunctions(context, resolveId, moduleMap)
+      : context
+  ) as {
+    require: RequireAsync
+    ssrRequire: RequireAsync
+  }
 
   const routesModule =
     moduleMap[context.routesPath] ||
@@ -83,7 +86,7 @@ export async function loadRoutes(
 
     await callPlugins(context.plugins, 'receiveRoutes', routesConfig)
     Object.assign(context, routesConfig)
-    injectRoutesMap(context)
+    injectRoutesMap(context as SausContext)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
@@ -94,8 +97,13 @@ export async function loadRoutes(
   }
 }
 
+type CompileContext = Pick<
+  SausContext,
+  'root' | 'routesPath' | 'compileCache' | 'config'
+>
+
 async function compileRoutesModule(
-  context: SausContext,
+  context: CompileContext,
   moduleMap: ModuleMap,
   resolveId: ResolveIdHook,
   requireAsync: RequireAsync

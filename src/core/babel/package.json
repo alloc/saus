@@ -1,0 +1,5 @@
+{
+  "name": "@saus/babel",
+  "private": true,
+  "main": "./index.ts"
+}

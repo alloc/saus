@@ -1,9 +1,8 @@
-import type { BufferLike } from '../app/types'
-import type { RouteModule } from '../client'
-import { parseRoutePath } from '../utils/parseRoutePath'
+import type { BufferLike } from './app/types'
 import type { ClientDescription, CommonClientProps } from './client'
-import type { RuntimeConfig } from './config'
-import type { RouteParams } from './routes'
+import type { RouteModule, RouteParams } from './routes'
+import type { RuntimeConfig } from './runtime/config'
+import { parseRoutePath } from './utils/parseRoutePath'
 
 type Promisable<T> = T | PromiseLike<T>
 

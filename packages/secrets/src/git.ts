@@ -1,27 +1,30 @@
 import { prompt } from '@saus/deploy-utils'
 import { AESEncryption } from 'aes-password'
-import { File, getDeployContext, SecretMap } from 'saus/core'
+import { File, getDeployContext, SecretMap } from 'saus/deploy'
 
 /**
  * Use secrets stored in your git repository and
  * encrypted-at-rest with a password.
  */
 export function useGitSecrets() {
-  const { secrets, files, logger } = getDeployContext()
+  const { secrets, files, logger, syncDeployCache } = getDeployContext()
+
   const secretsFile = files.get('secrets.aes', SecretsFile)
+  const beforeFileAccess = () =>
+    Promise.all([requestPassword(), syncDeployCache()])
 
   secrets.addSource({
     name: 'Git Secrets',
     async load() {
       if (secretsFile.exists) {
         logger.info('Using git for encrypted secret storage.')
-        await requestPassword()
+        await beforeFileAccess()
         return secretsFile.getData()
       }
       return {}
     },
     async set(secrets, replace) {
-      await requestPassword()
+      await beforeFileAccess()
       if (secretsFile.exists && !replace) {
         secrets = Object.assign(await secretsFile.getData(), secrets)
       }

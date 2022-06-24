@@ -1,9 +1,9 @@
 import fs from 'fs'
-import { createAsyncRequire } from '../vm/asyncRequire'
-import { compileNodeModule } from '../vm/compileNodeModule'
-import { compileSsrModule } from '../vm/compileSsrModule'
-import { dedupeNodeResolve } from '../vm/dedupeNodeResolve'
 import { SausContext } from './context'
+import { createAsyncRequire } from './vm/asyncRequire'
+import { compileNodeModule } from './vm/compileNodeModule'
+import { compileSsrModule } from './vm/compileSsrModule'
+import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 
 export function getRequireFunctions(
   context: Omit<SausContext, 'command'>,

@@ -1,8 +1,8 @@
-import type { RenderedPage } from '../app/types'
-import { limitTime } from '../utils/limitTime'
-import { reduceSerial } from '../utils/reduceSerial'
-import type { RuntimeConfig } from './config'
+import type { RenderedPage } from './app/types'
 import { routesModule } from './global'
+import type { RuntimeConfig } from './runtime/config'
+import { limitTime } from './utils/limitTime'
+import { reduceSerial } from './utils/reduceSerial'
 
 export type HtmlContext = {
   htmlProcessors?: HtmlProcessorMap

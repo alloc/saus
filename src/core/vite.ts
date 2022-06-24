@@ -1,18 +1,17 @@
 import * as vite from 'vite'
-import { App } from '../app/types'
-import type { BundleOptions, OutputBundle } from '../bundle'
-import type { PageBundle } from '../bundle/types'
-import type { ModuleProvider } from '../plugins/moduleProvider'
-import type { PublicFile } from '../plugins/publicDir'
-import type { TestFramework } from '../test'
-import type { AbortSignal } from '../utils/AbortController'
+import type { BundleOptions, OutputBundle, PageBundle } from '../bundle'
+import type { PublicFile } from '../publicDir'
+import type { TestFramework } from '../test/api'
+import { App } from './app/types'
 import type { ClientDescription } from './client'
-import type { RuntimeConfig } from './config'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
+import type { ModuleProvider } from './plugins/moduleProvider'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
-import './viteRequire'
+import type { RuntimeConfig } from './runtime/config'
+import type { AbortSignal } from './utils/AbortController'
+import './vite/requireHook'
 
 export { vite }
 
@@ -100,10 +99,17 @@ export interface SausConfig {
      */
     entry: string
     /**
-     * Which remote repository to use for the deployment cache.
-     * @default "origin"
+     * Which GitHub repository to use for the deployment cache.
+     *
+     * By default, Saus tries to parse this value from your `origin`
+     * repository URL (as listed by `git remote` command).
      */
-    repository?: string
+    githubRepo?: string
+    /**
+     * GitHub access token so the SSR bundle can load metadata
+     * from the deployment cache.
+     */
+    githubToken?: string
   }
   /**
    * How many pages can be rendered at once.
