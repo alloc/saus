@@ -1,3 +1,4 @@
+import { ResolveIdHook } from '@/vm'
 import fs from 'fs'
 import { SausContext } from './context'
 import { createAsyncRequire } from './vm/asyncRequire'
@@ -7,7 +8,6 @@ import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 
 export function getRequireFunctions(
   context: Omit<SausContext, 'command'>,
-  resolveId = context.resolveId!,
   moduleMap = context.moduleMap || {}
 ) {
   const {
@@ -20,6 +20,13 @@ export function getRequireFunctions(
     watcher,
   } = context
 
+  const resolveId: ResolveIdHook = async (id, importer) => {
+    const resolved = await context.resolveId(id, importer)
+    if (resolved) {
+      return typeof resolved == 'string' ? { id: resolved } : resolved
+    }
+  }
+
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
 
@@ -29,7 +36,7 @@ export function getRequireFunctions(
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
 
-  const watchFile = watcher && watcher.add.bind(watcher)
+  const watchFile = watcher?.add.bind(watcher)
   const filterStack = config.filterStack
 
   return {

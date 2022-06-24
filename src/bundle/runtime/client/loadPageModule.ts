@@ -2,8 +2,8 @@ import { getCachedState } from '@/runtime/getCachedState'
 import { ssrImport } from '@/runtime/ssrModules'
 import { baseToRegex } from '@/utils/base'
 import { getPagePath } from '@/utils/getPagePath'
-import config from './config'
-import routes from './routes'
+import config from '../bundle/config'
+import routes from '../bundle/routes'
 
 const debugBaseRE = config.debugBase ? baseToRegex(config.debugBase) : null
 

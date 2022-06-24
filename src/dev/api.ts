@@ -18,10 +18,11 @@ import { callPlugins } from '@/utils/callPlugins'
 import { defer } from '@/utils/defer'
 import { getPageFilename } from '@/utils/getPageFilename'
 import { vite } from '@/vite'
+import { getViteFunctions } from '@/vite/functions'
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
 import { createFullReload } from '@/vm/fullReload'
 import { injectNodeModule } from '@/vm/nodeModules'
-import { ModuleMap, ResolveIdHook } from '@/vm/types'
+import { ModuleMap } from '@/vm/types'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import http from 'http'
@@ -165,18 +166,15 @@ async function startServer(
     watcher.add(context.configPath)
   }
 
-  const resolveId: ResolveIdHook = (id, importer) =>
-    server.pluginContainer.resolveId(id, importer!, { ssr: true })
-
   context.events = events
   context.server = server
   context.watcher = watcher
-  context.resolveId = resolveId
   context.moduleMap = moduleMap
   context.externalExports = new Map()
   context.linkedModules = {}
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
+  Object.assign(context, getViteFunctions(server.pluginContainer))
   Object.assign(context, getRequireFunctions(context))
   setupClientInjections(context)
 
@@ -184,7 +182,7 @@ async function startServer(
   context.ssrForceReload = createFullReload()
   context.plugins = await getSausPlugins(context, config)
   try {
-    await loadRoutes(context, resolveId)
+    await loadRoutes(context)
     context.logger.info(green('✔︎ Routes are ready!'))
     await loadRenderers(context)
     context.logger.info(green('✔︎ Renderers are ready!'))

@@ -24,6 +24,7 @@ export function loadStateModule<T, Args extends any[]>(
   toCacheKey: (args: any[]) => string
 ): Promise<ResolvedState<T>> {
   const cacheKey = toCacheKey(args)
+
   if (!loadImpl) {
     const cached = getLoadedStateOrThrow(cacheKey, args)
     return deepCopy(cached[0])

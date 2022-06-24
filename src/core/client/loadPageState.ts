@@ -1,4 +1,4 @@
-import type { CommonClientProps } from '../core/client'
+import type { CommonClientProps } from '../client'
 import { getCachedState } from '../runtime/getCachedState'
 import { getPageFilename } from '../utils/getPageFilename'
 import { unwrapDefault } from '../utils/unwrapDefault'

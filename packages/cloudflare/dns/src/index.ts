@@ -1,4 +1,4 @@
-import { addDeployHook, addDeployTarget } from 'saus/core'
+import { addDeployHook, addDeployTarget } from 'saus/deploy'
 import { DnsRecordList } from './types'
 
 const hook = addDeployHook(() => import('./hook'))

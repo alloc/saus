@@ -1,4 +1,5 @@
-import { defineDeployHook, diffObjects, pick } from 'saus/core'
+import { diffObjects, pick } from 'saus/core'
+import { defineDeployHook } from 'saus/deploy'
 import { createRequestFn } from './api/request'
 import { DnsRecord, DnsRecordList } from './types'
 import { toTable } from './utils'

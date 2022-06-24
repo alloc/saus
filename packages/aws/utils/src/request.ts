@@ -1,5 +1,4 @@
 import * as aws4 from 'aws4'
-import { getDeployContext } from 'saus/core'
 import {
   Headers,
   http,
@@ -33,6 +32,8 @@ export interface AmzCredentials {
 }
 
 export interface AmzRequestOptions extends HttpRequestOptions {
+  /** AWS region */
+  region?: string
   method?: HttpMethod
   creds?: AmzCredentials
 }
@@ -121,6 +122,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     {
       method = 'get',
       creds,
+      region = config.region,
       coerceRequest,
       coerceResponse,
       ...opts
@@ -129,8 +131,8 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     const trace = new Error() as AmzError
 
     const subdomains = [config.service]
-    if (config.region) {
-      subdomains.push(config.region)
+    if (region) {
+      subdomains.push(region)
     }
 
     let path = ''
@@ -171,21 +173,13 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       }
     }
 
-    if (!creds) {
-      const { secrets } = getDeployContext()
-      creds = await secrets.expect({
-        accessKeyId: 'AWS_ACCESS_KEY_ID',
-        secretAccessKey: 'AWS_SECRET_ACCESS_KEY',
-      })
-    }
-
     opts.beforeSend = (req, body) => {
       const signedHeaders = req.headers
         ? omitKeys(req.headers, value => value == null)
         : {}
       const signedReq = {
         service: config.service,
-        region: config.region,
+        region,
         method: req.method!.toUpperCase(),
         host: req.hostname,
         path: req.path,
@@ -253,14 +247,14 @@ export function createAmzRequestFn<Actions extends ActionMap>(
 
   type ActionProps<Action extends string & keyof Actions> =
     CamelCasedPropertiesDeep<Omit<ActionParams<Action>, 'Action'>> &
-      Pick<AmzRequestOptions, 'body' | 'creds' | 'headers'>
+      Pick<AmzRequestOptions, 'body' | 'creds' | 'headers' | 'region'>
 
   send.action =
     <Action extends string & keyof Actions>(
       action: Action,
       opts: AmzSendOptions<Actions, Action> = {}
     ) =>
-    ({ creds, body, headers, ...params }: ActionProps<Action>) => {
+    ({ creds, body, headers, region, ...params }: ActionProps<Action>) => {
       const pascalParams: ActionParams<string & keyof Actions> =
         rewriteObjectKeys(params, pascalize)
       pascalParams.Action = action
@@ -268,6 +262,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
         ...opts,
         body,
         creds,
+        region,
         headers: headers ? { ...opts.headers, ...headers } : opts.headers,
       })
     }

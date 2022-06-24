@@ -47,9 +47,9 @@ export function addDeployTarget<
   hook: DeployHookRef<State, PulledState>,
   state: Promisable<Omit<State, keyof PulledState> & Partial<PulledState>>
 ): Promise<State> {
+  const ctx = getDeployContext()
   const { promise, resolve } = defer<State>()
-  const { addTarget } = getDeployContext()
-  addTarget(hook, state, resolve)
+  ctx.addDeployTarget(hook, state, resolve)
   return promise
 }
 
@@ -63,7 +63,7 @@ export function onDeploy<T>(action: DeployAction<T>) {
   return ctx.addDeployAction(action)
 }
 
-export * from '../secrets/types'
+export * from '../secrets/runtime'
 export * from './files'
 export * from './types'
 export { DeployContext, getDeployContext }

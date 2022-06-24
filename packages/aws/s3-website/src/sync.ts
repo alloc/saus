@@ -1,6 +1,8 @@
 import * as S3 from '@saus/aws-s3'
 import { cachedPublicFiles, OutputBundle } from 'saus'
-import { GitFiles, md5Hex, onDeploy } from 'saus/core'
+import { md5Hex } from 'saus/core'
+import { GitFiles, onDeploy } from 'saus/deploy'
+import secrets from './secrets'
 import { WebsiteConfig } from './types'
 
 type AssetList = string[]
@@ -34,6 +36,7 @@ export async function useBundleSync(
               key: name,
               cacheControl: 's-maxage=2592000, immutable',
               body: data,
+              creds: secrets,
             })
           )
         }
@@ -44,11 +47,12 @@ export async function useBundleSync(
           name => !assetNames.includes(name)
         )
         if (missingAssets.length)
-          await S3.moveObjects(config.region)(
-            buckets.assets,
-            missingAssets,
-            buckets.oldAssets
-          )
+          await S3.moveObjects(config.region)({
+            keys: missingAssets,
+            bucket: buckets.assets,
+            newBucket: buckets.oldAssets,
+            creds: secrets,
+          })
         memory.setData(assetNames)
       },
     }

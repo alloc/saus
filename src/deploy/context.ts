@@ -1,15 +1,16 @@
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getGitRepoByName } from '@/git'
 import { noop } from '@/utils/noop'
-import { getViteTransform } from '@/vite/transform'
+import { vite } from '@/vite'
 import { injectNodeModule } from '@/vm/nodeModules'
-import { ModuleMap, RequireAsync, ResolveIdHook } from '@/vm/types'
+import { ModuleMap, RequireAsync } from '@/vm/types'
 import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
 import { PackageJson, Promisable } from 'type-fest'
 import { BundleContext, loadBundleContext } from '../bundle/context'
 import { SecretHub } from '../secrets/hub'
+import { secretsPlugin } from '../secrets/plugin'
 import { GitFiles } from './files'
 import { DeployOptions } from './options'
 import {
@@ -27,6 +28,8 @@ export type DeployTargetArgs = [
 
 export interface DeployContext extends Omit<BundleContext, 'command'> {
   command: 'deploy' | 'secrets'
+  /** The file path of the deployment plan. */
+  deployPath: string
   files: GitFiles
   secrets: SecretHub
   /** The `package.json` file found in project root. */
@@ -39,24 +42,32 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   dryRun: boolean
   deployHooks: DeployHookRef[]
   deployPlugins: Record<string, DeployPlugin>
-  addTarget: (...args: DeployTargetArgs) => void
+  addDeployTarget: (...args: DeployTargetArgs) => void
   addDeployAction: <T>(action: DeployAction<T>) => Promise<T>
   syncDeployCache: () => Promise<void>
   //
   // Module context
   //
   moduleMap: ModuleMap
-  resolveId: ResolveIdHook
   require: RequireAsync
   ssrRequire: RequireAsync
 }
 
-export async function prepareDeployContext(
+export async function loadDeployContext(
   options: DeployOptions = {},
-  bundleContext?: Promisable<BundleContext>
+  inlineConfig: vite.UserConfig = {}
 ): Promise<DeployContext> {
-  const context: DeployContext = (await (bundleContext ||=
-    loadBundleContext())) as any
+  const context = await loadBundleContext<DeployContext>(options, inlineConfig)
+
+  const { deploy: deployConfig } = context.config.saus
+  if (!deployConfig) {
+    throw Error('[saus] Cannot deploy without `saus.deploy` configured')
+  }
+
+  context.deployPath = path.resolve(context.root, deployConfig.entry)
+
+  // @ts-ignore
+  context.config.plugins.unshift(secretsPlugin(context.deployPath))
 
   context.rootPackage = JSON.parse(
     fs.readFileSync(path.join(context.root, 'package.json'), 'utf8')
@@ -79,7 +90,7 @@ export async function prepareDeployContext(
 
   context.command = options.command || 'deploy'
   context.files = new GitFiles(cacheDir, options.dryRun)
-  context.secrets = new SecretHub()
+  context.secrets = new SecretHub(context)
   context.dryRun = !!options.dryRun
   context.deployHooks = []
 
@@ -88,12 +99,7 @@ export async function prepareDeployContext(
   // calls are avoided.
   context.addDeployAction = () => new Promise(noop)
 
-  const { pluginContainer } = await getViteTransform(context.config)
-
   context.moduleMap = {}
-  context.resolveId = (id, importer) =>
-    pluginContainer.resolveId(id, importer!, { ssr: true })
-
   Object.assign(context, getRequireFunctions(context))
 
   injectDeployContext(context)

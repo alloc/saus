@@ -1,0 +1,29 @@
+import { getDeployContext } from '../../deploy/context'
+import { DefinedSecrets } from '../types'
+
+/**
+ * Associate the given `fn` with a `defineSecrets` result,
+ * so its secrets are loaded when `fn` is imported in
+ * the deploy file.
+ */
+export function addSecrets(fn: Function, expected: DefinedSecrets): void
+
+/**
+ * For any `deps` that had secrets attached with `addSecrets`,
+ * their secrets will be loaded when the `fn` has its own secrets
+ * loaded.
+ */
+export function addSecrets(fn: Function, deps: Function[]): void
+
+/* @internal */
+export function addSecrets(
+  fn: Function,
+  namesOrDeps: DefinedSecrets | Function[]
+) {
+  const { secrets } = getDeployContext()
+  if (Array.isArray(namesOrDeps)) {
+    secrets['_adopted'].set(fn, namesOrDeps)
+  } else {
+    secrets['_defined'].set(fn, namesOrDeps)
+  }
+}

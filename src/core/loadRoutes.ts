@@ -15,18 +15,17 @@ import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
-import { ModuleMap, RequireAsync, ResolveIdHook } from './vm/types'
+import { ModuleMap, RequireAsync } from './vm/types'
 
 export async function loadRoutes(
-  context: Omit<SausContext, 'command'> & { command: string },
-  resolveId = context.resolveId!
+  context: Omit<SausContext, 'command'> & { command: string }
 ) {
   const time = Date.now()
   const moduleMap = context.moduleMap || {}
 
   const { require, ssrRequire } = (
     !context.ssrRequire && context.command == 'build'
-      ? getRequireFunctions(context, resolveId, moduleMap)
+      ? getRequireFunctions(context, moduleMap)
       : context
   ) as {
     require: RequireAsync
@@ -35,12 +34,8 @@ export async function loadRoutes(
 
   const routesModule =
     moduleMap[context.routesPath] ||
-    (await compileRoutesModule(
-      context,
-      moduleMap,
-      resolveId,
-      (id, importer, isDynamic) =>
-        (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
+    (await compileRoutesModule(context, moduleMap, (id, importer, isDynamic) =>
+      (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
     ))
 
   const routesConfig = setRoutesModule({
@@ -65,10 +60,9 @@ export async function loadRoutes(
     for (const route of routesConfig.routes) {
       if (!route.moduleId) continue
       if (route.generated) {
-        const resolved = await resolveId(
+        let resolved = await context.resolveId(
           route.moduleId,
-          context.routesPath,
-          true
+          context.routesPath
         )
         if (!resolved) {
           const error = Error(
@@ -80,7 +74,10 @@ export async function loadRoutes(
             code: 'ERR_MODULE_NOT_FOUND',
           })
         }
-        route.moduleId = toDevPath(resolved.id, context.root)
+        if (typeof resolved !== 'string') {
+          resolved = resolved.id
+        }
+        route.moduleId = toDevPath(resolved, context.root)
       }
     }
 
@@ -99,16 +96,15 @@ export async function loadRoutes(
 
 type CompileContext = Pick<
   SausContext,
-  'root' | 'routesPath' | 'compileCache' | 'config'
+  'root' | 'routesPath' | 'compileCache' | 'config' | 'resolveId'
 >
 
 async function compileRoutesModule(
   context: CompileContext,
   moduleMap: ModuleMap,
-  resolveId: ResolveIdHook,
   requireAsync: RequireAsync
 ) {
-  const { routesPath, root } = context
+  const { resolveId, routesPath, root } = context
 
   // Import specifiers for route modules need to be rewritten
   // as dev URLs for them to be imported properly by the browser.
@@ -116,8 +112,12 @@ async function compileRoutesModule(
   const editor = new MagicString(code)
   for (const imp of esModuleLexer.parse(code)[0]) {
     if (imp.d >= 0 && imp.n) {
-      const resolved = await resolveId(imp.n, routesPath, true)
+      let resolved = await resolveId(imp.n, routesPath)
       if (resolved) {
+        if (typeof resolved == 'string') {
+          resolved = { id: resolved }
+        }
+
         const resolvedUrl = resolved.external
           ? resolved.id
           : resolved.id.startsWith(root + '/')

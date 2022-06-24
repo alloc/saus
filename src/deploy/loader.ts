@@ -1,16 +1,10 @@
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
-import path from 'path'
 import { DeployContext } from './context'
 import type { DeployHookRef } from './types'
 
 export async function loadDeployFile(context: DeployContext) {
-  let { deploy: deployConfig } = context.config.saus
-  if (!deployConfig) {
-    throw Error('[saus] Cannot deploy without `saus.deploy` configured')
-  }
-  const entry = path.resolve(context.root, deployConfig.entry)
   try {
-    await context.require(entry)
+    await context.ssrRequire(context.deployPath)
   } catch (error: any) {
     formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
     throw error

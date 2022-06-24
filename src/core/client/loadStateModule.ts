@@ -9,6 +9,8 @@ export function loadStateModule(
   loadImpl: false | undefined,
   toCacheKey: (args: any[]) => string
 ) {
+  const cacheKey = toCacheKey(args)
+
   // Only the `get` method passes a false loadImpl.
   if (loadImpl === false) {
     return getLoadedStateOrThrow(cacheKey, args)[0]

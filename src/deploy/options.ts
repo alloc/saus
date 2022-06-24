@@ -1,6 +1,8 @@
+import { InlineBundleConfig } from '../bundle'
+
 export type DeployCommand = 'deploy' | 'secrets'
 
-export interface DeployOptions {
+export interface DeployOptions extends InlineBundleConfig {
   command?: DeployCommand
   /**
    * Deploy to a git respository other than `origin`.

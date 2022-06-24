@@ -1,9 +1,16 @@
 import * as CloudForm from 'cloudform-types'
 import { ResourceBase } from 'cloudform-types'
-import { addDeployHook, addDeployTarget, getDeployContext } from 'saus/core'
+import {
+  addDeployHook,
+  addDeployTarget,
+  addSecrets,
+  getDeployContext,
+} from 'saus/deploy'
+import secrets from './secrets'
 import { AttributeRef, ResourceRef, Stack, StackTemplate } from './types'
 
 const hook = addDeployHook(() => import('./hook'))
+addSecrets(useCloudFormation, secrets)
 
 export type StackOptions<Outputs extends object | void = any> = {
   name: string
@@ -14,9 +21,11 @@ export type StackOptions<Outputs extends object | void = any> = {
 /**
  * Declare a AWS CloudFormation stack.
  */
-export const useCloudFormation = <Outputs extends object | void>(
+export function useCloudFormation<Outputs extends object | void>(
   options: StackOptions<Outputs>
-): Promise<Stack<Outputs>> => addDeployTarget(hook, defineStack(options))
+): Promise<Stack<Outputs>> {
+  return addDeployTarget<Stack, any>(hook, defineStack(options))
+}
 
 async function defineStack<Outputs extends object | void>({
   name,

@@ -1,13 +1,23 @@
 import { defer } from '@/utils/defer'
-import { getDeployContext } from '../deploy/context'
-import { MutableSecretSource, SecretMap, SecretSource } from './types'
+import type { DeployContext } from '../deploy/context'
+import { kSecretDefinition } from './symbols'
+import type {
+  DefinedSecrets,
+  MutableSecretSource,
+  SecretMap,
+  SecretSource,
+} from './types'
 
 export class SecretHub {
   private _sources: SecretSource[] = []
   private _secrets: SecretMap = {}
-  private _expected = new Set<string>()
   private _loaded = defer<Set<string> | undefined>()
   private _loading = false
+  private _imported = new Set<Function>()
+  private _defined = new Map<Function, DefinedSecrets>()
+  private _adopted = new Map<Function, Function[]>()
+
+  constructor(private _context: DeployContext) {}
 
   /** Get the list of mutable secret sources. */
   getMutableSources(): MutableSecretSource[] {
@@ -22,31 +32,6 @@ export class SecretHub {
   /** Set secrets manually. Fine for testing purposes. */
   set(secrets: SecretMap) {
     Object.assign(this._secrets, secrets)
-  }
-
-  /** Throw if any of these secret names are not defined. */
-  expect(expected: string[]): Promise<string[]>
-  expect<T extends Record<string, string>>(
-    expected: T
-  ): Promise<{ [P in keyof T]: string }>
-  async expect(expected: string[] | Record<string, string>) {
-    const names = Array.isArray(expected) ? expected : Object.values(expected)
-    names.forEach(name => this._expected.add(name))
-    await this._loaded
-    const values = names.map(name => {
-      const secret = this._secrets[name]
-      if (!secret) {
-        throw Error(`Secret not found: ${name}`)
-      }
-      return secret
-    })
-    if (Array.isArray(expected)) {
-      return values
-    }
-    return Object.keys(expected).reduce((secrets, key, i) => {
-      secrets[key] = values[i]
-      return secrets
-    }, {} as any)
   }
 
   /** Add a source to load secrets from. */
@@ -70,14 +55,27 @@ export class SecretHub {
       }
     }
     const missing = new Set<string>()
-    for (const name of this._expected) {
-      if (!this._secrets[name]) {
-        missing.add(name)
+    const ensureSecretsExist = (fn: Function) => {
+      const secrets = this._defined.get(fn)
+      if (secrets) {
+        Object.entries(secrets[kSecretDefinition]).forEach(([alias, name]) => {
+          const secret = this._secrets[name]
+          if (secret) {
+            secrets[alias] = secret
+          } else {
+            missing.add(name)
+          }
+        })
       }
+    }
+    for (const fn of this._imported) {
+      const adopted = this._adopted.get(fn)
+      adopted?.forEach(ensureSecretsExist)
+      ensureSecretsExist(fn)
     }
     if (missing.size) {
       if (!silent) {
-        const { logger } = getDeployContext()
+        const { logger } = this._context
         logger.warn(
           'Secrets are missing:' +
             Array.from(missing, name => '\n  ‣ ' + name).slice(0, 5) +

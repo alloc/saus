@@ -1,5 +1,5 @@
 import path from 'path'
-import { addDeployHook, addDeployTarget, getDeployContext } from 'saus/core'
+import { addDeployHook, addDeployTarget, getDeployContext } from 'saus/deploy'
 import { Props } from './types'
 
 const hook = addDeployHook(() => import('./hook'))

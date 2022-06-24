@@ -1,3 +1,4 @@
+import { ViteFunctions } from '@/vite/functions'
 import arrify from 'arrify'
 import { resolve } from 'path'
 import type { DevContext } from '../dev/context'
@@ -74,7 +75,7 @@ type ProdContext = BaseContext &
     command: 'build'
   }
 
-export type SausContext = DevContext | ProdContext
+export type SausContext = (DevContext | ProdContext) & ViteFunctions
 export type { DevContext, ProdContext }
 
 type InlinePlugin = (

@@ -1,5 +1,6 @@
 import { AmzCredentials } from '@saus/aws-utils'
-import { AssetStore, defer, Deferred, runtimeSecrets } from 'saus/core'
+import { deployedEnv } from 'saus'
+import { AssetStore, defer, Deferred } from 'saus/core'
 import { deleteObjects } from '../deleteObjects'
 import { putObject } from '../putObject'
 
@@ -8,8 +9,8 @@ export function createStore(bucket: string, region: string): AssetStore {
   let pendingDeletion: Deferred<any> | undefined
 
   const creds: AmzCredentials = {
-    accessKeyId: runtimeSecrets.AWS_ACCESS_KEY_ID,
-    secretAccessKey: runtimeSecrets.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: deployedEnv.AWS_ACCESS_KEY_ID as string,
+    secretAccessKey: deployedEnv.AWS_SECRET_ACCESS_KEY as string,
   }
 
   return {

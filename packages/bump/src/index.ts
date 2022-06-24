@@ -1,7 +1,7 @@
 import { prompt } from '@saus/deploy-utils'
 import { readFileSync, writeFileSync } from 'fs'
 import path from 'path'
-import { onDeploy } from 'saus/core'
+import { onDeploy } from 'saus/deploy'
 
 export type BumpType = 'patch' | 'minor' | 'major'
 

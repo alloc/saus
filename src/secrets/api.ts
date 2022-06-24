@@ -1,13 +1,14 @@
 import { defer } from '@/utils/defer'
+import { noop } from '@/utils/noop'
 import { prompt } from '@saus/deploy-utils'
 import { green } from 'kleur/colors'
 import { success } from 'misty'
-import { prepareDeployContext } from '../deploy/context'
+import { loadDeployContext } from '../deploy/context'
 import { loadDeployFile } from '../deploy/loader'
-import { MutableSecretSource, SecretMap } from './hub'
+import { MutableSecretSource, SecretMap } from './types'
 
 export async function addSecrets() {
-  const context = await prepareDeployContext({
+  const context = await loadDeployContext({
     command: 'secrets',
   })
 
@@ -16,7 +17,11 @@ export async function addSecrets() {
   // Use the `addTarget` function to detect when to
   // start loading from our secret sources.
   const loading = defer<void>()
-  context.addTarget = () => loading.resolve()
+  context.addDeployTarget = () => loading.resolve()
+  context.addDeployAction = () => {
+    loading.resolve()
+    return new Promise(noop)
+  }
 
   loadDeployFile(context)
   await loading

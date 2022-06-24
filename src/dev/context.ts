@@ -3,8 +3,9 @@ import type { BaseContext } from '@/context'
 import type { ParsedUrl } from '@/node/url'
 import type { Promisable } from '@/utils/types'
 import type { vite } from '@/vite'
+import type { ViteFunctions } from '@/vite/functions'
 import type { RequireAsyncConfig } from '@/vm/asyncRequire'
-import type { RequireAsync, ResolveIdHook } from '@/vm/types'
+import type { RequireAsync } from '@/vm/types'
 import type { DevEventEmitter } from './events'
 import type { HotReloadFn } from './hotReload'
 
@@ -33,8 +34,7 @@ interface DevState extends RequireConfig {
   servedFiles: Record<string, RenderedFile>
 }
 
-interface DevMethods {
-  resolveId: ResolveIdHook
+interface DevMethods extends ViteFunctions {
   hotReload: HotReloadFn
   require: RequireAsync
   ssrForceReload?: (id: string) => boolean

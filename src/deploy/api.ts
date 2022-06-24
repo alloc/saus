@@ -10,12 +10,8 @@ import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
-import { BundleContext } from '../bundle/context'
-import {
-  DeployContext,
-  DeployTargetArgs,
-  prepareDeployContext,
-} from './context'
+import { vite } from '../core'
+import { DeployContext, DeployTargetArgs, loadDeployContext } from './context'
 import { loadDeployFile, loadDeployPlugin } from './loader'
 import { DeployOptions } from './options'
 import {
@@ -33,15 +29,16 @@ export { DeployOptions }
  */
 export async function deploy(
   options: DeployOptions = {},
-  bundleContext?: Promisable<BundleContext>
+  inlineConfig: vite.UserConfig = {}
 ) {
-  const context = await prepareDeployContext(options, bundleContext)
-  const { files, logger } = context
+  const context = await loadDeployContext(options, inlineConfig)
 
   let gitStatus = await exec('git status --porcelain', { cwd: context.root })
   if (!options.dryRun && gitStatus) {
     throw Error('[saus] Cannot deploy with unstaged changes')
   }
+
+  const { files, logger } = context
 
   const deployLockfile = files.get('deploy.lock')
   if (!options.dryRun && deployLockfile.exists) {
@@ -168,14 +165,14 @@ export async function deploy(
     return target
   }
 
-  context.addTarget = async (...args) => {
+  context.addDeployTarget = async (...args) => {
     const index = targets.push(args) - 1
     if (index == 0) {
       await context.secrets.load()
       await Promise.all(
-        Object.values(context.deployHooks).map(hookRef =>
-          loadDeployPlugin(hookRef, context)
-        )
+        context.deployHooks.map(hookRef => {
+          return loadDeployPlugin(hookRef, context)
+        })
       )
     }
     if (index == targetIndex) {

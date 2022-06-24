@@ -4,17 +4,15 @@ import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
 import {
-  defineDeployHook,
-  DeployContext,
   emptyDir,
   esbuild,
-  getDeployContext,
   getViteTransform,
   SourceMap,
   toDevPath,
   toInlineSourceMap,
   toObjectHash,
 } from 'saus/core'
+import { defineDeployHook, DeployContext, getDeployContext } from 'saus/deploy'
 import { Props } from './types'
 
 interface Target extends Props {

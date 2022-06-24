@@ -1,6 +1,7 @@
+import { ViteFunctions } from '@/vite/functions'
 import fs from 'fs'
 import { basename } from 'path'
-import { SausContext, vite } from '..'
+import { SausContext } from '..'
 import { CompileCache } from '../node/compileCache'
 import { loadSourceMap, toInlineSourceMap } from '../node/sourceMap'
 import { toDevPath } from '../node/toDevPath'
@@ -21,10 +22,14 @@ export async function compileSsrModule(
   id: string,
   context: Omit<SausContext, 'command'>
 ): Promise<CompiledModule | null> {
-  const { config, server } = context
-  const { pluginContainer } = server!
+  const { config } = context
 
-  let module = await readSsrModule(id, pluginContainer, context.compileCache)
+  let module = await readSsrModule(
+    id,
+    context.compileCache,
+    context.load,
+    context.transform
+  )
 
   const importMeta = {
     url: toDevPath(id, context.root),
@@ -55,12 +60,13 @@ export async function compileSsrModule(
 
 async function readSsrModule(
   id: string,
-  pluginContainer: vite.PluginContainer,
-  cache: CompileCache
+  cache: CompileCache,
+  load: ViteFunctions['load'],
+  transform: ViteFunctions['transform']
 ) {
   const filename = cleanUrl(id)
 
-  let loaded = await pluginContainer.load(id, { ssr: true })
+  let loaded = await load(id)
   if (loaded == null) {
     loaded = fs.readFileSync(filename, 'utf8')
   }
@@ -85,12 +91,10 @@ async function readSsrModule(
     return script
   }
 
-  const transformed = await pluginContainer.transform(script.code, id, {
-    inMap: script.map,
-    ssr: true,
-  })
-
-  if (transformed?.code != null) {
+  const transformed = await transform(script.code, id, script.map)
+  if (typeof transformed == 'string') {
+    script.code = transformed
+  } else if (transformed?.code != null) {
     script = transformed as Script
   }
 

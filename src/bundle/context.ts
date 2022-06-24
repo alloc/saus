@@ -7,6 +7,7 @@ import {
 import { renderPlugin } from '@/plugins/render'
 import { plural } from '@/utils/plural'
 import { SausBundleConfig, vite } from '@/vite'
+import { getViteFunctions, ViteFunctions } from '@/vite/functions'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -29,7 +30,7 @@ export interface BundleConfig
   outFile?: string
 }
 
-export interface BundleContext extends BaseContext {
+export interface BundleContext extends BaseContext, ViteFunctions {
   command: 'build' | 'deploy'
   loadRoutes: () => Promise<void>
   bundle: BundleConfig
@@ -47,10 +48,12 @@ export interface BundleContext extends BaseContext {
   onPublicFile?: (name: string, data: Buffer) => void
 }
 
-export async function loadBundleContext(
+export async function loadBundleContext<
+  T extends Omit<BundleContext, 'command'> = BundleContext
+>(
   options: InlineBundleConfig = {},
   inlineConfig: vite.UserConfig = {}
-) {
+): Promise<T> {
   const context: BundleContext = (await loadContext('build', inlineConfig, [
     renderPlugin,
   ])) as any
@@ -112,24 +115,24 @@ export async function loadBundleContext(
     debugBase,
   }
 
+  const { pluginContainer } = await vite.createTransformContext(
+    context.config,
+    false
+  )
+
+  Object.assign(context, getViteFunctions(pluginContainer))
   context.loadRoutes = () => {
     const loading = (async () => {
-      const { pluginContainer } = await vite.createTransformContext(
-        context.config,
-        false
-      )
-
       const loading = startTask('Loading routes...')
-      await loadRoutes(context, (id, importer) =>
-        pluginContainer.resolveId(id, importer!, { ssr: true })
-      )
+
+      await loadRoutes(context)
+
       const routeCount =
         context.routes.length +
         (context.defaultRoute ? 1 : 0) +
         (context.catchRoute ? 1 : 0)
 
       loading.finish(`${plural(routeCount, 'route')} loaded.`)
-      await pluginContainer.close()
     })()
 
     context.loadRoutes = () => loading
@@ -146,7 +149,7 @@ export async function loadBundleContext(
     ]),
   ]
 
-  return context
+  return context as any
 }
 
 function validateDebugBase(debugBase: string, base: string) {
