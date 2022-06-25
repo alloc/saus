@@ -16,5 +16,7 @@ export * from './runtime/config'
 export * from './tokens'
 export * from './types'
 export * from './vite'
-export * from './vite/transform'
+export * from './vite/compileModule'
+export * from './vite/esbuildPlugin'
+export * from './vite/functions'
 export { exec }

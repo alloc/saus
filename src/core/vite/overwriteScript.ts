@@ -1,6 +1,6 @@
-import { vite } from '..'
-import { SourceMap } from '../node/sourceMap'
-import { Script } from './types'
+import type { SourceMap } from '../node/sourceMap'
+import { vite } from '../vite'
+import { Script } from '../vm/types'
 
 export function overwriteScript(
   filename: string,

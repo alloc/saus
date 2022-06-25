@@ -1,17 +1,8 @@
 import exec from '@cush/exec'
-import builtinModules from 'builtin-modules'
 import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
-import {
-  emptyDir,
-  esbuild,
-  getViteTransform,
-  SourceMap,
-  toDevPath,
-  toInlineSourceMap,
-  toObjectHash,
-} from 'saus/core'
+import { emptyDir, esbuild, esbuildViteBridge, toObjectHash } from 'saus/core'
 import {
   createDryLog,
   defineDeployHook,
@@ -41,6 +32,7 @@ export default defineDeployHook(context => ({
       absolute: true,
     }).map(entry => path.relative(root, entry))
 
+    debugger
     const files = await bundleFunctions(entries, props, context)
     const modules: Record<string, string> = {}
     for (const file of files) {
@@ -148,69 +140,6 @@ async function bundleFunctions(
   props: Props,
   context: DeployContext
 ) {
-  const config = await context.resolveConfig('build', {
-    plugins: context.bundlePlugins,
-  })
-
-  const { transform, pluginContainer } = await getViteTransform({
-    ...config,
-    plugins: config.plugins.filter(p => p.name !== 'commonjs'),
-  })
-  await pluginContainer.buildStart({})
-
-  const moduleOverrideByPath: Record<string, string> = {}
-  const moduleOverrides: Record<string, string> = {
-    debug: 'export default () => () => {}',
-  }
-
-  const esbuildVite: esbuild.Plugin = {
-    name: 'vite-bridge',
-    setup(build) {
-      build.onResolve({ filter: /.+/ }, async ({ path: id, importer }) => {
-        if (!importer) {
-          return { path: id }
-        }
-        if (builtinModules.includes(id)) {
-          return { path: id, external: true, sideEffects: false }
-        }
-        const resolved = await pluginContainer.resolveId(id, importer, {
-          ssr: true,
-        })
-        if (resolved) {
-          if (moduleOverrides[id]) {
-            moduleOverrideByPath[resolved.id] = moduleOverrides[id]
-          }
-          return {
-            path: resolved.id,
-            sideEffects: !!resolved.moduleSideEffects,
-          }
-        }
-      })
-      build.onLoad({ filter: /.+/ }, async ({ path: id }) => {
-        if (moduleOverrideByPath[id]) {
-          return {
-            contents: moduleOverrideByPath[id],
-            loader: 'js',
-          }
-        }
-        const transformed = await transform(toDevPath(id, context.root, true))
-        if (transformed) {
-          let { code, map } = transformed as { code: string; map?: SourceMap }
-          if (map) {
-            map.sources = map.sources.map(source => {
-              return source ? path.relative(path.dirname(id), source) : null!
-            })
-            code += map ? toInlineSourceMap(map) : ''
-          }
-          return {
-            contents: code,
-            loader: 'js',
-          }
-        }
-      })
-    },
-  }
-
   const outBase = path.join(context.root, props.functionDir)
   const outDir = path.join(getDeployDir(props), 'api')
 
@@ -226,7 +155,7 @@ async function bundleFunctions(
     minify: props.minify,
     outbase: outBase,
     outdir: outDir,
-    plugins: [esbuildVite],
+    plugins: [await esbuildViteBridge(context)],
     sourcemap: 'external',
     splitting: true,
     target: 'esnext',
@@ -234,7 +163,6 @@ async function bundleFunctions(
     write: false,
   })
 
-  await pluginContainer.close()
   return outputFiles
 }
 

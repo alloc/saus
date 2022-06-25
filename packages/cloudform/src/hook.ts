@@ -29,7 +29,7 @@ export default defineDeployHook(ctx => ({
   async spawn(stack) {
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would create ${stack.resources.length} AWS resources`
+        `would create ${Object.keys(stack.resources).length} AWS resources`
       )
     }
     const spawned = await spawnStack(
@@ -56,7 +56,7 @@ export default defineDeployHook(ctx => ({
     }
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would update ${stack.resources.length} AWS resources`
+        `would update ${Object.keys(stack.resources).length} AWS resources`
       )
     }
     const updateStack = signedRequest.action('UpdateStack', {
@@ -81,7 +81,7 @@ export default defineDeployHook(ctx => ({
     }
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would destroy ${stack.resources.length} AWS resources`
+        `would destroy ${Object.keys(stack.resources).length} AWS resources`
       )
     }
     const deleteStack = signedRequest.action('DeleteStack', {

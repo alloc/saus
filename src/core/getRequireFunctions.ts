@@ -1,10 +1,10 @@
-import { ResolveIdHook } from '@/vm'
 import fs from 'fs'
 import { SausContext } from './context'
+import { compileNodeModule } from './vite/compileNodeModule'
+import { compileSsrModule } from './vite/compileSsrModule'
 import { createAsyncRequire } from './vm/asyncRequire'
-import { compileNodeModule } from './vm/compileNodeModule'
-import { compileSsrModule } from './vm/compileSsrModule'
 import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
+import { ResolveIdHook } from './vm/types'
 
 export function getRequireFunctions(
   context: Omit<SausContext, 'command'>,

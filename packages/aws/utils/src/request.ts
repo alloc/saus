@@ -227,7 +227,6 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       const json = res.toJSON()
       if (json.Error) {
         const props = { ...json.Error, params }
-        debugger
         Object.assign(trace, normalizeObjectResponse(props, res))
         throw trace
       }

@@ -116,12 +116,17 @@ export async function loadBundleContext<
     debugBase,
   }
 
-  const { pluginContainer } = await vite.createTransformContext(
-    context.config,
-    false
-  )
+  let { config } = context
+  config = {
+    ...config,
+    // Disable @rollup/plugin-commonjs (except for Vite builds
+    // which don't use this config).
+    plugins: config.plugins.filter(p => p.name !== 'commonjs'),
+  }
 
+  const { pluginContainer } = await vite.createTransformContext(config, false)
   Object.assign(context, getViteFunctions(pluginContainer))
+
   context.loadRoutes = () => {
     const loading = (async () => {
       const loading = startTask('Loading routes...')

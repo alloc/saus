@@ -191,7 +191,6 @@ export async function scanPublicDir(
           get: () => (buffer ||= fs.readFileSync(srcPath)),
           configurable: true,
           enumerable: true,
-          writable: true,
         })
         if (isWrite) {
           mkdirSync(path.dirname(destPath))

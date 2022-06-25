@@ -11,10 +11,10 @@ import {
   importAsyncId,
   importMetaId,
   requireAsyncId,
-} from './compileEsm'
-import { ImporterSet } from './ImporterSet'
+} from '../vm/compileEsm'
+import { ImporterSet } from '../vm/ImporterSet'
+import { CompiledModule, RequireAsync, Script } from '../vm/types'
 import { overwriteScript } from './overwriteScript'
-import { CompiledModule, RequireAsync, Script } from './types'
 
 export async function compileNodeModule(
   code: string,
