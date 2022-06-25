@@ -5,7 +5,7 @@ export function pascalize(key: string) {
 
 // FooBar -> fooBar
 export function camelize(key: string) {
-  return key.replace(/^([A-Z]+)([A-Z][a-z]|$)/, (_, k) => k.toLowerCase())
+  return key[0].toLowerCase() + key.slice(1)
 }
 
 export function rewriteKeys(

@@ -2,8 +2,6 @@ import type { RenderedPage, RenderPageOptions } from '@/app/types'
 import type { HttpRedirect } from '@/http/redirect'
 import type { ParsedUrl } from '@/node/url'
 
-export type PublicDirMode = 'write' | 'cache' | 'skip'
-
 export interface PageBundleOptions
   extends Pick<RenderPageOptions, 'timeout' | 'onError'> {
   renderStart?: (url: ParsedUrl) => void

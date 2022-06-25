@@ -223,6 +223,14 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       if (res.ok) {
         cacheParsedXml(res, xmlOptions, xmlRes)
       }
+    } else if (!res.ok && res.headers['content-type'] == 'application/json') {
+      const json = res.toJSON()
+      if (json.Error) {
+        const props = { ...json.Error, params }
+        debugger
+        Object.assign(trace, normalizeObjectResponse(props, res))
+        throw trace
+      }
     }
 
     if (!res.ok) {

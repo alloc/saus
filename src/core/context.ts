@@ -12,6 +12,7 @@ import { loadConfigHooks } from './loadConfigHooks'
 import { CompileCache } from './node/compileCache'
 import { relativeToCwd } from './node/relativeToCwd'
 import { toSausPath } from './paths'
+import { PublicDirOptions } from './publicDir'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import { clearCachedState } from './runtime/clearCachedState'
@@ -40,6 +41,7 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   configPath: string | undefined
   configHooks: ConfigHookRef[]
   userConfig: vite.UserConfig
+  publicDir: PublicDirOptions | null
   /**
    * Use this instead of `this.config` when an extra Vite build is needed,
    * or else you risk corrupting the Vite plugin state.
@@ -228,6 +230,15 @@ function getConfigResolver(
     sausConfig.defaultPath ||= '/404'
     sausConfig.stateModuleBase ||= '/state/'
 
+    const publicDir: PublicDirOptions | null =
+      typeof userConfig.publicDir == 'object' ||
+      typeof userConfig.publicDir == 'boolean'
+        ? userConfig.publicDir || null
+        : { root: userConfig.publicDir }
+
+    // Vite expects a string, false, or undefined.
+    userConfig.publicDir = publicDir ? publicDir.root : false
+
     if (inlinePlugins) {
       userConfig.plugins ??= []
       userConfig.plugins.unshift(
@@ -276,6 +287,7 @@ function getConfigResolver(
     ]
 
     const context = getContext(config)
+    context.publicDir = publicDir
     if (command == 'build') {
       context.plugins = await getSausPlugins(context, config)
     }

@@ -1,6 +1,6 @@
 import * as S3 from '@saus/aws-s3'
-import { cachedPublicFiles, OutputBundle } from 'saus'
-import { md5Hex, plural } from 'saus/core'
+import { OutputBundle } from 'saus'
+import { md5Hex, plural, scanPublicDir } from 'saus/core'
 import { createDryLog, getDeployContext, GitFiles } from 'saus/deploy'
 import secrets from './secrets'
 import { WebsiteConfig } from './types'
@@ -133,9 +133,10 @@ export async function syncStaticFiles(
   }
 
   const publicStore = syncPublicDir()
-  const publicFiles = cachedPublicFiles.get(bundle)
-  if (publicFiles) {
-    for (const [name, file] of Object.entries(publicFiles)) {
+  const publicDir = await scanPublicDir(context)
+  if (publicDir) {
+    await publicDir.commit('cache')
+    for (const [name, file] of Object.entries(publicDir.cache)) {
       publicStore.upload(name, file)
     }
   }

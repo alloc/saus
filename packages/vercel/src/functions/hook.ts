@@ -12,7 +12,12 @@ import {
   toInlineSourceMap,
   toObjectHash,
 } from 'saus/core'
-import { defineDeployHook, DeployContext, getDeployContext } from 'saus/deploy'
+import {
+  createDryLog,
+  defineDeployHook,
+  DeployContext,
+  getDeployContext,
+} from 'saus/deploy'
 import { Props } from './types'
 
 interface Target extends Props {
@@ -56,7 +61,11 @@ export default defineDeployHook(context => ({
     branch: target.gitBranch,
   }),
   async spawn(target) {
-    if (context.dryRun) return
+    if (context.dryRun) {
+      return createDryLog('@saus/vercel')(
+        `would deploy ${target.entries.length} serverless functions`
+      )
+    }
     await pushFunctions(target, context)
     // TODO: return rollback function
   },
@@ -67,10 +76,15 @@ export default defineDeployHook(context => ({
     const deployDir = getDeployDir(target)
     const { gitRepo } = context
 
-    if (!context.dryRun)
+    if (context.dryRun) {
+      createDryLog('@saus/vercel')(
+        `would destroy ${target.entries.length} serverless functions`
+      )
+    } else {
       await exec('git push --delete', [gitRepo.name, target.gitBranch], {
         cwd: deployDir,
       })
+    }
 
     try {
       emptyDir(deployDir)

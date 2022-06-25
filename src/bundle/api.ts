@@ -18,6 +18,7 @@ import { debugForbiddenImports } from '@/plugins/debug'
 import { rewriteHttpImports } from '@/plugins/httpImport'
 import { createModuleProvider } from '@/plugins/moduleProvider'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
+import { copyPublicDir } from '@/plugins/publicDir'
 import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { callPlugins } from '@/utils/callPlugins'
@@ -457,6 +458,7 @@ async function generateSsrBundle(
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
       ...workerPlugins,
+      copyPublicDir(),
       routesPlugin(clientRouteMap)(),
       context.bundlePlugins,
       modules,
@@ -523,17 +525,6 @@ async function generateSsrBundle(
   if (!options.preferExternal) {
     config.ssr!.noExternal = /./
     config.ssr!.external = bundleConfig.external
-  }
-
-  let publicFiles: Record<string, Buffer> | undefined
-  if (options.publicDirMode == 'cache') {
-    const { onPublicFile } = options
-
-    publicFiles = {}
-    options.onPublicFile = (name, data) => {
-      publicFiles![name] = data
-      return onPublicFile && onPublicFile(name, data)
-    }
   }
 
   const buildResult = (await vite.build(config)) as vite.ViteBuild

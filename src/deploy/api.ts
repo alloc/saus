@@ -57,12 +57,16 @@ export async function deploy(
 
   await context.syncDeployCache()
 
+  let lastError: any
   const logError = (e: any) => {
-    if (e.message.startsWith('[saus]')) {
-      logger.error('\n' + red('✗') + e.message.slice(6))
-    } else {
-      logger.error(e, { error: e })
+    if (e !== lastError && e.message !== lastError?.message) {
+      if (e.message.startsWith('[saus]')) {
+        logger.error('\n' + red('✗') + e.message.slice(6))
+      } else {
+        logger.error(e, { error: e })
+      }
     }
+    lastError = e
   }
 
   addExitCallback((signal, exitCode, error) => {
@@ -82,7 +86,7 @@ export async function deploy(
   ) => {
     let savedTargets = savedTargetsByPlugin.get(plugin)
     if (!savedTargets) {
-      savedTargets = targetCache[plugin.name].targets
+      savedTargets = targetCache[plugin.name]?.targets || []
       await Promise.all(
         savedTargets.map(async savedTarget => {
           defineTargetId(savedTarget, await plugin.identify(savedTarget))
@@ -186,7 +190,6 @@ export async function deploy(
   context.addDeployTarget = async (...args) => {
     const index = targets.push(args) - 1
     if (index == 0) {
-      debugger
       const missing = await context.secrets.load()
       if (missing) {
         throw Error(

@@ -18,6 +18,6 @@ export async function loadSecretSources(context: DeployContext) {
   await loading.promise
 
   if (context.logger.isLogged('info')) {
-    process.stderr.write(green('✔︎') + ' Plugin secrets were loaded.')
+    process.stderr.write(green('✔︎') + ' Plugin secrets were loaded.\n')
   }
 }

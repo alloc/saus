@@ -1,4 +1,4 @@
-import { PublicDirMode } from './types'
+import { PublicDirMode } from '@/publicDir'
 
 export interface BundleOptions {
   absoluteSources?: boolean

@@ -1,12 +1,12 @@
 import * as vite from 'vite'
 import type { BundleOptions, OutputBundle, PageBundle } from '../bundle'
-import type { PublicFile } from '../publicDir'
 import type { TestFramework } from '../test/api'
 import { App } from './app/types'
 import type { SausContext } from './context'
 import type { ClientDescription } from './defineClient'
 import type { Endpoint } from './endpoint'
 import type { ModuleProvider } from './plugins/moduleProvider'
+import type { PublicDirOptions, PublicFile } from './publicDir'
 import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import type { RuntimeConfig } from './runtime/config'
@@ -205,9 +205,19 @@ declare module 'vite' {
   }
 }
 
-export interface UserConfig extends Omit<vite.UserConfig, 'build'> {
+export interface UserConfig
+  extends Omit<vite.UserConfig, 'build' | 'publicDir'> {
   saus: SausConfig
   build?: BuildOptions
+  /**
+   * Public directory settings.
+   *
+   * Files in the `publicDir` are copied into the `build.outDir` after
+   * plugins get a chance to transform them.
+   *
+   * Use `false` to disable this feature.
+   */
+  publicDir?: false | string | PublicDirOptions
 }
 
 export interface BuildOptions extends vite.BuildOptions {
