@@ -52,8 +52,8 @@ async function defineStack<Outputs extends object | void>({
   }
 
   const { command } = getDeployContext()
-  const outputs =
-    command == 'deploy' ? await template(makeRef, CloudForm) : null
+  const outputs: any =
+    command == 'deploy' ? await template(makeRef, CloudForm) : {}
 
   return {
     name,

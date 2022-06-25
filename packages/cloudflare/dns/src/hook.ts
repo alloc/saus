@@ -1,6 +1,7 @@
 import { diffObjects, pick } from 'saus/core'
-import { defineDeployHook } from 'saus/deploy'
+import { createDryLog, defineDeployHook } from 'saus/deploy'
 import { createRequestFn } from './api/request'
+import secrets from './secrets'
 import { DnsRecord, DnsRecordList } from './types'
 import { toTable } from './utils'
 
@@ -10,14 +11,15 @@ export interface DnsRecordsTarget {
 }
 
 export default defineDeployHook(async ctx => {
-  const [apiToken] = await ctx.secrets.expect(['CLOUDFLARE_API_TOKEN'])
   const request = createRequestFn({
-    apiToken,
+    apiToken: secrets.apiToken,
     logger: ctx.logger,
   })
 
+  const dryLog = createDryLog('@saus/cloudflare-dns')
+
   function getRecordKey(rec: DnsRecord) {
-    return [rec.type, rec.name, rec.content].join('+')
+    return [rec.type, rec.name].join('+')
   }
 
   async function listRecords(zoneId: string) {
@@ -56,9 +58,15 @@ export default defineDeployHook(async ctx => {
         reusedRecords.add(oldRecord)
         if (diffObjects(pick(oldRecord, DnsRecordConfigKeys), rec)) {
           changedRecords.add(oldRecord)
+          if (ctx.dryRun) {
+            return dryLog(`would update "${rec.type} ${rec.name}" record`)
+          }
           return putRecord(zoneId, oldRecord.id, rec)
         }
       } else {
+        if (ctx.dryRun) {
+          return dryLog(`would create "${rec.type} ${rec.name}" record`)
+        }
         return createRecord(zoneId, rec).then(resp => {
           newRecordIds.set(rec, resp.id)
         })
@@ -66,42 +74,43 @@ export default defineDeployHook(async ctx => {
     })
 
     // Detect which records were removed.
-    const deletions = Object.values(oldRecords).map(
-      oldRec => reusedRecords.has(oldRec) || deleteRecord(zoneId, oldRec.id)
-    )
+    const deletions = Object.values(oldRecords).map(oldRec => {
+      if (!reusedRecords.has(oldRec)) {
+        if (ctx.dryRun) {
+          return dryLog(`would delete "${oldRec.type} ${oldRec.name}" record`)
+        }
+        return deleteRecord(zoneId, oldRec.id)
+      }
+    })
 
     // TODO: rollback successful updates if one fails
     await Promise.all([...updates, ...deletions])
 
     return async () => {
-      const updates = Object.values(oldRecords).map(oldRec => {
-        if (changedRecords.has(oldRec)) {
-          return request('put', `/zones/${zoneId}`)
+      const undoUpdates = records.map(rec => {
+        const key = getRecordKey(rec)
+        const oldRecord = oldRecords[key]
+        if (!oldRecord) {
+          const id = newRecordIds.get(rec)!
+          return deleteRecord(zoneId, id)
+        }
+        if (changedRecords.has(oldRecord)) {
+          return putRecord(
+            zoneId,
+            oldRecord.id,
+            pick(oldRecord, DnsRecordConfigKeys)
+          )
         }
       })
 
-      const deletions = records.map(rec => {
-        const key = getRecordKey(rec)
-        const oldRecord = oldRecords[key]
-        if (oldRecord) {
-          if (changedRecords.has(oldRecord)) {
-            return putRecord(
-              zoneId,
-              oldRecord.id,
-              pick(oldRecord, DnsRecordConfigKeys)
-            )
-          }
-          if (!reusedRecords.has(oldRecord)) {
-            return createRecord(zoneId, pick(oldRecord, DnsRecordConfigKeys))
-          }
-        } else {
-          const id = newRecordIds.get(rec)!
-          return deleteRecord(zoneId, id)
+      const undoDeletions = Object.values(oldRecords).map(oldRecord => {
+        if (!reusedRecords.has(oldRecord)) {
+          return createRecord(zoneId, pick(oldRecord, DnsRecordConfigKeys))
         }
       })
 
       // TODO: catch permission errors
-      await Promise.all([...updates, ...deletions])
+      await Promise.all([...undoUpdates, ...undoDeletions])
     }
   }
 

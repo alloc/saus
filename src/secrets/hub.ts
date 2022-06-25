@@ -1,5 +1,4 @@
 import { defer } from '@/utils/defer'
-import type { DeployContext } from '../deploy/context'
 import { kSecretDefinition } from './symbols'
 import type {
   DefinedSecrets,
@@ -16,8 +15,6 @@ export class SecretHub {
   private _imported = new Set<Function>()
   private _defined = new Map<Function, DefinedSecrets>()
   private _adopted = new Map<Function, Function[]>()
-
-  constructor(private _context: DeployContext) {}
 
   /** Get the list of mutable secret sources. */
   getMutableSources(): MutableSecretSource[] {
@@ -43,7 +40,7 @@ export class SecretHub {
    * Load secrets from the added sources. \
    * Missing secrets are returned as a set of names.
    */
-  async load(silent?: boolean) {
+  async load() {
     if (this._loaded.settled || this._loading) {
       return this._loaded.promise
     }
@@ -74,14 +71,6 @@ export class SecretHub {
       ensureSecretsExist(fn)
     }
     if (missing.size) {
-      if (!silent) {
-        const { logger } = this._context
-        logger.warn(
-          'Secrets are missing:' +
-            Array.from(missing, name => '\n  ‣ ' + name).slice(0, 5) +
-            (missing.size > 5 ? `\n  +${missing.size - 5} more` : '')
-        )
-      }
       this._loaded.resolve(missing)
     } else {
       this._loaded.resolve()

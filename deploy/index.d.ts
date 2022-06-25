@@ -1,1 +1,1 @@
-export * from '../src/deploy/runtime'
+export * from '../src/deploy'

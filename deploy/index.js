@@ -1,1 +1,1 @@
-Object.assign(exports, require('../dist/deploy/runtime'))
+Object.assign(exports, require('../dist/deploy'))

@@ -27,7 +27,7 @@ export default defineDeployHook(ctx => ({
         Outputs: stack.outputs,
       })
     )
-    stack.id = spawned.StackId
+    stack.id = spawned.stackId
     return async () => {
       await this.kill(stack)
     }

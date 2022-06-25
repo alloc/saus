@@ -68,6 +68,10 @@ cli
   .command('secrets add', 'Add secrets to use when deploying')
   .action(commandActions['secrets add'])
 
+cli
+  .command('secrets ls', 'List secrets used when deploying')
+  .action(commandActions['secrets ls'])
+
 cli.command('test').action(commandActions.test)
 
 declare const __VERSION__: string

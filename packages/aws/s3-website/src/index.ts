@@ -1,8 +1,8 @@
 import { ResourceRef, useCloudFormation } from '@saus/cloudform'
 import { OutputBundle } from 'saus'
-import { addSecrets, getDeployContext } from 'saus/deploy'
+import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
 import secrets from './secrets'
-import { useBundleSync } from './sync'
+import { syncStaticFiles } from './sync'
 import { WebsiteConfig } from './types'
 
 addSecrets(useS3Website, secrets)
@@ -194,13 +194,15 @@ export async function useS3Website(
     },
   })
 
-  await useBundleSync(
-    bundle,
-    ctx.files,
-    config,
-    awsInfra.outputs.buckets,
-    debugBase
-  )
+  await onDeploy(async () => {
+    await syncStaticFiles(
+      bundle,
+      ctx.files,
+      config,
+      awsInfra.outputs.buckets || {},
+      debugBase
+    )
+  })
 
   return {
     ...awsInfra.outputs,

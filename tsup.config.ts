@@ -15,7 +15,7 @@ export default defineConfig({
     'src/build/failedPages.ts',
     'src/build/worker.ts',
     'src/bundle/html.ts',
-    'src/deploy/runtime.ts',
+    'src/deploy/index.ts',
     // Programmatic API
     'src/build/api.ts',
     'src/bundle/api.ts',

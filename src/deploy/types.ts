@@ -153,3 +153,9 @@ export type DeployTarget<
   Props extends object = Record<string, any>,
   State extends object = {}
 > = { _id?: string } & Props & State
+
+export type DeployTargetArgs = [
+  hook: DeployHookRef,
+  target: Promisable<DeployTarget>,
+  resolve: (outputs: any) => void
+]

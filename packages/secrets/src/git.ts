@@ -54,6 +54,7 @@ export function useGitSecrets() {
         }
       }
       secretsFile.setPassword(password)
+      break
     }
   }
 }

@@ -1,7 +1,7 @@
 import { prompt } from '@saus/deploy-utils'
 import { readFileSync, writeFileSync } from 'fs'
 import path from 'path'
-import { onDeploy } from 'saus/deploy'
+import { createDryLog, onDeploy } from 'saus/deploy'
 
 export type BumpType = 'patch' | 'minor' | 'major'
 
@@ -51,10 +51,14 @@ export function bumpProjectVersion() {
     )
 
     ctx.rootPackage.version = newVersion
-    writeFileSync(pkgPath, newPkgText)
-    onRevert(() => {
-      writeFileSync(pkgPath, pkgText)
-    })
+    if (ctx.dryRun) {
+      createDryLog('@saus/bump')(`would bump the project to v${newVersion}`)
+    } else {
+      writeFileSync(pkgPath, newPkgText)
+      onRevert(() => {
+        writeFileSync(pkgPath, pkgText)
+      })
+    }
 
     return { type, version: newVersion }
   })

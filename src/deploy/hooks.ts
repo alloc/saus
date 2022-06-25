@@ -1,7 +1,7 @@
 import { defer } from '@/utils/defer'
 import { callerPath } from 'shared-log'
 import { Promisable } from 'type-fest'
-import { DeployContext, getDeployContext } from './context'
+import { getDeployContext } from './context'
 import type {
   DefineDeployHook,
   DeployAction,
@@ -62,8 +62,3 @@ export function onDeploy<T>(action: DeployAction<T>) {
   const ctx = getDeployContext()
   return ctx.addDeployAction(action)
 }
-
-export * from '../secrets/runtime'
-export * from './files'
-export * from './types'
-export { DeployContext, getDeployContext }

@@ -279,13 +279,13 @@ importers:
     specifiers:
       '@saus/deploy-utils': '*'
       aes-password: ^1.0.5
-      recrawl-sync: ^2.2.1
+      kleur: ^4.1.4
       saus: link:../..
     dependencies:
       '@saus/deploy-utils': link:../deploy-utils
       aes-password: 1.0.5
+      kleur: 4.1.4
     devDependencies:
-      recrawl-sync: 2.2.1
       saus: link:../..
 
   packages/test:

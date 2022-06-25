@@ -258,7 +258,7 @@ export async function deploy(
     const debugFile = path.resolve(context.root, 'targets.debug.yaml')
     fs.writeFileSync(debugFile, yaml.stringify(newTargetCache))
     if (logger.isLogged('info')) {
-      success('Dry run complete! Targets saved to:\n    ' + debugFile)
+      success('\nDry run complete! Targets saved to:\n    ' + debugFile + '\n')
     }
   } else {
     task = startTask('Saving deployment state')

@@ -125,6 +125,11 @@ export const commandActions = {
       require('../secrets/api') as typeof import('../secrets/api')
     await run(addSecrets)
   },
+  async 'secrets ls'() {
+    const { listSecrets } =
+      require('../secrets/api') as typeof import('../secrets/api')
+    await run(listSecrets)
+  },
   async deploy(options: DeployOptions) {
     const { deploy } =
       require('../deploy/api') as typeof import('../deploy/api')
@@ -145,7 +150,7 @@ async function run<Args extends any[], Result>(
     return await fn(...args)
   } catch (e: any) {
     if (e.message.startsWith('[saus]')) {
-      fatal(e.message)
+      fatal(e.message.slice(7))
     }
     throw e
   }

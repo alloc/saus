@@ -7,7 +7,7 @@ import { ModuleMap, RequireAsync } from '@/vm/types'
 import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
-import { PackageJson, Promisable } from 'type-fest'
+import { PackageJson } from 'type-fest'
 import { BundleContext, loadBundleContext } from '../bundle/context'
 import { SecretHub } from '../secrets/hub'
 import { secretsPlugin } from '../secrets/plugin'
@@ -17,14 +17,8 @@ import {
   DeployAction,
   DeployHookRef,
   DeployPlugin,
-  DeployTarget,
+  DeployTargetArgs,
 } from './types'
-
-export type DeployTargetArgs = [
-  hook: DeployHookRef,
-  target: Promisable<DeployTarget>,
-  resolve: (outputs: any) => void
-]
 
 export interface DeployContext extends Omit<BundleContext, 'command'> {
   command: 'deploy' | 'secrets'
@@ -90,7 +84,7 @@ export async function loadDeployContext(
 
   context.command = options.command || 'deploy'
   context.files = new GitFiles(cacheDir, options.dryRun)
-  context.secrets = new SecretHub(context)
+  context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
   context.deployHooks = []
 
