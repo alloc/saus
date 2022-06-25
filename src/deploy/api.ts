@@ -11,7 +11,7 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
 import { vite } from '../core'
-import { DeployContext, DeployTargetArgs, loadDeployContext } from './context'
+import { DeployContext, loadDeployContext } from './context'
 import { loadDeployFile, loadDeployPlugin } from './loader'
 import { DeployOptions } from './options'
 import {
@@ -19,6 +19,7 @@ import {
   DeployHookRef,
   DeployPlugin,
   DeployTarget,
+  DeployTargetArgs,
   RevertFn,
 } from './types'
 
@@ -193,7 +194,6 @@ export async function deploy(
   }
 
   task?.finish()
-  task = task && startTask('Deploying...')
 
   try {
     await loadDeployFile(context)
@@ -206,7 +206,6 @@ export async function deploy(
       context
     )
 
-    task?.finish()
     const numChanged =
       killedTargets.length + updatedTargets.length + addedTargets.length
 
@@ -233,10 +232,11 @@ export async function deploy(
     }
   } catch (e: any) {
     logger.error(e, { error: e })
-    logger.info(
-      `Plugin "${activePlugin.name}" threw an error.` +
-        (options.dryRun ? '' : ' Reverting changes...')
-    )
+    if (activePlugin)
+      logger.info(
+        `Plugin "${activePlugin.name}" threw an error.` +
+          (options.dryRun ? '' : ' Reverting changes...')
+      )
     if (!options.dryRun)
       for (const revert of revertFns.reverse()) {
         await revert()

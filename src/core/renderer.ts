@@ -1,5 +1,6 @@
 import type { BufferLike } from './app/types'
-import type { ClientDescription, CommonClientProps } from './client'
+import type { CommonClientProps } from './client'
+import type { ClientDescription } from './defineClient'
 import type { RouteModule, RouteParams } from './routes'
 import type { RuntimeConfig } from './runtime/config'
 import { parseRoutePath } from './utils/parseRoutePath'

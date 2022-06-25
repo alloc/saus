@@ -1,4 +1,4 @@
-import { onResponse, route } from 'saus'
+import { onResponse, route, setup } from 'saus'
 import {
   AssetStore,
   assignDefaults,
@@ -6,7 +6,6 @@ import {
   getPageFilename,
   getRequestMetadata,
   pick,
-  setup,
   toRawBody,
 } from 'saus/core'
 import { ResponseHeaders } from 'saus/http'

@@ -271,7 +271,7 @@ function getConfigResolver(
       ...arrify(config.optimizeDeps.entries),
       // Skip "saus/client" in build mode, so we don't get warnings
       // from trying to resolve imports for modules included in the
-      // bundled Saus runtime (see "./bundle/runtimeBundle.ts").
+      // bundled Saus runtime (see "../bundle/runtimeBundle.ts").
       ...arrify(isBuild ? undefined : toSausPath('client/index.js')),
     ]
 

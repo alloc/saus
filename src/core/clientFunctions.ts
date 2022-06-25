@@ -9,9 +9,8 @@ import {
   resolveReferences,
   t,
 } from './babel'
-import { renderIdentRE } from './plugins/render'
-import type { RouteParams } from './routes'
-import type { ImportDescriptorMap } from './utils/imports'
+
+export const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
 
 /** A generated client module */
 export interface Client {
@@ -28,16 +27,6 @@ interface ExistingRawSourceMap {
   sources: string[]
   sourcesContent?: string[]
   version: number
-}
-
-export type AnyClientProps = CommonClientProps & Record<string, any>
-
-/** JSON state provided by the renderer and made available to the client */
-export interface CommonClientProps<Params extends {} = RouteParams> {
-  rootId?: string
-  routePath: string
-  routeParams: Params
-  error?: any
 }
 
 /**
@@ -226,29 +215,4 @@ function toWrappedNode<T extends t.Node>(
     node,
     toString: () => source.slice(node.start, node.end),
   }
-}
-
-export function defineClient(description: ClientDescription) {
-  return description
-}
-
-export interface ClientDescription {
-  /**
-   * Define `import` statements to be included.
-   *
-   * The keys are modules to import from, and the values are either the
-   * identifier used for the default export or an array of identifiers
-   * used for named exports.
-   */
-  imports: ImportDescriptorMap
-  /**
-   * Hydration code to run on the client.
-   *
-   * Executed inside a function with this type signature:
-   *
-   *     async (content: unknown, request: RenderRequest) => void
-   *
-   * Custom imports are available as well.
-   */
-  onHydrate: string
 }

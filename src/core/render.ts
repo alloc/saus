@@ -1,4 +1,4 @@
-import type { ClientDescription } from './client'
+import type { ClientDescription } from './defineClient'
 import { renderModule } from './global'
 import { DocumentHook, Renderer, RenderRequest } from './renderer'
 import { matchRoute, RouteParams } from './routes'

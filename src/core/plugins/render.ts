@@ -1,6 +1,7 @@
-import * as vite from 'vite'
 import annotateAsPure from '@babel/helper-annotate-as-pure'
-import { babel, transformSync, t, NodePath } from '../babel'
+import * as vite from 'vite'
+import { babel, NodePath, t, transformSync } from '../babel'
+import { renderIdentRE } from '../clientFunctions'
 import { SausConfig } from '../core'
 import { isClientId } from './clientEntries'
 
@@ -24,8 +25,6 @@ export function renderPlugin(
     },
   }
 }
-
-export const renderIdentRE = /^(beforeRender$|render([A-Z]|$))/
 
 // Append the node position to render-related calls.
 function injectRenderMetadata(program: NodePath<t.Program>) {

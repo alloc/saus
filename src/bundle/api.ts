@@ -464,6 +464,7 @@ async function generateSsrBundle(
         'vite',
         './babel/index.js',
         './client/index.js',
+        './deploy/index.js',
         './src/core/index.ts',
         './src/core/babel/index.ts',
         './src/core/client/index.ts',
@@ -480,7 +481,7 @@ async function generateSsrBundle(
       // debugSymlinkResolver(),
     ],
     resolve: {
-      conditions: isWorker ? ['worker'] : undefined,
+      conditions: ['ssr'].concat(isWorker ? ['worker'] : []),
     },
     build: {
       write: false,

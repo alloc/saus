@@ -132,7 +132,7 @@ async function compileSsrRuntime(context: BundleContext) {
     // "saus/bundle" entry point
     bundle: path.join(bundleDir, 'bundle/api.ts'),
     // "saus/client" entry point
-    client: path.join(bundleDir, 'node/api.ts'),
+    client: path.join(bundleDir, 'client/api.ts'),
     // used by @saus/html
     html: path.resolve(bundleDir, '../html.ts'),
     // "saus/http" entry point

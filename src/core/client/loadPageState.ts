@@ -1,7 +1,7 @@
-import type { CommonClientProps } from '../client'
 import { getCachedState } from '../runtime/getCachedState'
 import { getPageFilename } from '../utils/getPageFilename'
 import { unwrapDefault } from '../utils/unwrapDefault'
+import type { CommonClientProps } from './types'
 
 export function loadPageState(pagePath: string) {
   const trace = Error()

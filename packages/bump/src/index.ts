@@ -15,6 +15,7 @@ export function bumpProjectVersion() {
     const { type } = await prompt({
       name: 'type',
       type: 'select',
+      message: 'Select a release kind',
       choices: [
         { title: 'Patch', value: 'patch' },
         { title: 'Minor', value: 'minor' },

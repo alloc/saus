@@ -61,7 +61,7 @@ cli
 
 cli
   .command('deploy')
-  .option('--dry-run', `[boolean] generate deployment actions then bail out`)
+  .option('-n, --dry-run', `[boolean] enable dry logs and skip deploying`)
   .action(commandActions.deploy)
 
 cli
