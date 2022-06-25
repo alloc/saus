@@ -1,3 +1,4 @@
+import { readJson } from '@/utils/readJson'
 import fs from 'fs'
 import path from 'path'
 
@@ -5,7 +6,7 @@ const failedPagesId = 'node_modules/.saus/failed-pages.json'
 
 export function getFailedPages(): string[] {
   try {
-    return JSON.parse(fs.readFileSync(failedPagesId, 'utf8'))
+    return readJson(failedPagesId)
   } catch {
     return []
   }

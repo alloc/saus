@@ -4,7 +4,7 @@ import { vite } from '@/vite'
 import arrify from 'arrify'
 import { addExitCallback } from 'catch-exit'
 import { cyan, gray, red } from 'kleur/colors'
-import { fatal, success } from 'misty'
+import { success } from 'misty'
 import { startTask } from 'misty/task'
 import log from 'shared-log'
 import type { DeployOptions } from '../deploy/options'
@@ -125,6 +125,11 @@ export const commandActions = {
       require('../secrets/api') as typeof import('../secrets/api')
     await run(addSecrets)
   },
+  async 'secrets rm'(opts: any) {
+    const { removeSecrets } =
+      require('../secrets/api') as typeof import('../secrets/api')
+    await run(removeSecrets, opts)
+  },
   async 'secrets ls'() {
     const { listSecrets } =
       require('../secrets/api') as typeof import('../secrets/api')
@@ -150,7 +155,8 @@ async function run<Args extends any[], Result>(
     return await fn(...args)
   } catch (e: any) {
     if (e.message.startsWith('[saus]')) {
-      fatal(e.message.slice(7))
+      console.error('\n' + red('✗') + e.message.slice(6))
+      process.exit(1)
     }
     throw e
   }

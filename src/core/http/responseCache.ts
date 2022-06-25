@@ -3,6 +3,7 @@ import { dirname, resolve } from 'path'
 import { unwrapBuffer } from '../buffer'
 import type { CacheEntry } from '../runtime/withCache'
 import { md5Hex } from '../utils/md5-hex'
+import { readJson } from '../utils/readJson'
 import { Response } from './response'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}
@@ -17,7 +18,7 @@ export function loadResponseCache(root: string) {
   const metadataFile = resolve(cacheDir, 'metadata.json')
   let metadata: Record<string, CacheEntry<string>>
   try {
-    metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'))
+    metadata = readJson(metadataFile)
   } catch {
     metadata = {}
   }

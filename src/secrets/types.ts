@@ -11,10 +11,12 @@ export interface SecretSource {
   loaded?: Record<string, any>
   load: () => Promisable<Record<string, any>>
   set?: (secrets: SecretMap, replace?: boolean) => Promisable<void>
+  unset?: (names: string[]) => Promisable<void>
 }
 
 export interface MutableSecretSource extends SecretSource {
   set: (secrets: SecretMap, replace?: boolean) => Promisable<void>
+  unset: (names: string[]) => Promisable<void>
 }
 
 export type DefinedSecrets<T extends SecretMap = any> = {

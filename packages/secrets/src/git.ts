@@ -1,5 +1,6 @@
 import { prompt } from '@saus/deploy-utils'
 import { AESEncryption } from 'aes-password'
+import { createCommit, exec, pickAllExcept } from 'saus/core'
 import { File, getDeployContext, SecretMap } from 'saus/deploy'
 
 /**
@@ -10,14 +11,15 @@ export function useGitSecrets() {
   const { secrets, files, logger, syncDeployCache } = getDeployContext()
 
   const secretsFile = files.get('secrets.aes', SecretsFile)
-  const beforeFileAccess = () =>
+  const beforeFileAccess = once(() =>
     Promise.all([requestPassword(), syncDeployCache()])
+  )
 
   secrets.addSource({
     name: 'Git Secrets',
     async load() {
       if (secretsFile.exists) {
-        logger.info('Using git for encrypted secret storage.')
+        logger.info('\nUsing git for encrypted secret storage.')
         await beforeFileAccess()
         return secretsFile.getData()
       }
@@ -28,7 +30,17 @@ export function useGitSecrets() {
       if (secretsFile.exists && !replace) {
         secrets = Object.assign(await secretsFile.getData(), secrets)
       }
-      secretsFile.setData(secrets)
+      await secretsFile.setData(secrets)
+      await commitUpdates()
+    },
+    async unset(names) {
+      await beforeFileAccess()
+      if (!secretsFile.exists) {
+        return logger.warn('No secrets were found.')
+      }
+      const secrets = pickAllExcept(await secretsFile.getData(), names)
+      await secretsFile.setData(secrets)
+      await commitUpdates()
     },
   })
 
@@ -37,7 +49,7 @@ export function useGitSecrets() {
       const { password } = await prompt({
         name: 'password',
         type: 'password',
-        message: secretsFile.exists ? 'New password' : 'Password',
+        message: secretsFile.exists ? 'Password' : 'New password',
       })
       if (!password) {
         throw Error('[saus] Operation canceled.')
@@ -57,6 +69,16 @@ export function useGitSecrets() {
       break
     }
   }
+
+  async function commitUpdates() {
+    if (!files.dryRun) {
+      await exec(`git add`, [secretsFile.name], { cwd: files.root })
+      await createCommit('update secrets.aes', {
+        cwd: files.root,
+      })
+      await exec(`git push`, { cwd: files.root })
+    }
+  }
 }
 
 class SecretsFile extends File {
@@ -70,8 +92,24 @@ class SecretsFile extends File {
     return JSON.parse(decrypted)
   }
   async setData(data: SecretMap) {
-    const decrypted = JSON.stringify(data)
-    const encrypted = await AESEncryption.encrypt(decrypted, this._password)
-    this.setBuffer(Buffer.from(encrypted))
+    if (Object.keys(data).length) {
+      const decrypted = JSON.stringify(data)
+      const encrypted = await AESEncryption.encrypt(decrypted, this._password)
+      this.setBuffer(Buffer.from(encrypted))
+    } else {
+      this.delete()
+    }
   }
+}
+
+function once<T extends (...args: any[]) => any>(fn: T): T {
+  let called = false
+  let result: any
+  return ((...args: any[]) => {
+    if (called) {
+      return result
+    }
+    called = true
+    return (result = fn(...args))
+  }) as any
 }

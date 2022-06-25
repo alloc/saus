@@ -9,6 +9,7 @@ import fs from 'fs'
 import path from 'path'
 import { PackageJson } from 'type-fest'
 import { BundleContext, loadBundleContext } from '../bundle/context'
+import { createCommit } from '../core'
 import { SecretHub } from '../secrets/hub'
 import { secretsPlugin } from '../secrets/plugin'
 import { GitFiles } from './files'
@@ -87,6 +88,7 @@ export async function loadDeployContext(
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
   context.deployHooks = []
+  context.deployPlugins = {}
 
   // By default, a deployment action will never resolve.
   // This affects `saus secrets add` for example, so unnecessary
@@ -126,11 +128,16 @@ async function syncDeployCache(
     await exec('git pull --depth 1', [gitRepo.name, targetBranch], {
       cwd: cacheDir,
     })
+    if (init) {
+      await exec('git branch -u', [gitRepo.name + '/deployed'], {
+        cwd: cacheDir,
+      })
+    }
   } catch (e: any) {
     if (!init || !/Couldn't find remote ref/.test(e.message)) {
       throw e
     }
-    await exec('git commit -m "init" --allow-empty', { cwd: cacheDir })
+    await createCommit('init', ['--allow-empty'], { cwd: cacheDir })
     await exec('git push -u', [gitRepo.name, 'master:' + targetBranch], {
       cwd: cacheDir,
     })

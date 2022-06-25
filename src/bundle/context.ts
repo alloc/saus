@@ -18,6 +18,7 @@ type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'moduleMap' | 'target'
 
 export interface InlineBundleConfig
   extends Pick<SausBundleConfig, InheritedKeys> {
+  appVersion?: string
   outFile?: string
   write?: boolean
 }

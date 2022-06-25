@@ -1,3 +1,4 @@
+import exec from '@cush/exec'
 import { execSync } from 'child_process'
 
 export const getRawGitHubUrl = (opts: {
@@ -9,5 +10,15 @@ export const getRawGitHubUrl = (opts: {
   `https://${opts.token}@raw.githubusercontent.com/${opts.repo}/${opts.branch}/${opts.file}`
 
 export function getCurrentGitBranch() {
-  return execSync('git rev-parse --abbrev-ref HEAD').toString('utf8')
+  return execSync('git rev-parse --abbrev-ref HEAD').toString('utf8').trim()
+}
+
+export function createCommit(message: string, ...args: exec.Args) {
+  return exec(`git commit -m`, [message], ...args).catch(ignoreExitCode1)
+}
+
+function ignoreExitCode1(e: any) {
+  if (e.exitCode !== 1) {
+    throw e
+  }
 }

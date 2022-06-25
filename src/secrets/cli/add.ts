@@ -2,7 +2,8 @@ import { prompt } from '@saus/deploy-utils'
 import { bold, gray, green, yellow } from 'kleur/colors'
 import { loadDeployContext } from '../../deploy/context'
 import { loadSecretSources } from '../loadSecretSources'
-import { MutableSecretSource, SecretMap } from '../types'
+import { SecretMap } from '../types'
+import { selectSource } from '../utils/selectSource'
 
 export async function addSecrets() {
   const context = await loadDeployContext({
@@ -11,7 +12,7 @@ export async function addSecrets() {
 
   await loadSecretSources(context)
 
-  const sources = context.secrets.getMutableSources()
+  const sources = context.secrets.getMutableSources('set')
   if (!sources.length) {
     throw Error('[saus] None of your deploy plugins allow adding secrets.')
   }
@@ -52,25 +53,9 @@ export async function addSecrets() {
 
   console.log('')
 
-  let source: MutableSecretSource
-  if (sources.length > 1) {
-    source = (
-      await prompt({
-        name: 'source',
-        type: 'select',
-        choices: sources.map(s => ({ title: s.name, value: s })),
-      })
-    ).source
-  } else {
-    source = sources[0]
+  const source = await selectSource(sources)
+  if (source) {
+    await source.set(secrets)
+    context.logger.info(green('✔︎ Secrets were saved!'))
   }
-
-  await source.set(secrets)
-
-  const commitMsg = 'add secrets\n' + Object.keys(secrets).join('\n')
-  if (await context.files.commit(commitMsg)) {
-    await context.files.push()
-  }
-
-  context.logger.info(green('✔︎ Secrets were saved!'))
 }

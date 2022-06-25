@@ -1,3 +1,4 @@
+import { createCommit } from '@/node/git'
 import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
@@ -8,11 +9,10 @@ export class GitFiles {
   private _tracker: FileTracker
 
   constructor(readonly root: string, readonly dryRun?: boolean) {
-    this._tracker = new FileTracker(
-      exec
-        .sync('git ls-tree --full-tree -r --name-only HEAD', { cwd: root })
-        .split('\n')
-    )
+    const knownFiles = exec
+      .sync('git ls-tree --full-tree -r --name-only HEAD', { cwd: root })
+      .split('\n')
+    this._tracker = new FileTracker(knownFiles)
   }
 
   get<T = any>(name: `${string}.json`): JsonFile<T>
@@ -38,7 +38,7 @@ export class GitFiles {
   async commit(message: string) {
     if (this._tracker.numChanged > 0) {
       await exec('git add -A', { cwd: this.root })
-      await exec('git commit -m', [message], { cwd: this.root })
+      await createCommit(message, { cwd: this.root })
       this._tracker.reset()
       return true
     }

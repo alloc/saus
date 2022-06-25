@@ -69,6 +69,11 @@ cli
   .action(commandActions['secrets add'])
 
 cli
+  .command('secrets rm', 'Remove secrets from this project')
+  .option('--all', `[boolean] remove all secrets at once`)
+  .action(commandActions['secrets rm'])
+
+cli
   .command('secrets ls', 'List secrets used when deploying')
   .action(commandActions['secrets ls'])
 

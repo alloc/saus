@@ -93,6 +93,9 @@ export async function useS3Website(
       type OriginGroup = InstanceType<
         typeof aws.CloudFront.Distribution.OriginGroup
       >
+      type CacheBehavior = InstanceType<
+        typeof aws.CloudFront.Distribution.CacheBehavior
+      >
 
       const BucketOrigin = (
         bucket: ResourceRef,
@@ -150,6 +153,38 @@ export async function useS3Website(
         ),
       ])
 
+      const forceHttps = 'redirect-to-https'
+
+      const cacheBehaviors: CacheBehavior[] = defalsify([
+        {
+          ViewerProtocolPolicy: forceHttps,
+          TargetOriginId: assets.id,
+          PathPattern: assetsDir + '/*',
+        },
+        debugBase && {
+          ViewerProtocolPolicy: forceHttps,
+          TargetOriginId: assets.id,
+          PathPattern: debugBase.slice(1) + assetsDir + '/*',
+        },
+      ])
+
+      config.prefixOrigins?.forEach(origin => {
+        const [DomainName, OriginPath] = /^([^/]+)(\/.+)?$/.exec(origin.origin)!
+        origins.push({
+          Id: origin.origin,
+          DomainName,
+          OriginPath,
+        })
+        cacheBehaviors.push({
+          ViewerProtocolPolicy: forceHttps,
+          TargetOriginId: origin.origin,
+          PathPattern: origin.prefix + '/*',
+          CachePolicyId: origin.noCache
+            ? managedCachePolicies.CachingDisabled
+            : undefined,
+        })
+      })
+
       const edgeCache = ref(
         'EdgeCache',
         new aws.CloudFront.Distribution({
@@ -157,18 +192,7 @@ export async function useS3Website(
             Enabled: true,
             Origins: origins,
             OriginGroups: items(originGroups),
-            CacheBehaviors: defalsify([
-              {
-                ViewerProtocolPolicy: 'redirect-to-https',
-                TargetOriginId: assets.id,
-                PathPattern: assetsDir + '/*',
-              },
-              debugBase && {
-                ViewerProtocolPolicy: 'redirect-to-https',
-                TargetOriginId: assets.id,
-                PathPattern: debugBase.slice(1) + assetsDir + '/*',
-              },
-            ]),
+            CacheBehaviors: cacheBehaviors,
             DefaultCacheBehavior: {
               ViewerProtocolPolicy: 'redirect-to-https',
               TargetOriginId: publicDir.id,
@@ -208,6 +232,10 @@ export async function useS3Website(
     ...awsInfra.outputs,
     awsRegion: config.region,
   }
+}
+
+const managedCachePolicies = {
+  CachingDisabled: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
 }
 
 function items<T>(items: T[]) {

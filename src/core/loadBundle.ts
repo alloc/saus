@@ -1,7 +1,7 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
-import { BundleOptions } from '../bundle'
+import { BundleOptions, OutputBundle } from '../bundle'
 import {
   BundleConfig,
   BundleContext,
@@ -13,6 +13,7 @@ import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
 import { callPlugins } from './utils/callPlugins'
 import { md5Hex } from './utils/md5-hex'
 import { pick } from './utils/pick'
+import { readJson } from './utils/readJson'
 import { vite } from './vite'
 
 type RuntimeConfigFn = (context: BundleContext) => Partial<RuntimeConfig>
@@ -65,8 +66,13 @@ export async function loadBundle({
     bundleFile
   )
 
-  let bundleResult: LoadedBundle | undefined
+  let metaFile = bundleFile.replace(/\.js$/, '.meta.json')
+  let metaPath: string | undefined
+
+  let cached = false
+  let bundleResult: OutputBundle | undefined
   if (bundlePath && !options.force) {
+    metaPath = bundlePath.replace(bundleFile, metaFile)
     try {
       const lastCommitDate = new Date(
         execSync('git log -1 --format=%cd', { cwd: context.root }).toString()
@@ -74,7 +80,10 @@ export async function loadBundle({
       const { mtime } = fs.statSync(bundlePath)
       if (mtime > lastCommitDate) {
         const code = fs.readFileSync(bundlePath, 'utf8')
-        bundleResult = { code, cached: true }
+        const meta = readJson(metaPath)
+        bundleResult = { ...meta, code }
+        cached = true
+        console.log('BUNDLE WAS CACHED')
       }
     } catch (e: any) {
       if (e.code !== 'ENOENT') {
@@ -88,9 +97,10 @@ export async function loadBundle({
     bundleResult = await bundle(context, bundleOptions)
   }
 
-  let { code, map, cached } = bundleResult
+  let { code, map, ...meta } = bundleResult
   if (!cached) {
     context.compileCache.set(bundleFile, code)
+    context.compileCache.set(metaFile, JSON.stringify(meta))
   }
 
   const mapFile = bundleFile + '.map'

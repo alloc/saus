@@ -17,8 +17,8 @@ export class SecretHub {
   private _adopted = new Map<Function, Function[]>()
 
   /** Get the list of mutable secret sources. */
-  getMutableSources(): MutableSecretSource[] {
-    return this._sources.filter(s => s.set) as any
+  getMutableSources(key: 'set' | 'unset'): MutableSecretSource[] {
+    return this._sources.filter(s => s[key]) as any
   }
 
   async get(names: readonly string[]) {

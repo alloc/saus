@@ -1,3 +1,5 @@
+import exec from '@cush/exec'
+
 export * as esbuild from 'esbuild'
 export * from './api'
 export * from './clientFunctions'
@@ -14,3 +16,4 @@ export * from './tokens'
 export * from './types'
 export * from './vite'
 export * from './vite/transform'
+export { exec }

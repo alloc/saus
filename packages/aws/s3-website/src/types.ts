@@ -1,3 +1,17 @@
+export interface BrotliConfig {
+  /**
+   * Minimum file size before compression is used.
+   * @default 1501
+   */
+  threshold?: number
+}
+
+export interface PrefixOrigin {
+  prefix: string
+  origin: string
+  noCache?: boolean
+}
+
 export interface WebsiteConfig {
   /** The GUID of the CloudFormation stack. */
   name: string
@@ -5,6 +19,24 @@ export interface WebsiteConfig {
   region: string
   /** The domain to forward uncached requests to. */
   origin: string
+  /**
+   * Additional origin servers that only respond to a specific
+   * pathname prefix.
+   *
+   * Take this for example…
+   *
+   *     api: "123.vercel.app"
+   *
+   * It would forward `/api/*` requests to your Vercel functions
+   * at `123.vercel.app/api/*` and rewrite to HTTPS.
+   */
+  prefixOrigins?: PrefixOrigin[]
+  /**
+   * By default, static assets are compressed with Brotli.
+   *
+   * Set `false` to disable this compression.
+   */
+  brotli?: false | BrotliConfig
   /** Configure the various buckets */
   buckets?: {
     /**

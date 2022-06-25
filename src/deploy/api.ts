@@ -5,12 +5,14 @@ import { toObjectHash } from '@/utils/objectHash'
 import { plural } from '@/utils/plural'
 import { Promisable } from '@/utils/types'
 import exec from '@cush/exec'
+import { addExitCallback } from 'catch-exit'
 import fs from 'fs'
+import { gray, red, yellow } from 'kleur/colors'
 import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
-import { vite } from '../core'
+import { createCommit, vite } from '../core'
 import { DeployContext, loadDeployContext } from './context'
 import { loadDeployFile, loadDeployPlugin } from './loader'
 import { DeployOptions } from './options'
@@ -54,6 +56,21 @@ export async function deploy(
     : null
 
   await context.syncDeployCache()
+
+  const logError = (e: any) => {
+    if (e.message.startsWith('[saus]')) {
+      logger.error('\n' + red('✗') + e.message.slice(6))
+    } else {
+      logger.error(e, { error: e })
+    }
+  }
+
+  addExitCallback((signal, exitCode, error) => {
+    if (error) {
+      logError(error)
+      process.exit(1)
+    }
+  })
 
   const targetsFile = files.get('targets.yaml')
   const targetCache = targetsFile.getData() as DeployFile
@@ -169,7 +186,14 @@ export async function deploy(
   context.addDeployTarget = async (...args) => {
     const index = targets.push(args) - 1
     if (index == 0) {
-      await context.secrets.load()
+      debugger
+      const missing = await context.secrets.load()
+      if (missing) {
+        throw Error(
+          '[saus] Secrets are missing:\n' +
+            Array.from(missing, name => `  - ` + name).join('\n')
+        )
+      }
       await Promise.all(
         context.deployHooks.map(hookRef => {
           return loadDeployPlugin(hookRef, context)
@@ -231,17 +255,21 @@ export async function deploy(
       )
     }
   } catch (e: any) {
-    logger.error(e, { error: e })
+    logError(e)
     if (activePlugin)
       logger.info(
-        `Plugin "${activePlugin.name}" threw an error.` +
-          (options.dryRun ? '' : ' Reverting changes...')
+        yellow(
+          `Plugin "${activePlugin.name}" threw the error above.` +
+            (options.dryRun ? '' : gray('\nReverting changes...\n'))
+        )
       )
+
     if (!options.dryRun)
       for (const revert of revertFns.reverse()) {
         await revert()
       }
-    throw e
+
+    return
   } finally {
     deployLockfile.delete()
     task?.finish()
@@ -273,7 +301,7 @@ export async function deploy(
     if (gitStatus) {
       const { version = '0.0.0' } = context.rootPackage
       await exec('git add -A', { cwd: context.root })
-      await exec(`git commit -m "v${version}-${context.lastCommitHash}"`, {
+      await createCommit(`v${version}-${context.lastCommitHash}`, {
         cwd: context.root,
       })
     }

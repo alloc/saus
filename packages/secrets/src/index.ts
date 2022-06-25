@@ -14,7 +14,7 @@ export * from './unsafe'
  * @param authToken - For private repository access
  * @param password - Used to decrypt the secrets file
  */
-export async function loadGithubSecrets(
+export async function loadGitHubSecrets(
   repoId: string,
   authToken: string,
   password: string

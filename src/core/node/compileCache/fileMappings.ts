@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { debounce } from 'ts-debounce'
+import { readJson } from '../../utils/readJson'
 
 export type FileMappings = Record<string, string> & {
   path: string
@@ -11,7 +12,7 @@ export function loadFileMappings(cacheDir: string) {
 
   let fileMappings: Record<string, string>
   try {
-    fileMappings = JSON.parse(fs.readFileSync(fileMappingsPath, 'utf8'))
+    fileMappings = readJson(fileMappingsPath)
   } catch {
     fileMappings = {}
   }

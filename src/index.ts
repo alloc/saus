@@ -4,6 +4,7 @@ import { UserConfig, vite } from './core'
 export * from './bundle/runtime/api'
 export type { OutputBundle } from './bundle/types'
 export { Plugin, UserConfig, vite } from './core'
+export * from './core/loadBundle'
 export * from './publicDir'
 
 export const build = importWhenCalled('build', () => import('./build/api')),

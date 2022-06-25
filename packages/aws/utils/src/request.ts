@@ -1,4 +1,5 @@
 import * as aws4 from 'aws4'
+import { Agent } from 'https'
 import {
   Headers,
   http,
@@ -95,6 +96,8 @@ export interface AmzSendOptions<
   coerceRequest?: AmzCoerceRequestFn<Actions, Action>
   coerceResponse?: AmzCoerceResponseFn<Actions, Action>
 }
+
+const agent = new Agent({ keepAlive: true })
 
 export function createAmzRequestFn<Actions extends ActionMap>(
   config: AmzRequestConfig<Actions>
@@ -203,6 +206,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       ...opts,
       headers,
       body,
+      agent,
       allowBadStatus: true,
     })
 
@@ -254,7 +258,13 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       action: Action,
       opts: AmzSendOptions<Actions, Action> = {}
     ) =>
-    ({ creds, body, headers, region, ...params }: ActionProps<Action>) => {
+    ({
+      body,
+      headers,
+      region = opts.region,
+      creds = opts.creds,
+      ...params
+    }: ActionProps<Action>) => {
       const pascalParams: ActionParams<string & keyof Actions> =
         rewriteObjectKeys(params, pascalize)
       pascalParams.Action = action
