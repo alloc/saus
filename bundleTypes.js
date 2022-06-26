@@ -9,7 +9,7 @@ const outFile = 'bundle/index.d.ts'
 
 async function run() {
   const bundle = await rollup.rollup({
-    input: 'src/bundle/main.ts',
+    input: 'src/bundle/runtime/bundle/api.ts',
     external: id => !/^[./]/.test(id),
     plugins: [
       dts({

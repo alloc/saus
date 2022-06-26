@@ -3,7 +3,7 @@ import { Plugin, SausPlugin, vite } from './vite'
 
 export async function getSausPlugins(
   context: SausContext,
-  config = context.config
+  config: vite.ResolvedConfig = context.config
 ) {
   const sausPlugins: SausPlugin[] = []
   for (const p of flattenPlugins(config.plugins as Plugin[], p => {

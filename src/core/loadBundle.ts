@@ -76,7 +76,7 @@ export async function loadBundle({
   let metaFile = bundleFile.replace(/\.js$/, '.meta.json')
   let metaPath: string | undefined
 
-  let cached = false
+  let cached: true | undefined
   let bundleResult: OutputBundle | undefined
   if (bundlePath && !noCache) {
     metaPath = bundlePath.replace(bundleFile, metaFile)
@@ -143,7 +143,7 @@ export async function loadBundle({
     bundleFile,
     bundlePath: path.join(context.compileCache.path, bundleFile),
     runtimeConfig,
-    context,
+    context: context as BundleContext,
   }
 }
 

@@ -1,5 +1,5 @@
 import { createApp as create } from '@/app/createApp'
-import type { App, AppContext, PageContext } from '@/app/types'
+import type { App, AppContext, PageContext, RenderedPage } from '@/app/types'
 import { loadDeployedEnv } from '@/runtime/deployedEnv'
 import { setRequestMetadata } from '@/runtime/requestMetadata'
 import { ssrClearCache, ssrImport } from '@/runtime/ssrModules'
@@ -71,7 +71,8 @@ function createPageEndpoint(context: AppContext): App.Plugin {
       method == 'GET' &&
       (async (req, headers) => {
         const page = await app.renderPageBundle(req, route, {
-          receivePage: page => page && setRequestMetadata(req, { page }),
+          receivePage: (page: RenderedPage | null) =>
+            page && setRequestMetadata(req, { page }),
         })
         if (page) {
           headers.content({

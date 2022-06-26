@@ -25,6 +25,8 @@ import {
   isLinkedModule,
   kLinkedModule,
   LinkedModule,
+  LinkedModuleMap,
+  ModuleMap,
   RequireAsync,
   ResolveIdHook,
 } from './types'
