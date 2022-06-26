@@ -77,7 +77,7 @@ export async function deploy(
   })
 
   const targetsFile = files.get('targets.yaml')
-  const targetCache = targetsFile.getData() as DeployFile
+  const targetCache = (targetsFile.getData() || {}) as DeployFile
 
   const savedTargetsByPlugin = new Map<DeployPlugin, DeployTarget[]>()
   const findSavedTarget = async (
@@ -227,7 +227,15 @@ export async function deploy(
 
   try {
     await loadDeployFile(context)
-    await (deploying = defer())
+
+    deploying = defer()
+    queueMicrotask(() => {
+      if (targetIndex == targets.length) {
+        deploying!.resolve()
+      }
+    })
+
+    await deploying
     await Promise.all(actions)
 
     const killedTargets = await getKillableTargets(
@@ -285,12 +293,17 @@ export async function deploy(
   for (const [{ hook, plugin }, target] of targets) {
     const name = plugin!.name
     const cached = (newTargetCache[name] ||= { hook: hook!.file!, targets: [] })
-    cached.targets.push(target)
+    cached.targets.push(await target)
   }
 
   if (options.dryRun) {
     const debugFile = path.resolve(context.root, 'targets.debug.yaml')
-    fs.writeFileSync(debugFile, yaml.stringify(newTargetCache))
+    fs.writeFileSync(
+      debugFile,
+      yaml.stringify(newTargetCache, {
+        aliasDuplicateObjects: false,
+      })
+    )
     if (logger.isLogged('info')) {
       success('\nDry run complete! Targets saved to:\n    ' + debugFile + '\n')
     }

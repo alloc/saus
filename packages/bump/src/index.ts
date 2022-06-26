@@ -1,36 +1,18 @@
 import { prompt } from '@saus/deploy-utils'
 import { readFileSync, writeFileSync } from 'fs'
 import path from 'path'
-import { createDryLog, onDeploy } from 'saus/deploy'
+import { onDeploy } from 'saus/deploy'
 
 export type BumpType = 'patch' | 'minor' | 'major'
 
 export interface BumpResult {
-  type: string
   version: string
+  /** Equals null on dry run */
+  type: BumpType | null
 }
 
 export function bumpProjectVersion() {
-  return onDeploy<BumpResult>(async (ctx, onRevert) => {
-    const { type } = await prompt({
-      name: 'type',
-      type: 'select',
-      message: 'Select a release kind',
-      choices: [
-        { title: 'Patch', value: 'patch' },
-        { title: 'Minor', value: 'minor' },
-        { title: 'Major', value: 'major' },
-      ],
-    })
-
-    if (!type) {
-      process.exit(1)
-    }
-
-    const pkgPath = path.join(ctx.root, 'package.json')
-    const pkgText = readFileSync(pkgPath, 'utf8')
-    const { version } = JSON.parse(pkgText)
-
+  const bump = (version: string, type: BumpType) => {
     const parsedVersion = /^(\d+)\.(\d+)\.(\d+)/.exec(version)
     if (!parsedVersion) {
       throw Error('Project version is not a valid version: ' + version)
@@ -49,21 +31,49 @@ export function bumpProjectVersion() {
       patch = 0
     }
 
-    const newVersion = major + '.' + minor + '.' + patch
+    return major + '.' + minor + '.' + patch
+  }
+
+  return onDeploy<BumpResult>(async (ctx, onRevert) => {
+    const pkgPath = path.join(ctx.root, 'package.json')
+    const pkgText = readFileSync(pkgPath, 'utf8')
+    const { version } = JSON.parse(pkgText)
+
+    if (ctx.dryRun) {
+      return { type: null, version }
+    }
+
+    const bumps: Record<string, string> = {
+      patch: bump(version, 'patch'),
+      minor: bump(version, 'minor'),
+      major: bump(version, 'major'),
+    }
+
+    const { type } = await prompt({
+      name: 'type',
+      type: 'select',
+      message: 'Select a release kind',
+      choices: Object.keys(bumps).map(type => ({
+        title: type,
+        description: 'v' + bumps[type],
+      })),
+    })
+
+    if (!type) {
+      process.exit(1)
+    }
+
+    const newVersion = bumps[type]
     const newPkgText = pkgText.replace(
       /("version": *)".+?"/,
       (_, key) => key + JSON.stringify(newVersion)
     )
 
     ctx.rootPackage.version = newVersion
-    if (ctx.dryRun) {
-      createDryLog('@saus/bump')(`would bump the project to v${newVersion}`)
-    } else {
-      writeFileSync(pkgPath, newPkgText)
-      onRevert(() => {
-        writeFileSync(pkgPath, pkgText)
-      })
-    }
+    writeFileSync(pkgPath, newPkgText)
+    onRevert(() => {
+      writeFileSync(pkgPath, pkgText)
+    })
 
     return { type, version: newVersion }
   })

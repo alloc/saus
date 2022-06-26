@@ -2,7 +2,13 @@ import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
-import { emptyDir, esbuild, esbuildViteBridge, toObjectHash } from 'saus/core'
+import {
+  emptyDir,
+  esbuild,
+  esbuildViteBridge,
+  plural,
+  toObjectHash,
+} from 'saus/core'
 import {
   createDryLog,
   defineDeployHook,
@@ -54,7 +60,7 @@ export default defineDeployHook(context => ({
   async spawn(target) {
     if (context.dryRun) {
       return createDryLog('@saus/vercel')(
-        `would deploy ${target.entries.length} serverless functions`
+        `would deploy ${plural(target.entries.length, 'serverless function')}`
       )
     }
     await pushFunctions(target, context)
@@ -69,7 +75,7 @@ export default defineDeployHook(context => ({
 
     if (context.dryRun) {
       createDryLog('@saus/vercel')(
-        `would destroy ${target.entries.length} serverless functions`
+        `would destroy ${plural(target.entries.length, 'serverless function')}`
       )
     } else {
       await exec('git push --delete', [gitRepo.name, target.gitBranch], {

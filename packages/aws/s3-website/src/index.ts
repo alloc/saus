@@ -169,7 +169,9 @@ export async function useS3Website(
       ])
 
       config.prefixOrigins?.forEach(origin => {
-        const [DomainName, OriginPath] = /^([^/]+)(\/.+)?$/.exec(origin.origin)!
+        const [, DomainName, OriginPath] = /^([^/]+)(\/.+)?$/.exec(
+          origin.origin
+        )!
         origins.push({
           Id: origin.origin,
           DomainName,

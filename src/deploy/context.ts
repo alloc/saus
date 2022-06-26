@@ -50,9 +50,12 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
 
 export async function loadDeployContext(
   options: DeployOptions = {},
-  inlineConfig: vite.UserConfig = {}
+  inlineConfig?: vite.UserConfig
 ): Promise<DeployContext> {
-  const context = await loadBundleContext<DeployContext>(options, inlineConfig)
+  const context = await loadBundleContext<DeployContext>(options, {
+    mode: 'production',
+    ...inlineConfig,
+  })
 
   const { deploy: deployConfig } = context.config.saus
   if (!deployConfig) {

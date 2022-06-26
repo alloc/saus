@@ -1,4 +1,5 @@
 import { createDryLog, defineDeployHook } from 'saus/deploy'
+import { describeStack } from './api/describeStack'
 import { signedRequest } from './api/request'
 import secrets from './secrets'
 import { Stack } from './types'
@@ -6,21 +7,8 @@ import { Stack } from './types'
 export default defineDeployHook(ctx => ({
   name: '@saus/cloudform',
   async pull(stack: Stack) {
-    const describeStacks = signedRequest.action('DescribeStacks', {
-      creds: secrets,
-      region: stack.region,
-    })
-    const res = await describeStacks({ stackName: stack.name }).catch(
-      (e: any) => {
-        if (!/ does not exist$/.test(e.message)) {
-          throw e
-        }
-        return {} as ReturnType<typeof describeStacks>
-      }
-    )
     return {
-      // The stack ID is required for updates and deletion.
-      id: res.stacks?.[0].stackId,
+      ...(await describeStack(stack)),
     }
   },
   identify: stack => ({
@@ -40,6 +28,7 @@ export default defineDeployHook(ctx => ({
       })
     )
     stack.id = spawned.stackId
+    Object.assign(stack, await describeStack(stack))
     return async () => {
       await this.kill(stack)
     }
@@ -70,6 +59,7 @@ export default defineDeployHook(ctx => ({
         Outputs: stack.outputs,
       }),
     })
+    Object.assign(stack, await describeStack(stack))
     return async () => {
       const spawned = await spawnStack(stack, prevTemplate)
       stack.id = spawned.stackId

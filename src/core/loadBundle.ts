@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
+import { green } from 'kleur/colors'
 import path from 'path'
 import { BundleOptions, OutputBundle } from '../bundle'
 import {
@@ -8,6 +9,7 @@ import {
   InlineBundleConfig,
   loadBundleContext,
 } from '../bundle/context'
+import { getDeployContext } from '../deploy'
 import { SourceMap } from './node/sourceMap'
 import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
 import { callPlugins } from './utils/callPlugins'
@@ -49,10 +51,12 @@ export async function loadBundle({
   runtimeConfig: runtimeUserConfig,
   ...options
 }: LoadBundleConfig = {}) {
-  const context = await loadBundleContext(options, {
-    mode: 'production',
-    ...config,
-  })
+  const context =
+    getDeployContext() ||
+    (await loadBundleContext(options, {
+      mode: 'production',
+      ...config,
+    }))
 
   const bundleHash = getBundleHash(
     context.config.mode,
@@ -83,7 +87,10 @@ export async function loadBundle({
         const meta = readJson(metaPath)
         bundleResult = { ...meta, code }
         cached = true
-        console.log('BUNDLE WAS CACHED')
+
+        if (context.command == 'deploy') {
+          context.logger.info(green('✔︎') + ' Using cached bundle.')
+        }
       }
     } catch (e: any) {
       if (e.code !== 'ENOENT') {
