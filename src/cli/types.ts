@@ -11,3 +11,8 @@ export type BundleFlags = InlineBundleConfig & {
   mode?: string
   sourcemap?: boolean | 'inline' | 'hidden'
 }
+
+export type DeployFlags = {
+  dryRun?: true
+  cache?: false
+}

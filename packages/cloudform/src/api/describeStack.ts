@@ -6,7 +6,7 @@ type StackOutputs = Record<string, string | undefined>
 
 export interface DescribedStack {
   id?: string
-  outputs?: StackOutputs
+  outputs: StackOutputs
 }
 
 /** This only describes the first instance of the given stack. */
@@ -37,6 +37,6 @@ export async function describeStack(stack: Stack): Promise<DescribedStack> {
   }
   return {
     id: undefined,
-    outputs: undefined,
+    outputs: {},
   }
 }

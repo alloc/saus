@@ -7,9 +7,8 @@ import { cyan, gray, red } from 'kleur/colors'
 import { success } from 'misty'
 import { startTask } from 'misty/task'
 import log from 'shared-log'
-import type { DeployOptions } from '../deploy/options'
 import type { PreviewOptions } from '../preview/options'
-import type { BuildFlags, BundleFlags } from './types'
+import type { BuildFlags, BundleFlags, DeployFlags } from './types'
 
 export const commandActions = {
   async dev(options: vite.ServerOptions) {
@@ -135,10 +134,13 @@ export const commandActions = {
       require('../secrets/api') as typeof import('../secrets/api')
     await run(listSecrets)
   },
-  async deploy(options: DeployOptions) {
+  async deploy(options: DeployFlags) {
     const { deploy } =
       require('../deploy/api') as typeof import('../deploy/api')
-    await run(deploy, options)
+    await run(deploy, {
+      ...options,
+      noCache: !options.cache,
+    })
   },
   async test() {
     const { startTestServer } =
