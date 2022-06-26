@@ -187,9 +187,10 @@ export async function deploy(
     return target
   }
 
+  let loading: Promise<any> | undefined
+
   context.addDeployTarget = async (...args) => {
-    const index = targets.push(args) - 1
-    if (index == 0) {
+    await (loading ||= (async () => {
       const missing = await context.secrets.load()
       if (missing) {
         throw Error(
@@ -202,7 +203,9 @@ export async function deploy(
           return loadDeployPlugin(hookRef, context)
         })
       )
-    }
+    })())
+
+    const index = targets.push(args) - 1
     if (index == targetIndex) {
       const [hook, target, resolve] = args
       resolve(addTarget(hook, target))

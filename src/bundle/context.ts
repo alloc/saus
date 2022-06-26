@@ -8,6 +8,7 @@ import { renderPlugin } from '@/plugins/render'
 import { plural } from '@/utils/plural'
 import { SausBundleConfig, vite } from '@/vite'
 import { getViteFunctions, ViteFunctions } from '@/vite/functions'
+import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -124,8 +125,8 @@ export async function loadBundleContext<
     plugins: config.plugins.filter(p => p.name !== 'commonjs'),
   }
 
-  const { pluginContainer } = await vite.createTransformContext(config, false)
-  Object.assign(context, getViteFunctions(pluginContainer))
+  context.pluginContainer = await createPluginContainer(config)
+  Object.assign(context, getViteFunctions(context.pluginContainer))
 
   context.loadRoutes = () => {
     const loading = (async () => {

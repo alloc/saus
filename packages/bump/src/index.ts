@@ -23,6 +23,10 @@ export function bumpProjectVersion() {
       ],
     })
 
+    if (!type) {
+      process.exit(1)
+    }
+
     const pkgPath = path.join(ctx.root, 'package.json')
     const pkgText = readFileSync(pkgPath, 'utf8')
     const { version } = JSON.parse(pkgText)

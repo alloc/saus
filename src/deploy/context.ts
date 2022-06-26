@@ -62,7 +62,7 @@ export async function loadDeployContext(
   context.deployPath = path.resolve(context.root, deployConfig.entry)
 
   // @ts-ignore
-  context.config.plugins.unshift(secretsPlugin(context.deployPath))
+  context.pluginContainer.plugins.unshift(secretsPlugin(context.deployPath))
 
   context.rootPackage = JSON.parse(
     fs.readFileSync(path.join(context.root, 'package.json'), 'utf8')

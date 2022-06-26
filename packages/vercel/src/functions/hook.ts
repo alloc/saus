@@ -32,7 +32,6 @@ export default defineDeployHook(context => ({
       absolute: true,
     }).map(entry => path.relative(root, entry))
 
-    debugger
     const files = await bundleFunctions(entries, props, context)
     const modules: Record<string, string> = {}
     for (const file of files) {
@@ -148,7 +147,7 @@ async function bundleFunctions(
     bundle: true,
     chunkNames: '_chunk.[hash]',
     entryNames: '[dir]/[name]',
-    entryPoints: entries.map(entry => path.join(outBase, entry)),
+    entryPoints: entries.map(entry => path.join(context.root, entry)),
     format: 'esm',
     logLevel: 'error',
     metafile: true,

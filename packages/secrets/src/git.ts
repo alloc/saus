@@ -1,5 +1,6 @@
 import { prompt } from '@saus/deploy-utils'
 import { AESEncryption } from 'aes-password'
+import { red } from 'kleur/colors'
 import { createCommit, exec, pickAllExcept } from 'saus/core'
 import { File, getDeployContext, SecretMap } from 'saus/deploy'
 
@@ -21,14 +22,14 @@ export function useGitSecrets() {
       if (secretsFile.exists) {
         logger.info('\nUsing git for encrypted secret storage.')
         await beforeFileAccess()
-        return secretsFile.getData()
+        return readSecrets()
       }
       return {}
     },
     async set(secrets, replace) {
       await beforeFileAccess()
       if (secretsFile.exists && !replace) {
-        secrets = Object.assign(await secretsFile.getData(), secrets)
+        secrets = Object.assign(await readSecrets(), secrets)
       }
       await secretsFile.setData(secrets)
       await commitUpdates()
@@ -38,7 +39,7 @@ export function useGitSecrets() {
       if (!secretsFile.exists) {
         return logger.warn('No secrets were found.')
       }
-      const secrets = pickAllExcept(await secretsFile.getData(), names)
+      const secrets = pickAllExcept(await readSecrets(), names)
       await secretsFile.setData(secrets)
       await commitUpdates()
     },
@@ -67,6 +68,21 @@ export function useGitSecrets() {
       }
       secretsFile.setPassword(password)
       break
+    }
+  }
+
+  async function readSecrets() {
+    while (true) {
+      try {
+        return await secretsFile.getData()
+      } catch (e: any) {
+        if (/Authentication failed/.test(e.message)) {
+          logger.error(red('Incorrect password!'), { clear: true })
+          await requestPassword()
+          continue
+        }
+        throw e
+      }
     }
   }
 

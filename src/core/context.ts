@@ -26,6 +26,7 @@ import {
   UserConfig,
   vite,
 } from './vite'
+import { PluginContainer } from './vite/pluginContainer'
 
 type Command = 'build' | 'deploy' | 'serve'
 
@@ -41,6 +42,7 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   configPath: string | undefined
   configHooks: ConfigHookRef[]
   userConfig: vite.UserConfig
+  pluginContainer: PluginContainer
   publicDir: PublicDirOptions | null
   /**
    * Use this instead of `this.config` when an extra Vite build is needed,
