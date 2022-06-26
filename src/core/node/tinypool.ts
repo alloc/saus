@@ -1,10 +1,9 @@
 import Tinypool from 'tinypool'
-
-const dynamicImport = (0, eval)('id => import(id)')
+import { lazyImport } from './lazyImport'
 
 // Tinypool is ESM only, so use dynamic import to load it.
 export const loadTinypool = async () =>
-  ((await dynamicImport('tinypool')) as typeof import('tinypool')).default
+  ((await lazyImport('tinypool')) as typeof import('tinypool')).default
 
 export type { Tinypool } from 'tinypool'
 

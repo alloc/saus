@@ -4,16 +4,15 @@ import { join } from 'path'
 import { URL } from 'url'
 import { unwrapBuffer } from '../buffer'
 import { emptyDir } from '../node/emptyDir'
+import { lazyImport } from '../node/lazyImport'
 import { get } from './get'
-
-const nodeImport: (id: string) => Promise<any> = eval('id => import(id)')
 
 export async function httpImport(url: string) {
   const file = toFilePath(url)
   const resp = await get(url)
   fs.writeFileSync(file, unwrapBuffer(resp.data))
   setExitHandler()
-  return nodeImport(file)
+  return lazyImport(file)
 }
 
 const root = /* @__PURE__ */ join(/* @__PURE__ */ os.tmpdir(), 'saus-ssr')
