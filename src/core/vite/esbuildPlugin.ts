@@ -12,7 +12,7 @@ import { createPluginContainer } from './pluginContainer'
  * but you also want to use Vite plugins, this function can help.
  */
 export async function esbuildViteBridge(
-  context: Omit<BundleContext, 'command'>
+  context: BundleContext
 ): Promise<esbuild.Plugin> {
   const config = await context.resolveConfig('build', {
     plugins: context.bundlePlugins,

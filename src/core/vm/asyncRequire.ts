@@ -25,13 +25,11 @@ import {
   isLinkedModule,
   kLinkedModule,
   LinkedModule,
-  LinkedModuleMap,
-  ModuleMap,
   RequireAsync,
   ResolveIdHook,
 } from './types'
 
-export type RequireAsyncConfig = {
+export interface RequireAsyncState {
   /**
    * Reuse compiled modules between `createAsyncRequire` calls,
    * and wield full control over them.
@@ -42,6 +40,20 @@ export type RequireAsyncConfig = {
    * `node_modules` directory will be tracked in here.
    */
   linkedModules?: LinkedModuleMap
+  /**
+   * Modules loaded with Node's module loader (instead of Vite-based compilation)
+   * have their exports cached in here.
+   *
+   * This lets us prevent compiled modules from using different instances of the
+   * same external module; for example, if two compiled modules were reloaded
+   * separately, and an external module was cleared (from Node's require cache)
+   * before the last one could reload, this cache will prevent another instance
+   * of the external module from being loaded by a compiled import.
+   */
+  externalExports?: Map<string, any>
+}
+
+export interface RequireAsyncConfig extends RequireAsyncState {
   /**
    * Return `true` to mark an installed module as "live", implying that
    * its exports may be updated dynamically after being loaded.
@@ -55,17 +67,6 @@ export type RequireAsyncConfig = {
    * in mind that importers won't be reset when you do.
    */
   isLiveModule?: (file: string) => boolean
-  /**
-   * Modules loaded with Node's module loader (instead of Vite-based compilation)
-   * have their exports cached in here.
-   *
-   * This lets us prevent compiled modules from using different instances of the
-   * same external module; for example, if two compiled modules were reloaded
-   * separately, and an external module was cleared (from Node's require cache)
-   * before the last one could reload, this cache will prevent another instance
-   * of the external module from being loaded by a compiled import.
-   */
-  externalExports?: Map<string, any>
   /**
    * This function must return a string before `isCompiledModule`
    * can be called. If it doesn't, then Node's module resolution

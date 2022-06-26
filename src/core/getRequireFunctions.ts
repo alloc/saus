@@ -7,7 +7,7 @@ import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 import { ResolveIdHook } from './vm/types'
 
 export function getRequireFunctions(
-  context: Omit<SausContext, 'command'>,
+  context: SausContext,
   moduleMap = context.moduleMap || {}
 ) {
   const {

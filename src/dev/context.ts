@@ -3,25 +3,19 @@ import type { BaseContext } from '@/context'
 import type { ParsedUrl } from '@/node/url'
 import type { Promisable } from '@/utils/types'
 import type { vite } from '@/vite'
-import type { ViteFunctions } from '@/vite/functions'
-import type { RequireAsyncConfig } from '@/vm/asyncRequire'
+import type { RequireAsyncState } from '@/vm/asyncRequire'
 import type { RequireAsync } from '@/vm/types'
+import { Merge } from 'type-fest'
 import type { DevEventEmitter } from './events'
 import type { HotReloadFn } from './hotReload'
 
-export interface DevContext extends BaseContext, DevState, DevMethods {
-  // Overrides
+export interface DevContext extends Merge<BaseContext, DevState & DevMethods> {
   command: 'serve'
-  ssrRequire: RequireAsync
 }
 
 type PageSetupHook = (url: ParsedUrl) => Promisable<void>
 
-type RequireConfig = Required<
-  Pick<RequireAsyncConfig, 'moduleMap' | 'externalExports' | 'linkedModules'>
->
-
-interface DevState extends RequireConfig {
+export interface DevState extends Required<RequireAsyncState> {
   app: App
   events: DevEventEmitter
   server: vite.ViteDevServer
@@ -34,8 +28,9 @@ interface DevState extends RequireConfig {
   servedFiles: Record<string, RenderedFile>
 }
 
-interface DevMethods extends ViteFunctions {
+export interface DevMethods {
   hotReload: HotReloadFn
   require: RequireAsync
+  ssrRequire: RequireAsync
   ssrForceReload?: (id: string) => boolean
 }

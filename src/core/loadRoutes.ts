@@ -17,9 +17,7 @@ import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
 import { ModuleMap, RequireAsync } from './vm/types'
 
-export async function loadRoutes(
-  context: Omit<SausContext, 'command'> & { command: string }
-) {
+export async function loadRoutes(context: SausContext) {
   const time = Date.now()
   const moduleMap = context.moduleMap || {}
 

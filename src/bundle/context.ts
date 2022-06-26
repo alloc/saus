@@ -7,7 +7,7 @@ import {
 import { renderPlugin } from '@/plugins/render'
 import { plural } from '@/utils/plural'
 import { SausBundleConfig, vite } from '@/vite'
-import { getViteFunctions, ViteFunctions } from '@/vite/functions'
+import { getViteFunctions } from '@/vite/functions'
 import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
@@ -32,8 +32,13 @@ export interface BundleConfig
   outFile?: string
 }
 
-export interface BundleContext extends BaseContext, ViteFunctions {
-  command: 'build' | 'deploy'
+/** Used by both `saus build` and `saus bundle` commands. */
+export interface BuildContext extends BundleContext {
+  command: 'build'
+}
+
+/** When `loadBundleContext` is used, this is the context type. */
+export interface BundleContext extends BaseContext {
   loadRoutes: () => Promise<void>
   bundle: BundleConfig
   /** The virtual module ID of the SSR bundle. */
@@ -51,7 +56,7 @@ export interface BundleContext extends BaseContext, ViteFunctions {
 }
 
 export async function loadBundleContext<
-  T extends Omit<BundleContext, 'command'> = BundleContext
+  T extends BundleContext = BundleContext
 >(
   options: InlineBundleConfig = {},
   inlineConfig: vite.UserConfig = {}

@@ -1,7 +1,8 @@
-import { ViteFunctions } from '@/vite/functions'
 import arrify from 'arrify'
 import { resolve } from 'path'
-import type { DevContext } from '../dev/context'
+import type { BuildContext, BundleContext } from '../bundle'
+import type { DeployContext } from '../deploy'
+import type { DevContext, DevMethods, DevState } from '../dev/context'
 import type { RenderPageResult } from './app/types'
 import { ConfigHook, ConfigHookRef } from './configHooks'
 import { debug } from './debug'
@@ -26,15 +27,23 @@ import {
   UserConfig,
   vite,
 } from './vite'
+import { ViteFunctions } from './vite/functions'
 import { PluginContainer } from './vite/pluginContainer'
 
-type Command = 'build' | 'deploy' | 'serve'
+export type SausCommand = SausContext['command']
+export type SausContext = BuildContext | DeployContext | DevContext
 
 /**
  * This context exists in both serve and build mode.
  */
-export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
-  command: Command
+export interface BaseContext
+  extends RenderModule,
+    RoutesModule,
+    HtmlContext,
+    ViteFunctions,
+    Partial<DevState>,
+    Partial<DevMethods> {
+  command: SausCommand
   root: string
   plugins: readonly SausPlugin[]
   logger: vite.Logger
@@ -49,7 +58,7 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
    * or else you risk corrupting the Vite plugin state.
    */
   resolveConfig: (
-    command: Command,
+    command: SausCommand,
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
   /** The cache for compiled SSR modules */
@@ -74,13 +83,7 @@ export interface BaseContext extends RenderModule, RoutesModule, HtmlContext {
   renderPath: string
 }
 
-type ProdContext = BaseContext &
-  Partial<Omit<DevContext, keyof BaseContext>> & {
-    command: 'build'
-  }
-
-export type SausContext = (DevContext | ProdContext) & ViteFunctions
-export type { DevContext, ProdContext }
+export type { DevContext, BuildContext, BundleContext, DeployContext }
 
 type InlinePlugin = (
   sausConfig: SausConfig,
@@ -114,9 +117,10 @@ function createContext(
   }
 
   return {
-    command: config.command,
     root: config.root,
     plugins: [],
+    pluginContainer: null!,
+    publicDir: null,
     logger: config.logger,
     config,
     configPath: config.configFile,
@@ -141,7 +145,7 @@ function createContext(
 }
 
 export async function loadContext<T extends BaseContext>(
-  command: Command,
+  command: SausCommand,
   inlineConfig?: vite.InlineConfig,
   inlinePlugins?: InlinePlugin[]
 ): Promise<T> {
@@ -168,18 +172,18 @@ function getConfigResolver(
   getConfigHooks: (config: ResolvedConfig) => Promise<ConfigHookRef[]>,
   getContext: (config: ResolvedConfig) => BaseContext
 ) {
-  return async (command: Command, inlineConfig?: vite.InlineConfig) => {
-    const isBuild = command !== 'serve'
+  return async (command: SausCommand, inlineConfig?: vite.InlineConfig) => {
+    const isDevServer = command == 'serve'
     const sausDefaults: vite.InlineConfig = {
       configFile: false,
       server: {
-        preTransformRequests: !isBuild,
+        preTransformRequests: isDevServer,
         fs: {
           allow: [toSausPath('')],
         },
       },
       ssr: {
-        noExternal: isBuild ? true : ['saus/client'],
+        noExternal: isDevServer ? ['saus/client'] : true,
       },
       build: {
         ssr: true,
@@ -196,8 +200,8 @@ function getConfigResolver(
         : defaultConfig
     )
 
-    const defaultMode = isBuild ? 'production' : 'development'
-    const viteCommand = isBuild ? 'build' : command
+    const defaultMode = isDevServer ? 'development' : 'production'
+    const viteCommand = isDevServer ? command : 'build'
     const configEnv: vite.ConfigEnv = {
       command: viteCommand,
       mode: inlineConfig.mode || defaultMode,
@@ -285,7 +289,7 @@ function getConfigResolver(
       // Skip "saus/client" in build mode, so we don't get warnings
       // from trying to resolve imports for modules included in the
       // bundled Saus runtime (see "../bundle/runtimeBundle.ts").
-      ...arrify(isBuild ? undefined : toSausPath('client/index.js')),
+      ...arrify(isDevServer ? toSausPath('client/index.js') : undefined),
     ]
 
     const context = getContext(config)

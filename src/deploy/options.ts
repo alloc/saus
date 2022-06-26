@@ -16,4 +16,10 @@ export interface DeployOptions extends InlineBundleConfig {
    * Skip the execution of any deployment action.
    */
   dryRun?: boolean
+  /**
+   * Avoid using cached build artifacts.
+   *
+   * For example, the `loadBundle` function respects this.
+   */
+  noCache?: boolean
 }

@@ -35,14 +35,16 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
   dryRun: boolean
+  /** Avoid using cached build artifacts. */
+  noCache: boolean
+  //
+  // Internals
+  //
   deployHooks: DeployHookRef[]
   deployPlugins: Record<string, DeployPlugin>
   addDeployTarget: (...args: DeployTargetArgs) => void
   addDeployAction: <T>(action: DeployAction<T>) => Promise<T>
   syncDeployCache: () => Promise<void>
-  //
-  // Module context
-  //
   moduleMap: ModuleMap
   require: RequireAsync
   ssrRequire: RequireAsync
@@ -90,6 +92,7 @@ export async function loadDeployContext(
   context.files = new GitFiles(cacheDir, options.dryRun)
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
+  context.noCache = !!options.noCache
   context.deployHooks = []
   context.deployPlugins = {}
 

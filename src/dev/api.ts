@@ -169,6 +169,7 @@ async function startServer(
   context.events = events
   context.server = server
   context.watcher = watcher
+  context.pluginContainer = server.pluginContainer
   context.moduleMap = moduleMap
   context.externalExports = new Map()
   context.linkedModules = {}

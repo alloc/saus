@@ -3,12 +3,10 @@ import createDebug from 'debug'
 import fs from 'fs'
 import path from 'path'
 import { Promisable } from 'type-fest'
-import { BaseContext } from './context'
+import { SausContext } from './context'
 import { memoizeFn } from './utils/memoizeFn'
 
-type PublicDirContext = Omit<BaseContext, 'command'>
-
-const publicDirs = new WeakMap<PublicDirContext, PublicDir>()
+const publicDirs = new WeakMap<SausContext, PublicDir>()
 
 export type PublicDirMode = 'write' | 'cache' | 'skip'
 
@@ -62,7 +60,7 @@ export interface PublicDir {
  * Returns `null` if scanning is disabled.
  */
 export async function scanPublicDir(
-  context: PublicDirContext
+  context: SausContext
 ): Promise<PublicDir | null> {
   if (!context.publicDir) {
     return null

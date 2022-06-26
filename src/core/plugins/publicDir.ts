@@ -22,9 +22,7 @@ export function copyPublicDir() {
     },
     saus: context => ({
       async receiveBundleOptions({ publicDirMode = 'write' }) {
-        const publicDir = await scanPublicDir(context, {
-          publicDirMode,
-        })
+        const publicDir = await scanPublicDir(context)
         if (!publicDir) {
           return
         }
@@ -32,8 +30,11 @@ export function copyPublicDir() {
         const commit = async (
           onPublicFile?: (name: string, data: Buffer) => Promisable<void>
         ) => {
-          const count = await publicDir.commit(onPublicFile)
-          if (count > 0 && publicDirMode == 'write')
+          const count = await publicDir.commit(publicDirMode, onPublicFile)
+          void (
+            count > 0 &&
+            publicDirMode == 'write' &&
+            context.logger.isLogged('info') &&
             success(
               `${plural(count, 'file')} copied from ${green(
                 path
@@ -42,6 +43,7 @@ export function copyPublicDir() {
                   .replace(/([^/])$/, '$1/')
               )}`
             )
+          )
         }
 
         // Rewrite JS imports of public files.

@@ -1,8 +1,8 @@
-import { BaseContext, SausContext } from './context'
+import { SausContext } from './context'
 import { Plugin, SausPlugin, vite } from './vite'
 
 export async function getSausPlugins(
-  context: BaseContext,
+  context: SausContext,
   config = context.config
 ) {
   const sausPlugins: SausPlugin[] = []
@@ -19,9 +19,7 @@ export async function getSausPlugins(
     return !p.apply || p.apply == config.command
   })) {
     const sausPlugin =
-      typeof p.saus == 'function'
-        ? await p.saus(context as SausContext)
-        : p.saus!
+      typeof p.saus == 'function' ? await p.saus(context) : p.saus!
 
     if (sausPlugin) {
       sausPlugin.name ||= p.name

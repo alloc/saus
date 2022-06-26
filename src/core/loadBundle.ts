@@ -58,6 +58,9 @@ export async function loadBundle({
       ...config,
     }))
 
+  const noCache =
+    options.force || (context.command == 'deploy' && context.noCache)
+
   const bundleHash = getBundleHash(
     context.config.mode,
     context.bundle,
@@ -75,7 +78,7 @@ export async function loadBundle({
 
   let cached = false
   let bundleResult: OutputBundle | undefined
-  if (bundlePath && !options.force) {
+  if (bundlePath && !noCache) {
     metaPath = bundlePath.replace(bundleFile, metaFile)
     try {
       const lastCommitDate = new Date(
