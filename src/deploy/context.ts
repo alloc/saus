@@ -37,6 +37,8 @@ export interface DeployContext extends BundleContext {
   dryRun: boolean
   /** Avoid using cached build artifacts. */
   noCache: boolean
+  /** Plugins should use this for deployment logs. */
+  logActivity: (...args: any[]) => void
   /** Plugins should use this for successful deployment logs. */
   logSuccess: (...args: any[]) => void
   /** Plugins should use this for dry run logs. */
@@ -99,6 +101,7 @@ export async function loadDeployContext(
   context.noCache = !!options.noCache
   context.deployHooks = []
   context.deployPlugins = {}
+  context.logActivity = noop
   context.logSuccess = noop
   context.logPlan = noop
 

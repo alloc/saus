@@ -23,6 +23,7 @@ export default defineDeployHook(ctx => ({
         } AWS resources`
       )
     }
+    ctx.logActivity(`Spawning the "${stack.name}" stack...`)
     const spawned = await spawnStack(stack, toTemplateString(stack.template))
     onRevert(async () => {
       await this.kill(stack, onRevert)
@@ -52,6 +53,7 @@ export default defineDeployHook(ctx => ({
         } AWS resources`
       )
     }
+    ctx.logActivity(`Updating the "${stack.name}" stack...`)
     const updateStack = signedRequest.action('UpdateStack', {
       creds: secrets,
       region: stack.region,
@@ -82,6 +84,7 @@ export default defineDeployHook(ctx => ({
         } AWS resources`
       )
     }
+    ctx.logActivity(`Deleting the "${stack.name}" stack...`)
     const deleteStack = signedRequest.action('DeleteStack', {
       creds: secrets,
       region: stack.region,
@@ -90,7 +93,7 @@ export default defineDeployHook(ctx => ({
       stackName: stack.id,
     })
     return () => {
-      this.spawn(stack)
+      this.spawn(stack, () => {})
     }
   },
 }))

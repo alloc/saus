@@ -1,5 +1,5 @@
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
-import { cyan, gray, green } from 'kleur/colors'
+import { cyan, gray, green, yellow } from 'kleur/colors'
 import { DeployContext } from './context'
 import type { DeployHookRef } from './types'
 
@@ -28,6 +28,10 @@ export async function loadDeployPlugin(
   const plugin = await hook(context)
 
   if (context.logger.isLogged('info')) {
+    context.logActivity = (...args) => {
+      const arg1 = typeof args[0] == 'string' ? ' ' + args.shift() : ''
+      console.log(gray(plugin.name) + yellow(' ⦿') + arg1, ...args)
+    }
     context.logSuccess = (...args) => {
       const arg1 = typeof args[0] == 'string' ? ' ' + args.shift() : ''
       console.log(gray(plugin.name) + green(' ✔︎') + arg1, ...args)
