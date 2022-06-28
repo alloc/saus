@@ -22,4 +22,8 @@ export interface DeployOptions extends InlineBundleConfig {
    * For example, the `loadBundle` function respects this.
    */
   noCache?: boolean
+  /**
+   * Skip rollback functions on failure.
+   */
+  noRevert?: boolean
 }

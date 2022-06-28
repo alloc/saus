@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@saus/aws-utils": "*",
-    "cloudform-types": "^7.3.0",
+    "cloudform-types": "npm:@alloc/cloudform-types@^7.4.3",
     "type-fest": "^2.13.0"
   }
 }

@@ -63,6 +63,7 @@ cli
   .command('deploy')
   .option('-n, --dry-run', `[boolean] enable dry logs and skip deploying`)
   .option('--no-cache', `[boolean] avoid using cached build artifacts`)
+  .option('--no-revert', `[boolean] skip rollbacks if deployment fails`)
   .action(commandActions.deploy)
 
 cli

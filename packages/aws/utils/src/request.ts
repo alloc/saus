@@ -192,7 +192,6 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       }
       if (!signedHeaders.accept && config.acceptJson) {
         signedHeaders.accept = 'application/json'
-        coerceResponse ||= res => res.toJSON()
       }
       aws4.sign(signedReq, creds)
       req.headers = signedReq.headers
@@ -253,6 +252,19 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       }
       return coercedRes
     }
+
+    if (res.headers['content-type'] == 'application/json') {
+      const json = res.toJSON()
+      const responseKey = params.Action + 'Response'
+      if (json[responseKey]) {
+        const result = json[responseKey][params.Action + 'Result']
+        if (isObject(result)) {
+          return normalizeObjectResponse(result, res)
+        }
+        return result
+      }
+    }
+
     return res as any
   }
 

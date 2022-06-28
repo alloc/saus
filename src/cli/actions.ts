@@ -139,7 +139,8 @@ export const commandActions = {
       require('../deploy/api') as typeof import('../deploy/api')
     await run(deploy, {
       ...options,
-      noCache: !options.cache,
+      noCache: options.cache === false,
+      noRevert: options.revert === false,
     })
   },
   async test() {

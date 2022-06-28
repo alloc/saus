@@ -1,9 +1,11 @@
+import { PartialDeep, ReadonlyDeep } from 'type-fest'
+import { getDeployContext } from '../../deploy'
 import { http } from '../http'
 import { getRawGitHubUrl } from '../node/git'
-import { JSONObject } from '../utils/types'
+import { JSONObject } from '../utils'
 import type { RuntimeConfig } from './config'
 
-export interface DeployedEnv extends JSONObject {
+export interface DeployedEnv {
   githubToken?: string
   /** Used to encrypt/decrypt your project-specific secrets. */
   password?: string
@@ -20,7 +22,16 @@ export interface DeployedEnv extends JSONObject {
  * to this object during deployment! You can use `@saus/secrets`
  * instead.
  */
-export const deployedEnv: DeployedEnv = {}
+export const deployedEnv: ReadonlyDeep<DeployedEnv> & JSONObject = {}
+
+/**
+ * Call this during `saus deploy` only.
+ */
+export function setEnvData(env: PartialDeep<DeployedEnv>) {
+  if (getDeployContext()) {
+    Object.assign(deployedEnv, env)
+  }
+}
 
 /**
  * Load the deployed environment from GitHub, if possible.

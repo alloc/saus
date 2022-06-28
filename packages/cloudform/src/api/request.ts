@@ -18,6 +18,10 @@ export const signedRequest = createAmzRequestFn<{
     params: CloudFormation.DescribeStacksInput
     result: CloudFormation.DescribeStacksOutput
   }
+  DescribeStackEvents: {
+    params: CloudFormation.DescribeStackEventsInput
+    result: CloudFormation.DescribeStackEventsOutput
+  }
   GetTemplate: {
     params: CloudFormation.GetTemplateInput
     result: CloudFormation.GetTemplateOutput

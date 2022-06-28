@@ -208,16 +208,29 @@ importers:
   packages/cloudform:
     specifiers:
       '@saus/aws-utils': '*'
-      cloudform-types: ^7.3.0
+      cloudform-types: npm:@alloc/cloudform-types@^7.4.3
       recrawl-sync: ^2.2.1
       saus: '*'
       type-fest: ^2.13.0
     dependencies:
       '@saus/aws-utils': link:../aws/utils
-      cloudform-types: 7.3.0
+      cloudform-types: /@alloc/cloudform-types/7.4.3
       type-fest: 2.13.0
     devDependencies:
       recrawl-sync: 2.2.1
+      saus: link:../..
+
+  packages/cloudimage:
+    specifiers:
+      '@saus/deploy-utils': '*'
+      '@types/lodash.merge': ^4.6.7
+      lodash.merge: ^4.6.2
+      saus: '*'
+    dependencies:
+      '@saus/deploy-utils': link:../deploy-utils
+      lodash.merge: 4.6.2
+    devDependencies:
+      '@types/lodash.merge': 4.6.7
       saus: link:../..
 
   packages/deploy-utils:
@@ -365,6 +378,10 @@ packages:
     hasBin: true
     optionalDependencies:
       fsevents: 2.3.2
+    dev: false
+
+  /@alloc/cloudform-types/7.4.3:
+    resolution: {integrity: sha512-eKFLDfu1/sIENTvffWwF/aZ77LqkLzaidERzFFEQPlxpztOzaeykT1W5esZKLUItgjPH1qS+haa/YrM4lhIodw==}
     dev: false
 
   /@alloc/fast-rimraf/1.0.8:
@@ -842,6 +859,16 @@ packages:
       '@types/node': 17.0.42
     dev: true
 
+  /@types/lodash.merge/4.6.7:
+    resolution: {integrity: sha512-OwxUJ9E50gw3LnAefSHJPHaBLGEKmQBQ7CZe/xflHkyy/wH2zVyEIAKReHvVrrn7zKdF58p16We9kMfh7v0RRQ==}
+    dependencies:
+      '@types/lodash': 4.14.182
+    dev: true
+
+  /@types/lodash/4.14.182:
+    resolution: {integrity: sha512-/THyiqyQAP9AfARo4pF+aCGcyiQ94tX/Is2I7HofNRqoYLgN1PBoOWu2/zTA5zMxzP5EFutMtWtGAFRKUe961Q==}
+    dev: true
+
   /@types/minimatch/3.0.5:
     resolution: {integrity: sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==}
     dev: false
@@ -1249,10 +1276,6 @@ packages:
     resolution: {integrity: sha512-yjLXh88P599UOyPTFX0POsd7WxnbsVsGohcwzHOLspIhhpalPw1BcqED8NblyZLKcGrL8dTgMlcaZxV2jAD41Q==}
     dependencies:
       mimic-response: 1.0.1
-    dev: false
-
-  /cloudform-types/7.3.0:
-    resolution: {integrity: sha512-DovkhcKCqewvuduVGK9/KKVD9AYS9nCE7izmBgM1qvqaNgwhCkSLkz7UCyaEpi5aGgCE+YNs/qkZIz2CPx6aMQ==}
     dev: false
 
   /color-convert/1.9.3:
@@ -2541,6 +2564,10 @@ packages:
     resolution: {integrity: sha512-lL87ytIGP2FU5PWwNDo0w3WhIo2gopIAxPg9RxDYF7m4rr5ahuZxP22xnJHIvaLTe4Z9P6uKKY2UHiwyB4pcrw==}
     engines: {node: '>=14'}
     dev: true
+
+  /lodash.merge/4.6.2:
+    resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
+    dev: false
 
   /lodash.sortby/4.7.0:
     resolution: {integrity: sha512-HDWXG8isMntAyRF5vZ7xKuEvOhT4AhlRt/3czTSjvGUxjYCBVRQY48ViDHyfYz9VIoBkW4TMGQNapx+l3RUwdA==}

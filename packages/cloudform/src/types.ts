@@ -2,14 +2,19 @@ import * as CloudForm from 'cloudform-types'
 import { IntrinsicFunction, ResourceBase, Value } from 'cloudform-types'
 import { Promisable } from 'type-fest'
 
-export { CloudForm }
+export * from 'cloudform-types'
 
 export interface Stack<Outputs extends object | void = any> {
   id?: string
   name: string
   region: string
-  resources: Record<string, ResourceBase>
-  outputs: Outputs extends any
+  template: {
+    resources: Record<string, ResourceBase>
+    outputs: Record<string, any>
+  }
+  outputs?: [Outputs] extends [Any]
+    ? Record<string, string | undefined>
+    : Outputs extends any
     ? undefined extends Outputs
       ? undefined
       : {
@@ -44,4 +49,9 @@ export interface ResourceRef extends IntrinsicFunction {
 
 export namespace ResourceRef {
   export type Factory = (id: string, resource: ResourceBase) => ResourceRef
+}
+
+// Helper class type for `any` detection
+declare class Any {
+  private _: any
 }

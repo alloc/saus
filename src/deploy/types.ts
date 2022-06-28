@@ -1,5 +1,5 @@
 import { Changed } from '@/utils/types'
-import { Promisable } from 'type-fest'
+import { Merge, Promisable } from 'type-fest'
 import { DeployContext } from './context'
 
 export type DeployAction<T = any> = (
@@ -8,16 +8,14 @@ export type DeployAction<T = any> = (
 ) => Promisable<T>
 
 export type DeployFile = {
-  /** Name of deploy plugin */
-  [name: string]: DeployPluginState
-}
-
-/** Plugin state is stored in `node_modules/.saus/deployed/targets.yaml` */
-export type DeployPluginState = {
-  /** Path to its deploy hook */
-  hook: string
-  /** JSON metadata for each deployed target */
-  targets: DeployTarget[]
+  targets: {
+    plugin: number
+    state: DeployTarget
+  }[]
+  plugins: {
+    name: string
+    hook: string
+  }[]
 }
 
 export interface DeployHookRef<
@@ -106,20 +104,22 @@ export namespace DeployPlugin {
      * Return data that identifies the target. \
      * Exclude data that only configures behavior.
      */
-    identify: (target: Props & State) => Promisable<Record<string, any>>
+    identify: (target: Merge<Props, State>) => Promisable<Record<string, any>>
     /**
      * Deploy the given target.
      */
     spawn: (
       this: DeployPlugin<Props, State>,
-      target: DeployTarget<Props, State>
+      target: DeployTarget<Props, State>,
+      onRevert: (fn: RevertFn) => void
     ) => Promisable<RevertFn | void>
     /**
      * Destroy the given target.
      */
     kill: (
       this: DeployPlugin<Props, State>,
-      target: DeployTarget<Props, State>
+      target: DeployTarget<Props, State>,
+      onRevert: (fn: RevertFn) => void
     ) => Promisable<RevertFn | void>
   }
   export interface Addons<
@@ -138,7 +138,8 @@ export namespace DeployPlugin {
     update?: (
       this: DeployPlugin<Props, State>,
       target: DeployTarget<Props, State>,
-      changed: Changed<Props & State>
+      changed: Changed<Props & State>,
+      onRevert: (fn: RevertFn) => void
     ) => Promisable<RevertFn | void>
   }
 }
@@ -152,7 +153,7 @@ export type RevertFn = () => Promisable<void>
 export type DeployTarget<
   Props extends object = Record<string, any>,
   State extends object = {}
-> = { _id?: string } & Props & State
+> = { _id?: string } & Merge<Props, State>
 
 export type DeployTargetArgs = [
   hook: DeployHookRef,

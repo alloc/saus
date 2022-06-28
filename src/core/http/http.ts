@@ -1,5 +1,6 @@
 import { Endpoint } from '../core'
 import { writeBody } from '../node/writeBody'
+import { joinUrl } from '../utils/joinUrl'
 import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
@@ -16,6 +17,10 @@ type ForwardedKeys =
   | 'timeout'
 
 export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
+  /**
+   * Prepend this string to the requested URL.
+   */
+  base?: string
   body?: Endpoint.Body
   headers?: RequestHeaders
 }
@@ -77,7 +82,7 @@ http.post = http.bind(null, 'post')
 
 function createRequest(url: string | URL, opts?: HttpRequestOptions) {
   if (typeof url == 'string') {
-    url = new URL(url)
+    url = new URL(opts?.base ? joinUrl(opts.base, url) : url)
   }
   const req = urlToHttpOptions(url)
   if (opts) {

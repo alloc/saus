@@ -1,9 +1,10 @@
-import { ResourceRef, useCloudFormation } from '@saus/cloudform'
+import { CloudFront, ResourceRef, useCloudFormation } from '@saus/cloudform'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
+import { WebsiteConfig } from './config'
 import secrets from './secrets'
 import { syncStaticFiles } from './sync'
-import { WebsiteConfig } from './types'
+import { varyByDevice } from './varyByDevice'
 
 addSecrets(useS3Website, secrets)
 addSecrets(useS3Website, [useCloudFormation])
@@ -89,18 +90,12 @@ export async function useS3Website(
         OriginProtocolPolicy: 'https-only',
       }
 
-      type Origin = InstanceType<typeof aws.CloudFront.Distribution.Origin>
-      type OriginGroup = InstanceType<
-        typeof aws.CloudFront.Distribution.OriginGroup
-      >
-      type CacheBehavior = InstanceType<
-        typeof aws.CloudFront.Distribution.CacheBehavior
-      >
+      type OriginConfig = CloudFront.Distribution.Origin
 
       const BucketOrigin = (
         bucket: ResourceRef,
-        extra?: Partial<Origin>
-      ): Origin => ({
+        extra?: Partial<OriginConfig>
+      ): OriginConfig => ({
         Id: bucket.id,
         DomainName: bucket.get('DomainName'),
         CustomOriginConfig: httpsOnly,
@@ -110,7 +105,7 @@ export async function useS3Website(
       const OriginGroup = (
         primaryOriginId: string,
         secondOriginId: string
-      ): OriginGroup => ({
+      ): CloudFront.Distribution.OriginGroup => ({
         Id: primaryOriginId + '-404',
         FailoverCriteria: { StatusCodes: items([404]) },
         Members: items([
@@ -128,7 +123,7 @@ export async function useS3Website(
         )
 
       const pageServerId = 'PageServer'
-      const pageServer: Origin = {
+      const pageServer: OriginConfig = {
         Id: pageServerId,
         DomainName: config.origin,
         CustomOriginConfig: httpsOnly,
@@ -153,19 +148,64 @@ export async function useS3Website(
         ),
       ])
 
-      const forceHttps = 'redirect-to-https'
+      const defaultCachePolicy = ref(
+        'DefaultCachePolicy',
+        new aws.CloudFront.CachePolicy({
+          CachePolicyConfig: {
+            Name: 'DefaultCachePolicy',
+            ParametersInCacheKeyAndForwardedToOrigin: {
+              CookiesConfig: {
+                CookieBehavior: config.cookies?.length ? 'whitelist' : 'none',
+                Cookies: config.cookies,
+              },
+              HeadersConfig: {
+                HeaderBehavior: 'whitelist',
+                Headers: [
+                  'If-Modified-Since',
+                  'If-None-Match',
+                  'Origin',
+                  ...varyByDevice(config.caching?.varyByDevice),
+                ],
+              },
+              QueryStringsConfig: {
+                QueryStringBehavior: 'all',
+              },
+              EnableAcceptEncodingGzip: false,
+              EnableAcceptEncodingBrotli: false,
+            },
+            MinTTL: config.caching?.minTTL ?? 0,
+            DefaultTTL: config.caching?.defaultTTL ?? 86400,
+            MaxTTL: config.caching?.maxTTL ?? 31536000,
+          },
+        })
+      )
+
+      type CacheBehavior = CloudFront.Distribution.CacheBehavior
+
+      const CacheBehavior = (
+        props: Omit<CacheBehavior, 'ViewerProtocolPolicy'>
+      ): CacheBehavior => ({
+        ViewerProtocolPolicy: 'redirect-to-https',
+        CachePolicyId: defaultCachePolicy,
+        OriginRequestPolicyId: managedRequestPolicies.AllViewer,
+        ResponseHeadersPolicyId: config.injectSecurityHeaders
+          ? managedResponseHeaderPolicies.SecurityHeaders
+          : undefined,
+        ...props,
+      })
 
       const cacheBehaviors: CacheBehavior[] = defalsify([
-        {
-          ViewerProtocolPolicy: forceHttps,
+        CacheBehavior({
           TargetOriginId: assets.id,
           PathPattern: assetsDir + '/*',
-        },
-        debugBase && {
-          ViewerProtocolPolicy: forceHttps,
-          TargetOriginId: assets.id,
-          PathPattern: debugBase.slice(1) + assetsDir + '/*',
-        },
+          CachePolicyId: managedCachePolicies.CachingOptimized,
+        }),
+        debugBase &&
+          CacheBehavior({
+            TargetOriginId: assets.id,
+            PathPattern: debugBase.slice(1) + assetsDir + '/*',
+            CachePolicyId: managedCachePolicies.CachingOptimized,
+          }),
       ])
 
       config.prefixOrigins?.forEach(origin => {
@@ -176,15 +216,17 @@ export async function useS3Website(
           Id: origin.origin,
           DomainName,
           OriginPath,
+          CustomOriginConfig: httpsOnly,
         })
-        cacheBehaviors.push({
-          ViewerProtocolPolicy: forceHttps,
-          TargetOriginId: origin.origin,
-          PathPattern: origin.prefix + '/*',
-          CachePolicyId: origin.noCache
-            ? managedCachePolicies.CachingDisabled
-            : undefined,
-        })
+        cacheBehaviors.push(
+          CacheBehavior({
+            PathPattern: origin.prefix + '/*',
+            TargetOriginId: origin.origin,
+            CachePolicyId: origin.noCache
+              ? managedCachePolicies.CachingDisabled
+              : defaultCachePolicy,
+          })
+        )
       })
 
       const edgeCache = ref(
@@ -195,10 +237,10 @@ export async function useS3Website(
             Origins: origins,
             OriginGroups: items(originGroups),
             CacheBehaviors: cacheBehaviors,
-            DefaultCacheBehavior: {
-              ViewerProtocolPolicy: 'redirect-to-https',
+            DefaultCacheBehavior: CacheBehavior({
+              PathPattern: undefined!,
               TargetOriginId: publicDir.id,
-            },
+            }),
           },
         })
       )
@@ -238,6 +280,15 @@ export async function useS3Website(
 
 const managedCachePolicies = {
   CachingDisabled: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
+  CachingOptimized: '658327ea-f89d-4fab-a63d-7e88639e58f6',
+}
+
+const managedRequestPolicies = {
+  AllViewer: '216adef6-5c7f-47e4-b989-5492eafa07d3',
+}
+
+const managedResponseHeaderPolicies = {
+  SecurityHeaders: '67f7725c-6f97-4210-82d7-5512b31e9d03',
 }
 
 function items<T>(items: T[]) {

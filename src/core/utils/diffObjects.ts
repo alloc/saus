@@ -6,6 +6,12 @@ export function diffObjects(
   let differs = false
   const diff = (key: string, oldValue: any, value: any) => {
     if (isPlainObject(oldValue) && isPlainObject(value)) {
+      if (canCoerceToJson(oldValue)) {
+        oldValue = oldValue.toJSON()
+      }
+      if (canCoerceToJson(value)) {
+        value = value.toJSON()
+      }
       if (diffObjects(oldValue, value, (changed[key] = {}))) {
         differs = true
       }
@@ -33,9 +39,15 @@ function equalArrays(oldValues: any[], values: any[]) {
     return false
   }
   for (let i = 0; i < values.length; i++) {
-    const value = values[i]
-    const oldValue = oldValues[i]
+    let value = values[i]
+    let oldValue = oldValues[i]
     if (isPlainObject(oldValue) && isPlainObject(value)) {
+      if (canCoerceToJson(oldValue)) {
+        oldValue = oldValue.toJSON()
+      }
+      if (canCoerceToJson(value)) {
+        value = value.toJSON()
+      }
       if (diffObjects(oldValue, value, {})) {
         return false
       }
@@ -52,4 +64,8 @@ function equalArrays(oldValues: any[], values: any[]) {
 
 function isPlainObject(value: any): value is object {
   return value !== null && typeof value == 'object'
+}
+
+function canCoerceToJson(value: object): value is { toJSON(): any } {
+  return typeof (value as any).toJSON == 'function'
 }

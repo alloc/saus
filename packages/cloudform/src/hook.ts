@@ -7,33 +7,35 @@ import { Stack } from './types'
 export default defineDeployHook(ctx => ({
   name: '@saus/cloudform',
   async pull(stack: Stack) {
-    return {
-      ...(await describeStack(stack)),
-    }
+    return describeStack(stack, {
+      when: 'settled',
+    })
   },
   identify: stack => ({
     name: stack.name,
   }),
-  async spawn(stack) {
+  async spawn(stack, onRevert) {
+    stack.outputs
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would create ${Object.keys(stack.resources).length} AWS resources`
+        `would create ${
+          Object.keys(stack.template.resources).length
+        } AWS resources`
       )
     }
-    const spawned = await spawnStack(
+    const spawned = await spawnStack(stack, toTemplateString(stack.template))
+    onRevert(async () => {
+      await this.kill(stack, onRevert)
+    })
+    stack.id = spawned.stackId
+    Object.assign(
       stack,
-      JSON.stringify({
-        Resources: stack.resources,
-        Outputs: stack.outputs,
+      await describeStack(stack, {
+        action: 'CREATE',
       })
     )
-    stack.id = spawned.stackId
-    Object.assign(stack, await describeStack(stack))
-    return async () => {
-      await this.kill(stack)
-    }
   },
-  async update(stack) {
+  async update(stack, _, onRevert) {
     if (!stack.id) {
       throw Error('Expected stack.id to exist')
     }
@@ -45,7 +47,9 @@ export default defineDeployHook(ctx => ({
     }
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would update ${Object.keys(stack.resources).length} AWS resources`
+        `would update ${
+          Object.keys(stack.template.resources).length
+        } AWS resources`
       )
     }
     const updateStack = signedRequest.action('UpdateStack', {
@@ -54,16 +58,18 @@ export default defineDeployHook(ctx => ({
     })
     await updateStack({
       stackName: stack.id,
-      templateBody: JSON.stringify({
-        Resources: stack.resources,
-        Outputs: stack.outputs,
-      }),
+      templateBody: toTemplateString(stack.template),
     })
-    Object.assign(stack, await describeStack(stack))
-    return async () => {
+    onRevert(async () => {
       const spawned = await spawnStack(stack, prevTemplate)
       stack.id = spawned.stackId
-    }
+    })
+    Object.assign(
+      stack,
+      await describeStack(stack, {
+        action: 'UPDATE',
+      })
+    )
   },
   async kill(stack) {
     if (!stack.id) {
@@ -71,7 +77,9 @@ export default defineDeployHook(ctx => ({
     }
     if (ctx.dryRun) {
       return createDryLog('@saus/cloudform')(
-        `would destroy ${Object.keys(stack.resources).length} AWS resources`
+        `would destroy ${
+          Object.keys(stack.template.resources).length
+        } AWS resources`
       )
     }
     const deleteStack = signedRequest.action('DeleteStack', {
@@ -107,4 +115,16 @@ async function getTemplate(stack: Stack) {
     stackName: stack.id || stack.name,
   })
   return resp.templateBody
+}
+
+function toTemplateString(template: Stack['template']) {
+  return JSON.stringify({
+    Resources: template.resources,
+    Outputs: Object.entries(template.outputs).reduce((outputs, entry) => {
+      if (entry[1] !== undefined) {
+        outputs[entry[0]] = { Value: entry[1] }
+      }
+      return outputs
+    }, {} as Record<string, any>),
+  })
 }

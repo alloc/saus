@@ -55,6 +55,7 @@ export function bumpProjectVersion() {
       message: 'Select a release kind',
       choices: Object.keys(bumps).map(type => ({
         title: type,
+        value: type,
         description: 'v' + bumps[type],
       })),
     })

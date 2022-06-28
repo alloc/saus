@@ -15,4 +15,5 @@ export type BundleFlags = InlineBundleConfig & {
 export type DeployFlags = {
   dryRun?: true
   cache?: false
+  revert?: false
 }
