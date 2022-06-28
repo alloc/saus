@@ -21,7 +21,7 @@ import {
   DeployTargetArgs,
 } from './types'
 
-export interface DeployContext extends Omit<BundleContext, 'command'> {
+export interface DeployContext extends BundleContext {
   command: 'deploy' | 'secrets'
   /** The file path of the deployment plan. */
   deployPath: string
@@ -37,6 +37,10 @@ export interface DeployContext extends Omit<BundleContext, 'command'> {
   dryRun: boolean
   /** Avoid using cached build artifacts. */
   noCache: boolean
+  /** Plugins should use this for successful deployment logs. */
+  logSuccess: (...args: any[]) => void
+  /** Plugins should use this for dry run logs. */
+  logPlan: (...args: any[]) => void
   //
   // Internals
   //
@@ -95,6 +99,8 @@ export async function loadDeployContext(
   context.noCache = !!options.noCache
   context.deployHooks = []
   context.deployPlugins = {}
+  context.logSuccess = noop
+  context.logPlan = noop
 
   // By default, a deployment action will never resolve.
   // This affects `saus secrets add` for example, so unnecessary

@@ -1,5 +1,5 @@
 import { diffObjects, pick } from 'saus/core'
-import { createDryLog, defineDeployHook } from 'saus/deploy'
+import { defineDeployHook } from 'saus/deploy'
 import { createRequestFn } from './api/request'
 import secrets from './secrets'
 import { DnsRecord, DnsRecordList } from './types'
@@ -15,8 +15,6 @@ export default defineDeployHook(async ctx => {
     apiToken: secrets.apiToken,
     logger: ctx.logger,
   })
-
-  const dryLog = createDryLog('@saus/cloudflare-dns')
 
   function getRecordKey(rec: DnsRecord) {
     return [rec.type, rec.name].join('+')
@@ -59,13 +57,13 @@ export default defineDeployHook(async ctx => {
         if (diffObjects(pick(oldRecord, DnsRecordConfigKeys), rec)) {
           changedRecords.add(oldRecord)
           if (ctx.dryRun) {
-            return dryLog(`would update "${rec.type} ${rec.name}" record`)
+            return ctx.logPlan(`would update "${rec.type} ${rec.name}" record`)
           }
           return putRecord(zoneId, oldRecord.id, rec)
         }
       } else {
         if (ctx.dryRun) {
-          return dryLog(`would create "${rec.type} ${rec.name}" record`)
+          return ctx.logPlan(`would create "${rec.type} ${rec.name}" record`)
         }
         return createRecord(zoneId, rec).then(resp => {
           newRecordIds.set(rec, resp.id)

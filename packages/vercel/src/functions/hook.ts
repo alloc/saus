@@ -9,26 +9,21 @@ import {
   plural,
   toObjectHash,
 } from 'saus/core'
-import {
-  createDryLog,
-  defineDeployHook,
-  DeployContext,
-  getDeployContext,
-} from 'saus/deploy'
+import { defineDeployHook, DeployContext, getDeployContext } from 'saus/deploy'
 import { Props } from './types'
 
 interface Target extends Props {
   entries: string[]
 }
 
-export default defineDeployHook(context => ({
+export default defineDeployHook(ctx => ({
   name: 'vercel/functions',
   async pull(props: Props) {
-    const { gitRepo, root } = context
+    const { gitRepo, root } = ctx
     const deployDir = getDeployDir(props)
     const git = bindExec('git', { cwd: deployDir })
 
-    await prepareDeployDir(deployDir, props, context, git)
+    await prepareDeployDir(deployDir, props, ctx, git)
     await git('reset --hard', [gitRepo.name + '/' + props.gitBranch])
     emptyDir(deployDir, ['.git'])
 
@@ -38,7 +33,7 @@ export default defineDeployHook(context => ({
       absolute: true,
     }).map(entry => path.relative(root, entry))
 
-    const files = await bundleFunctions(entries, props, context)
+    const files = await bundleFunctions(entries, props, ctx)
     const modules: Record<string, string> = {}
     for (const file of files) {
       fs.mkdirSync(path.dirname(file.path), { recursive: true })
@@ -58,23 +53,23 @@ export default defineDeployHook(context => ({
     branch: target.gitBranch,
   }),
   async spawn(target) {
-    if (context.dryRun) {
-      return createDryLog('@saus/vercel')(
+    if (ctx.dryRun) {
+      return ctx.logPlan(
         `would deploy ${plural(target.entries.length, 'serverless function')}`
       )
     }
-    await pushFunctions(target, context)
+    await pushFunctions(target, ctx)
     // TODO: return rollback function
   },
-  update(target) {
-    return this.spawn(target)
+  update(target, _, onRevert) {
+    return this.spawn(target, onRevert)
   },
   async kill(target) {
     const deployDir = getDeployDir(target)
-    const { gitRepo } = context
+    const { gitRepo } = ctx
 
-    if (context.dryRun) {
-      createDryLog('@saus/vercel')(
+    if (ctx.dryRun) {
+      ctx.logPlan(
         `would destroy ${plural(target.entries.length, 'serverless function')}`
       )
     } else {

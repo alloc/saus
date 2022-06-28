@@ -19,6 +19,8 @@ export default defineDeployHook(ctx => {
     },
     identify: ({ token }) => ({ token }),
     spawn: async config => {
+      if (ctx.dryRun) return
+
       const data = rewriteKeys(
         configToPayload(config),
         snakeCase
@@ -32,6 +34,8 @@ export default defineDeployHook(ctx => {
       }
 
       await setConfiguration(auth, nextData)
+      ctx.logSuccess('Cloudimage settings were updated!')
+
       return async () => {
         await setConfiguration(auth, prevData)
       }
@@ -40,10 +44,11 @@ export default defineDeployHook(ctx => {
       return this.spawn(config, onRevert)
     },
     kill: config => {
-      ctx.logger.warnOnce(
-        'Beware: @saus/cloudimage was removed from your deployment file,\n' +
-          'but the Cloudimage CDN is still charging you for cached files.'
-      )
+      if (!ctx.dryRun)
+        ctx.logger.warnOnce(
+          'Beware: @saus/cloudimage was removed from your deployment file,\n' +
+            'but the Cloudimage CDN is still charging you for cached files.'
+        )
     },
   }
 })

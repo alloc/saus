@@ -1,15 +1,13 @@
 import * as S3 from '@saus/aws-s3'
 import { OutputBundle } from 'saus'
 import { md5Hex, plural, scanPublicDir } from 'saus/core'
-import { createDryLog, getDeployContext, GitFiles } from 'saus/deploy'
+import { getDeployContext, GitFiles } from 'saus/deploy'
+import { WebsiteConfig } from './config'
 import secrets from './secrets'
-import { WebsiteConfig } from './types'
 
 type AssetList = string[]
 type ContentHash = string
 type PublicFileHashes = { [name: string]: ContentHash }
-
-const dryLog = createDryLog('@saus/aws-s3-website')
 
 export async function syncStaticFiles(
   bundle: OutputBundle,
@@ -18,7 +16,7 @@ export async function syncStaticFiles(
   buckets: { assets: string; oldAssets: string; publicDir: string },
   debugBase: string
 ): Promise<void> {
-  const context = getDeployContext()
+  const ctx = getDeployContext()
   const bucketConfig = config.buckets || {}
 
   const syncAssets = () => {
@@ -30,7 +28,7 @@ export async function syncStaticFiles(
     return {
       upload(name: string, data: string | Buffer) {
         assetNames.push(name)
-        if (context.dryRun) {
+        if (ctx.dryRun) {
           return
         }
         // Assets are content-hashed, so we can bail on name alone.
@@ -47,8 +45,8 @@ export async function syncStaticFiles(
         }
       },
       async finalize() {
-        if (context.dryRun) {
-          dryLog(`would upload ${plural(assetNames.length, 'asset')}`)
+        if (ctx.dryRun) {
+          ctx.logPlan(`would upload ${plural(assetNames.length, 'asset')}`)
         } else {
           await Promise.all(uploading)
           const missingAssets = oldAssetNames.filter(
@@ -80,7 +78,7 @@ export async function syncStaticFiles(
     return {
       upload(name: string, data: Buffer) {
         const hash = (hashes[name] = md5Hex(data).slice(0, 8))
-        if (context.dryRun) {
+        if (ctx.dryRun) {
           return
         }
         const oldHash = oldHashes[name]
@@ -98,8 +96,8 @@ export async function syncStaticFiles(
       },
       /** Move old public files into the "oldAssets" bucket. */
       async finalize() {
-        if (context.dryRun) {
-          dryLog(
+        if (ctx.dryRun) {
+          ctx.logPlan(
             `would upload ${plural(Object.keys(hashes).length, 'public file')}`
           )
         } else {
@@ -133,7 +131,7 @@ export async function syncStaticFiles(
   }
 
   const publicStore = syncPublicDir()
-  const publicDir = await scanPublicDir(context)
+  const publicDir = await scanPublicDir(ctx)
   if (publicDir) {
     await publicDir.commit('cache')
     for (const [name, file] of Object.entries(publicDir.cache)) {

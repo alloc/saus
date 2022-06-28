@@ -1,4 +1,4 @@
-import { createDryLog, defineDeployHook } from 'saus/deploy'
+import { defineDeployHook } from 'saus/deploy'
 import { describeStack } from './api/describeStack'
 import { signedRequest } from './api/request'
 import secrets from './secrets'
@@ -17,7 +17,7 @@ export default defineDeployHook(ctx => ({
   async spawn(stack, onRevert) {
     stack.outputs
     if (ctx.dryRun) {
-      return createDryLog('@saus/cloudform')(
+      return ctx.logPlan(
         `would create ${
           Object.keys(stack.template.resources).length
         } AWS resources`
@@ -46,7 +46,7 @@ export default defineDeployHook(ctx => ({
       )
     }
     if (ctx.dryRun) {
-      return createDryLog('@saus/cloudform')(
+      return ctx.logPlan(
         `would update ${
           Object.keys(stack.template.resources).length
         } AWS resources`
@@ -76,7 +76,7 @@ export default defineDeployHook(ctx => ({
       throw Error('Expected stack.id to exist')
     }
     if (ctx.dryRun) {
-      return createDryLog('@saus/cloudform')(
+      return ctx.logPlan(
         `would destroy ${
           Object.keys(stack.template.resources).length
         } AWS resources`
