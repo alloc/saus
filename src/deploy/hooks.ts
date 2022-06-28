@@ -1,6 +1,6 @@
 import { defer } from '@/utils/defer'
 import { callerPath } from 'shared-log'
-import { Promisable } from 'type-fest'
+import { Merge, Promisable } from 'type-fest'
 import { getDeployContext } from './context'
 import type {
   DefineDeployHook,
@@ -45,10 +45,10 @@ export function addDeployTarget<
   PulledState extends object
 >(
   hook: DeployHookRef<State, PulledState>,
-  state: Promisable<Omit<State, keyof PulledState> & Partial<PulledState>>
-): Promise<State> {
+  state: Promisable<State & Omit<Partial<PulledState>, keyof State>>
+): Promise<Merge<State, PulledState>> {
   const ctx = getDeployContext()
-  const { promise, resolve } = defer<State>()
+  const { promise, resolve } = defer<any>()
   ctx.addDeployTarget(hook, state, resolve)
   return promise
 }

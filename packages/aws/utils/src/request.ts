@@ -1,3 +1,4 @@
+import { isObject, rewriteKeys, rewriteObjectKeys } from '@saus/deploy-utils'
 import * as aws4 from 'aws4'
 import { Agent } from 'https'
 import {
@@ -14,13 +15,7 @@ import {
   parseXmlResponse,
 } from './response'
 import { CamelCasedPropertiesDeep } from './types'
-import {
-  camelize,
-  isObject,
-  pascalize,
-  rewriteKeys,
-  rewriteObjectKeys,
-} from './utils'
+import { camelize, pascalize } from './utils'
 import { XmlParserOptions } from './xml/parse'
 
 interface ActionMap {

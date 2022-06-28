@@ -5,9 +5,10 @@
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "types": "index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "index.d.ts"
   ],
   "scripts": {
     "build": "tsup --clean",
@@ -17,8 +18,5 @@
   "dependencies": {
     "@types/prompts": "^2.0.14",
     "prompts": "^2.4.2"
-  },
-  "devDependencies": {
-    "recrawl-sync": "^2.2.1"
   }
 }
