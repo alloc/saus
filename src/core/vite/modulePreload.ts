@@ -1,4 +1,4 @@
-import { vite } from '../vite'
+import type { vite } from '../vite'
 
 export function getPreloadTagsForModules(
   moduleUrls: Iterable<string>,

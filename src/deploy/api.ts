@@ -184,6 +184,8 @@ export async function deploy(
       }
     } catch (e: any) {
       return (deploying || Promise).reject(e)
+    } finally {
+      activePlugin = null!
     }
 
     if (index == targetIndex) {

@@ -111,6 +111,7 @@ export async function loadBundleContext<
     )
   }
 
+  context.command = 'build'
   context.bundle = {
     ...bundleConfig,
     type: bundleConfig.type || 'script',
@@ -136,8 +137,7 @@ export async function loadBundleContext<
   context.loadRoutes = () => {
     const loading = (async () => {
       const loading = startTask('Loading routes...')
-
-      await loadRoutes(context)
+      await loadRoutes(context as BuildContext)
 
       const routeCount =
         context.routes.length +

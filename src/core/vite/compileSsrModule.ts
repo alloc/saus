@@ -15,7 +15,7 @@ import { CompiledModule } from '../vm/types'
 
 export async function compileSsrModule(
   id: string,
-  context: Omit<SausContext, 'command'>
+  context: SausContext
 ): Promise<CompiledModule | null> {
   const { config } = context
 
