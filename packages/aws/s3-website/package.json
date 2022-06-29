@@ -11,7 +11,7 @@
     "index.d.ts"
   ],
   "scripts": {
-    "build": "tsup --clean",
+    "build": "tsup",
     "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build"
   },
@@ -22,7 +22,8 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-s3": "workspace:*",
-    "@saus/cloudform": "workspace:*"
+    "@saus/aws-s3": "workspace:^0.1.0",
+    "@saus/cloudform": "workspace:^0.1.0",
+    "@saus/deploy-utils": "workspace:^0.1.0"
   }
 }

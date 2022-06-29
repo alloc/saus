@@ -16,7 +16,7 @@
     "index.d.ts"
   ],
   "scripts": {
-    "build": "tsup --clean",
+    "build": "tsup",
     "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build"
   },
@@ -27,7 +27,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "workspace:*",
+    "@saus/aws-utils": "workspace:^0.1.0",
     "mrmime": "^1.0.0"
   }
 }

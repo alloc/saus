@@ -347,7 +347,7 @@ export async function deploy(
     const numChanged =
       missingTargets.length + updatedTargets.size + spawnedTargets.size
 
-    if (numChanged == 0) {
+    if (numChanged == 0 && files.numChanged == 0) {
       return logger.info(
         yellow(
           `\nNo deployment actions were required.` +
@@ -357,9 +357,11 @@ export async function deploy(
       )
     }
 
-    task = task && startTask('Killing obsolete targets...')
-    for (const [plugin, target] of missingTargets.reverse()) {
-      await invokeAction((activePlugin = plugin), 'kill', target)
+    if (missingTargets.length) {
+      task = task && startTask('Killing obsolete targets...')
+      for (const [plugin, target] of missingTargets.reverse()) {
+        await invokeAction((activePlugin = plugin), 'kill', target)
+      }
     }
 
     if (!options.dryRun) {

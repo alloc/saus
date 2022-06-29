@@ -35,6 +35,10 @@ export class GitFiles {
     return file
   }
 
+  get numChanged() {
+    return this._tracker.numChanged
+  }
+
   async commit(message: string) {
     if (this._tracker.numChanged > 0) {
       await exec('git add -A', { cwd: this.root })

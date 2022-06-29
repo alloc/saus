@@ -11,7 +11,7 @@
     "index.d.ts"
   ],
   "scripts": {
-    "build": "tsup --clean",
+    "build": "tsup",
     "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build"
   },
@@ -22,6 +22,6 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/deploy-utils": "workspace:*"
+    "@saus/deploy-utils": "workspace:^0.1.0"
   }
 }

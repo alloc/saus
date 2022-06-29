@@ -11,7 +11,7 @@
     "index.d.ts"
   ],
   "scripts": {
-    "build": "tsup --clean",
+    "build": "tsup",
     "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build"
   },
@@ -23,7 +23,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "workspace:*",
+    "@saus/aws-utils": "workspace:^0.1.0",
     "cloudform-types": "npm:@alloc/cloudform-types@^7.4.3",
     "dset": "^3.1.2",
     "type-fest": "^2.13.0"
