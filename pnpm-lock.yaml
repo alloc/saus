@@ -13,11 +13,11 @@ importers:
       '@babel/helper-annotate-as-pure': ^7.15.4
       '@babel/plugin-syntax-typescript': ^7.14.5
       '@babel/types': ^7.16.7
-      '@cush/exec': ^1.7.1
+      '@cush/exec': ^1.8.0
       '@cush/relative': ^1.0.0
       '@rollup/pluginutils': ^4.1.2
-      '@saus/deploy-utils': '*'
-      '@saus/html': '*'
+      '@saus/deploy-utils': workspace:*
+      '@saus/html': workspace:*
       '@types/babel__code-frame': ^7.0.3
       '@types/babel__core': ^7.1.16
       '@types/convert-source-map': ^1.5.2
@@ -99,7 +99,7 @@ importers:
       '@alloc/fast-rimraf': 1.0.8
       '@alloc/prettier-config': 1.0.0
       '@babel/helper-annotate-as-pure': 7.16.7
-      '@cush/exec': 1.7.1
+      '@cush/exec': 1.8.0
       '@cush/relative': 1.0.0
       '@rollup/pluginutils': 4.2.1
       '@types/babel__code-frame': 7.0.3
@@ -161,7 +161,7 @@ importers:
 
   packages/aws/s3:
     specifiers:
-      '@saus/aws-utils': '*'
+      '@saus/aws-utils': workspace:*
       mrmime: ^1.0.0
       saus: '*'
     dependencies:
@@ -172,8 +172,8 @@ importers:
 
   packages/aws/s3-website:
     specifiers:
-      '@saus/aws-s3': '*'
-      '@saus/cloudform': '*'
+      '@saus/aws-s3': workspace:*
+      '@saus/cloudform': workspace:*
       saus: '*'
     dependencies:
       '@saus/aws-s3': link:../s3
@@ -194,7 +194,7 @@ importers:
 
   packages/bump:
     specifiers:
-      '@saus/deploy-utils': '*'
+      '@saus/deploy-utils': workspace:*
       saus: '*'
     dependencies:
       '@saus/deploy-utils': link:../deploy-utils
@@ -209,7 +209,7 @@ importers:
 
   packages/cloudform:
     specifiers:
-      '@saus/aws-utils': '*'
+      '@saus/aws-utils': workspace:*
       cloudform-types: npm:@alloc/cloudform-types@^7.4.3
       dset: ^3.1.2
       recrawl-sync: ^2.2.1
@@ -226,7 +226,7 @@ importers:
 
   packages/cloudimage:
     specifiers:
-      '@saus/deploy-utils': '*'
+      '@saus/deploy-utils': workspace:*
       '@types/lodash.merge': ^4.6.7
       lodash.merge: ^4.6.2
       saus: '*'
@@ -293,14 +293,12 @@ importers:
 
   packages/secrets:
     specifiers:
-      '@saus/deploy-utils': '*'
+      '@saus/deploy-utils': workspace:*
       aes-password: ^1.0.5
-      kleur: ^4.1.4
       saus: link:../..
     dependencies:
       '@saus/deploy-utils': link:../deploy-utils
       aes-password: 1.0.5
-      kleur: 4.1.4
     devDependencies:
       saus: link:../..
 
@@ -332,9 +330,11 @@ importers:
   packages/vercel:
     specifiers:
       '@saus/deploy-utils': workspace:*
+      recrawl-sync: ^2.2.1
       saus: '*'
     dependencies:
       '@saus/deploy-utils': link:../deploy-utils
+      recrawl-sync: 2.2.1
     devDependencies:
       saus: link:../..
 
@@ -675,6 +675,14 @@ packages:
     dependencies:
       shell-quote: 1.7.3
       type-error: 1.0.3
+    dev: false
+
+  /@cush/exec/1.8.0:
+    resolution: {integrity: sha512-wwWjZPAMyPP58ja9Ad1o3oo2mPqd0AXOPD+Zotn3amK1ZpLDJM4ci6xNAeupI9KvkXYMPWSxg1h1sUeUoMajOQ==}
+    dependencies:
+      shell-quote: 1.7.3
+      type-error: 1.0.3
+    dev: true
 
   /@cush/execall/1.0.0:
     resolution: {integrity: sha512-pbrDxZOGgTbyLunPdgDgTeJCVFctqlGMoS0yEzuYQbaBvnSCAgh//74/Elhmx/gKG6gkutPvPWs/UwdEHFGV7w==}
@@ -2174,7 +2182,6 @@ packages:
 
   /glob-regex/0.3.2:
     resolution: {integrity: sha512-m5blUd3/OqDTWwzBBtWBPrGlAzatRywHameHeekAZyZrskYouOGdNB8T/q6JucucvJXtOuyHIn0/Yia7iDasDw==}
-    dev: true
 
   /glob/7.1.6:
     resolution: {integrity: sha512-LwaxwyZ72Lk7vZINtNNrywX0ZuLyStrdDtabefZKAY5ZGJhVtgdznluResxNmPitE0SAO+O26sWTHeKSI2wMBA==}
@@ -3168,7 +3175,6 @@ packages:
       glob-regex: 0.3.2
       slash: 3.0.0
       tslib: 1.14.1
-    dev: true
 
   /redent/1.0.0:
     resolution: {integrity: sha512-qtW5hKzGQZqKoh6JNSD+4lfitfPKGz42e6QwiRmPM5mmKtR0N41AbJRYu0xJi7nhOJ4WDgRkKvAk6tw4WIwR4g==}
@@ -3636,7 +3642,6 @@ packages:
 
   /tslib/1.14.1:
     resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
-    dev: true
 
   /tsup/5.12.9_typescript@4.7.4:
     resolution: {integrity: sha512-dUpuouWZYe40lLufo64qEhDpIDsWhRbr2expv5dHEMjwqeKJS2aXA/FPqs1dxO4T6mBojo7rvo3jP9NNzaKyDg==}

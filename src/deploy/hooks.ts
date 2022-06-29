@@ -1,5 +1,5 @@
+import { getStackFrame } from '@/node/stack'
 import { defer } from '@/utils/defer'
-import { callerPath } from 'shared-log'
 import { Merge, Promisable } from 'type-fest'
 import { getDeployContext } from './context'
 import type {
@@ -27,7 +27,11 @@ import type {
  *     }
  */
 export const defineDeployHook: DefineDeployHook = (hook: any) => {
-  hook.file = callerPath()
+  const frame = getStackFrame(2)
+  if (!frame) {
+    throw Error('Failed to infer source file')
+  }
+  hook.file = frame.file
   return hook
 }
 

@@ -49,7 +49,7 @@ export default defineDeployHook(ctx => ({
     }
   },
   identify: target => ({
-    branch: target.gitBranch,
+    gitBranch: target.gitBranch,
   }),
   async spawn(target) {
     if (ctx.dryRun) {
@@ -160,7 +160,7 @@ async function bundleFunctions(
     plugins: [await esbuildViteBridge(context)],
     sourcemap: 'external',
     splitting: true,
-    target: 'esnext',
+    target: 'es2020',
     treeShaking: true,
     write: false,
   })

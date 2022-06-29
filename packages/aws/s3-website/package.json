@@ -22,7 +22,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-s3": "*",
-    "@saus/cloudform": "*"
+    "@saus/aws-s3": "workspace:*",
+    "@saus/cloudform": "workspace:*"
   }
 }

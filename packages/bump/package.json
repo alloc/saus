@@ -22,6 +22,6 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/deploy-utils": "*"
+    "@saus/deploy-utils": "workspace:*"
   }
 }

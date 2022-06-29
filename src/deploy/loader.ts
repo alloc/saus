@@ -1,7 +1,7 @@
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
 import { cyan, gray, green, yellow } from 'kleur/colors'
 import { DeployContext } from './context'
-import type { DeployHookRef } from './types'
+import type { DeployHookRef, DeployPlugin } from './types'
 
 export async function loadDeployFile(context: DeployContext) {
   try {
@@ -15,7 +15,7 @@ export async function loadDeployFile(context: DeployContext) {
 export async function loadDeployPlugin(
   hookRef: DeployHookRef | string,
   { ...context }: DeployContext
-) {
+): Promise<DeployPlugin> {
   const hookModule = await (typeof hookRef == 'string'
     ? context.require(hookRef)
     : hookRef.load())
@@ -25,7 +25,7 @@ export async function loadDeployPlugin(
   }
 
   const hook = hookModule.default
-  const plugin = await hook(context)
+  const plugin: DeployPlugin = await hook(context)
 
   if (context.logger.isLogged('info')) {
     context.logActivity = (...args) => {

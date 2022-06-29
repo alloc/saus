@@ -60,7 +60,7 @@ export async function syncStaticFiles(
               creds: secrets,
             })
 
-          memory.setData(assetNames)
+          memory.setData(assetNames.sort())
         }
       },
     }

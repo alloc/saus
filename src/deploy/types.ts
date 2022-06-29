@@ -8,14 +8,14 @@ export type DeployAction<T = any> = (
 ) => Promisable<T>
 
 export type DeployFile = {
+  version: number
   targets: {
-    plugin: number
+    plugin: string
     state: DeployTarget
   }[]
   plugins: {
-    name: string
-    hook: string
-  }[]
+    [name: string]: string
+  }
 }
 
 export interface DeployHookRef<
@@ -153,7 +153,14 @@ export type RevertFn = () => Promisable<void>
 export type DeployTarget<
   Props extends object = Record<string, any>,
   State extends object = {}
-> = { _id?: string } & Merge<Props, State>
+> = Merge<Props, State> & {
+  _id?: DeployTargetId
+}
+
+export type DeployTargetId = {
+  hash: string
+  values: Record<string, any>
+}
 
 export type DeployTargetArgs = [
   hook: DeployHookRef,

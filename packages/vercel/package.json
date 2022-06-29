@@ -21,6 +21,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/deploy-utils": "workspace:*"
+    "@saus/deploy-utils": "workspace:*",
+    "recrawl-sync": "^2.2.1"
   }
 }

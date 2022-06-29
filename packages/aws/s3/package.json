@@ -27,7 +27,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "*",
+    "@saus/aws-utils": "workspace:*",
     "mrmime": "^1.0.0"
   }
 }

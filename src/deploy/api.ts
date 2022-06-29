@@ -23,6 +23,7 @@ import {
   DeployPlugin,
   DeployTarget,
   DeployTargetArgs,
+  DeployTargetId,
   RevertFn,
 } from './types'
 
@@ -130,20 +131,24 @@ export async function deploy(
   let deploying: Deferred<void> | undefined
   let activePlugin: DeployPlugin = null!
 
+  const targets: DeployTargetArgs[] = []
   const savedTargets = getSavedTargets(targetCache)
   const reusedTargets = new Set<DeployTarget>()
   const updatedTargets = new Set<DeployTarget>()
   const spawnedTargets = new Set<DeployTarget>()
-  const targets: DeployTargetArgs[] = []
+
+  /** Saved targets before this index have been reused, removed, or moved. */
   let reusedIndex = 0
-  let targetIndex = 0
 
   const markTargetReused = (target: DeployTarget) => {
     reusedIndex = Math.max(reusedIndex, 1 + savedTargets.indexOf(target))
     reusedTargets.add(target)
   }
 
-  const addTarget = async (
+  /** Queued targets before this index are done deploying. */
+  let targetIndex = 0
+
+  const deployTarget = async (
     hook: DeployHookRef,
     target: Promisable<DeployTarget>
   ) => {
@@ -194,7 +199,7 @@ export async function deploy(
       if (++targetIndex < targets.length) {
         queueMicrotask(() => {
           const [hook, target, resolve] = targets[targetIndex]
-          resolve(addTarget(hook, target))
+          resolve(deployTarget(hook, target))
         })
       } else {
         deploying?.resolve()
@@ -203,35 +208,53 @@ export async function deploy(
     return target
   }
 
+  const pluginCache = createPluginCache(context.deployPlugins, entry =>
+    loadDeployPlugin(entry, context)
+  )
+
   let newTargetCache: DeployFile | undefined
   let deployFailed = false
 
   const refreshTargetCache = async () => {
-    const newCache: DeployFile = { targets: [], plugins: [] }
+    const newCache: DeployFile = { version: 1, targets: [], plugins: {} }
 
     const cacheTarget = async (
       target: Promisable<DeployTarget>,
-      pluginName: string,
-      hookPath: string
+      plugin: DeployPlugin,
+      entry: string
     ) => {
-      let pluginIndex = newCache.plugins.findIndex(p => p.hook == hookPath)
-      if (pluginIndex < 0) {
-        pluginIndex =
-          newCache.plugins.push({
-            name: pluginName,
-            hook: hookPath,
-          }) - 1
+      const cachedPlugin = Object.entries(newCache.plugins).find(
+        cachedPlugin => cachedPlugin[1] == entry
+      )
+
+      let pluginName = plugin.name
+      debugger
+      if (cachedPlugin) {
+        pluginName = cachedPlugin[0]
+      } else {
+        newCache.plugins[pluginName] = entry
       }
-      newCache.targets.push({
-        plugin: pluginIndex,
-        state: await target,
-      })
+
+      // Cache the target before awaiting it.
+      const cachedTarget = { plugin: pluginName, state: null as any }
+      newCache.targets.push(cachedTarget)
+      target = await target
+
+      // Ensure the target is identified.
+      let targetId = target._id
+      if (!targetId) {
+        defineTargetId(target, await plugin.identify(target))
+        targetId = target._id
+      }
+
+      // Hoist identifying keys so they show first in cached state.
+      cachedTarget.state = hoistKeys(target, Object.keys(targetId.values))
     }
 
     for (let [{ hook, plugin }, target] of targets) {
       target = await target
       if (spawnedTargets.has(target) || updatedTargets.has(target)) {
-        await cacheTarget(target, plugin!.name, hook!.file!)
+        await cacheTarget(target, plugin!, hook!.file!)
       }
     }
 
@@ -242,8 +265,9 @@ export async function deploy(
     // but then moved down before the failed deploy can be accidentally removed.
     if (deployFailed) {
       for (const savedTarget of targetCache.targets.slice(reusedIndex)) {
-        const plugin = targetCache.plugins[savedTarget.plugin]
-        await cacheTarget(savedTarget.state, plugin.name, plugin.hook)
+        const entry = targetCache.plugins[savedTarget.plugin]
+        const plugin = await pluginCache.load(entry, savedTarget.plugin)
+        await cacheTarget(savedTarget.state, plugin, entry)
       }
     }
 
@@ -284,7 +308,7 @@ export async function deploy(
     const index = targets.push(args) - 1
     if (index == targetIndex) {
       const [hook, target, resolve] = args
-      resolve(addTarget(hook, target))
+      resolve(deployTarget(hook, target))
     }
   }
 
@@ -317,7 +341,7 @@ export async function deploy(
     const missingTargets = await getMissingTargets(
       targetCache,
       reusedTargets,
-      context
+      pluginCache
     )
 
     const numChanged =
@@ -325,9 +349,11 @@ export async function deploy(
 
     if (numChanged == 0) {
       return logger.info(
-        '\nNo deployment actions were required.' +
-          '\nIf you expected otherwise, you might have a deploy target' +
-          " that's missing necessary metadata to detect changes."
+        yellow(
+          `\nNo deployment actions were required.` +
+            `\nIf you expected otherwise, you might have a deploy target` +
+            ` that's missing necessary metadata to detect changes.`
+        )
       )
     }
 
@@ -414,10 +440,10 @@ type SavedTargets = DeployTarget[] & {
 }
 
 function getSavedTargets(targetCache: DeployFile) {
-  const targetsByPluginName = targetCache.plugins.reduce(
-    (targets, plugin, index) => {
-      targets[plugin.name] = targetCache.targets
-        .filter(target => target.plugin == index)
+  const targetsByPluginName = Object.keys(targetCache.plugins).reduce(
+    (targets, pluginName) => {
+      targets[pluginName] = targetCache.targets
+        .filter(target => target.plugin == pluginName)
         .map(target => target.state)
       return targets
     },
@@ -441,7 +467,7 @@ function getSavedTargets(targetCache: DeployFile) {
       savedTargets.byPlugin.set(plugin, targets)
     }
     return targets.find(savedTarget => {
-      return savedTarget._id == target._id
+      return savedTarget._id!.hash == target._id!.hash
     })
   }
   return savedTargets
@@ -450,19 +476,14 @@ function getSavedTargets(targetCache: DeployFile) {
 async function getMissingTargets(
   targetCache: DeployFile,
   reusedTargets: Set<DeployTarget>,
-  context: DeployContext
+  pluginCache: PluginCache<DeployPlugin>
 ) {
-  const pendingPlugins: Record<string, Promise<any>> = {}
   const missing: [DeployPlugin, DeployTarget][] = []
-  for (const props of targetCache.plugins) {
-    let plugin =
-      context.deployPlugins[props.name] || (await pendingPlugins[props.hook])
+  for (const [name, entry] of Object.entries(targetCache.plugins)) {
+    let plugin = await pluginCache.get(entry, name)
     for (const target of targetCache.targets) {
       if (!reusedTargets.has(target.state)) {
-        if (!plugin) {
-          const pendingPlugin = loadDeployPlugin(props.hook, context)
-          plugin = await (pendingPlugins[props.hook] = pendingPlugin)
-        }
+        plugin ||= await pluginCache.load(entry)
         missing.push([plugin, target])
       }
     }
@@ -473,9 +494,9 @@ async function getMissingTargets(
 function defineTargetId(
   target: DeployTarget,
   values: Record<string, any>
-): asserts target is DeployTarget & { _id: string } {
+): asserts target is { _id: DeployTargetId } {
   Object.defineProperty(target, '_id', {
-    value: toObjectHash(values),
+    value: { hash: toObjectHash(values), values },
   })
 }
 
@@ -496,4 +517,27 @@ function logActionCounts(
   spawnCount && success(plural(spawnCount, 'target'), 'spawned.')
   updateCount && success(plural(updateCount, 'target'), 'updated.')
   killCount && success(plural(killCount, 'target'), 'killed.')
+}
+
+function hoistKeys(obj: any, keys: string[]) {
+  return Object.fromEntries(
+    Object.entries(obj).sort(([key]) => (keys.includes(key) ? -1 : 1))
+  )
+}
+
+interface PluginCache<T> {
+  get: (entry: string, name?: string) => Promise<T | undefined>
+  load: (entry: string, name?: string) => Promise<T>
+}
+
+function createPluginCache<T>(
+  cache: Record<string, T>,
+  load: (entry: string, cache: Record<string, T>) => Promise<T>
+): PluginCache<T> {
+  const loading: Record<string, Promise<T>> = {}
+  return {
+    get: async (entry, name) => (name && cache[name]) || (await loading[entry]),
+    load: async (entry, name) =>
+      (name && cache[name]) || (loading[entry] ||= load(entry, cache)),
+  }
 }
