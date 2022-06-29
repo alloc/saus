@@ -1,4 +1,4 @@
-import exec from '@cush/exec'
+import { exec } from '@saus/deploy-utils'
 import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
@@ -24,7 +24,6 @@ export default defineDeployHook(ctx => ({
     const git = bindExec('git', { cwd: deployDir })
 
     await prepareDeployDir(deployDir, props, ctx, git)
-    await git('reset --hard', [gitRepo.name + '/' + props.gitBranch])
     emptyDir(deployDir, ['.git'])
 
     const entries = crawl(path.resolve(root, props.functionDir), {
@@ -92,6 +91,7 @@ async function prepareDeployDir(
   git: exec.Exec
 ) {
   if (fs.existsSync(deployDir)) {
+    await git('reset --hard', [gitRepo.name + '/' + props.gitBranch])
     return
   }
   try {
@@ -118,7 +118,9 @@ async function pushFunctions(
   git = bindExec('git', { cwd: getDeployDir(target) })
 ) {
   await git('add -A')
-  await git('commit -m', [await getDeployCommitMessage(context)])
+  await git('commit -m', [await getDeployCommitMessage(context)], {
+    noThrow: /nothing to commit/,
+  })
 
   const { gitRepo } = context
   const localBranch = await git('rev-parse --abbrev-ref head')

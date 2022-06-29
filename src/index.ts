@@ -3,7 +3,7 @@ import { UserConfig, vite } from './core'
 
 export * from './bundle/runtime/api'
 export type { OutputBundle } from './bundle/types'
-export { loadBundle, Plugin, UserConfig, vite } from './core'
+export { loadBundle, Plugin, setEnvData, UserConfig, vite } from './core'
 
 export const build = importWhenCalled('build', () => import('./build/api')),
   deploy = importWhenCalled('deploy', () => import('./deploy/api')),

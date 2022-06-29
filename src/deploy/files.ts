@@ -81,23 +81,30 @@ export class File {
 
   /** Read as raw bytes */
   getBuffer(): Buffer
-  getBuffer(encoding: string): string
-  getBuffer(encoding?: string): string | Buffer {
+  /** Read with the given text encoding. */
+  getBuffer(encoding: BufferEncoding): string
+  // @internal
+  getBuffer(encoding?: BufferEncoding): string | Buffer {
     if (this.exists) {
       if (this._files.dryRun && this._data) {
         return this._data
       }
-      return fs.readFileSync(this.path, encoding as any)
+      return fs.readFileSync(this.path, encoding)
     }
     return encoding !== undefined ? '' : Buffer.alloc(0)
   }
 
   /** Set the raw byte data */
-  setBuffer(data: Buffer): void {
+  setBuffer(data: Buffer): void
+  /** Set the file's UTF-8 data */
+  setBuffer(data: string, encoding: BufferEncoding): void
+  // @internal
+  setBuffer(data: string | Buffer, encoding?: BufferEncoding): void {
     if (this._files.dryRun) {
-      this._data = data
+      this._data = Buffer.isBuffer(data) ? data : Buffer.from(data, encoding)
     } else {
-      fs.writeFileSync(this.path, data)
+      fs.mkdirSync(path.dirname(this.path), { recursive: true })
+      fs.writeFileSync(this.path, data, { encoding })
     }
     this._tracker.onChange(this, this._known)
   }

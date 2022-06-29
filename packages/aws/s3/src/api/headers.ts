@@ -11,7 +11,7 @@ export function paramsToHeaders<Params extends object>(
   ignore: (string & keyof Params)[] = []
 ): RequestHeaders {
   return {
-    ...pick(params, httpHeaderParams as any),
+    ...pick(params, httpHeaderParams as any, Boolean),
     ...formatAmzHeaders(
       pickAllExcept(params, [
         ...ignore,

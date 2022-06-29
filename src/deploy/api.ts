@@ -8,7 +8,7 @@ import exec from '@cush/exec'
 import assert from 'assert'
 import { addExitCallback } from 'catch-exit'
 import fs from 'fs'
-import { gray, green, red, yellow } from 'kleur/colors'
+import { bold, gray, green, red, yellow } from 'kleur/colors'
 import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -97,9 +97,11 @@ export async function deploy(
       }
     } else if (plugin && !options.dryRun && !revertiblePlugins.has(plugin)) {
       logger.warnOnce(
-        `Beware: Plugin "${plugin.name}" did not return a rollback function ` +
-          `for its "${action}" action. If an error happens while deploying, its ` +
-          `effects won't be automatically reversible!`
+        yellow(
+          `Beware: Plugin "${plugin.name}" did not return a rollback function ` +
+            `for its "${action}" action. If an error happens while deploying, its ` +
+            `effects won't be automatically reversible!`
+        )
       )
     }
   }
@@ -147,7 +149,7 @@ export async function deploy(
   ) => {
     const index = targetIndex
     const plugin = (activePlugin = hook.plugin!)
-    try {
+    deploy: try {
       target = await target
       if (plugin.pull) {
         const pulled = await plugin.pull(target)
@@ -165,7 +167,7 @@ export async function deploy(
         changed = {}
         if (!diffObjects(savedTarget, target, changed)) {
           markTargetReused(savedTarget)
-          return target // Nothing changed.
+          break deploy // Nothing changed.
         }
       }
 
@@ -228,19 +230,22 @@ export async function deploy(
 
     for (let [{ hook, plugin }, target] of targets) {
       target = await target
-      if (spawnedTargets.has(target) || reusedTargets.has(target)) {
+      if (spawnedTargets.has(target) || updatedTargets.has(target)) {
         await cacheTarget(target, plugin!.name, hook!.file!)
       }
     }
 
-    // Preserve targets that haven't been reached yet,
-    // unless we did not fail.
-    if (deployFailed)
-      for (let i = reusedIndex; i < savedTargets.length; i++) {
-        const target = targetCache.targets[i]
-        const plugin = targetCache.plugins[target.plugin]
-        await cacheTarget(target.state, plugin.name, plugin.hook)
+    // This branch only runs when --no-revert is used.
+    // When a deployment fails, we should preserve targets that were
+    // not yet compared with the current deployment plan.
+    // Note that targets that were once higher up in the deployment plan
+    // but then moved down before the failed deploy can be accidentally removed.
+    if (deployFailed) {
+      for (const savedTarget of targetCache.targets.slice(reusedIndex)) {
+        const plugin = targetCache.plugins[savedTarget.plugin]
+        await cacheTarget(savedTarget.state, plugin.name, plugin.hook)
       }
+    }
 
     return newCache
   }
@@ -332,6 +337,7 @@ export async function deploy(
     }
 
     if (!options.dryRun) {
+      logger.info(bold('\nDeployment complete!'))
       logActionCounts(
         spawnedTargets.size,
         updatedTargets.size,

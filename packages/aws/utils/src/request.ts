@@ -8,6 +8,7 @@ import {
   HttpRequestOptions,
   Response,
 } from 'saus/http'
+import { Promisable } from 'type-fest'
 import {
   AmzError,
   cacheParsedXml,
@@ -59,8 +60,9 @@ export type AmzCoerceRequestFn<
 > = (
   params: Action extends keyof Actions
     ? Actions[Action]['params'] & { Action: Action; Version: string }
-    : never
-) => AmzRequestOverrides
+    : never,
+  opts: HttpRequestOptions
+) => Promisable<AmzRequestOverrides>
 
 export type AmzCoerceResponseFn<
   Actions extends ActionMap,
@@ -142,7 +144,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     params.Version ||= config.apiVersion
 
     if (coerceRequest) {
-      const derived = coerceRequest(params as any)
+      const derived = await coerceRequest(params as any, opts)
       if (derived.method) {
         method = derived.method
       }

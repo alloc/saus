@@ -1,6 +1,6 @@
 import * as S3 from '@saus/aws-s3'
 import { OutputBundle } from 'saus'
-import { md5Hex, plural, scanPublicDir } from 'saus/core'
+import { joinUrl, md5Hex, plural, scanPublicDir, wrapBody } from 'saus/core'
 import { getDeployContext, GitFiles } from 'saus/deploy'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
@@ -38,7 +38,7 @@ export async function syncStaticFiles(
               bucket: buckets.assets,
               key: name,
               cacheControl: 's-maxage=2592000, immutable',
-              body: data,
+              body: wrapBody(data),
               creds: secrets,
             })
           )
@@ -87,7 +87,7 @@ export async function syncStaticFiles(
             S3.putObject(config.region)({
               bucket: buckets.publicDir,
               key: name,
-              body: data,
+              body: wrapBody(data),
               cacheControl,
               creds: secrets,
             })
@@ -123,10 +123,11 @@ export async function syncStaticFiles(
   for (const [name, asset] of Object.entries(bundle.clientAssets)) {
     assetStore.upload(name, asset)
   }
-  for (const [name, mod] of Object.entries(bundle.clientModules)) {
-    assetStore.upload(name, mod.text)
+  for (const mod of Object.values(bundle.clientModules)) {
+    assetStore.upload(mod.id, mod.text)
     if (debugBase && mod.debugText) {
-      assetStore.upload(debugBase.slice(1) + name, mod.debugText)
+      const debugId = joinUrl(debugBase, mod.id).slice(1)
+      assetStore.upload(debugId, mod.debugText)
     }
   }
 

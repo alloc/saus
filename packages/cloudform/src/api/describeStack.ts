@@ -1,3 +1,4 @@
+import { dset } from 'dset'
 import secrets from '../secrets'
 import { Stack } from '../types'
 import { describeStackEvents } from './describeStackEvents'
@@ -39,7 +40,6 @@ export async function describeStack(
   )
   if (stacks?.length) {
     const { stackId, outputs, stackStatus } = stacks[0]
-    console.log('status:', stackStatus)
     if (opts.action || opts.when == 'settled') {
       const action = opts.action || ''
       if (stackStatus.includes(action + '_IN_PROGRESS')) {
@@ -53,14 +53,17 @@ export async function describeStack(
         await throwStackFailure({ ...stack, id: stackId }, trace)
       }
     }
+    const outputPaths = Object.keys((stack as any)._outputs)
     return {
       id: stackId!,
       outputs: (outputs || []).reduce((outputs, { outputKey, outputValue }) => {
         if (outputKey) {
-          outputs[outputKey] = outputValue
+          const index = Number(outputKey)
+          const outputPath = outputPaths[index].split('.')
+          dset(outputs, outputPath, outputValue)
         }
         return outputs
-      }, {} as StackOutputs),
+      }, {} as Record<string, any>),
     }
   }
   return {

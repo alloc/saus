@@ -61,6 +61,11 @@ export default defineDeployHook(ctx => ({
     await updateStack({
       stackName: stack.id,
       templateBody: toTemplateString(stack.template),
+    }).catch(e => {
+      if (/^No updates/.test(e.message)) {
+        return // Everything is up-to-date!
+      }
+      throw e
     })
     onRevert(async () => {
       const spawned = await spawnStack(stack, prevTemplate)

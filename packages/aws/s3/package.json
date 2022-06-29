@@ -27,6 +27,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/aws-utils": "*"
+    "@saus/aws-utils": "*",
+    "mrmime": "^1.0.0"
   }
 }

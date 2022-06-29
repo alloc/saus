@@ -14,11 +14,7 @@ export function getCurrentGitBranch() {
 }
 
 export function createCommit(message: string, ...args: exec.Args) {
-  return exec(`git commit -m`, [message], ...args).catch(ignoreExitCode1)
-}
-
-function ignoreExitCode1(e: any) {
-  if (e.exitCode !== 1) {
-    throw e
-  }
+  return exec(`git commit -m`, [message], ...args, {
+    noThrow: /nothing to commit/,
+  })
 }

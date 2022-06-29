@@ -1,3 +1,4 @@
+import { isObject } from '@saus/deploy-utils'
 import * as CloudForm from 'cloudform-types'
 import {
   addDeployHook,
@@ -56,14 +57,41 @@ async function defineStack({ name, region, template }: StackOptions) {
 
   const { command } = getDeployContext()
   const outputs: any =
-    command == 'deploy' ? await template(makeRef, CloudForm) : {}
+    command == 'deploy' ? toCfnOutputs(await template(makeRef, CloudForm)) : {}
 
-  return {
+  const stack: Stack = {
     name,
     region,
     template: {
       resources,
-      outputs,
+      // CloudFormation outputs must have alphanumeric keys and string values.
+      // This plugin allows nested objects via dot-notated key paths.
+      // Since dots are not allowed by CloudFormation, we have to use indices
+      // to store the output values and convert them back to key paths later.
+      outputs: Object.fromEntries(Object.entries(Object.values(outputs))),
     },
   }
+
+  Object.defineProperty(stack, '_outputs', {
+    value: outputs,
+  })
+
+  return stack
+}
+
+function toCfnOutputs(
+  obj: Record<string, any>,
+  out: Record<string, any> = {},
+  path: string[] = []
+) {
+  for (let key in obj) {
+    const value = obj[key]
+    if (value && value.constructor == Object) {
+      toCfnOutputs(value, out, path.concat(key))
+    } else {
+      key = path.concat(key).join('.')
+      out[key] = isObject(value) ? value : '' + value
+    }
+  }
+  return out
 }

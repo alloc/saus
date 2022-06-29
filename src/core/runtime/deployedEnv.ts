@@ -1,5 +1,3 @@
-import { PartialDeep, ReadonlyDeep } from 'type-fest'
-import { getDeployContext } from '../../deploy'
 import { http } from '../http'
 import { getRawGitHubUrl } from '../node/git'
 import { JSONObject } from '../utils'
@@ -23,15 +21,6 @@ export interface DeployedEnv {
  * instead.
  */
 export const deployedEnv: ReadonlyDeep<DeployedEnv> & JSONObject = {}
-
-/**
- * Call this during `saus deploy` only.
- */
-export function setEnvData(env: PartialDeep<DeployedEnv>) {
-  if (getDeployContext()) {
-    Object.assign(deployedEnv, env)
-  }
-}
 
 /**
  * Load the deployed environment from GitHub, if possible.

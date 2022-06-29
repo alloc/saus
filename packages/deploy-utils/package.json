@@ -3,9 +3,15 @@
   "version": "0.1.0",
   "description": "Common logic for deployment plugins",
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    "types": "./index.d.ts",
+    "import": {
+      "ssr": "./dist/index.ssr.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "default": "./dist/index.js"
+  },
   "files": [
     "dist",
     "index.d.ts"
@@ -16,6 +22,7 @@
     "prepare": "yarn build"
   },
   "dependencies": {
+    "@cush/exec": "^1.7.1",
     "@types/prompts": "^2.0.14",
     "prompts": "^2.4.2"
   }

@@ -6,7 +6,7 @@ import {
   getPageFilename,
   getRequestMetadata,
   pick,
-  toRawBody,
+  unwrapBody,
 } from 'saus/core'
 import { ResponseHeaders } from 'saus/http'
 
@@ -42,7 +42,7 @@ export function setupPageStore(config: PageStoreConfig) {
         return // Skip authorized requests.
       }
       if (res.body && res.headers.has('content-type', /^text\/html\b/)) {
-        const html = toRawBody(res.body)
+        const html = unwrapBody(res.body)
         if (!html) {
           return // HTML streams are not supported.
         }
@@ -62,7 +62,7 @@ export function setupPageStore(config: PageStoreConfig) {
         )
         if (pageRules?.length) {
           pageRules.forEach(rule => {
-            assignDefaults(headers, rule.headers)
+            assignDefaults(headers, rule.headers(req))
           })
         }
 

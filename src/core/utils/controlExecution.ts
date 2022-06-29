@@ -49,10 +49,24 @@ export type ControlledFunction<
   state: State & ExecutorState<Args, Result>
 }
 
+type ControlExecutionResult<Args extends any[], State, Result> = {
+  with(
+    schedule: ExecutionGate<Args, State, Result>
+  ): ControlledFunction<Args, State, Result>
+}
+
 /**
  * The provided `execute` function has its calls intercepted by the
  * `schedule` handler (set by `.with` on the returned object).
  */
+export function controlExecution<Args extends any[], Result>(
+  execute: Executor<Args, {}, Result>
+): ControlExecutionResult<Args, {}, Result>
+export function controlExecution<Args extends any[], State, Result>(
+  execute: Executor<Args, State, Result>,
+  initialState?: State
+): ControlExecutionResult<Args, State, Result>
+// @internal
 export function controlExecution<Args extends any[], State, Result>(
   execute: Executor<Args, State, Result>,
   initialState?: State

@@ -130,7 +130,7 @@ export function injectDeployContext(context: DeployContext) {
 async function syncDeployCache(
   cacheDir: string,
   targetBranch: string,
-  { gitRepo }: DeployContext
+  { gitRepo, files }: DeployContext
 ) {
   let init: boolean
   if ((init = !fs.existsSync(path.join(cacheDir, '.git')))) {
@@ -152,7 +152,9 @@ async function syncDeployCache(
     if (!init || !/Couldn't find remote ref/.test(e.message)) {
       throw e
     }
-    await createCommit('init', ['--allow-empty'], { cwd: cacheDir })
+    files.get('.gitignore').setBuffer('deploy.lock', 'utf8')
+    await exec('git add .gitignore', { cwd: cacheDir })
+    await createCommit('init', { cwd: cacheDir })
     await exec('git push -u', [gitRepo.name, 'master:' + targetBranch], {
       cwd: cacheDir,
     })
