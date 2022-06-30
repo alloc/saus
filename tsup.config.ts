@@ -28,7 +28,6 @@ export default defineConfig({
   format: ['cjs'],
   target: 'node16',
   splitting: true,
-  sourcemap: true,
   noExternal: ['@'],
   define: { __VERSION__: JSON.stringify(pkgJson.version) },
   clean: true,

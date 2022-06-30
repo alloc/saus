@@ -1,11 +1,16 @@
-import { prompt } from '@saus/deploy-utils'
 import { bold, gray, green, yellow } from 'kleur/colors'
-import { loadDeployContext } from '../../deploy/context'
-import { loadSecretSources } from '../loadSecretSources'
-import { SecretMap } from '../types'
-import { selectSource } from '../utils/selectSource'
+import type { SecretMap } from '../../../secrets/types'
+import { command } from '../../command'
 
-export async function addSecrets() {
+command(addSecrets) //
+
+export { addSecrets as add }
+
+async function addSecrets() {
+  const { loadDeployContext, loadSecretSources, selectSource } = await import(
+    '../../../secrets/api'
+  )
+
   const context = await loadDeployContext({
     command: 'secrets',
   })
@@ -32,6 +37,8 @@ export async function addSecrets() {
         .join('') +
       (missing.size > 3 ? gray(`\n  +${missing.size - 3} more`) : '')
   )
+
+  const { prompt } = await import('@saus/deploy-utils')
 
   const secrets: SecretMap = {}
   for (const name of missing) {

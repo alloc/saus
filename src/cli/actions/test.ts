@@ -1,9 +1,14 @@
+import type { Plugin, UserConfig } from '@/core'
 import { unwrapDefault } from '@/utils/unwrapDefault'
 import { fatal } from 'misty'
-import { Plugin, UserConfig, vite } from '../core'
-import { createServer } from '../dev/api'
+import type { TestFramework } from '../../test/api'
+import { command } from '../command'
 
-export async function startTestServer() {
+command(startTestServer) //
+
+export { startTestServer as test }
+
+async function startTestServer() {
   let test: TestFramework
 
   const mainPlugin: Plugin = {
@@ -22,23 +27,13 @@ export async function startTestServer() {
     },
   }
 
+  const { vite } = await import('../../core')
+  const { createServer } = await import('../../dev/api')
+
   await createServer({
     plugins: [mainPlugin],
     customLogger: vite.createLogger(undefined, {
       allowClearScreen: false,
     }),
   })
-}
-
-export interface TestFramework {
-  /** Dev server plugins */
-  plugins?: Plugin[]
-  /** A file was changed. */
-  onFileChange?: () => void
-  /** The dev server was restarted. */
-  onRestart?: () => void
-}
-
-export function defineTestFramework(framework: TestFramework) {
-  return framework
 }

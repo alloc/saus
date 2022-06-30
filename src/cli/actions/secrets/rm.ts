@@ -1,10 +1,16 @@
-import { prompt } from '@saus/deploy-utils'
 import { green } from 'kleur/colors'
-import { loadDeployContext } from '../../deploy/context'
-import { loadSecretSources } from '../loadSecretSources'
-import { selectSource } from '../utils/selectSource'
+import { command } from '../../command'
 
-export async function removeSecrets(opts: { all?: boolean } = {}) {
+command(removeSecrets) //
+  .option('--all', `[boolean] remove all secrets at once`)
+
+export { removeSecrets as rm }
+
+async function removeSecrets(opts: { all?: boolean } = {}) {
+  const { loadDeployContext, loadSecretSources, selectSource } = await import(
+    '../../../secrets/api'
+  )
+
   const context = await loadDeployContext({
     command: 'secrets',
   })
@@ -22,6 +28,7 @@ export async function removeSecrets(opts: { all?: boolean } = {}) {
   if (opts.all) {
     names = Object.keys(context.secrets['_secrets'])
   } else {
+    const { prompt } = await import('@saus/deploy-utils')
     names =
       (
         await prompt({

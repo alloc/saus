@@ -4,12 +4,13 @@ import { green } from 'kleur/colors'
 import path from 'path'
 import { BundleOptions, OutputBundle } from '../bundle'
 import {
+  BuildContext,
   BundleConfig,
   BundleContext,
   InlineBundleConfig,
   loadBundleContext,
 } from '../bundle/context'
-import { getDeployContext } from '../deploy'
+import { DeployContext, getDeployContext } from '../deploy'
 import { SourceMap } from './node/sourceMap'
 import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
 import { callPlugins } from './utils/callPlugins'
@@ -51,8 +52,8 @@ export async function loadBundle({
   runtimeConfig: runtimeUserConfig,
   ...options
 }: LoadBundleConfig = {}) {
-  const context =
-    getDeployContext() ||
+  const context: BuildContext | DeployContext =
+    getDeployContext(true) ||
     (await loadBundleContext(options, {
       mode: 'production',
       ...config,
@@ -87,7 +88,11 @@ export async function loadBundle({
       const { mtime } = fs.statSync(bundlePath)
       if (mtime > lastCommitDate) {
         const code = fs.readFileSync(bundlePath, 'utf8')
-        const meta = readJson(metaPath)
+        const meta = readJson(metaPath, (_, val) =>
+          val && typeof val == 'object' && '@buffer' in val
+            ? Buffer.from(val['@buffer'], 'base64')
+            : val
+        )
         bundleResult = { ...meta, code }
         cached = true
 
@@ -110,7 +115,12 @@ export async function loadBundle({
   let { code, map, ...meta } = bundleResult
   if (!cached) {
     context.compileCache.set(bundleFile, code)
-    context.compileCache.set(metaFile, JSON.stringify(meta))
+    context.compileCache.set(
+      metaFile,
+      JSON.stringify(meta, (_, value) =>
+        Buffer.isBuffer(value) ? { '@buffer': value.toString('base64') } : value
+      )
+    )
   }
 
   const mapFile = bundleFile + '.map'
@@ -139,11 +149,12 @@ export async function loadBundle({
   )
 
   return {
+    cached,
     bundle: bundleResult,
     bundleFile,
     bundlePath: path.join(context.compileCache.path, bundleFile),
     runtimeConfig,
-    context: context as BundleContext,
+    context,
   }
 }
 

@@ -1,8 +1,15 @@
 import { gray } from 'kleur/colors'
-import { loadDeployContext } from '../../deploy/context'
-import { loadSecretSources } from '../loadSecretSources'
+import { command } from '../../command'
 
-export async function listSecrets() {
+command(listSecrets) //
+
+export { listSecrets as ls }
+
+async function listSecrets() {
+  const { loadDeployContext, loadSecretSources } = await import(
+    '../../../secrets/api'
+  )
+
   const context = await loadDeployContext({
     command: 'secrets',
   })

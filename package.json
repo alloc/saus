@@ -35,7 +35,7 @@
   ],
   "scripts": {
     "build": "rimraf dist && tsup",
-    "dev": "tsup --watch",
+    "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build",
     "test": "vitest"
   },

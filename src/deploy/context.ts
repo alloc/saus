@@ -117,13 +117,16 @@ export async function loadDeployContext(
   return context
 }
 
-const contextPath = path.resolve(__dirname, '../core/context.cjs')
+let contextPath: string | undefined
 
+export function getDeployContext(): DeployContext
+export function getDeployContext(unsure: true): DeployContext | null
 export function getDeployContext() {
-  return (void 0, require)(contextPath) as DeployContext
+  return contextPath ? (void 0, require)(contextPath) : null
 }
 
 export function injectDeployContext(context: DeployContext) {
+  contextPath = path.resolve(__dirname, '../core/context.cjs')
   injectNodeModule(contextPath, context)
 }
 

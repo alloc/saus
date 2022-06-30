@@ -219,7 +219,7 @@ export async function deploy(
     const newCache: DeployFile = { version: 1, targets: [], plugins: {} }
 
     const cacheTarget = async (
-      target: Promisable<DeployTarget>,
+      target: DeployTarget,
       plugin: DeployPlugin,
       entry: string
     ) => {
@@ -228,17 +228,11 @@ export async function deploy(
       )
 
       let pluginName = plugin.name
-      debugger
       if (cachedPlugin) {
         pluginName = cachedPlugin[0]
       } else {
         newCache.plugins[pluginName] = entry
       }
-
-      // Cache the target before awaiting it.
-      const cachedTarget = { plugin: pluginName, state: null as any }
-      newCache.targets.push(cachedTarget)
-      target = await target
 
       // Ensure the target is identified.
       let targetId = target._id
@@ -247,15 +241,15 @@ export async function deploy(
         targetId = target._id
       }
 
-      // Hoist identifying keys so they show first in cached state.
-      cachedTarget.state = hoistKeys(target, Object.keys(targetId.values))
+      newCache.targets.push({
+        plugin: pluginName,
+        // Hoist identifying keys so they show first in cached state.
+        state: hoistKeys(target, Object.keys(targetId.values)),
+      })
     }
 
-    for (let [{ hook, plugin }, target] of targets) {
-      target = await target
-      if (spawnedTargets.has(target) || updatedTargets.has(target)) {
-        await cacheTarget(target, plugin!, hook!.file!)
-      }
+    for (const [{ hook, plugin }, target] of targets) {
+      await cacheTarget(await target, plugin!, hook!.file!)
     }
 
     // This branch only runs when --no-revert is used.
