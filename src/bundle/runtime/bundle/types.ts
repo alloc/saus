@@ -1,5 +1,4 @@
 import type { RenderedPage, RenderPageOptions } from '@/app/types'
-import type { HttpRedirect } from '@/http/redirect'
 import type { ParsedUrl } from '@/node/url'
 
 export interface PageBundleOptions
@@ -19,10 +18,10 @@ export interface PageBundle {
   html: string
   /** Files generated whilst rendering. */
   files: RenderedFile[]
-  /** Modules required by the client. */
-  modules: Set<ClientModule>
-  /** Assets required by the client. */
-  assets: Map<string, ClientAsset>
+  /** Modules used by the client. */
+  modules: string[]
+  /** Assets used by the client. */
+  assets: string[]
 }
 
 export interface RenderedFile {
@@ -30,8 +29,6 @@ export interface RenderedFile {
   data: any
   mime: string
 }
-
-export type ClientAsset = ArrayBufferLike | HttpRedirect
 
 export interface ClientModule {
   id: string

@@ -19,7 +19,6 @@ import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
 import type { PageBundle } from '../bundle/types'
-import { writePages } from '../bundle/writePages'
 import { Multicast } from './multicast'
 import { BundleDescriptor, loadPageFactory, PageEvents } from './pageFactory'
 import { runBundle } from './runBundle'
@@ -69,7 +68,7 @@ async function buildPages(
     write: false,
     entry: null,
     format: 'cjs',
-    moduleMap: 'inline',
+    clientStorage: 'inline',
     bundle: {
       isBuild: true,
       absoluteSources: true,
@@ -238,8 +237,8 @@ async function buildPages(
 
   if (buildOptions.write !== false && !abortSignal?.aborted) {
     await callPlugins(context.plugins, 'onWritePages', pages)
-    const { inlinedAssets } = runBundle(workerData)
-    const files = writePages(pages, outDir, inlinedAssets)
+    const { writePages } = runBundle(workerData)
+    const files = await writePages(pages, outDir)
     printFiles(
       context.logger,
       files,

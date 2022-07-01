@@ -1,7 +1,7 @@
 import { Headers, normalizeHeaders } from '@/http'
 import QuickLRU, { Options } from 'quick-lru'
 import { getModuleUrl } from '../getModuleUrl'
-import type { ClientAsset, ClientModule } from '../types'
+import type { ClientModule } from '../types'
 
 type BoundHeadersFn = () => Headers | null | undefined
 type HeadersParam =
@@ -11,13 +11,13 @@ type HeadersParam =
 
 export interface FileCache extends QuickLRU<string, FileCacheEntry> {
   addModules(module: Set<ClientModule>, headers?: HeadersParam): void
-  addAssets(assets: Map<string, ClientAsset>, headers?: HeadersParam): void
+  addAssets(assets: Map<string, Buffer>, headers?: HeadersParam): void
 }
 
 export type FileCacheOptions = Options<string, FileCacheEntry>
 
 export type FileCacheEntry = [
-  data: string | ClientAsset,
+  data: string | Buffer,
   headers: BoundHeadersFn | null | undefined
 ]
 

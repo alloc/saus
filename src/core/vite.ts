@@ -28,7 +28,7 @@ export interface SausBundleConfig {
    * to render pages on-demand and/or ahead-of-time.
    * @default null
    */
-  entry?: string | false | null
+  entry?: string | null
   /**
    * For serverless functions, you'll want to set this to `"worker"`.
    * @default "script"
@@ -38,7 +38,7 @@ export interface SausBundleConfig {
    * Set `build.target` for the SSR bundle.
    * @default "node14"
    */
-  target?: vite.BuildOptions['target']
+  target?: string
   /**
    * The module format of the generated SSR bundle.
    * @default "cjs"
@@ -63,18 +63,22 @@ export interface SausBundleConfig {
    */
   isolate?: (string | RegExp)[]
   /**
-   * Control how the map of client modules is stored by the server.
+   * Control how the client modules are stored and served.
    *
-   * For the `"inline"` setting, client modules are inlined into the bundle
-   * and encoded with Base64 if needed. This increases the bundle size
-   * considerably.
+   * - `"inline"` (the default) \
+   *   Client modules are inlined into the bundle. Binary assets are
+   *   encoded with Base64. This option increases the bundle size considerably.
    *
-   * For the `"external"` setting, client modules are written to their own files
-   * and loaded with `fs.readFileSync` on-demand.
+   * - `"external"` \
+   *   Client modules are **not served** by the bundle. You should use a
+   *   deploy plugin that uploads them to an object storage service like
+   *   Amazon S3.
    *
-   * @default "inline"
+   * - `"local"` \
+   *   Client modules are written to their own files in `build.outDir` and
+   *   loaded with `fs.readFileSync` on-demand.
    */
-  moduleMap?: 'external' | 'inline'
+  clientStore?: 'inline' | 'external' | 'local'
   /**
    * Define which modules should never be bundled.
    */

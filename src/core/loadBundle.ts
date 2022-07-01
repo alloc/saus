@@ -169,7 +169,7 @@ function getBundleHash(
     entry: config.entry || null,
     target: config.target,
     format: config.format,
-    moduleMap: config.moduleMap || 'inline',
+    clientStore: config.clientStore!,
     bundle: bundleOptions,
   }
   return md5Hex(JSON.stringify(values)).slice(0, 8)

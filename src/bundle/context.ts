@@ -5,6 +5,7 @@ import {
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
 import { renderPlugin } from '@/plugins/render'
+import { assignDefaults } from '@/utils/assignDefaults'
 import { plural } from '@/utils/plural'
 import { SausBundleConfig, vite } from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
@@ -15,7 +16,7 @@ import path from 'path'
 import { internalRedirects, ssrRedirects } from './moduleRedirects'
 import { preBundleSsrRuntime } from './runtimeBundle'
 
-type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'moduleMap' | 'target'
+type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'clientStore' | 'target'
 
 export interface InlineBundleConfig
   extends Pick<SausBundleConfig, InheritedKeys> {
@@ -24,11 +25,18 @@ export interface InlineBundleConfig
   write?: boolean
 }
 
-type RequiredKeys<T, P extends keyof T> = {} & Omit<T, P> & Required<Pick<T, P>>
+const BundleConfigDefaults = {
+  type: 'script',
+  format: 'cjs',
+  target: 'node14',
+  clientStore: 'inline',
+} as const
 
 /** @internal */
 export interface BundleConfig
-  extends RequiredKeys<SausBundleConfig, 'format' | 'type' | 'target'> {
+  extends Omit<SausBundleConfig, keyof typeof BundleConfigDefaults>,
+    Required<Pick<SausBundleConfig, keyof typeof BundleConfigDefaults>> {
+  entry: string | null
   outFile?: string
 }
 
@@ -57,26 +65,26 @@ export interface BundleContext extends BaseContext {
 
 export async function loadBundleContext<
   T extends BundleContext = BundleContext
->(
-  options: InlineBundleConfig = {},
-  inlineConfig: vite.UserConfig = {}
-): Promise<T> {
+>(options: InlineBundleConfig, inlineConfig: vite.UserConfig = {}): Promise<T> {
   const context: BundleContext = (await loadContext('build', inlineConfig, [
     renderPlugin,
   ])) as any
 
-  const bundleConfig = context.config.saus.bundle || {}
   const buildConfig = context.userConfig.build || {}
+  const bundleConfig = assignDefaults(
+    { ...context.config.saus.bundle },
+    BundleConfigDefaults
+  )
 
   let {
     debugBase = bundleConfig.debugBase,
-    entry,
-    format = bundleConfig.format || 'cjs',
+    entry = bundleConfig.entry || null,
+    format = bundleConfig.format,
     outFile,
-    moduleMap = bundleConfig.moduleMap || 'inline',
-    target = bundleConfig.target || 'node14',
+    clientStore = bundleConfig.clientStore,
+    target = bundleConfig.target,
     write = buildConfig.write,
-  } = options
+  } = options || {}
 
   if (outFile) {
     outFile = path.resolve(outFile)
@@ -90,9 +98,6 @@ export async function loadBundleContext<
     }
   }
 
-  if (entry === undefined) {
-    entry = bundleConfig.entry
-  }
   if (entry) {
     outFile ??= path.resolve(
       context.root,
@@ -118,7 +123,7 @@ export async function loadBundleContext<
     entry,
     target,
     format,
-    moduleMap,
+    clientStore,
     outFile,
     debugBase,
   }

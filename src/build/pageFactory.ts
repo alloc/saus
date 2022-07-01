@@ -5,7 +5,7 @@ import { loadSourceMap, SourceMap } from '@/node/sourceMap'
 import { resolveStackTrace } from '@/node/stack'
 import { parseUrl } from '@/node/url'
 import { MutableRuntimeConfig } from '@/runtime/config'
-import { MessagePort } from 'worker_threads'
+import { isMainThread, MessagePort } from 'worker_threads'
 import type { PageBundle, PageBundleOptions } from '../bundle/types'
 import { Multicast } from './multicast'
 import { runBundle } from './runBundle'
@@ -21,7 +21,7 @@ export interface BundleDescriptor {
 }
 
 export function loadPageFactory(bundle: BundleDescriptor) {
-  const { root, eventPort, runtimeConfig = {}, isProfiling } = bundle
+  const { root, eventPort, runtimeConfig, isProfiling } = bundle
 
   const {
     default: createApp,
@@ -32,15 +32,29 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   const init = createApp()
   const events = new Multicast<PageEvents>(eventPort)
 
-  if (isProfiling) {
-    runtimeConfig.profile = (...args) => {
+  let profile: ProfiledEventHandler | undefined
+  if (isProfiling)
+    profile = (...args) => {
       events.emit('profile', ...args)
     }
-  }
 
-  if (runtimeConfig) {
-    configureBundle(runtimeConfig)
-  }
+  configureBundle({
+    ...runtimeConfig,
+    profile,
+    postProcessAsset(data) {
+      // When `data` is a Node buffer, we cannot be sure if it can
+      // be safely copied between threads, since it may have been
+      // allocated with `Buffer.from` (which uses object pooling).
+      // An explicit copy into a non-pooled buffer is the only
+      // way to make sure the data won't get corrupted.
+      if (!isMainThread && Buffer.isBuffer(data)) {
+        const nonPooled = Buffer.alloc(data.byteLength)
+        data.copy(nonPooled)
+        data = nonPooled.buffer
+      }
+      return data
+    },
+  })
 
   // If a response cache already exists, the bundle will use it.
   setResponseCache(responseCache || loadResponseCache(root))

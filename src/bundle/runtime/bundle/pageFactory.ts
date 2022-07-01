@@ -11,21 +11,15 @@ import path from 'path'
 import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
 import { applyHtmlProcessors, endent } from '../core/api'
-import getAssetLoader from './assetLoader'
 import config from './config'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
 import { getModuleUrl } from './getModuleUrl'
 import inlinedModules from './inlinedModules'
-import getModuleLoader from './moduleLoader'
 import moduleMap from './moduleMap'
-import { postProcessAsset } from './postProcessAsset'
-import { ClientAsset, ClientModule, PageBundle } from './types'
+import { ClientModule, PageBundle } from './types'
 
 const hydrateImport = `import { hydrate } from "saus/client"`
-
-const { loadModule } = getModuleLoader()
-const { loadAsset } = getAssetLoader()
 
 // Avoid string duplication in the inlined module cache
 // by setting their `id` property at runtime.
@@ -98,8 +92,8 @@ export const createPageFactory: App.Plugin = app => {
         const finishedPage: PageBundle = {
           id: filename,
           html: '',
-          modules: new Set(),
-          assets: new Map(),
+          modules: [],
+          assets: [],
           files: page.files,
         }
         renderFinish?.(url, null, finishedPage)
@@ -252,18 +246,6 @@ export const createPageFactory: App.Plugin = app => {
         { page, config, assets },
         config.htmlTimeout
       ).then(async html => {
-        const assetMap = new Map<string, ClientAsset>(
-          await Promise.all(
-            Array.from(assets)
-              .filter(assetId => !isExternalUrl(assetId))
-              .map(async assetId => {
-                let data: ClientAsset = await loadAsset(assetId)
-                data = postProcessAsset(data)
-                return [assetId, data] as const
-              })
-          )
-        )
-
         const [styleUrls, assetUrls] = generateAssetUrls(assets)
 
         if (page && entryModule) {
@@ -329,8 +311,8 @@ export const createPageFactory: App.Plugin = app => {
           id: filename,
           html,
           files,
-          modules,
-          assets: assetMap,
+          modules: Array.from(modules, m => m.id),
+          assets: Array.from(assets),
         }
 
         renderFinish?.(url, null, finishedPage)

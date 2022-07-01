@@ -130,7 +130,7 @@ export async function bundle(
       fs.writeFileSync(file, unwrapBuffer(buffer))
     }
 
-    if (context.bundle.moduleMap == 'external') {
+    if (context.bundle.clientStore == 'local') {
       let file: string
       for (const module of Object.values(moduleMap)) {
         file = path.join(outDir, module.id)
@@ -363,7 +363,7 @@ async function generateSsrBundle(
         (moduleMap, { id, text, debugText, ...props }) => {
           if (id.endsWith('.js')) {
             moduleMap[id] = props as any
-            if (bundleConfig.moduleMap !== 'external') {
+            if (bundleConfig.clientStore !== 'local') {
               Object.assign(props, { text, debugText })
             }
           } else {

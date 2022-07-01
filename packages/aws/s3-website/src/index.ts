@@ -1,4 +1,4 @@
-import { CloudFront, ResourceRef, useCloudFormation } from '@saus/cloudform'
+import { CloudFront, ResourceRef, S3, useCloudFormation } from '@saus/cloudform'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
 import { WebsiteConfig } from './config'
@@ -22,68 +22,80 @@ export async function useS3Website(
     name: config.name,
     region: config.region,
     template(ref, aws) {
-      // This bucket mirrors the ./public/ folder of your project.
-      const publicDir = ref(
-        'PublicDir',
-        new aws.S3.Bucket({
-          AccessControl: 'PublicRead',
-        })
-      )
-
-      // This bucket holds the content-hashed modules that are
-      // loaded by the browser for client-side logic.
-      const assets = ref(
-        'LatestAssets',
-        new aws.S3.Bucket({
-          AccessControl: 'PublicRead',
-        })
-      )
-
-      // When a new project version is deployed, this bucket is
-      // where the old assets are moved to. They are kept alive
-      // for 48 hours to avoid interrupting user sessions.
-      const oldAssets = ref(
-        'OldAssets',
-        new aws.S3.Bucket({
-          AccessControl: 'PublicRead',
-          LifecycleConfiguration: {
-            Rules: [{ Status: 'Enabled', ExpirationInDays: 2 }],
-          },
-        })
-      )
-
-      // This bucket holds pre-rendered pages, which tend to be
-      // the most popular pages (hence the name).
-      const popularPages =
-        bucketConfig.popularPages &&
-        ref(
-          'PopularPages',
+      const createBucket = (
+        id: string,
+        props?: ConstructorParameters<typeof S3.Bucket>[0]
+      ) => {
+        const bucket = ref(
+          id,
           new aws.S3.Bucket({
+            ...props,
             AccessControl: 'PublicRead',
+            OwnershipControls: {
+              Rules: [{ ObjectOwnership: 'BucketOwnerEnforced' }],
+            },
           })
         )
-
-      // This bucket holds pages rendered just-in-time. This reduces
-      // load on the origin server for often requested dynamic pages.
-      const onDemandPages =
-        bucketConfig.onDemandPages &&
         ref(
-          'OnDemandPages',
-          new aws.S3.Bucket({
-            AccessControl: 'PublicRead',
-            LifecycleConfiguration: {
-              Rules: [
+          id + 'BucketPolicy',
+          new aws.S3.BucketPolicy({
+            Bucket: bucket,
+            // https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html
+            PolicyDocument: {
+              Version: '2012-10-17',
+              Statement: [
                 {
-                  Status: 'Enabled',
-                  ExpirationInDays:
-                    typeof bucketConfig.onDemandPages == 'object'
-                      ? bucketConfig.onDemandPages.expirationInDays
-                      : 1,
+                  Sid: 'PublicRead',
+                  Effect: 'Allow',
+                  Principal: '*',
+                  Action: ['s3:GetObject'],
+                  Resource: [aws.Fn.Join('/', [bucket.get('Arn'), '*'])],
                 },
               ],
             },
           })
         )
+        return bucket
+      }
+
+      // This bucket mirrors the ./public/ folder of your project.
+      const publicDir = createBucket('PublicDir')
+
+      // This bucket holds the content-hashed modules that are
+      // loaded by the browser for client-side logic.
+      const assets = createBucket('LatestAssets')
+
+      // When a new project version is deployed, this bucket is
+      // where the old assets are moved to. They are kept alive
+      // for 48 hours to avoid interrupting user sessions.
+      const oldAssets = createBucket('OldAssets', {
+        LifecycleConfiguration: {
+          Rules: [{ Status: 'Enabled', ExpirationInDays: 2 }],
+        },
+      })
+
+      // This bucket holds pre-rendered pages, which tend to be
+      // the most popular pages (hence the name).
+      const popularPages =
+        bucketConfig.popularPages && createBucket('PopularPages')
+
+      // This bucket holds pages rendered just-in-time. This reduces
+      // load on the origin server for often requested dynamic pages.
+      const onDemandPages =
+        bucketConfig.onDemandPages &&
+        createBucket('OnDemandPages', {
+          LifecycleConfiguration: {
+            Rules: [
+              {
+                Status: 'Enabled',
+                ExpirationInDays:
+                  typeof bucketConfig.onDemandPages == 'object'
+                    ? bucketConfig.onDemandPages.expirationInDays
+                    : 1,
+              },
+            ],
+          },
+        })
 
       const httpsOnly = {
         HTTPSPort: 443,

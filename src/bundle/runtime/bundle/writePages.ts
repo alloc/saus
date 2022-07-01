@@ -1,6 +1,7 @@
-import { HttpRedirect } from '@/http'
 import fs from 'fs'
 import path from 'path'
+import inlinedAssets from './inlinedAssets'
+import { loadAsset, loadModule } from './loaders'
 import type { PageBundle } from './types'
 
 /**
@@ -9,10 +10,9 @@ import type { PageBundle } from './types'
  * Returns a map of file names to their size in kilobytes. This object can be
  * passed to the `printFiles` function.
  */
-export function writePages(
+export async function writePages(
   pages: ReadonlyArray<PageBundle | null>,
-  outDir: string,
-  inlinedAssets?: Record<string, string>
+  outDir: string
 ) {
   const files: Record<string, number> = {}
   const writeFile = (file: string, content: string | Buffer) => {
@@ -28,13 +28,11 @@ export function writePages(
     if (!page) continue
     if (page.html) {
       writeFile(path.join(outDir, page.id), page.html)
-      for (const module of page.modules) {
-        writeFile(path.join(outDir, module.id), module.text)
+      for (const moduleId of page.modules) {
+        writeFile(path.join(outDir, moduleId), await loadModule(moduleId))
       }
-      for (const [assetId, content] of page.assets) {
-        if (!(content instanceof HttpRedirect)) {
-          writeFile(path.join(outDir, assetId), Buffer.from(content))
-        }
+      for (const assetId of page.assets) {
+        writeFile(path.join(outDir, assetId), await loadAsset(assetId))
       }
     }
     for (const { id, data } of page.files) {
@@ -45,14 +43,15 @@ export function writePages(
     }
   }
 
-  if (inlinedAssets)
-    for (const assetId in inlinedAssets) {
-      if (assetId in files) continue
-      writeFile(
-        path.join(outDir, assetId),
-        Buffer.from(inlinedAssets[assetId], 'base64')
-      )
-    }
+  // If a plugin uses the `emitFile` API, the asset won't exist in
+  // the page's asset list, but it should still be written to disk.
+  for (const assetId in inlinedAssets) {
+    if (assetId in files) continue
+    writeFile(
+      path.join(outDir, assetId),
+      Buffer.from(inlinedAssets[assetId], 'base64')
+    )
+  }
 
   return files
 }
