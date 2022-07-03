@@ -108,7 +108,7 @@
     "strip-comments": "^2.0.1",
     "ts-debounce": "2.0.0",
     "tsup": "^5.12.8",
-    "typescript": "4.8.0-dev.20220615",
+    "typescript": "4.8.0-beta",
     "vitest": "*"
   },
   "prettier": "@alloc/prettier-config"

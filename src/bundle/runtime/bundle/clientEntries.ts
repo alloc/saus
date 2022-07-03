@@ -1,4 +1,9 @@
-type ClientEntryUrl = string
+export type ClientEntryUrl = string
+export type ClientEntries = {
+  [layoutModuleId: string]: {
+    [routeModuleId: string]: ClientEntryUrl
+  }
+}
 
 /**
  * Every combination of layout module + route module has its own
@@ -8,11 +13,7 @@ type ClientEntryUrl = string
  *
  * The keys are SSR paths, which are identical to dev server paths.
  */
-const clientEntries: {
-  [layoutModuleId: string]: {
-    [routeModuleId: string]: ClientEntryUrl
-  }
-} = {}
+const clientEntries: ClientEntries = {}
 
 // Stub module replaced at build time.
 export default clientEntries

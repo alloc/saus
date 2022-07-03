@@ -16,7 +16,6 @@ export interface PageBundleOptions
 export interface PageBundle {
   id: string
   html: string
-  routeModuleId: string
   /** Files generated whilst rendering. */
   files: RenderedFile[]
 }

@@ -5,6 +5,9 @@ export interface RuntimeConfig {
   assetsDir: string
   base: string
   bundleType?: 'script' | 'worker'
+  clientCacheId: string
+  clientHelpersId: string
+  clientRuntimeId: string
   command: 'dev' | 'bundle'
   debugBase?: string
   defaultLayoutId: string
@@ -12,14 +15,12 @@ export interface RuntimeConfig {
   delayModulePreload?: boolean
   githubRepo?: string
   githubToken?: string
-  helpersModuleId: string
   htmlTimeout?: number
   minify: boolean
   mode: string
   publicDir: string
   renderConcurrency?: number
   ssrRoutesId: string
-  stateCacheId: string
   stateModuleBase: string
   stripLinkTags?: boolean
 }
@@ -28,12 +29,12 @@ export interface RuntimeConfig {
 // cannot be updated at runtime.
 type RuntimeConstants =
   | 'base'
+  | 'clientCacheId'
   | 'command'
   | 'debugBase'
   | 'defaultPath'
   | 'mode'
   | 'ssrRoutesId'
-  | 'stateCacheId'
 
 export interface MutableRuntimeConfig
   extends Omit<RuntimeConfig, RuntimeConstants> {

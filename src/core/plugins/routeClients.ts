@@ -1,9 +1,8 @@
+import { renderPageScript } from '@/runtime/renderPageScript'
 import { prependBase } from '@/utils/base'
 import { getPageFilename } from '@/utils/getPageFilename'
-import { serializeImports } from '@/utils/imports'
 import { collectCss } from '@/vite/collectCss'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
-import endent from 'endent'
 import path from 'path'
 import { DevContext } from '../context'
 import { Plugin, RenderedPage, RuntimeConfig, vite } from '../core'
@@ -66,13 +65,13 @@ export function routeClientsPlugin(): Plugin {
 
         const base = context.basePath
         const timestamp = (page.props as CommonServerProps)._ts || 0
-        const pageStateUrl = base + filename + '.js?t=' + timestamp
-        const sausClientUrl = base + '@id/saus/client'
+        const pageStateId = base + filename + '.js?t=' + timestamp
+        const sausClientId = base + '@id/saus/client'
 
         // TODO: preload transient dependencies?
         const modulesToPreload = [
-          pageStateUrl,
-          sausClientUrl,
+          pageStateId,
+          sausClientId,
           ...page.stateModules.map(id =>
             prependBase(config.stateModuleBase + id + '.js', base)
           ),
@@ -100,31 +99,19 @@ export function routeClientsPlugin(): Plugin {
           // We don't know if the page is hydrated until the
           // client promise is resolved with a non-empty string.
           if (await routeClient.promise) {
-            let sausClientImports = ['hydrate']
-            let hydrateCall = endent`
-              hydrate(client, props, document.getElementById("root"))
-            `
-
-            if (context.config.mode == 'development') {
-              sausClientImports.push('renderErrorPage')
-              hydrateCall += `.catch(renderErrorPage)`
-            }
-
-            // Hydrate the page.
             tags.push({
               injectTo: 'body',
               tag: 'script',
               attrs: { type: 'module' },
-              children: endent`
-                ${serializeImports({
-                  [pageStateUrl]: 'props',
-                  [sausClientUrl]: sausClientImports,
-                })}
-
-                import("${routeClient.url}").then(client => {
-                  ${hydrateCall}
-                })
-              `,
+              children: renderPageScript({
+                pageStateId,
+                sausClientId,
+                routeClientId: routeClient.url,
+                catchHandler:
+                  config.mode == 'development'
+                    ? 'Saus.renderErrorPage'
+                    : undefined,
+              }),
             })
 
             modulesToPreload.push(

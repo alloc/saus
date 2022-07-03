@@ -37,17 +37,17 @@ export function renderRouteClients(context: {
   const routesByClientId: Record<string, Route[]> = {}
 
   const loadRouteClient = async (
-    routeEntry: string,
-    layoutEntry: string
+    routeModuleId: string,
+    layoutModuleId: string
   ): Promise<string | null> => {
-    const layoutModule = await context.ssrRequire(layoutEntry)
+    const layoutModule = await context.ssrRequire(layoutModuleId)
     const layout = unwrapDefault<RouteLayout>(layoutModule)
     if (!layout.hydrator) {
       return null
     }
     return renderRouteClient({
-      routeEntry,
-      layoutEntry,
+      routeModuleId,
+      layoutModuleId,
       hydratorId: layout.hydrator,
       preExport:
         context.config.command == 'build' ? clientPreloadsMarker + '\n' : '',
@@ -86,20 +86,24 @@ export function renderRouteClients(context: {
  * a given route is hydrated.
  */
 export const renderRouteClient = (opts: {
-  routeEntry: string
-  layoutEntry: string
+  /** Module with layout-compatible exports */
+  routeModuleId: string
+  /** Module with `layout` object as `default` export */
+  layoutModuleId: string
+  /** Module with `hydrate` function as `default` export */
   hydratorId: string
+  /** Code inserted before `export default` statement */
   preExport?: string
 }) => endent`
-  import layout from "${opts.layoutEntry}"
+  import layout from "${opts.layoutModuleId}"
   import hydrate from "${opts.hydratorId}"
-  import * as routeModule from "${opts.routeEntry}"
+  import * as routeModule from "${opts.routeModuleId}"
   ${opts.preExport || ''}
   export default {
     layout,
     hydrate,
     route: {
-      url: "${opts.routeEntry}",
+      url: "${opts.routeModuleId}",
       module: routeModule,
     }
   }

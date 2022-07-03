@@ -1,7 +1,7 @@
-import { toDevPath } from '@/node/toDevPath'
+import { servedPathForFile \} from '@/node/toDevPath'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
-import { BundleContext } from './context'
+import { BundleContext \} from './context'
 
 export type RouteImports = Map<
   esModuleLexer.ImportSpecifier,
@@ -25,7 +25,7 @@ export async function resolveRouteImports({
       if (resolved && !resolved.external) {
         routeImports.set(imp, {
           file: resolved.id,
-          url: toDevPath(resolved.id, root),
+          url: servedPathForFile(resolved.id, root),
         })
       }
     }

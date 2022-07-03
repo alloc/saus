@@ -7,12 +7,12 @@ import { prependBase } from '@/utils/base'
 import { LazyPromise } from '@/utils/LazyPromise'
 import config from './config'
 import { context } from './context'
-import { defineClientEntry } from './defineClientEntry'
+import { injectSausClient } from './injectSausClient'
 import { createPageFactory } from './pageFactory'
 import { loadRenderers } from './render'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
-defineClientEntry()
+injectSausClient()
 
 // Avoid loading the routes module more than once.
 const routeSetup = new LazyPromise(resolve => {
@@ -41,7 +41,7 @@ function isolatePages(context: AppContext): App.Plugin {
         ...options,
         async setup(pageContext: PageContext) {
           await ssrClearCache()
-          defineClientEntry({
+          injectSausClient({
             BASE_URL: options.isDebug
               ? prependBase(debugBase, config.base)
               : config.base,

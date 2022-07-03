@@ -1,6 +1,6 @@
 import { App } from '@/app/types'
-import { removeSourceMapUrls } from '@/node/sourceMap'
 import { globalCache } from '@/runtime/cache'
+import { renderPageScript } from '@/runtime/renderPageScript'
 import { prependBase } from '@/utils/base'
 import { getPageFilename } from '@/utils/getPageFilename'
 import { isCSSRequest } from '@/utils/isCSSRequest'
@@ -8,14 +8,13 @@ import { isExternalUrl } from '@/utils/isExternalUrl'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
-import { applyHtmlProcessors, endent } from '../core/api'
+import { applyHtmlProcessors } from '../core/api'
+import clientEntries from './clientEntries'
 import config from './config'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
 import { getModuleUrl } from './getModuleUrl'
 import { PageBundle } from './types'
-
-const hydrateImport = `import { hydrate } from "saus/client"`
 
 export const createPageFactory: App.Plugin = app => {
   const { config, renderPageState, renderStateModule } = app
@@ -23,20 +22,15 @@ export const createPageFactory: App.Plugin = app => {
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''
 
-  // Prepended to module IDs in debug view.
-  const debugDir = debugBase.slice(1)
-
   return {
     async renderPageBundle(url, route, options = {}) {
       const { renderStart, renderFinish } = options
 
       // Let's assume `config.base` is already stripped.
       let base = '/'
-      let baseDir = ''
       let isDebug = false
       if (debugBase && url.startsWith(debugBase)) {
         base = debugBase
-        baseDir = debugDir
         isDebug = true
       }
 
@@ -78,12 +72,13 @@ export const createPageFactory: App.Plugin = app => {
         isDefaultPage ? prependBase(config.defaultPath, base) : url.path
       )
 
+      const { files } = page
+
       if (!page.html) {
         const finishedPage: PageBundle = {
           id: filename,
           html: '',
-          routeModuleId: page.route.moduleId!,
-          files: page.files,
+          files,
         }
         renderFinish?.(url, null, finishedPage)
         return finishedPage
@@ -92,53 +87,41 @@ export const createPageFactory: App.Plugin = app => {
       const bodyTags: HtmlTagDescriptor[] = []
 
       // Share the state cache and state modules b/w debug and production views.
-      const stateCacheId = config.stateCacheId.slice(1)
       const stateModuleBase = config.stateModuleBase.slice(1)
 
-        // State modules are not renamed for debug view.
-        for (const stateId of [...page.stateModules].reverse()) {
-          const stateModuleId = stateModuleBase + stateId + '.js'
-          const stateModuleText = renderStateModule(
-            stateId,
-            globalCache.loaded[stateId]
-          )
-          page.files.push({
-            id: stateModuleId,
-            data: Buffer.from(stateModuleText),
-            mime: 'application/javascript',
-          })
-        }
-
-        // The hydrating module is inlined.
-        // const hydrateModule = clientModules[clientModules[hydrateImport]]
-        // hydrateModule.imports?.forEach(addModule)
-
-      const pageStateId = filename + '.js'
-      const routeModuleUrl = getModuleUrl(page.route.moduleId)
-        const entryModuleUrl = getModuleUrl(entryModule)
-
-        // Hydrate the page. The route module is imported dynamically to ensure
-        // it's executed *after* the page state module is.
-        bodyTags.push({
-          tag: 'script',
-          attrs: { type: 'module' },
-          children: endent`
-            import pageState from "${config.base + pageStateId}"
-            ${removeSourceMapUrls(
-              await (isDebug
-                ? rewriteImports(hydrateModule, new Set(), base, skipDebugBase)
-                : loadModule(hydrateModule.id))
-            )}
-
-            Promise.all([
-              import("${routeModuleUrl}"),
-              import("${entryModuleUrl}")
-            ]).then(([routeModule]) =>
-              hydrate(pageState, routeModule, "${routeModuleUrl}")
-            )
-          `,
+      // State modules are not renamed for debug view.
+      for (const stateId of [...page.stateModules].reverse()) {
+        const stateModuleId = stateModuleBase + stateId + '.js'
+        const stateModuleText = renderStateModule(
+          stateId,
+          globalCache.loaded[stateId]
+        )
+        page.files.push({
+          id: stateModuleId,
+          data: Buffer.from(stateModuleText),
+          mime: 'application/javascript',
         })
       }
+
+      // The hydrating module is inlined.
+      // const hydrateModule = clientModules[clientModules[hydrateImport]]
+      // hydrateModule.imports?.forEach(addModule)
+
+      const pageStateId = filename + '.js'
+      const routeClientId =
+        clientEntries[page.route.layoutEntry!][page.route.moduleId!]
+
+      // Hydrate the page. The route module is imported dynamically to ensure
+      // it's executed *after* the page state module is.
+      bodyTags.push({
+        tag: 'script',
+        attrs: { type: 'module' },
+        children: renderPageScript({
+          pageStateId: config.base + pageStateId,
+          sausClientId: config.base + config.clientCacheId,
+          routeClientId: prependBase(routeClientId, config.base),
+        }),
+      })
 
       let html = page.html
 
@@ -165,7 +148,7 @@ export const createPageFactory: App.Plugin = app => {
         ]
       }
 
-      const { files } = page
+      const assets = new Set<string>()
       return applyHtmlProcessors(
         html,
         postHtmlProcessors,
@@ -198,7 +181,7 @@ export const createPageFactory: App.Plugin = app => {
 
           // The page's state module is rendered after HTML post processors
           // run to ensure all <link> tags are included.
-          page.files.push({
+          files.push({
             id: pageStateId,
             data: Buffer.from(renderPageState(page)),
             mime: 'application/javascript',
@@ -231,7 +214,6 @@ export const createPageFactory: App.Plugin = app => {
         const finishedPage: PageBundle = {
           id: filename,
           html,
-          routeModuleId: page.route.moduleId,
           files,
         }
 

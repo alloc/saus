@@ -19,11 +19,11 @@ import endent from 'endent'
 import path from 'path'
 import posixPath from 'path/posix'
 import { clientRedirects } from './moduleRedirects'
-import { ClientAsset, ClientModule } from './types'
+import { ClientAsset, ClientChunk } from './types'
 
 type OutputArray = vite.RollupOutput['output']
-type OutputAsset = Exclude<OutputArray[number], OutputChunk>
 type OutputChunk = OutputArray[0]
+type OutputAsset = Exclude<OutputArray[number], OutputChunk>
 
 export async function compileClients(
   context: BundleContext,
@@ -54,8 +54,11 @@ export async function compileClients(
     })
   )
 
-  const helpersPath = path.join(clientDir, 'helpers.ts')
-  entryPaths.push('/@fs/' + helpersPath)
+  const clientHelpersEntry = path.join(clientDir, 'helpers.ts')
+  entryPaths.push('/@fs/' + clientHelpersEntry)
+
+  const clientRuntimeEntry = path.join(clientDir, 'index.ts')
+  entryPaths.push('/@fs/' + clientRuntimeEntry)
 
   // Vite replaces `process.env.NODE_ENV` in client modules with the value
   // at compile time (strangely), so we need to reset it here.
@@ -172,27 +175,36 @@ export async function compileClients(
     debugChunks[chunk.fileName] = debugText
   }
 
+  const internalEntryToRuntimeKey = {
+    [globalCachePath]: 'clientCacheId',
+    [clientHelpersEntry]: 'clientHelpersId',
+    [clientRuntimeEntry]: 'clientRuntimeId',
+  } as const
+
   const entryChunks: OutputChunk[] = []
   for (const chunk of chunks) {
     fileMap[chunk.fileName] = chunk
 
-    if (globalCachePath in chunk.modules) {
-      runtimeConfig.stateCacheId = '/' + chunk.fileName
-    } else if (helpersPath in chunk.modules) {
-      runtimeConfig.helpersModuleId = '/' + chunk.fileName
-    } else {
-      createDebugChunk(chunk)
-      if (chunk.isEntry) {
-        entryChunks.push(chunk)
+    const isInternalEntry = !!Object.entries(internalEntryToRuntimeKey).find(
+      ([clientPath, runtimeKey]) => {
+        if (clientPath in chunk.modules) {
+          runtimeConfig[runtimeKey] = chunk.fileName
+          return true
+        }
       }
+    )
 
-      // Restore imports that Vite removed, unless the imported
-      // module is empty because of Rollup optimizations.
-      const importedAssets = [...chunk.importedAssets, ...chunk.importedCss]
-      importedAssets.forEach(
-        fileName => fileName in fileMap && chunk.imports.push(fileName)
-      )
+    createDebugChunk(chunk)
+    if (chunk.isEntry && !isInternalEntry) {
+      entryChunks.push(chunk)
     }
+
+    // Restore imports that Vite removed, unless the imported
+    // module is empty because of Rollup optimizations.
+    const importedAssets = [...chunk.importedAssets, ...chunk.importedCss]
+    importedAssets.forEach(
+      fileName => fileName in fileMap && chunk.imports.push(fileName)
+    )
 
     if (minify) {
       const minified = await terser.minify(chunk.code, {
@@ -233,7 +245,7 @@ export async function compileClients(
   }
 
   const helpersModuleUrl = prependBase(
-    runtimeConfig.helpersModuleId,
+    runtimeConfig.clientHelpersId,
     context.basePath
   )
 
@@ -259,17 +271,22 @@ export async function compileClients(
     }
   }
 
-  const clientModules: ClientModule[] = chunks
+  const clientChunks: ClientChunk[] = chunks
   if (debugBase) {
     const debugDir = context.bundle.debugBase!.slice(1)
     Object.entries(debugChunks).forEach(([fileName, code]) => {
-      clientModules.push({ fileName: debugDir + fileName, code, isDebug: true })
+      clientChunks.push({
+        fileName: debugDir + fileName,
+        code,
+        isEntry: (fileMap[fileName] as OutputChunk).isEntry,
+        isDebug: true,
+      })
     })
   }
 
   return {
     clientAssets: assets as ClientAsset[],
-    clientModules,
+    clientChunks,
     clientRouteMap,
   }
 }
@@ -278,24 +295,21 @@ export async function compileClients(
  * Rewrite the static `routes` object to use the debug view.
  */
 function useDebugRoutes(code: string, base: string, debugBase: string) {
-  return code.replace(
-    /\b(routes = )(\{[\s\S]*?\})/,
-    (_, assign, routesJson) => {
-      const routes: Record<string, string> = JSON.parse(routesJson)
-      const newRoutes: Record<string, string> = {}
-      for (let routePath in routes) {
-        let routeModuleId = routes[routePath]
-        if (routeModuleId.startsWith(base)) {
-          routeModuleId = routeModuleId.replace(base, debugBase)
-        }
-        if (routePath.startsWith(base)) {
-          routePath = routePath.replace(base, debugBase)
-        }
-        newRoutes[routePath] = routeModuleId
+  return code.replace(/\b(routes = )(\{[\s\S]*?})/, (_, assign, routesJson) => {
+    const routes: Record<string, string> = JSON.parse(routesJson)
+    const newRoutes: Record<string, string> = {}
+    for (let routePath in routes) {
+      let routeModuleId = routes[routePath]
+      if (routeModuleId.startsWith(base)) {
+        routeModuleId = routeModuleId.replace(base, debugBase)
       }
-      return assign + JSON.stringify(newRoutes, null, 2)
+      if (routePath.startsWith(base)) {
+        routePath = routePath.replace(base, debugBase)
+      }
+      newRoutes[routePath] = routeModuleId
     }
-  )
+    return assign + JSON.stringify(newRoutes, null, 2)
+  })
 }
 
 /**

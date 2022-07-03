@@ -6,8 +6,7 @@ addConfigHook('./vite.config')
 
 export const defineLayout = defineLayoutRenderer({
   hydrator: '@saus/react/hydrator/index.tsx',
-  toString: (result: JSX.Element | null) =>
-    result ? ReactDOM.renderToString(result) : '',
+  toString: ReactDOM.renderToString,
 })
 
 export * from './types'

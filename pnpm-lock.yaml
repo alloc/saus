@@ -1,4 +1,4 @@
-lockfileVersion: 5.3
+lockfileVersion: 5.4
 
 importers:
 
@@ -62,7 +62,7 @@ importers:
       ts-debounce: 2.0.0
       tsup: ^5.12.8
       type-fest: ^2.13.0
-      typescript: 4.8.0-dev.20220615
+      typescript: 4.8.0-beta
       vite: npm:@alloc/vite@2.6.3-3
       vitest: '*'
       yaml: ^2.1.1
@@ -123,12 +123,12 @@ importers:
       klona: 2.0.5
       prettier: 2.7.0
       quick-lru: 6.1.1
-      rollup-plugin-dts: 4.2.2_0dbeca9aa442ebd6280cc8a7e668bb8a
+      rollup-plugin-dts: 4.2.2_vweegiakdkqzubhncbfxnab2pu
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 2.0.0
-      tsup: 5.12.9_typescript@4.8.0-dev.20220615
-      typescript: 4.8.0-dev.20220615
+      tsup: 5.12.9_typescript@4.8.0-beta
+      typescript: 4.8.0-beta
       vitest: 0.15.0
 
   examples/react-basic:
@@ -3234,7 +3234,7 @@ packages:
       glob: 7.2.3
     dev: false
 
-  /rollup-plugin-dts/4.2.2_0dbeca9aa442ebd6280cc8a7e668bb8a:
+  /rollup-plugin-dts/4.2.2_vweegiakdkqzubhncbfxnab2pu:
     resolution: {integrity: sha512-A3g6Rogyko/PXeKoUlkjxkP++8UDVpgA7C+Tdl77Xj4fgEaIjPSnxRmR53EzvoYy97VMVwLAOcWJudaVAuxneQ==}
     engines: {node: '>=v12.22.11'}
     peerDependencies:
@@ -3243,7 +3243,7 @@ packages:
     dependencies:
       magic-string: 0.26.2
       rollup: /@aleclarson/rollup/2.62.1
-      typescript: 4.8.0-dev.20220615
+      typescript: 4.8.0-beta
     optionalDependencies:
       '@babel/code-frame': 7.16.7
     dev: true
@@ -3680,7 +3680,7 @@ packages:
       - ts-node
     dev: true
 
-  /tsup/5.12.9_typescript@4.8.0-dev.20220615:
+  /tsup/5.12.9_typescript@4.8.0-beta:
     resolution: {integrity: sha512-dUpuouWZYe40lLufo64qEhDpIDsWhRbr2expv5dHEMjwqeKJS2aXA/FPqs1dxO4T6mBojo7rvo3jP9NNzaKyDg==}
     hasBin: true
     peerDependencies:
@@ -3709,7 +3709,7 @@ packages:
       source-map: 0.8.0-beta.0
       sucrase: 3.21.0
       tree-kill: 1.2.2
-      typescript: 4.8.0-dev.20220615
+      typescript: 4.8.0-beta
     transitivePeerDependencies:
       - supports-color
       - ts-node
@@ -3740,8 +3740,8 @@ packages:
     hasBin: true
     dev: true
 
-  /typescript/4.8.0-dev.20220615:
-    resolution: {integrity: sha512-Is/gGrlFdQdT4GA/FEz4tMnDy78lNVxCxtZule9Xv5LRSwLgbgLwJQBMqpLWXd/KJO6u66F2EFmfXU1g3MCVZA==}
+  /typescript/4.8.0-beta:
+    resolution: {integrity: sha512-Almk3jQ+i+J2/6Nq68M9hr7pYemLJ29pJJ2actTEGQWHSOpfTRDowfWYRZ1cgAXQqcnvygntgD/6odChhNcKlQ==}
     engines: {node: '>=4.2.0'}
     hasBin: true
     dev: true

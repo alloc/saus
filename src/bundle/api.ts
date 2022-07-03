@@ -1,4 +1,4 @@
-import { MagicString } from '@/babel'
+import { MagicString \} from '@/babel'
 import {
   ClientFunction,
   ClientFunctions,
@@ -6,24 +6,25 @@ import {
   endent,
   RuntimeConfig,
   SausContext,
-  unwrapBuffer,
-} from '@/core'
-import { debug } from '@/debug'
-import { inferGitHubRepo, resolveGitHubToken } from '@/git'
-import { relativeToCwd } from '@/node/relativeToCwd'
-import { resolveMapSources, SourceMap } from '@/node/sourceMap'
-import { toDevPath } from '@/node/toDevPath'
-import { bundleDir, clientDir, httpDir } from '@/paths'
-import { debugForbiddenImports } from '@/plugins/debug'
-import { rewriteHttpImports } from '@/plugins/httpImport'
-import { createModuleProvider } from '@/plugins/moduleProvider'
-import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
-import { copyPublicDir } from '@/plugins/publicDir'
-import { routesPlugin } from '@/plugins/routes'
-import { Profiling } from '@/profiling'
-import { callPlugins } from '@/utils/callPlugins'
-import { serializeImports } from '@/utils/imports'
-import { vite } from '@/vite'
+  unwrapBuffer
+\} from '@/core'
+import { debug \} from '@/debug'
+import { inferGitHubRepo, resolveGitHubToken \} from '@/git'
+import { relativeToCwd \} from '@/node/relativeToCwd'
+import { servedPathForFile \} from '@/node/servedPathForFile'
+import { resolveMapSources, SourceMap \} from '@/node/sourceMap'
+import { bundleDir, clientDir, httpDir \} from '@/paths'
+import { debugForbiddenImports \} from '@/plugins/debug'
+import { rewriteHttpImports \} from '@/plugins/httpImport'
+import { createModuleProvider \} from '@/plugins/moduleProvider'
+import { overrideBareImport, redirectModule \} from '@/plugins/moduleRedirection'
+import { copyPublicDir \} from '@/plugins/publicDir'
+import { routesPlugin \} from '@/plugins/routes'
+import { Profiling \} from '@/profiling'
+import { RouteClient \} from '@/routeClients'
+import { callPlugins \} from '@/utils/callPlugins'
+import { serializeImports \} from '@/utils/imports'
+import { vite \} from '@/vite'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
@@ -31,14 +32,15 @@ import etag from 'etag'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
-import { BundleConfig, BundleContext } from '../bundle'
-import { loadConfigHooks } from '../core/loadConfigHooks'
-import { compileClients } from './clients'
-import { IsolatedModuleMap } from './isolateRoutes'
-import type { BundleOptions } from './options'
-import { preferExternal } from './preferExternal'
-import { resolveRouteImports } from './routeImports'
-import type { ClientAsset, ClientModule, OutputBundle } from './types'
+import { BundleConfig, BundleContext \} from '../bundle'
+import { loadConfigHooks \} from '../core/loadConfigHooks'
+import { compileClients \} from './clients'
+import { IsolatedModuleMap \} from './isolateRoutes'
+import type { BundleOptions \} from './options'
+import { preferExternal \} from './preferExternal'
+import { resolveRouteImports \} from './routeImports'
+import type { ClientEntries \} from './runtime/bundle/clientEntries'
+import type { ClientAsset, ClientChunk, OutputBundle \} from './types'
 
 export async function bundle(
   context: BundleContext,
@@ -72,12 +74,12 @@ export async function bundle(
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
-    ssrRoutesId: toDevPath(context.routesPath, config.root, true),
+    ssrRoutesId: servedPathForFile(context.routesPath, config.root, true),
     stateModuleBase: config.saus.stateModuleBase!,
     stripLinkTags: config.saus.stripLinkTags,
     // These are set by the `compileClients` function.
-    helpersModuleId: '',
-    stateCacheId: '',
+    clientHelpersId: '',
+    clientCacheId: '',
   }
 
   await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
@@ -93,7 +95,7 @@ export async function bundle(
   // debugger
 
   Profiling.mark('generate client modules')
-  const { clientRouteMap, clientModules, clientAssets } = await compileClients(
+  const { clientRouteMap, clientChunks, clientAssets } = await compileClients(
     context,
     runtimeConfig
   )
@@ -103,7 +105,7 @@ export async function bundle(
     context,
     options,
     runtimeConfig,
-    clientModules,
+    clientChunks,
     clientAssets,
     clientRouteMap,
     isolatedModules,
@@ -115,7 +117,7 @@ export async function bundle(
     code,
     map: map as SourceMap | undefined,
     files: {},
-    clientModules,
+    clientChunks,
     clientAssets,
   }
 
@@ -154,7 +156,7 @@ export async function bundle(
 
     if (context.bundle.clientStore == 'local') {
       let file: string
-      for (const chunk of clientModules) {
+      for (const chunk of clientChunks) {
         file = path.join(outDir, chunk.fileName)
         fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, chunk.code)
@@ -174,7 +176,7 @@ async function generateSsrBundle(
   context: BundleContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
-  clientModules: ClientModule[],
+  clientChunks: ClientChunk[],
   clientAssets: ClientAsset[],
   clientRouteMap: Record<string, string>,
   isolatedModules: IsolatedModuleMap,
@@ -182,6 +184,33 @@ async function generateSsrBundle(
 ) {
   const bundleConfig = context.bundle
   const modules = createModuleProvider()
+
+  const clientEntries: ClientEntries = {}
+  for (const client of Object.values(
+    context.routeClients.clientsById
+  ) as RouteClient[]) {
+    const clientEntry = clientChunks.find(
+      chunk => !chunk.isDebug && chunk.isEntry && client.id in chunk.modules
+    )!
+    const clientEntryId = servedPathForFile(
+      clientEntry.fileName,
+      context.root,
+      true
+    )
+    const layoutModuleId = servedPathForFile(
+      client.layoutEntry,
+      context.root,
+      true
+    )
+    const [route] = context.routeClients.routesByClientId[client.id]
+    clientEntries[layoutModuleId] ||= {}
+    clientEntries[layoutModuleId][route.moduleId!] = clientEntryId
+  }
+
+  modules.addModule({
+    id: path.join(bundleDir, 'bundle/clientEntries.ts'),
+    code: dataToEsm(clientEntries),
+  })
 
   if (bundleConfig.clientStore !== 'external') {
     const isInlined = bundleConfig.clientStore == 'inline'
@@ -196,7 +225,7 @@ async function generateSsrBundle(
     modules.addModule({
       id: path.join(bundleDir, 'bundle/clientModules.ts'),
       code: dataToEsm(
-        clientModules.reduce((clientModules, chunk) => {
+        clientChunks.reduce((clientModules, chunk) => {
           const value = isInlined
             ? chunk.code
             : etag(chunk.code, { weak: true })

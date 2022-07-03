@@ -1,6 +1,6 @@
 import fs from 'fs'
 
-export function toDevPath(id: string, root: string, exists?: boolean) {
+export function servedPathForFile(id: string, root: string, exists?: boolean) {
   if (id[0] === '\0' || id.startsWith('/@fs/')) {
     return id
   }

@@ -1,5 +1,5 @@
 import { SausContext } from '..'
-import { toDevPath } from '../node/toDevPath'
+import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
 import { isPackageRef } from '../utils/isPackageRef'
 import { compileModule } from '../vite/compileModule'
@@ -25,7 +25,7 @@ export async function compileSsrModule(
   })
 
   const importMeta = {
-    url: toDevPath(id, context.root),
+    url: servedPathForFile(id, context.root),
     env: {
       ...config.env,
       SSR: true,

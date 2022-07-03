@@ -3,11 +3,14 @@ import type { SourceMap } from '@/node/sourceMap'
 
 export * from './runtime/bundle/types'
 
-export type ClientModule = {
+export type ClientChunk = {
   fileName: string
   code: string
-  isDebug?: boolean
-}
+  isEntry: boolean
+} & (
+  | { isDebug: true; modules?: undefined }
+  | { isDebug?: false; modules: Record<string, any> }
+)
 
 export type ClientAsset = {
   fileName: string
@@ -34,7 +37,7 @@ export interface OutputBundle {
    * The client runtime and any user code; split into "chunks"
    * so that routes only load what they use.
    */
-  clientModules: ClientModule[]
+  clientChunks: ClientChunk[]
   /**
    * Assets loaded by the client.
    */

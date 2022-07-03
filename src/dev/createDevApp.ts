@@ -1,16 +1,16 @@
-import { cachePages } from '@/app/cachePages'
-import { createApp } from '@/app/createApp'
-import { renderErrorFallback } from '@/app/errorFallback'
-import { throttleRender } from '@/app/throttleRender'
-import { App, RenderPageOptions } from '@/app/types'
-import { DevContext } from '@/context'
-import { Route, RuntimeConfig } from '@/core'
-import { globalCachePath } from '@/paths'
-import { callPlugins } from '@/utils/callPlugins'
-import { throttle } from '@/utils/throttle'
-import { clearExports } from '@/vm/moduleMap'
+import { cachePages \} from '@/app/cachePages'
+import { createApp \} from '@/app/createApp'
+import { renderErrorFallback \} from '@/app/errorFallback'
+import { throttleRender \} from '@/app/throttleRender'
+import { App, RenderPageOptions \} from '@/app/types'
+import { DevContext \} from '@/context'
+import { Route, RuntimeConfig \} from '@/core'
+import { globalCachePath \} from '@/paths'
+import { callPlugins \} from '@/utils/callPlugins'
+import { throttle \} from '@/utils/throttle'
+import { clearExports \} from '@/vm/moduleMap'
 import os from 'os'
-import { createHotReload } from './hotReload'
+import { createHotReload \} from './hotReload'
 
 export async function createDevApp(
   context: DevContext,
@@ -23,13 +23,13 @@ export async function createDevApp(
     command: 'dev',
     defaultLayoutId: context.defaultLayoutId,
     defaultPath: context.defaultPath,
-    helpersModuleId: '@id/saus/src/client/helpers.ts',
+    clientHelpersId: '@id/saus/src/client/helpers.ts',
     htmlTimeout: viteConfig.saus.htmlTimeout,
     minify: false,
     mode: viteConfig.mode,
     publicDir: viteConfig.publicDir,
     ssrRoutesId: '/@fs' + context.routesPath,
-    stateCacheId: '/@fs' + globalCachePath,
+    clientCacheId: '/@fs' + globalCachePath,
     stateModuleBase: viteConfig.saus.stateModuleBase!,
   }
 
