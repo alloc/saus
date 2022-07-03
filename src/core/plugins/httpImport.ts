@@ -11,7 +11,8 @@ export function rewriteHttpImports(
   logger: vite.Logger,
   skipJsImport?: boolean
 ): vite.Plugin {
-  const modulesId = path.join(bundleDir, 'bundle/inlinedModules.ts')
+  // Avoid rewriting the code of inlined client modules.
+  const modulesId = path.join(bundleDir, 'bundle/moduleMap.ts')
 
   return {
     name: 'saus:rewriteHttpImports',

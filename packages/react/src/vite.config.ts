@@ -1,12 +1,8 @@
 import reactVite from '@vitejs/plugin-react'
 import { defineConfig, UserConfig } from 'saus/core'
-import client from './node/client'
 
 export default (config: UserConfig) =>
   defineConfig({
-    saus: {
-      clients: [client],
-    },
     ssr: {
       external: ['react', 'react-dom'],
     },

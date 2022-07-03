@@ -7,10 +7,12 @@ export interface RuntimeConfig {
   bundleType?: 'script' | 'worker'
   command: 'dev' | 'bundle'
   debugBase?: string
+  defaultLayoutId: string
   defaultPath: string
   delayModulePreload?: boolean
   githubRepo?: string
   githubToken?: string
+  helpersModuleId: string
   htmlTimeout?: number
   minify: boolean
   mode: string

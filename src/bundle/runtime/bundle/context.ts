@@ -1,25 +1,22 @@
 import type { AppContext } from '@/app/types'
 import type { MutableRuntimeConfig } from '@/runtime/config'
+import { ssrImport } from '@/runtime/ssrModules'
 import { withCache } from '@/runtime/withCache'
 import config from './config'
-import functions from './functions'
-import moduleMap from './moduleMap'
 
 export const context: AppContext = {
-  beforeRenderHooks: [],
   config,
   defaultState: [],
-  functions,
+  layoutEntries: new Set(),
   getCachedPage: withCache({
     loading: {},
     loaders: {},
     loaded: {},
   }),
   onError: console.error,
-  renderers: [],
   routes: [],
   runtimeHooks: [],
-  helpersId: moduleMap.helpers,
+  ssrRequire: ssrImport,
 }
 
 /**

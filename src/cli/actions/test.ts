@@ -1,7 +1,7 @@
 import type { Plugin, UserConfig } from '@/core'
+import type { TestPlugin } from '@/testPlugin'
 import { unwrapDefault } from '@/utils/unwrapDefault'
 import { fatal } from 'misty'
-import type { TestFramework } from '../../test/api'
 import { command } from '../command'
 
 command(startTestServer) //
@@ -9,7 +9,7 @@ command(startTestServer) //
 export { startTestServer as test }
 
 async function startTestServer() {
-  let test: TestFramework
+  let test: TestPlugin
 
   const mainPlugin: Plugin = {
     name: 'saus:test',

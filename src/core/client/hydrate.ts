@@ -1,35 +1,57 @@
 import type { CommonClientProps, RenderRequest } from '../core'
 import { globalCache } from '../runtime/cache'
+import type { RouteLayout } from '../runtime/layouts'
 import { getPageFilename } from '../utils/getPageFilename'
 import routes from './routes'
 
-export type HydrateFn = (request: RenderRequest) => Promise<void> | void
+export type Hydrator<RenderResult = any> = (
+  root: HTMLElement,
+  content: RenderResult,
+  request: RenderRequest
+) => Promise<void> | void
 
-let runHydration: HydrateFn
+export interface RouteClient {
+  route: { url: string; module: object }
+  layout: Pick<RouteLayout, 'render' | 'clientHooks'>
+  hydrate: Hydrator
+}
+
+export const defineHydrator = <RenderResult = any>(
+  hydrate: Hydrator<RenderResult>
+) => hydrate
 
 export async function hydrate(
+  { route, layout, hydrate }: RouteClient,
   props: CommonClientProps,
-  routeModule: object,
-  routeModuleUrl: string
+  root: HTMLElement
 ) {
-  if (import.meta.env.DEV && !runHydration) {
-    throw Error(`[saus] "onHydrate" must be called before "hydrate"`)
-  }
-  routes[props.routePath] = routeModuleUrl
+  // Update client routes map.
+  routes[props.routePath] = route.url
+
+  // Cache page props in global cache.
   const path = location.pathname
   globalCache.loaded[path] = [props]
-  await runHydration({
+
+  const req: RenderRequest = {
     path,
     file: getPageFilename(path, import.meta.env.BASE_URL),
     query: location.search.slice(1),
     params: props.routeParams,
-    module: routeModule,
+    module: route.module,
     props,
-  })
-  saus.hydrated = true
-}
+  }
 
-// TODO: support multiple hydration handlers
-export function onHydrate(hydrate: HydrateFn) {
-  runHydration = hydrate
+  const content = await layout.render(req)
+
+  const { beforeHydrate, afterHydrate } = layout.clientHooks || {}
+  if (beforeHydrate) {
+    await beforeHydrate(req, root)
+  }
+
+  await hydrate(root, content, req)
+  saus.hydrated = true
+
+  if (afterHydrate) {
+    await afterHydrate(req, root)
+  }
 }

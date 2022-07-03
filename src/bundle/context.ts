@@ -1,10 +1,10 @@
-import { BaseContext, loadContext } from '@/context'
+import { BaseContext, loadContext, SausContext } from '@/context'
+import { injectRoutesMap } from '@/injectRoutesMap'
 import { loadRoutes } from '@/loadRoutes'
 import {
   moduleRedirection,
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
-import { renderPlugin } from '@/plugins/render'
 import { assignDefaults } from '@/utils/assignDefaults'
 import { plural } from '@/utils/plural'
 import { SausBundleConfig, vite } from '@/vite'
@@ -13,6 +13,7 @@ import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { getSausPlugins } from '../core/getSausPlugins'
 import { internalRedirects, ssrRedirects } from './moduleRedirects'
 import { preBundleSsrRuntime } from './runtimeBundle'
 
@@ -66,9 +67,8 @@ export interface BundleContext extends BaseContext {
 export async function loadBundleContext<
   T extends BundleContext = BundleContext
 >(options: InlineBundleConfig, inlineConfig: vite.UserConfig = {}): Promise<T> {
-  const context: BundleContext = (await loadContext('build', inlineConfig, [
-    renderPlugin,
-  ])) as any
+  const context = await loadContext<BundleContext>('build', inlineConfig)
+  context.plugins = await getSausPlugins(context as SausContext)
 
   const buildConfig = context.userConfig.build || {}
   const bundleConfig = assignDefaults(
@@ -143,6 +143,7 @@ export async function loadBundleContext<
     const loading = (async () => {
       const loading = startTask('Loading routes...')
       await loadRoutes(context as BuildContext)
+      injectRoutesMap(context as BuildContext)
 
       const routeCount =
         context.routes.length +

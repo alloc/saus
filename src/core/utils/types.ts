@@ -57,3 +57,18 @@ export type Changed<T> = Remap<
       : never
   }
 >
+
+export type AnyToObject<T, U extends object = Record<string, any>> = [
+  T
+] extends [Any]
+  ? U
+  : T
+
+/**
+ * Used for `any` conditions.
+ *
+ *     type Example<T> = [T] extends [Any] ? 1 : 0
+ */
+export declare class Any {
+  private _: any
+}

@@ -58,8 +58,17 @@ export function convertToWebp(options: Options = {}): Plugin {
     name: 'saus:webp',
     apply: 'build',
     enforce: 'pre',
-    configResolved(config) {
-      const { logger } = config
+    saus({ config, logger }) {
+      // Ignore public files in the `load` hook, since those are
+      // handled in the `transformPublicFile` hook.
+      const publicFileRE = new RegExp(
+        '^' + path.resolve(config.root, config.publicDir) + '/'
+      )
+      filter = createFilter(
+        options.include || [/\.(png|jpe?g)$/],
+        (options.exclude || []).concat(publicFileRE),
+        { resolve: false }
+      )
       this.load = async function (id) {
         if (!filter(id)) {
           return
@@ -113,18 +122,6 @@ export function convertToWebp(options: Options = {}): Plugin {
           success(`${plural(numConverted, 'image')} converted to WebP`)
         }
       }
-    },
-    saus({ config, logger }) {
-      // Ignore public files in the `load` hook, since those are
-      // handled in the `transformPublicFile` hook.
-      const publicFileRE = new RegExp(
-        '^' + path.resolve(config.root, config.publicDir) + '/'
-      )
-      filter = createFilter(
-        options.include || [/\.(png|jpe?g)$/],
-        (options.exclude || []).concat(publicFileRE),
-        { resolve: false }
-      )
       return {
         async transformPublicFile(file) {
           if (!filter(file.name)) {

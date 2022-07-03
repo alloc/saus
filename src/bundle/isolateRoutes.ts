@@ -1,13 +1,12 @@
 import { babel } from '@/babel'
-import { extractClientFunctions, vite } from '@/core'
+import { vite } from '@/core'
 import { debug } from '@/debug'
 import { relativeToCwd } from '@/node/relativeToCwd'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { toDevPath } from '@/node/toDevPath'
-import { createModuleProvider, ModuleProvider } from '@/plugins/moduleProvider'
+import { createModuleProvider } from '@/plugins/moduleProvider'
 import { dedupe } from '@/utils/dedupe'
 import { bareImportRE, relativePathRE } from '@/utils/importRegex'
-import { md5Hex } from '@/utils/md5-hex'
 import { plural } from '@/utils/plural'
 import { getViteTransform } from '@/vite/transform'
 import { compileEsm, exportsId, requireAsyncId } from '@/vm/compileEsm'
@@ -15,7 +14,6 @@ import { ForceLazyBindingHook } from '@/vm/types'
 import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
 import builtinModules from 'builtin-modules'
-import endent from 'endent'
 import escalade from 'escalade/sync'
 import fs from 'fs'
 import { bold } from 'kleur/colors'
@@ -25,8 +23,7 @@ import { dirname, isAbsolute, relative, resolve } from 'path'
 import * as rollup from 'rollup'
 import { BundleContext } from './context'
 import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
-import { createRendererChunk } from './rendererChunk'
-import { RouteImports } from './routeModules'
+import { RouteImports } from './routeImports'
 
 export type IsolatedModuleMap = Record<string, IsolatedModule>
 export type IsolatedModule = {
@@ -49,7 +46,7 @@ export async function isolateRoutes(
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
   const modules = createModuleProvider()
-  const config = await context.resolveConfig('build', {
+  const config = await context.resolveConfig('build', context.configHooks, {
     resolve: {
       conditions: ['ssr'],
     },
@@ -77,21 +74,6 @@ export async function isolateRoutes(
       external: [],
     },
   })
-
-  // Some plugins rely on this hook (like vite:css)
-  await pluginContainer.buildStart({})
-
-  const virtualRenderPath = resolve(config.root, '.saus/render.js')
-  const rendererModule = await transform(
-    toDevPath(context.renderPath, config.root, true)
-  )
-  const rendererMap = isolateRenderers(
-    context.renderPath,
-    rendererModule as any,
-    virtualRenderPath,
-    modules,
-    config
-  )
 
   const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
@@ -287,13 +269,16 @@ export async function isolateRoutes(
   const routeEntryPoints = dedupe(
     Array.from(routeImports.values(), resolved => resolved.file)
   )
+  const layoutEntryPoints = dedupe(
+    context.routes.map(route => route.layoutEntry || context.defaultLayoutId)
+  )
 
   debug(`route entries: %O`, routeEntryPoints)
+  debug(`layout entries: %O`, layoutEntryPoints)
 
   const bundleInputs = [
-    virtualRenderPath,
-    context.routesPath,
-    ...Object.keys(rendererMap),
+    context.routesPath, //
+    ...layoutEntryPoints,
     ...routeEntryPoints,
   ]
 
@@ -346,9 +331,7 @@ export async function isolateRoutes(
       : toSsrPath(modulePath, config.root)
 
     const map = chunk.map!
-    if (modulePath !== virtualRenderPath) {
-      resolveMapSources(map, dirname(modulePath))
-    }
+    resolveMapSources(map, dirname(modulePath))
 
     isolatedIds[modulePath] = ssrId
     isolatedIds[rolledPath] = ssrId
@@ -581,9 +564,6 @@ export async function isolateRoutes(
       if (isolatedModules[id]) {
         return id
       }
-      if (id == context.renderPath) {
-        return virtualRenderPath
-      }
       // Throw an error if an isolated CJS module is imported by a non-isolated module.
       if (importer && !isolatedModules[importer]) {
         if (isolatedCjsModules.has(id))
@@ -597,17 +577,6 @@ export async function isolateRoutes(
       return isolatedModules[id]
     },
     async transform(code, id) {
-      if (id == virtualRenderPath) {
-        const editor = new MagicString(code)
-        for (const chunkPath in rendererMap) {
-          editor.prepend(`import "${chunkPath}"\n`)
-        }
-        return {
-          code: editor.toString(),
-          map: editor.generateMap(),
-          moduleSideEffects: 'no-treeshake',
-        }
-      }
       const ssrId = isolatedIds[id]
       if (ssrId) {
         if (isolatedCjsModules.has(id)) {
@@ -646,60 +615,4 @@ function rewriteRouteImports(
       }
     },
   }
-}
-
-function isolateRenderers(
-  renderPath: string,
-  renderModule: IsolatedModule,
-  virtualRenderPath: string,
-  modules: ModuleProvider,
-  config: vite.ResolvedConfig
-) {
-  const rendererMap: Record<string, IsolatedModule> = {}
-  const rendererList: string[] = []
-
-  const functions = extractClientFunctions(
-    renderPath.replace(/\.[^.]+$/, '.js'),
-    renderModule.code,
-    true
-  )
-
-  for (const type of ['beforeRender', 'render'] as const) {
-    for (const func of functions[type]) {
-      const editor = new MagicString(renderModule.code)
-      const chunk = createRendererChunk(type, func, editor)
-
-      if (renderModule.map)
-        chunk.map = vite.combineSourcemaps(renderPath, [
-          chunk.map as any,
-          renderModule.map as any,
-        ]) as any
-
-      const hash = md5Hex(chunk.code).slice(0, 8)
-      const chunkPath = renderPath.replace(/\.[^.]+$/, `.${hash}.js`)
-      rendererMap[chunkPath] = chunk
-      modules.addModule({
-        id: toDevPath(chunkPath, config.root, true),
-        ...chunk,
-      })
-
-      const chunkId = '/' + relative(config.root, chunkPath)
-      rendererList.push(
-        `[${JSON.stringify(func.route)}, () => ssrImport("${chunkId}")],`
-      )
-    }
-  }
-
-  modules.addModule({
-    id: toDevPath(virtualRenderPath, config.root),
-    code: endent`
-      import { addRenderers, ssrImport } from "saus/core"
-
-      addRenderers([
-        ${rendererList.join('\n')}
-      ])
-    `,
-  })
-
-  return rendererMap
 }

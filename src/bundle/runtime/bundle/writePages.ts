@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import inlinedAssets from './inlinedAssets'
+import clientAssets from './clientAssets'
+import clientModules from './clientModules'
 import { loadAsset, loadModule } from './loaders'
 import type { PageBundle } from './types'
 
@@ -28,12 +29,6 @@ export async function writePages(
     if (!page) continue
     if (page.html) {
       writeFile(path.join(outDir, page.id), page.html)
-      for (const moduleId of page.modules) {
-        writeFile(path.join(outDir, moduleId), await loadModule(moduleId))
-      }
-      for (const assetId of page.assets) {
-        writeFile(path.join(outDir, assetId), await loadAsset(assetId))
-      }
     }
     for (const { id, data } of page.files) {
       writeFile(
@@ -43,14 +38,11 @@ export async function writePages(
     }
   }
 
-  // If a plugin uses the `emitFile` API, the asset won't exist in
-  // the page's asset list, but it should still be written to disk.
-  for (const assetId in inlinedAssets) {
-    if (assetId in files) continue
-    writeFile(
-      path.join(outDir, assetId),
-      Buffer.from(inlinedAssets[assetId], 'base64')
-    )
+  for (const moduleId in clientModules) {
+    writeFile(path.join(outDir, moduleId), await loadModule(moduleId))
+  }
+  for (const assetId in clientAssets) {
+    writeFile(path.join(outDir, assetId), await loadAsset(assetId))
   }
 
   return files

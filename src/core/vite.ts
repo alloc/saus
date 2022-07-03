@@ -1,15 +1,14 @@
 import * as vite from 'vite'
 import type { BundleOptions, OutputBundle, PageBundle } from '../bundle'
-import type { TestFramework } from '../test/api'
 import { App } from './app/types'
 import type { SausContext } from './context'
 import type { ClientDescription } from './defineClient'
 import type { Endpoint } from './endpoint'
 import type { ModuleProvider } from './plugins/moduleProvider'
 import type { PublicDirOptions, PublicFile } from './publicDir'
-import { RenderModule } from './render'
 import { RoutesModule } from './routes'
 import type { RuntimeConfig } from './runtime/config'
+import type { TestPlugin } from './testPlugin'
 import type { AbortSignal } from './utils/AbortController'
 import './vite/requireHook'
 
@@ -91,9 +90,10 @@ export interface SausConfig {
    */
   routes: string
   /**
-   * Path to the module containing `render` calls.
+   * Path to the module that provides the default layout.
+   * @default "/src/layouts/default"
    */
-  render: string
+  defaultLayoutId?: string
   /**
    * Configure the `saus deploy` command.
    */
@@ -187,7 +187,7 @@ declare module 'vite' {
      */
     testFramework?: (
       config: import('./vite').UserConfig
-    ) => Promise<TestFramework | { default: TestFramework }>
+    ) => Promise<TestPlugin | { default: TestPlugin }>
     /**
      * Filter the stack trace from an SSR error so there's
      * less noise from files you don't care about.
@@ -281,13 +281,6 @@ export interface SausPlugin {
    * modify the routes if they want.
    */
   receiveRoutes?: (context: RoutesModule) => Promisable<void>
-  /**
-   * Called after the renderers are loaded or reloaded. Plugins can
-   * modify the renderers if they want.
-   *
-   * ⚠︎ This is only called when `saus dev` is used.
-   */
-  receiveRenderers?: (context: RenderModule) => Promisable<void>
   /**
    * Called after the dev app is created or replaced.
    */

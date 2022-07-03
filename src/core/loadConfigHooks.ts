@@ -1,33 +1,26 @@
 import esModuleLexer from 'es-module-lexer'
-import fs from 'fs'
 import { Module } from 'module'
 import { dirname } from 'path'
 import { ConfigHookRef, setConfigHooks } from './configHooks'
 import { debug } from './debug'
 import { findPackage } from './node/findPackage'
+import { SausContext } from './types'
 import { bareImportRE, relativePathRE } from './utils/importRegex'
 import { plural } from './utils/plural'
-import { ResolvedConfig } from './vite'
 import { createAsyncRequire } from './vm/asyncRequire'
 import { createFullReload } from './vm/fullReload'
 
-export async function loadConfigHooks(config: ResolvedConfig) {
+export async function loadConfigHooks(
+  context: SausContext
+): Promise<ConfigHookRef[]> {
   const time = Date.now()
-
-  const importer = config.saus.render
-  const code = fs
-    .readFileSync(importer, 'utf8')
-    .split('\n')
-    .filter(line => line.startsWith('import '))
-    .join('\n')
-
-  await esModuleLexer.init
-  const [imports] = esModuleLexer.parse(code, importer)
 
   const configHooks: ConfigHookRef[] = []
   setConfigHooks(configHooks)
 
-  const { resolve } = Module.createRequire(importer)
+  const { config } = context
+  const { resolve } = Module.createRequire(config.root)
+
   const nodeResolve = (id: string, importer: string) => {
     if (!bareImportRE.test(id)) {
       return
@@ -48,7 +41,6 @@ export async function loadConfigHooks(config: ResolvedConfig) {
     }
     try {
       return resolve(id, {
-        paths: [config.root],
         // @ts-ignore: Avoid infinite recursion.
         skipSelf: true,
       })
@@ -61,20 +53,42 @@ export async function loadConfigHooks(config: ResolvedConfig) {
     shouldReload: createFullReload(reloadList),
   })
 
-  for (const imp of imports) {
-    const id = imp.n
-    if (!id || relativePathRE.test(id) || imp.d !== -1) {
-      continue
-    }
-    try {
-      const resolvedId = nodeResolve(id, importer) || resolve(id)
-      if (!/\.c?js$/.test(resolvedId || '')) {
+  const importers = await Promise.all(
+    [...context.layoutEntries, context.defaultLayoutId].map(async url => {
+      const resolved = await context.resolveId(url)
+      if (!resolved) {
+        throw Error(`Failed to resolve "${url}"`)
+      }
+      return resolved.id
+    })
+  )
+
+  await esModuleLexer.init
+  for (const importer of importers) {
+    let { code } = (await context.fetchModule(importer))!
+
+    code = code
+      .split('\n')
+      .filter(line => line.startsWith('import '))
+      .join('\n')
+
+    const [imports] = esModuleLexer.parse(code, importer)
+    for (const imp of imports) {
+      const id = imp.n
+      if (!id || relativePathRE.test(id) || imp.d !== -1) {
         continue
       }
-      await requireAsync(resolvedId, importer, false)
-    } catch (e: any) {
-      if (!/Cannot (use import|find module)/.test(e.message)) {
-        console.error(e)
+      try {
+        const resolvedId =
+          nodeResolve(id, importer) || resolve(id, { paths: [importer] })
+
+        if (/\.c?js$/.test(resolvedId || '')) {
+          await requireAsync(resolvedId, importer, false)
+        }
+      } catch (e: any) {
+        if (!/Cannot (use import|find module)/.test(e.message)) {
+          console.error(e)
+        }
       }
     }
   }

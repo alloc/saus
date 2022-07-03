@@ -3,7 +3,6 @@ import path from 'path'
 import { callerPath } from 'shared-log'
 import { ConfigEnv } from 'vite'
 import { UserConfig } from './core'
-import { renderModule } from './global'
 
 export type ConfigHook = (
   config: UserConfig,
@@ -29,8 +28,6 @@ export function addConfigHook(hookPath: string, source = callerPath()) {
       path: path.resolve(path.dirname(source), hookPath),
       source,
     })
-  } else if (!renderModule) {
-    throw Error('Cannot call `addConfigHook` at this time')
   }
 }
 

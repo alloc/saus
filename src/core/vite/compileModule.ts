@@ -37,31 +37,26 @@ export async function compileModule(
 ): Promise<Script> {
   const filename = cleanUrl(id)
 
-  let loaded = await context.load(id)
-  if (loaded == null) {
-    loaded = readFileSync(filename, 'utf8')
-  }
+  let code: string | undefined
+  let script = ((await context.load(id)) || {
+    code: (code = readFileSync(filename, 'utf8')),
+    map: loadSourceMap(code, filename),
+  }) as Script
 
   let cacheKey: string
   let cached: string | undefined
 
   if (cache) {
-    cacheKey = cache.key(
-      typeof loaded == 'string' ? loaded : loaded.code,
-      'ssr/' + basename(filename)
-    )
+    cacheKey = cache.key(script.code, 'ssr/' + basename(filename))
 
     cached = cache.get(cacheKey, filename)
     if (cached !== undefined) {
-      loaded = cached
+      script = {
+        code: cached,
+        map: loadSourceMap(cached, filename),
+      }
     }
   }
-
-  let script = (
-    typeof loaded == 'string'
-      ? { code: loaded, map: loadSourceMap(loaded, filename) }
-      : loaded
-  ) as Script
 
   if (cached !== undefined) {
     return script

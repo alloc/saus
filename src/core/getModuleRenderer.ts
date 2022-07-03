@@ -155,7 +155,10 @@ export function getModuleRenderer(context: AppContext): ModuleRenderer {
 
       if (helpers.length) {
         const helpersId =
-          base + (isDebug ? debugBase.slice(1) : '') + context.helpersId
+          base +
+          (isDebug ? debugBase.slice(1) : '') +
+          context.config.helpersModuleId
+
         imports.set(helpersId, helpers)
       }
 

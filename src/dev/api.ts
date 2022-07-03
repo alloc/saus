@@ -1,16 +1,15 @@
 import { App } from '@/app/types'
 import { loadContext } from '@/context'
-import type { Endpoint } from '@/core'
+import { createPluginContainer, Endpoint } from '@/core'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
-import { loadRenderers } from '@/loadRenderers'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir, runtimeDir } from '@/paths'
-import { defineClientContext } from '@/plugins/clientContext'
-import { getClientUrl, serveClientEntries } from '@/plugins/clientEntries'
-import { transformClientState } from '@/plugins/clientState'
+import { clientContextPlugin } from '@/plugins/clientContext'
+import { clientLayoutPlugin } from '@/plugins/clientLayout'
+import { clientStatePlugin } from '@/plugins/clientState'
 import { moduleRedirection, redirectModule } from '@/plugins/moduleRedirection'
-import { renderPlugin } from '@/plugins/render'
+import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
 import { prependBase } from '@/utils/base'
@@ -30,6 +29,9 @@ import { bold, gray, green, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
+import { injectRoutesMap } from '../core/injectRoutesMap'
+import { loadConfigHooks } from '../core/loadConfigHooks'
+import { renderRouteClients } from '../core/routeClients'
 import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
 import { DevEventEmitter } from './events'
@@ -50,11 +52,11 @@ export async function createServer(
   const createContext = () =>
     loadContext<DevContext>('serve', inlineConfig, [
       servePlugin(e => events.emit('error', e)),
-      serveClientEntries,
       routesPlugin(),
-      renderPlugin,
-      defineClientContext,
-      transformClientState,
+      routeClientsPlugin,
+      clientContextPlugin,
+      clientLayoutPlugin,
+      clientStatePlugin,
       () =>
         moduleRedirection([
           redirectModule(
@@ -145,8 +147,45 @@ async function startServer(
   events: DevEventEmitter,
   isRestart?: boolean
 ) {
-  const { config, logger } = context
+  const { resolveConfig, logger } = context
+
+  context.events = events
+  context.moduleMap = moduleMap
+  context.externalExports = new Map()
+  context.linkedModules = {}
+  context.liveModulePaths = new Set()
+  context.pageSetupHooks = []
+  context.routeClients = renderRouteClients(context)
+  Object.assign(context, getRequireFunctions(context))
+  setupClientInjections(context)
+
+  // The `loadRoutes` call expects `context.resolveId` to exist,
+  // which depends on a plugin container. Since the Vite dev server
+  // isn't created yet, we'll have to create our own container.
+  const pluginContainer = await createPluginContainer(context.config)
+  context.pluginContainer = pluginContainer
+  Object.assign(context, getViteFunctions(pluginContainer))
+
+  // Force all node_modules to be reloaded
+  context.ssrForceReload = createFullReload()
+  try {
+    await loadRoutes(context)
+    context.logger.info(green('✔︎ Routes are ready!'))
+    context.configHooks = await loadConfigHooks(context)
+  } catch (e: any) {
+    events.emit('error', e)
+  } finally {
+    context.ssrForceReload = undefined
+  }
+
+  const config = await resolveConfig('serve', context.configHooks)
+  context.plugins = await getSausPlugins(context, config)
+  await callPlugins(context.plugins, 'receiveRoutes', context)
+
   const server = await vite.createServer(config)
+  context.server = server
+  context.watcher = server.watcher!
+  injectRoutesMap(context)
 
   // Listen immediately to ensure `buildStart` hook is called.
   if (server.httpServer) {
@@ -161,39 +200,12 @@ async function startServer(
   }
 
   // Ensure the Vite config is watched.
-  const watcher = server.watcher!
   if (context.configPath) {
-    watcher.add(context.configPath)
+    context.watcher.add(context.configPath)
   }
-
-  context.events = events
-  context.server = server
-  context.watcher = watcher
-  context.pluginContainer = server.pluginContainer
-  context.moduleMap = moduleMap
-  context.externalExports = new Map()
-  context.linkedModules = {}
-  context.liveModulePaths = new Set()
-  context.pageSetupHooks = []
-  Object.assign(context, getViteFunctions(server.pluginContainer))
-  Object.assign(context, getRequireFunctions(context))
-  setupClientInjections(context)
-
-  // Force all node_modules to be reloaded
-  context.ssrForceReload = createFullReload()
-  context.plugins = await getSausPlugins(context, config)
-  try {
-    await loadRoutes(context)
-    context.logger.info(green('✔︎ Routes are ready!'))
-    await loadRenderers(context)
-    context.logger.info(green('✔︎ Renderers are ready!'))
-  } catch (e: any) {
-    events.emit('error', e)
-  }
-  context.ssrForceReload = undefined
 
   await prepareDevApp(context)
-  watcher.prependListener('change', context.hotReload)
+  context.watcher.prependListener('change', context.hotReload)
 
   // Use process.nextTick to ensure whoever is awaiting the `createServer`
   // call can handle this event.
@@ -295,7 +307,7 @@ async function prepareDevApp(context: DevContext) {
 
   context.hotReload = createHotReload(context, {
     schedule: debounce(reload => reload(), 50),
-    async start({ routesChanged, renderersChanged, clientEntriesChanged }) {
+    async start({ routesChanged }) {
       const clientChanges = new Set<string>()
 
       return {
@@ -304,7 +316,7 @@ async function prepareDevApp(context: DevContext) {
         },
         async finish() {
           let pendingPages: Promise<void> | undefined
-          if (routesChanged || renderersChanged) {
+          if (routesChanged) {
             pendingPages = context.forCachedPages((pagePath, [page]) => {
               // Emit change events for page state modules.
               if (routesChanged) {
@@ -312,9 +324,9 @@ async function prepareDevApp(context: DevContext) {
                 clientChanges.add('/' + filename + '.js')
               }
               // Ensure the generated clients are updated.
-              if (renderersChanged && clientEntriesChanged && page?.client) {
-                clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
-              }
+              // if (clientChanged && page?.client) {
+              //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
+              // }
             })
             context.clearCachedPages()
             await resetDevApp()

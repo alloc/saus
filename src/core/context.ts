@@ -6,15 +6,13 @@ import type { DevContext, DevMethods, DevState } from '../dev/context'
 import type { RenderPageResult } from './app/types'
 import { ConfigHook, ConfigHookRef } from './configHooks'
 import { debug } from './debug'
-import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
-import { loadConfigHooks } from './loadConfigHooks'
 import { CompileCache } from './node/compileCache'
 import { relativeToCwd } from './node/relativeToCwd'
 import { toSausPath } from './paths'
 import { PublicDirOptions } from './publicDir'
-import { RenderModule } from './render'
+import { RouteClients } from './routeClients'
 import { RoutesModule } from './routes'
 import { clearCachedState } from './runtime/clearCachedState'
 import { getCachedState } from './runtime/getCachedState'
@@ -37,8 +35,7 @@ export type SausContext = BuildContext | DeployContext | DevContext
  * This context exists in both serve and build mode.
  */
 export interface BaseContext
-  extends RenderModule,
-    RoutesModule,
+  extends RoutesModule,
     HtmlContext,
     ViteFunctions,
     Partial<DevState>,
@@ -49,7 +46,7 @@ export interface BaseContext
   logger: vite.Logger
   config: ResolvedConfig
   configPath: string | undefined
-  configHooks: ConfigHookRef[]
+  configHooks?: ConfigHookRef[]
   userConfig: vite.UserConfig
   pluginContainer: PluginContainer
   publicDir: PublicDirOptions | null
@@ -59,6 +56,7 @@ export interface BaseContext
    */
   resolveConfig: (
     command: SausCommand,
+    configHooks?: ConfigHookRef[],
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
   /** The cache for compiled SSR modules */
@@ -69,6 +67,10 @@ export interface BaseContext
   defaultPath: string
   /** Path to the routes module */
   routesPath: string
+  /** Lazy generator of route clients */
+  routeClients: RouteClients
+  /** Path to the default layout */
+  defaultLayoutId: string
   /** Track which files are responsible for state modules */
   stateModulesByFile: Record<string, string[]>
   /** Load a page if not cached */
@@ -79,8 +81,6 @@ export interface BaseContext
   ) => Promise<void>
   /** Clear any matching pages (loading or loaded) */
   clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
-  /** Path to the render module */
-  renderPath: string
 }
 
 export type { DevContext, BuildContext, BundleContext, DeployContext }
@@ -90,11 +90,13 @@ type InlinePlugin = (
   configEnv: vite.ConfigEnv
 ) => Plugin | Plugin[]
 
+type Context = Omit<BaseContext, keyof ViteFunctions>
+
 function createContext(
+  command: SausCommand,
   config: ResolvedConfig,
-  configHooks: ConfigHookRef[],
-  resolveConfig: BaseContext['resolveConfig']
-): BaseContext {
+  resolveConfig: Context['resolveConfig']
+): Context {
   const pageCache: Cache<RenderPageResult> = {
     loading: {},
     loaders: {},
@@ -117,6 +119,7 @@ function createContext(
   }
 
   return {
+    command,
     root: config.root,
     plugins: [],
     pluginContainer: null!,
@@ -124,43 +127,44 @@ function createContext(
     logger: config.logger,
     config,
     configPath: config.configFile,
-    configHooks,
     userConfig: config.inlineConfig,
     resolveConfig,
     compileCache: new CompileCache('node_modules/.saus', config.root),
     basePath: config.base,
     defaultPath: config.saus.defaultPath!,
+    defaultLayoutId: config.saus.defaultLayoutId!,
+    layoutEntries: new Set(),
     routesPath: config.saus.routes,
     routes: [],
+    routeClients: null!,
     runtimeHooks: [],
     defaultState: [],
     stateModulesByFile: {},
     getCachedPage: withCache(pageCache),
     forCachedPages,
     clearCachedPages: filter => clearCachedState(filter, pageCache),
-    renderPath: config.saus.render,
-    renderers: [],
-    beforeRenderHooks: [],
+    ssrRequire: null!,
   }
 }
 
-export async function loadContext<T extends BaseContext>(
+export async function loadContext<T extends Context>(
   command: SausCommand,
   inlineConfig?: vite.InlineConfig,
   inlinePlugins?: InlinePlugin[]
 ): Promise<T> {
-  let context: BaseContext | undefined
-  let configHooks: ConfigHookRef[]
+  let context!: Context
 
   const resolveConfig = getConfigResolver(
     inlineConfig || {},
     inlinePlugins,
-    async config =>
-      context?.configHooks || (configHooks = await loadConfigHooks(config)),
-    config => (context ||= createContext(config, configHooks, resolveConfig))
+    config => (context ||= createContext(command, config, resolveConfig))
   )
 
-  await resolveConfig(command)
+  // The `context.config` always assumes the build command,
+  // so we can load the routes before the dev server is ready.
+  // Otherwise, plugins like `vite:importAnalysis` will assume
+  // the `configureServer` hook was called while loading routes.
+  await resolveConfig('build')
 
   setResponseCache(loadResponseCache(context!.root))
   return context as T
@@ -169,10 +173,13 @@ export async function loadContext<T extends BaseContext>(
 function getConfigResolver(
   defaultConfig: vite.InlineConfig,
   inlinePlugins: InlinePlugin[] | undefined,
-  getConfigHooks: (config: ResolvedConfig) => Promise<ConfigHookRef[]>,
-  getContext: (config: ResolvedConfig) => BaseContext
+  getContext: (config: ResolvedConfig) => Context
 ) {
-  return async (command: SausCommand, inlineConfig?: vite.InlineConfig) => {
+  return async (
+    command: SausCommand,
+    configHooks: ConfigHookRef[] = [],
+    inlineConfig?: vite.InlineConfig
+  ) => {
     const isDevServer = command == 'serve'
     const sausDefaults: vite.InlineConfig = {
       configFile: false,
@@ -229,12 +236,11 @@ function getConfigResolver(
 
     const sausConfig = userConfig.saus
     assertSausConfig(sausConfig)
-    assertSausConfig(sausConfig, 'render')
     assertSausConfig(sausConfig, 'routes')
-    sausConfig.render = resolve(root, sausConfig.render)
     sausConfig.routes = resolve(root, sausConfig.routes)
     sausConfig.defaultPath ||= '/404'
     sausConfig.stateModuleBase ||= '/state/'
+    sausConfig.defaultLayoutId ||= '/src/layouts/default'
 
     const publicDir: PublicDirOptions | null =
       typeof userConfig.publicDir == 'object' ||
@@ -252,7 +258,6 @@ function getConfigResolver(
       )
     }
 
-    const configHooks = await getConfigHooks(userConfig as any)
     for (const hookRef of configHooks) {
       const hookModule = require(hookRef.path)
       const configHook: ConfigHook = hookModule.__esModule
@@ -282,9 +287,7 @@ function getConfigResolver(
     // @ts-ignore
     config.configFile = loadResult.path
 
-    // The render module and "saus/client" need their deps optimized.
     config.optimizeDeps.entries = [
-      sausConfig.render,
       ...arrify(config.optimizeDeps.entries),
       // Skip "saus/client" in build mode, so we don't get warnings
       // from trying to resolve imports for modules included in the
@@ -294,9 +297,6 @@ function getConfigResolver(
 
     const context = getContext(config)
     context.publicDir = publicDir
-    if (command == 'build') {
-      context.plugins = await getSausPlugins(context, config)
-    }
     return config
   }
 }

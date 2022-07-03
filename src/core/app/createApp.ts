@@ -1,5 +1,4 @@
 import { klona } from 'klona'
-import path from 'path'
 import { CommonClientProps } from '../client'
 import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
@@ -19,7 +18,6 @@ import { RuntimeConfig, RuntimeHook } from '../runtime/config'
 import { StateModule } from '../runtime/stateModules'
 import { toArray } from '../utils/array'
 import { baseToRegex, prependBase } from '../utils/base'
-import { md5Hex } from '../utils/md5-hex'
 import { noop } from '../utils/noop'
 import { pick, pickAllExcept } from '../utils/pick'
 import { plural } from '../utils/plural'
@@ -32,15 +30,12 @@ import {
 } from './global'
 import { handleNestedState } from './handleNestedState'
 import { createNegotiator } from './negotiator'
-import { renderClient } from './renderClient'
 import { createRenderPageFn } from './renderPage'
 import { createStateModuleMap, loadIncludedState } from './stateModules'
 import {
   App,
   AppContext,
-  ClientFunctions,
   ClientPropsLoader,
-  ClientResolver,
   ProfiledEventHandler,
   RouteResolver,
 } from './types'
@@ -55,7 +50,7 @@ export function createApp(
   context: AppContext,
   plugins: App.Plugin[] = []
 ): App {
-  const { config, onError, profile, functions } = context
+  const { config, onError, profile } = context
   const moduleRenderer = getModuleRenderer(context)
 
   // Use an isolated context for each `createApp` instance, since
@@ -72,24 +67,15 @@ export function createApp(
     routes,
     catchRoute,
     defaultRoute,
-    renderers,
-    defaultRenderer,
-    beforeRenderHooks,
     requestHooks,
     responseHooks,
   } = context
 
-  // Routes and renderers are matched in reverse order.
+  // Routes are matched in reverse order.
   routes = [...routes].reverse()
-  renderers = [...renderers].reverse()
 
   const routeCount = routes.length + (defaultRoute ? 1 : 0)
-  const rendererCount = renderers.length + (defaultRenderer ? 1 : 0)
-  debug(
-    'Loaded %s and %s',
-    plural(routeCount, 'route'),
-    plural(rendererCount, 'renderer')
-  )
+  debug('Loaded %s', plural(routeCount, 'route'))
 
   // Any HTML processors with `enforce: post` will be applied by the
   // `servePage` function, after any Vite `transformIndexHtml` hooks.
@@ -109,14 +95,10 @@ export function createApp(
     profile
   )
 
-  const resolveClient = createClientResolver(functions)
   const renderPage = createRenderPageFn(
     config,
-    renderers,
-    defaultRenderer,
-    beforeRenderHooks,
+    context.ssrRequire,
     (url, route) => app.loadClientProps(url, route),
-    resolveClient,
     preProcessHtml,
     catchRoute,
     onError,
@@ -419,26 +401,6 @@ function createClientPropsLoader(
 }
 
 type ContentNegotiater = (provided: string[]) => string[]
-
-function createClientResolver(functions: ClientFunctions): ClientResolver {
-  return async ({ client, start }, beforeHooks) => {
-    if (client) {
-      const result = renderClient(
-        client,
-        functions.render.find(fn => fn.start === start)!,
-        functions.beforeRender.filter(fn =>
-          beforeHooks.some(hook => fn.start === hook.start)
-        )
-      )
-      const hash = md5Hex(result.code).slice(0, 8)
-      const ext = path.extname(functions.filename)
-      return {
-        id: `client.${hash}${ext}`,
-        ...result,
-      }
-    }
-  }
-}
 
 function cloneRouteContext(context: AppContext): AppContext {
   return {

@@ -68,7 +68,7 @@ async function buildPages(
     write: false,
     entry: null,
     format: 'cjs',
-    clientStorage: 'inline',
+    clientStore: 'inline',
     bundle: {
       isBuild: true,
       absoluteSources: true,

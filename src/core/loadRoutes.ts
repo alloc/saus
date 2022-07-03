@@ -1,20 +1,15 @@
 import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
-import path from 'path'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
-import { relativeToCwd } from './node/relativeToCwd'
-import { toDevPath } from './node/toDevPath'
-import { Route } from './routes'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from './vm/moduleMap'
-import { injectNodeModule } from './vm/nodeModules'
 import { ModuleMap, RequireAsync } from './vm/types'
 
 export async function loadRoutes(context: SausContext) {
@@ -45,6 +40,7 @@ export async function loadRoutes(context: SausContext) {
     runtimeHooks: [],
     requestHooks: undefined,
     responseHooks: undefined,
+    layoutEntries: new Set(),
     ssrRequire,
   })
   try {
@@ -55,33 +51,29 @@ export async function loadRoutes(context: SausContext) {
     routesModule.package?.delete(routesModule)
     routesModule.package = undefined
 
-    for (const route of routesConfig.routes) {
-      if (!route.moduleId) continue
-      if (route.generated) {
-        let resolved = await context.resolveId(
-          route.moduleId,
-          context.routesPath
-        )
-        if (!resolved) {
-          const error = Error(
-            `Cannot find module "${
-              route.moduleId
-            }" (imported by ${relativeToCwd(context.routesPath)})`
-          )
-          throw Object.assign(error, {
-            code: 'ERR_MODULE_NOT_FOUND',
-          })
-        }
-        if (typeof resolved !== 'string') {
-          resolved = resolved.id
-        }
-        route.moduleId = toDevPath(resolved, context.root)
-      }
-    }
+    // for (const route of routesConfig.routes) {
+    //   if (!route.moduleId) continue
+    //   if (route.generated) {
+    //     let resolved = await context.resolveId(
+    //       route.moduleId,
+    //       context.routesPath
+    //     )
+    //     if (!resolved) {
+    //       const error = Error(
+    //         `Cannot find module "${
+    //           route.moduleId
+    //         }" (imported by ${relativeToCwd(context.routesPath)})`
+    //       )
+    //       throw Object.assign(error, {
+    //         code: 'ERR_MODULE_NOT_FOUND',
+    //       })
+    //     }
+    //     route.moduleId = toDevPath(resolved.id, context.root)
+    //   }
+    // }
 
     await callPlugins(context.plugins, 'receiveRoutes', routesConfig)
     Object.assign(context, routesConfig)
-    injectRoutesMap(context as SausContext)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
@@ -92,13 +84,8 @@ export async function loadRoutes(context: SausContext) {
   }
 }
 
-type CompileContext = Pick<
-  SausContext,
-  'root' | 'routesPath' | 'compileCache' | 'config' | 'resolveId'
->
-
 async function compileRoutesModule(
-  context: CompileContext,
+  context: SausContext,
   moduleMap: ModuleMap,
   requireAsync: RequireAsync
 ) {
@@ -137,48 +124,4 @@ async function compileRoutesModule(
       context.config.env
     )
   )
-}
-
-/**
- * This injects the `routes` object exported by `saus/client`.
- */
-function injectRoutesMap(context: SausContext) {
-  const routesMap: Record<string, string> = {}
-
-  const loaders: Record<string, () => Promise<any>> = {}
-  Object.defineProperty(routesMap, 'loaders', {
-    value: loaders,
-    configurable: true,
-  })
-
-  let route: Route | undefined
-  if ((route = context.defaultRoute)) {
-    routesMap.default = route.moduleId!
-    loaders.default = route.load
-  }
-  for (let i = context.routes.length; --i >= 0; ) {
-    route = context.routes[i]
-    if (route.moduleId) {
-      routesMap[route.path] = route.moduleId
-      loaders[route.path] = route.load
-    }
-  }
-
-  const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
-  injectNodeModule(routesMapPath, routesMap)
-
-  if (context.command == 'serve') {
-    // Do nothing if already registered.
-    if (!context.liveModulePaths.has(routesMapPath)) {
-      context.liveModulePaths.add(routesMapPath)
-
-      // Eagerly invalidate our importers when the routes module
-      // is changed, thereby merging the two reload passes.
-      context.watcher.on('change', file => {
-        if (file === context.routesPath) {
-          context.hotReload(routesMapPath)
-        }
-      })
-    }
-  }
 }

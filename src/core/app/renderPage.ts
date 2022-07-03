@@ -1,25 +1,23 @@
+import { RouteLayout } from '@/runtime/layouts'
 import createDebug from 'debug'
-import {
-  BeforeRenderHook,
+import type {
   CommonClientProps,
   MergedHtmlProcessor,
-  Renderer,
   RenderRequest,
   Route,
   RouteModule,
   RuntimeConfig,
 } from '../core'
 import { ParsedUrl } from '../node/url'
-import { globalCache } from '../runtime/cache'
 import { getPageFilename } from '../utils/getPageFilename'
 import { limitTime } from '../utils/limitTime'
 import { noop } from '../utils/noop'
 import { parseHead } from '../utils/parseHead'
+import { unwrapDefault } from '../utils/unwrapDefault'
 import { headPropsCache, stateModulesMap } from './global'
+import { renderHtml } from './renderHtml'
 import {
   ClientPropsLoader,
-  ClientResolver,
-  PageContext,
   ProfiledEventHandler,
   RenderedPage,
   RenderPageFn,
@@ -31,24 +29,20 @@ const debug = createDebug('saus:pages')
 
 export function createRenderPageFn(
   config: RuntimeConfig,
-  renderers: Renderer[],
-  defaultRenderer: Renderer | undefined,
-  beforeRenderHooks: BeforeRenderHook[],
+  ssrImport: <T = any>(id: string) => Promise<T>,
   loadClientProps: ClientPropsLoader,
-  resolveClient: ClientResolver,
   processHtml: MergedHtmlProcessor | undefined,
   catchRoute: Route | undefined,
   onError: (e: any) => void,
   profile?: ProfiledEventHandler
 ): RenderPageFn {
   // The main logic for HTML document generation.
-  const generateDocument = async (
+  const renderRouteLayout = async (
     url: ParsedUrl,
     props: CommonClientProps,
     route: Route,
     routeModule: RouteModule,
-    renderer: Renderer,
-    beforeRenderHooks: BeforeRenderHook[]
+    routeLayout: RouteLayout
   ): Promise<RenderedPage | null> => {
     const { path } = url
     const request: RenderRequest = {
@@ -62,16 +56,7 @@ export function createRenderPageFn(
 
     let timestamp = Date.now()
 
-    const usedHooks: BeforeRenderHook[] = []
-    for (const hook of beforeRenderHooks) {
-      const params = hook.match ? hook.match(path) : {}
-      if (params) {
-        usedHooks.push(hook)
-        await hook({ ...request, params })
-      }
-    }
-
-    let html = await renderer.renderDocument(request, headPropsCache.get(props))
+    let html = await renderHtml(routeLayout, request, headPropsCache.get(props))
     if (html == null) {
       return null
     }
@@ -85,12 +70,11 @@ export function createRenderPageFn(
     const page: RenderedPage = {
       path,
       html: '',
-      head: undefined!,
+      head: null!,
       files: [],
       props,
-      routeModuleId: route.moduleId!,
+      route,
       stateModules: stateModulesMap.get(props) || [],
-      client: undefined,
     }
 
     if (processHtml) {
@@ -103,32 +87,7 @@ export function createRenderPageFn(
       })
     }
 
-    await renderer.onDocument.call(
-      {
-        emitFile(id, mime, data) {
-          if (id !== request.file) {
-            page.files.push({ id, mime, data })
-          } else {
-            page.html = data.toString()
-          }
-        },
-      },
-      html,
-      request,
-      config
-    )
-
     if (page.html) {
-      timestamp = Date.now()
-      page.client = await resolveClient(renderer, usedHooks)
-      if (page.client) {
-        globalCache.loaded[page.client.id] = [page.client]
-        profile?.('render client', {
-          url: url.toString(),
-          timestamp,
-          duration: Date.now() - timestamp,
-        })
-      }
       page.head = parseHead(page.html)
     }
 
@@ -137,24 +96,15 @@ export function createRenderPageFn(
 
   let pageContextQueue = Promise.resolve()
 
-  async function getPageContext(
-    url: ParsedUrl,
-    route: Route,
-    options: RenderPageOptions
-  ): Promise<PageContext> {
-    if (!options.setup) {
-      return {
-        renderers,
-        defaultRenderer,
-        beforeRenderHooks,
-      }
+  const loadRouteLayout = async (route: Route) => {
+    let layoutModule: any
+    if (typeof route.layout == 'function') {
+      layoutModule = await route.layout()
+    } else {
+      const layoutEntry = route.layoutEntry || config.defaultLayoutId
+      layoutModule = await ssrImport(layoutEntry)
     }
-    const pageContext: PageContext = {
-      renderers: [],
-      beforeRenderHooks: [],
-    }
-    await options.setup(pageContext, route, url)
-    return pageContext
+    return unwrapDefault<RouteLayout>(layoutModule)
   }
 
   async function renderErrorPage(
@@ -166,77 +116,34 @@ export function createRenderPageFn(
     // @ts-ignore
     url.routeParams.error = error
 
-    const statePromise = loadClientProps(url, route)
-    statePromise.catch(noop)
+    const promisedProps = loadClientProps(url, route)
+    promisedProps.catch(noop)
 
-    const contextPromise = pageContextQueue.then(async () => {
-      const { defaultRenderer, beforeRenderHooks } = await getPageContext(
-        url,
-        route,
-        options
-      )
-      if (!defaultRenderer) {
-        throw error
+    let props!: CommonClientProps
+    let routeModule!: RouteModule
+    let routeLayout!: RouteLayout
+
+    await (pageContextQueue = pageContextQueue.then(async () => {
+      if (options.setup) {
+        await options.setup(route, url)
       }
-      const state = await statePromise
-      const routeModule = await route.load()
-      return [state, routeModule, defaultRenderer, beforeRenderHooks] as const
-    })
-
-    pageContextQueue = contextPromise.then(noop, noop)
-    const [state, routeModule, renderer, beforeRenderHooks] =
-      await contextPromise
-
-    return generateDocument(
-      url,
-      state,
-      route,
-      routeModule,
-      renderer,
-      beforeRenderHooks
-    )
-  }
-
-  async function loadPageContext(
-    url: ParsedUrl,
-    route: Route,
-    options: RenderPageOptions
-  ) {
-    // In SSR mode, multiple pages must not load their modules at the
-    // same time, or else they won't be isolated from each other.
-    const contextPromise = pageContextQueue.then(async () => {
-      const { renderers, defaultRenderer, beforeRenderHooks } =
-        await getPageContext(url, route, options)
-
-      let routeModule: RouteModule
-      let error: any
       try {
+        props = await promisedProps
+        props.error = error
         routeModule = await route.load()
+        routeLayout = await loadRouteLayout(route)
+        error = undefined
       } catch (e) {
         error = e
       }
+    }))
 
-      return [
-        defaultRenderer,
-        renderers,
-        error,
-        (renderer: Renderer) =>
-          generateDocument(
-            url,
-            options.props || {
-              routePath: route.path,
-              routeParams: url.routeParams,
-            },
-            route,
-            routeModule,
-            renderer,
-            beforeRenderHooks
-          ),
-      ] as const
-    })
+    if (error) {
+      error.message = 'The "error" route failed to render: ' + error.message
+      throw error
+    }
 
-    pageContextQueue = contextPromise.then(noop, noop)
-    return contextPromise
+    return renderRouteLayout(url, props, route, routeModule, routeLayout)
   }
 
   /**
@@ -250,42 +157,37 @@ export function createRenderPageFn(
     route: Route,
     options: RenderPageOptions
   ) {
-    let [defaultRenderer, renderers, error, useRenderer] =
-      await loadPageContext(url, route, options)
+    let error: any
+    let routeModule!: RouteModule
+    let routeLayout!: RouteLayout
 
-    let page: RenderedPage | null
-    let renderer: Renderer | undefined
-
-    if (!error)
-      for (renderer of renderers) {
-        if (!renderer.test(url.path)) {
-          continue
-        }
-        try {
-          if ((page = await useRenderer(renderer))) {
-            return page
-          }
-        } catch (e) {
-          error = e
-          break
-        }
-      }
-
-    if (!error) {
-      // Skip requests with file extension, unless explicitly
-      // handled by a non-default renderer.
-      if (/\.[^/]+$/.test(url.path)) {
-        return null
-      }
-      if (!(renderer = defaultRenderer)) {
-        debug(`No matching renderer: %s`, url.path)
-        return null
+    // In SSR mode, multiple pages must not load their modules at the
+    // same time, or else they won't be isolated from each other.
+    await (pageContextQueue = pageContextQueue.then(async () => {
+      if (options.setup) {
+        await options.setup(route, url)
       }
       try {
-        if ((page = await useRenderer(renderer))) {
-          return page
-        }
-        return null
+        routeModule = await route.load()
+        routeLayout = await loadRouteLayout(route)
+      } catch (e) {
+        error = e
+      }
+    }))
+
+    if (!error) {
+      const props = options.props || {
+        routePath: route.path,
+        routeParams: url.routeParams,
+      }
+      try {
+        return await renderRouteLayout(
+          url,
+          props,
+          route,
+          routeModule,
+          routeLayout
+        )
       } catch (e) {
         error = e
       }
@@ -293,13 +195,7 @@ export function createRenderPageFn(
 
     if (catchRoute) {
       onError(error)
-      try {
-        return await renderErrorPage(url, error, catchRoute, options)
-      } catch (error: any) {
-        error.message =
-          'The "error" route could not be rendered: ' + error.message
-        throw error
-      }
+      return await renderErrorPage(url, error, catchRoute, options)
     }
 
     error.url = url.toString()

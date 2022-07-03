@@ -14,13 +14,11 @@ import { internalRedirects } from './moduleRedirects'
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
-  'bundle/runtime/bundle/debugBase.ts',
-  'bundle/runtime/bundle/functions.ts',
-  'bundle/runtime/bundle/inlinedAssets.ts',
-  'bundle/runtime/bundle/inlinedModules.ts',
-  'bundle/runtime/bundle/moduleMap.ts',
-  'bundle/runtime/bundle/routes.ts',
+  'bundle/runtime/bundle/clientAssets.ts',
+  'bundle/runtime/bundle/clientModules.ts',
   'bundle/runtime/bundle/config.ts',
+  'bundle/runtime/bundle/debugBase.ts',
+  'bundle/runtime/bundle/routes.ts',
   'core/client/baseUrl.ts',
   'core/client/routes.ts',
 ]
@@ -154,7 +152,7 @@ async function compileSsrRuntime(context: BundleContext) {
   if (entryBundles.every(Boolean)) {
     bundleInfo = JSON.parse(cache.get('_bundle.json')!)
   } else {
-    const config = await context.resolveConfig('build', {
+    const config = await context.resolveConfig('build', [], {
       plugins: [moduleRedirection(internalRedirects)],
     })
 

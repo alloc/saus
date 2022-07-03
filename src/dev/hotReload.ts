@@ -1,6 +1,5 @@
 import { debug } from '@/debug'
 import { loadConfigHooks } from '@/loadConfigHooks'
-import { loadRenderers } from '@/loadRenderers'
 import { loadRoutes } from '@/loadRoutes'
 import { clearCachedState } from '@/runtime/clearCachedState'
 import { prependBase } from '@/utils/base'
@@ -10,6 +9,7 @@ import { CompiledModule, isLinkedModule, LinkedModule } from '@/vm/types'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
+import { injectRoutesMap } from '../core/injectRoutesMap'
 import { DevContext } from './context'
 
 const clientDir = path.resolve(__dirname, '../client') + '/'
@@ -23,8 +23,6 @@ export interface HotReloadFn {
 export interface HotReloadInfo {
   nonce: number
   routesChanged: boolean
-  renderersChanged: boolean
-  clientEntriesChanged: boolean
 }
 
 export interface HotReloadHandler {
@@ -72,16 +70,12 @@ export function createHotReload(
     pendingReload = undefined
 
     let routesChanged = dirtyFiles.has(context.routesPath)
-    let renderersChanged = dirtyFiles.has(context.renderPath)
-    let clientEntriesChanged = dirtyClientModules.has(context.renderPath)
     dirtyFiles.clear()
     dirtyClientModules.clear()
 
     const handler = await start({
       nonce,
       routesChanged,
-      renderersChanged,
-      clientEntriesChanged,
     })
 
     const { stateModuleBase } = context.app.config
@@ -107,28 +101,11 @@ export function createHotReload(
       try {
         logger.info(yellow('⨠ Reloading routes...'))
         await loadRoutes(context)
+        injectRoutesMap(context)
         logger.info(green('✔︎ Routes are ready!'), { clear: true })
 
-        // Reload the client-side routes map.
-        if (handler.clientChange) {
-          handler.clientChange('/@fs' + path.join(clientDir, 'routes.ts'))
-        }
-      } catch (error: any) {
-        routesChanged = false
-        events.emit('error', error)
-      }
-    }
-
-    // Reload the renderers immediately, so the dev server is up-to-date
-    // when new HTTP requests come in.
-    if (renderersChanged) {
-      try {
-        logger.info(yellow('⨠ Reloading renderers...'))
-        await loadRenderers(context)
-        logger.info(green('✔︎ Renderers are ready!'), { clear: true })
-
-        const oldConfigHooks = context.configHooks
-        const newConfigHooks = await loadConfigHooks(context.config)
+        const oldConfigHooks = context.configHooks || []
+        const newConfigHooks = await loadConfigHooks(context)
 
         const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
         const newConfigPaths = newConfigHooks.map(ref => ref.path)
@@ -141,8 +118,13 @@ export function createHotReload(
         if (needsRestart) {
           return events.emit('restart')
         }
+
+        // Reload the client-side routes map.
+        if (handler.clientChange) {
+          handler.clientChange('/@fs' + path.join(clientDir, 'routes.ts'))
+        }
       } catch (error: any) {
-        renderersChanged = false
+        routesChanged = false
         events.emit('error', error)
       }
     }

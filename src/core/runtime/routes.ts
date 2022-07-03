@@ -7,10 +7,10 @@ import type {
   RouteConfig,
   RouteLoader,
 } from '@/routes'
-import { getCurrentModule, ssrImport } from '@/runtime/ssrModules'
+import { getCurrentModule } from '@/runtime/ssrModules'
 import { httpMethods } from '@/utils/httpMethods'
 import { parseRoutePath } from '@/utils/parseRoutePath'
-import { relative } from '@cush/relative'
+import { getLayoutEntry } from '../getLayoutEntry'
 
 const importRE = /\b\(["']([^"']+)["']\)/
 const parseDynamicImport = (fn: Function, path: string) => {
@@ -86,19 +86,7 @@ export function route(
     const id = moduleId
     const importer = getCurrentModule()
     const { ssrRequire } = routesModule
-    load = ssrRequire
-      ? () => ssrRequire(id, importer, true)
-      : () => {
-          let resolvedId: string | null = id
-          if (importer && /^\.\.?\//.test(id)) {
-            resolvedId = relative(importer, id)
-            if (!resolvedId)
-              throw Error(
-                `Cannot find module "${id}" imported by "${importer}"`
-              )
-          }
-          return ssrImport(resolvedId)
-        }
+    load = () => ssrRequire(id, importer, true)
   } else {
     load = () => {
       throw Error(`Route "${path}" has no module defined`)
@@ -114,11 +102,20 @@ export function route(
   const self: Route = {
     ...config,
     path,
+    file: getCurrentModule(),
     load,
     generated,
     moduleId,
     pattern,
     keys,
+  }
+
+  if (self.layout) {
+    const layoutEntry = getLayoutEntry(self, '')
+    if (layoutEntry) {
+      self.layoutEntry = layoutEntry
+      routesModule.layoutEntries.add(layoutEntry)
+    }
   }
 
   if (isPublic) {

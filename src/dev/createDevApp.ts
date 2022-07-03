@@ -4,12 +4,10 @@ import { renderErrorFallback } from '@/app/errorFallback'
 import { throttleRender } from '@/app/throttleRender'
 import { App, RenderPageOptions } from '@/app/types'
 import { DevContext } from '@/context'
-import { extractClientFunctions, RuntimeConfig } from '@/core'
-import { loadRenderers } from '@/loadRenderers'
+import { Route, RuntimeConfig } from '@/core'
 import { globalCachePath } from '@/paths'
 import { callPlugins } from '@/utils/callPlugins'
 import { throttle } from '@/utils/throttle'
-import { resolveEntryUrl } from '@/vite/resolveEntryUrl'
 import { clearExports } from '@/vm/moduleMap'
 import os from 'os'
 import { createHotReload } from './hotReload'
@@ -18,14 +16,14 @@ export async function createDevApp(
   context: DevContext,
   onError: (e: any) => void
 ): Promise<App> {
-  const functions = extractClientFunctions(context.renderPath)
-
   const viteConfig = context.config
   const runtimeConfig: RuntimeConfig = {
     assetsDir: viteConfig.build.assetsDir,
     base: context.basePath,
     command: 'dev',
+    defaultLayoutId: context.defaultLayoutId,
     defaultPath: context.defaultPath,
+    helpersModuleId: '@id/saus/src/client/helpers.ts',
     htmlTimeout: viteConfig.saus.htmlTimeout,
     minify: false,
     mode: viteConfig.mode,
@@ -50,8 +48,6 @@ export async function createDevApp(
     {
       ...context,
       config: runtimeConfig,
-      helpersId: '@id/saus/src/client/helpers.ts',
-      functions,
       onError,
     },
     plugins
@@ -120,24 +116,33 @@ const createPageEndpoint =
  * stateful modules between each other.
  */
 function isolatePages(context: DevContext): App.Plugin {
-  const routeModuleIds = new Set(
-    context.routes.map(route => route.moduleId).filter(Boolean) as string[]
-  )
-  if (context.defaultRoute) {
-    routeModuleIds.add(context.defaultRoute.moduleId!)
+  const routeModuleIds = new Set<string>()
+  const layoutModuleIds = new Set<string>()
+
+  const onRoute = (route: Route) => {
+    if (route.moduleId) {
+      routeModuleIds.add(route.moduleId)
+    }
+    layoutModuleIds.add(route.layoutEntry || context.defaultLayoutId)
   }
 
-  const entryPaths = Array.from(routeModuleIds, moduleId => {
-    return resolveEntryUrl(moduleId, context.config)
-  })
-  entryPaths.push(context.renderPath)
+  context.routes.forEach(onRoute)
+  context.defaultRoute && onRoute(context.defaultRoute)
+  context.catchRoute && onRoute(context.catchRoute)
 
-  const reload: RenderPageOptions['setup'] = async (
-    pageContext,
-    route,
-    url
-  ) => {
-    // Reset all modules used by every route or renderer, because we can't know
+  let entryPaths: string[]
+
+  const reload: RenderPageOptions['setup'] = async (route, url) => {
+    entryPaths ||= (
+      await Promise.all(
+        [...routeModuleIds, ...layoutModuleIds].map(async moduleId => {
+          const resolved = await context.resolveId(moduleId)
+          return resolved?.id
+        })
+      )
+    ).filter(Boolean) as string[]
+
+    // Reset all modules used by every route or layout, because we can't know
     // which modules have side effects and are also used by the route matched
     // for the currently rendering page.
     for (const entryPath of entryPaths) {
@@ -155,22 +160,11 @@ function isolatePages(context: DevContext): App.Plugin {
     })
 
     // This hook exists for URL-based module injection, which needs
-    // to take place before the route and renderers are loaded.
+    // to take place before the route and layouts are loaded.
     await Promise.all(context.pageSetupHooks.map(hook => hook(url)))
 
     await context.hotReload.promise
     context.hotReload = oldHotReload
-
-    // Load the route module and its dependencies now, since the
-    // setup function is guaranteed to run serially, which lets us
-    // ensure no local modules are shared between page renders.
-    await route.load()
-
-    context.renderers = []
-    context.defaultRenderer = undefined
-    context.beforeRenderHooks = []
-    await loadRenderers(context)
-    Object.assign(pageContext, context)
   }
 
   return app => {

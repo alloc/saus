@@ -6,7 +6,6 @@ import type {
   Client,
   MergedHtmlProcessor,
   Renderer,
-  RenderModule,
   Route,
   RoutesModule,
   RuntimeConfig,
@@ -47,10 +46,8 @@ export namespace App {
   export type Plugin = (app: App) => Partial<App>
 }
 
-export interface AppContext extends RoutesModule, RenderModule {
+export interface AppContext extends RoutesModule {
   config: RuntimeConfig
-  helpersId: string
-  functions: ClientFunctions
   getCachedPage: SausContext['getCachedPage']
   onError: (e: any) => void
   profile?: ProfiledEventHandler
@@ -70,9 +67,8 @@ export type RenderedPage = {
   head: ParsedHead
   files: RenderedFile[]
   props: AnyClientProps
-  routeModuleId: string
+  route: Route
   stateModules: string[]
-  client?: Client
   isDebug?: boolean
 }
 
@@ -95,9 +91,6 @@ type ProfiledEventHandlerArgs =
 export interface ProfiledEventHandler {
   (...args: ProfiledEventHandlerArgs): void
 }
-
-// Each page has its own render module in SSR mode.
-export interface PageContext extends RenderModule {}
 
 export type RenderPageFn = (
   url: ParsedUrl,
@@ -126,7 +119,7 @@ export type RenderPageOptions = {
    * allowing for rendered pages to be isolated from
    * each other if desired.
    */
-  setup?: (context: PageContext, route: Route, url: ParsedUrl) => any
+  setup?: (route: Route, url: ParsedUrl) => any
 }
 
 type BundledFunction = {

@@ -16,33 +16,13 @@ export interface PageBundleOptions
 export interface PageBundle {
   id: string
   html: string
+  routeModuleId: string
   /** Files generated whilst rendering. */
   files: RenderedFile[]
-  /** Modules used by the client. */
-  modules: string[]
-  /** Assets used by the client. */
-  assets: string[]
 }
 
 export interface RenderedFile {
   id: string
   data: any
   mime: string
-}
-
-export interface ClientModule {
-  id: string
-  text: string
-  debugText?: string
-  imports?: string[]
-  exports?: string[]
-}
-
-/**
- * For entry chunks, keys are import statements.
- * For vendor chunks, keys are generated file names.
- * For route chunks, keys are dev URLs.
- */
-export interface ClientModuleMap {
-  [key: string]: ClientModule
 }

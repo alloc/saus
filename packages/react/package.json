@@ -12,8 +12,8 @@
     "index.d.ts"
   ],
   "scripts": {
-    "build": "rimraf dist && tsup",
-    "dev": "tsup --watch",
+    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
     "prepare": "yarn build"
   },
   "peerDependencies": {
@@ -24,6 +24,8 @@
   "devDependencies": {
     "@types/react": "^17.0.25",
     "@types/react-dom": "^17.0.9",
+    "react": "*",
+    "react-dom": "*",
     "saus": "*"
   },
   "dependencies": {

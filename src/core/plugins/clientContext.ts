@@ -6,9 +6,9 @@ import { Plugin } from '../core'
  * Client modules have access to the global `saus` object,
  * which is injected at build time.
  */
-export function defineClientContext(): Plugin {
+export function clientContextPlugin(): Plugin {
   return {
-    name: 'saus:client-context',
+    name: 'saus:context:client',
     config(config, env) {
       const define: Record<string, string> = {}
 

@@ -1,11 +1,11 @@
-import { getBabelConfig, MagicString, t } from '@/babel'
+import { MagicString } from '@/babel'
 import {
   ClientFunction,
   ClientFunctions,
   dataToEsm,
   endent,
-  extractClientFunctions,
   RuntimeConfig,
+  SausContext,
   unwrapBuffer,
 } from '@/core'
 import { debug } from '@/debug'
@@ -23,29 +23,22 @@ import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { callPlugins } from '@/utils/callPlugins'
 import { serializeImports } from '@/utils/imports'
-import { md5Hex } from '@/utils/md5-hex'
 import { vite } from '@/vite'
-import { getViteTransform } from '@/vite/transform'
-import * as babel from '@babel/core'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
+import etag from 'etag'
 import fs from 'fs'
 import kleur from 'kleur'
-import { warnOnce } from 'misty'
 import path from 'path'
-import {
-  BundleConfig,
-  BundleContext,
-  ClientImport,
-  generateClientModules,
-  IsolatedModuleMap,
-  isolateRoutes,
-  resolveRouteImports,
-} from '../bundle'
+import { BundleConfig, BundleContext } from '../bundle'
+import { loadConfigHooks } from '../core/loadConfigHooks'
+import { compileClients } from './clients'
+import { IsolatedModuleMap } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { preferExternal } from './preferExternal'
-import type { ClientModuleMap, OutputBundle } from './types'
+import { resolveRouteImports } from './routeImports'
+import type { ClientAsset, ClientModule, OutputBundle } from './types'
 
 export async function bundle(
   context: BundleContext,
@@ -53,36 +46,65 @@ export async function bundle(
 ): Promise<OutputBundle> {
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
+  context.configHooks = await loadConfigHooks(context as SausContext)
 
-  const { functions, functionImports, routeImports, runtimeConfig } =
-    await prepareFunctions(context)
+  const [githubRepo, githubToken, routeImports] = await Promise.all([
+    inferGitHubRepo(context),
+    resolveGitHubToken(context),
+    resolveRouteImports(context),
+  ])
 
+  const { config, userConfig } = context
+  const outDir = path.resolve(config.root, config.build.outDir)
+  const runtimeConfig: RuntimeConfig = {
+    assetsDir: config.build.assetsDir,
+    base: config.base,
+    bundleType: context.bundle.type,
+    command: 'bundle',
+    debugBase: context.bundle.debugBase,
+    defaultLayoutId: context.defaultLayoutId,
+    defaultPath: context.defaultPath,
+    delayModulePreload: config.saus.delayModulePreload,
+    githubRepo,
+    githubToken,
+    htmlTimeout: config.saus.htmlTimeout,
+    minify: (userConfig.build?.minify ?? config.mode == 'production') !== false,
+    mode: config.mode,
+    publicDir: path.relative(outDir, config.publicDir),
+    renderConcurrency: config.saus.renderConcurrency,
+    ssrRoutesId: toDevPath(context.routesPath, config.root, true),
+    stateModuleBase: config.saus.stateModuleBase!,
+    stripLinkTags: config.saus.stripLinkTags,
+    // These are set by the `compileClients` function.
+    helpersModuleId: '',
+    stateCacheId: '',
+  }
+
+  await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
+
+  const { pluginContainer } = context
+  await pluginContainer.buildStart({})
+
+  // Isolate the server modules while bundling the client modules.
   const isolatedModules: IsolatedModuleMap = {}
-
-  // Isolate the server routes while bundling client modules.
-  const isolatedRoutes = isolateRoutes(context, routeImports, isolatedModules)
+  // const isolatedRoutes = isolateRoutes(context, routeImports, isolatedModules)
+  const isolatedRoutes: any = {}
+  // await isolatedRoutes
+  // debugger
 
   Profiling.mark('generate client modules')
-  const { moduleMap, assetMap, clientRouteMap } = await generateClientModules(
-    functions,
-    functionImports,
-    runtimeConfig,
+  const { clientRouteMap, clientModules, clientAssets } = await compileClients(
     context,
-    options.minify
+    runtimeConfig
   )
-
-  // The runtime config isn't ready for plugins until after
-  // the `generateClientModules` function promise is fulfilled.
-  await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
 
   Profiling.mark('generate ssr bundle')
   const { code, map } = await generateSsrBundle(
     context,
     options,
     runtimeConfig,
-    functions,
-    moduleMap,
-    assetMap,
+    clientModules,
+    clientAssets,
     clientRouteMap,
     isolatedModules,
     [await isolatedRoutes]
@@ -93,8 +115,8 @@ export async function bundle(
     code,
     map: map as SourceMap | undefined,
     files: {},
-    clientModules: moduleMap,
-    clientAssets: assetMap,
+    clientModules,
+    clientAssets,
   }
 
   await callPlugins(context.plugins, 'receiveBundle', bundle, options)
@@ -132,20 +154,15 @@ export async function bundle(
 
     if (context.bundle.clientStore == 'local') {
       let file: string
-      for (const module of Object.values(moduleMap)) {
-        file = path.join(outDir, module.id)
+      for (const chunk of clientModules) {
+        file = path.join(outDir, chunk.fileName)
         fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, module.text)
-        if (runtimeConfig.debugBase && module.debugText) {
-          file = path.join(outDir, runtimeConfig.debugBase, module.id)
-          fs.mkdirSync(path.dirname(file), { recursive: true })
-          fs.writeFileSync(file, module.debugText)
-        }
+        fs.writeFileSync(file, chunk.code)
       }
-      for (const assetId in assetMap) {
-        file = path.join(outDir, assetId)
+      for (const asset of clientAssets) {
+        file = path.join(outDir, asset.fileName)
         fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, assetMap[assetId])
+        fs.writeFileSync(file, asset.source)
       }
     }
   }
@@ -153,193 +170,12 @@ export async function bundle(
   return bundle
 }
 
-async function prepareFunctions(context: BundleContext) {
-  const { root, renderPath, config } = context
-
-  Profiling.mark('parse render functions')
-  const functions = extractClientFunctions(renderPath)
-  Profiling.mark('transform render functions')
-
-  const functionExt = path.extname(renderPath)
-  const functionModules = createModuleProvider()
-  const functionImports: { [stmt: string]: ClientImport } = {}
-
-  const { transform, pluginContainer } = await getViteTransform({
-    ...config,
-    plugins: [functionModules, ...config.plugins],
-  })
-
-  const babelConfig = getBabelConfig(renderPath)
-  const parseFile = (code: string) =>
-    babel.parseSync(code, babelConfig) as t.File
-  const parseStmt = <T = t.Statement>(code: string) =>
-    parseFile(code).program.body[0] as any as T
-
-  const registerImport = async (code: string, node?: t.ImportDeclaration) => {
-    if (functionImports[code]) return
-
-    // Explicit imports have a Babel node parsed from the source file,
-    // while implicit imports need their injected code to be parsed.
-    const isImplicit = node == null
-
-    if (!node) {
-      node = parseStmt(code)!
-      if (!t.isImportDeclaration(node)) {
-        return warnOnce(`Expected an import declaration`)
-      }
-    }
-
-    const id = node.source.value
-
-    let resolvedId = (await pluginContainer.resolveId(id, renderPath))?.id
-    if (!resolvedId) {
-      return warnOnce(`Could not resolve "${id}"`)
-    }
-
-    const isRelativeImport = id[0] == '.'
-    const inProjectRoot = resolvedId.startsWith(root + '/')
-
-    if (isRelativeImport && !inProjectRoot) {
-      return warnOnce(`Relative import "${id}" resolved outside project root`)
-    }
-
-    const isVirtual = id === resolvedId || resolvedId[0] === '\0'
-    const resolved: ClientImport = {
-      id,
-      code,
-      source: isVirtual
-        ? resolvedId
-        : inProjectRoot
-        ? resolvedId.slice(root.length)
-        : `/@fs/${resolvedId}`,
-      isVirtual,
-      isImplicit,
-    }
-
-    if (!isVirtual)
-      resolved.code =
-        code.slice(0, node.source.start! - node.start!) +
-        `"${resolved.source}"` +
-        code.slice(node.source.end! - node.start!)
-
-    functionImports[code] = resolved
-  }
-
-  const transformFunction = async (fn: ClientFunction) => {
-    const functionCode = [
-      ...fn.referenced,
-      `export default ` + fn.function,
-    ].join('\n')
-
-    const functionModule = functionModules.addModule({
-      // The function module must be within the project root
-      // for some transform plugins to work correctly.
-      id: path.join(
-        root,
-        '.saus/functions',
-        md5Hex(functionCode).slice(0, 8) + functionExt
-      ),
-      code: functionCode,
-    })
-
-    const transformResult = await transform('/@fs' + functionModule.id)
-    if (transformResult?.code) {
-      const [prelude, transformedFn] =
-        transformResult.code.split('\nexport default ')
-
-      const referenced: string[] = []
-      for (const node of parseFile(prelude).program.body) {
-        const code = prelude.slice(node.start!, node.end!)
-        referenced.push(code)
-        if (t.isImportDeclaration(node)) {
-          await registerImport(code, node)
-        }
-      }
-
-      fn.transformResult = {
-        function: transformedFn.replace(/;\n?$/, ''),
-        referenced,
-      }
-    }
-  }
-
-  const implicitImports = new Set<string>()
-
-  // The `onHydrate` function is used by every shared client module.
-  implicitImports.add(`import { onHydrate as $onHydrate } from "saus/client"`)
-
-  // The `hydrate` function is used by every inlined client module.
-  implicitImports.add(`import { hydrate } from "saus/client"`)
-
-  // Renderer packages often import modules that help with hydrating the page.
-  for (const { imports } of config.saus.clients || []) {
-    serializeImports(imports).forEach(stmt => implicitImports.add(stmt))
-  }
-
-  const routeImports = await resolveRouteImports(context, pluginContainer)
-
-  // Every route has a module imported by the inlined client module.
-  for (const { url } of routeImports.values()) {
-    implicitImports.add(`import * as routeModule from "${url}"`)
-  }
-
-  await Promise.all<any>([
-    ...Array.from(implicitImports, stmt => registerImport(stmt)),
-    ...functions.beforeRender.map(transformFunction),
-    ...functions.render.map(renderFn =>
-      Promise.all([
-        transformFunction(renderFn),
-        renderFn.didRender && transformFunction(renderFn.didRender),
-      ])
-    ),
-  ])
-
-  await pluginContainer.close()
-
-  const outDir = path.resolve(config.root, config.build.outDir)
-  const runtimeConfig: RuntimeConfig = {
-    assetsDir: config.build.assetsDir,
-    base: config.base,
-    bundleType: context.bundle.type,
-    command: 'bundle',
-    debugBase: context.bundle.debugBase,
-    defaultPath: context.defaultPath,
-    delayModulePreload: config.saus.delayModulePreload,
-    githubRepo: await inferGitHubRepo(context),
-    githubToken: await resolveGitHubToken(context),
-    htmlTimeout: config.saus.htmlTimeout,
-    mode: config.mode,
-    publicDir: path.relative(outDir, config.publicDir),
-    renderConcurrency: config.saus.renderConcurrency,
-    ssrRoutesId: toDevPath(context.routesPath, config.root, true),
-    stateModuleBase: config.saus.stateModuleBase!,
-    stripLinkTags: config.saus.stripLinkTags,
-    // These are set by the `generateClientModules` function.
-    minify: false,
-    stateCacheId: '',
-  }
-
-  // The functions are now transpiled to plain JavaScript.
-  functions.filename = path.basename(
-    functions.filename.replace(/\.[^.]+$/, '.js')
-  )
-
-  return {
-    functions,
-    functionImports,
-    implicitImports,
-    routeImports,
-    runtimeConfig,
-  }
-}
-
 async function generateSsrBundle(
   context: BundleContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
-  functions: ClientFunctions,
-  moduleMap: ClientModuleMap,
-  assetMap: Record<string, Buffer>,
+  clientModules: ClientModule[],
+  clientAssets: ClientAsset[],
   clientRouteMap: Record<string, string>,
   isolatedModules: IsolatedModuleMap,
   inlinePlugins: vite.PluginOption[]
@@ -347,51 +183,40 @@ async function generateSsrBundle(
   const bundleConfig = context.bundle
   const modules = createModuleProvider()
 
-  modules.addModule({
-    id: path.join(bundleDir, 'bundle/functions.ts'),
-    code: serializeClientFunctions(functions),
-  })
+  if (bundleConfig.clientStore !== 'external') {
+    const isInlined = bundleConfig.clientStore == 'inline'
+    const assetEntries = clientAssets.map(asset => {
+      const content = Buffer.from(asset.source)
+      return [
+        asset.fileName,
+        isInlined ? content.toString('base64') : etag(content, { weak: true }),
+      ] as const
+    })
 
-  const inlinedAssets = Object.entries(assetMap).map(
-    ([id, data]) => [id, data.toString('base64')] as const
-  )
+    modules.addModule({
+      id: path.join(bundleDir, 'bundle/clientModules.ts'),
+      code: dataToEsm(
+        clientModules.reduce((clientModules, chunk) => {
+          const value = isInlined
+            ? chunk.code
+            : etag(chunk.code, { weak: true })
 
-  modules.addModule({
-    id: path.join(bundleDir, 'bundle/inlinedModules.ts'),
-    code: dataToEsm(
-      Object.values(moduleMap).reduce(
-        (moduleMap, { id, text, debugText, ...props }) => {
-          if (id.endsWith('.js')) {
-            moduleMap[id] = props as any
-            if (bundleConfig.clientStore !== 'local') {
-              Object.assign(props, { text, debugText })
-            }
+          if (chunk.fileName.endsWith('.js')) {
+            clientModules[chunk.fileName] = value
           } else {
-            inlinedAssets.push([id, text])
+            assetEntries.push([chunk.fileName, value])
           }
-          return moduleMap
-        },
-        {} as typeof import('./runtime/bundle/inlinedModules').default
-      )
-    ),
-  })
 
-  modules.addModule({
-    id: path.join(bundleDir, 'bundle/inlinedAssets.ts'),
-    code: dataToEsm(Object.fromEntries(inlinedAssets)),
-  })
+          return clientModules
+        }, {} as typeof import('./runtime/bundle/clientModules').default)
+      ),
+    })
 
-  modules.addModule({
-    id: path.join(bundleDir, 'bundle/moduleMap.ts'),
-    code: dataToEsm(
-      Object.keys(moduleMap).reduce((moduleIds, key) => {
-        if (key !== moduleMap[key].id) {
-          moduleIds[key] = moduleMap[key].id
-        }
-        return moduleIds
-      }, {} as typeof import('./runtime/bundle/moduleMap').default)
-    ),
-  })
+    modules.addModule({
+      id: path.join(bundleDir, 'bundle/clientAssets.ts'),
+      code: dataToEsm(Object.fromEntries(assetEntries)),
+    })
+  }
 
   if (!bundleConfig.debugBase)
     modules.addModule({
@@ -420,7 +245,7 @@ async function generateSsrBundle(
     id: context.bundleModuleId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
-      import "${context.renderPath}"
+      import "${context.defaultLayoutId}"
       import "${context.routesPath}"
 
       export * from "${runtimeId}"
@@ -453,7 +278,7 @@ async function generateSsrBundle(
     (options.preferExternal || undefined) && preferExternal(context)
 
   debug('Resolving "build" config for SSR bundle')
-  const config = await context.resolveConfig('build', {
+  const config = await context.resolveConfig('build', context.configHooks, {
     plugins: [
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,

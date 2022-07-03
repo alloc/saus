@@ -120,10 +120,10 @@ export async function syncStaticFiles(
   }
 
   const assetStore = syncAssets()
-  for (const [name, asset] of Object.entries(bundle.clientAssets)) {
-    assetStore.upload(name, asset)
+  for (const asset of bundle.clientAssets) {
+    assetStore.upload(asset.fileName, Buffer.from(asset.source))
   }
-  for (const mod of Object.values(bundle.clientModules)) {
+  for (const chunk of bundle.clientModules) {
     assetStore.upload(mod.id, mod.text)
     if (debugBase && mod.debugText) {
       const debugId = joinUrl(debugBase, mod.id).slice(1)

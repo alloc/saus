@@ -6,11 +6,11 @@ const includeRE = /\.m?[tj]sx?$/
 /**
  * Transform `defineStateModule` calls for client-side use.
  */
-export function transformClientState(): Plugin {
+export function clientStatePlugin(): Plugin {
   let stateModulesByFile: Record<string, string[]>
 
   return {
-    name: 'saus:transformClientState',
+    name: 'saus:state:client',
     enforce: 'pre',
     saus(context) {
       stateModulesByFile = context.stateModulesByFile
