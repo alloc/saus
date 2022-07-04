@@ -3,7 +3,6 @@ import type { BaseContext } from '@/context'
 import type { ParsedUrl } from '@/node/url'
 import type { Promisable } from '@/utils/types'
 import type { vite } from '@/vite'
-import type { RequireAsyncState } from '@/vm/asyncRequire'
 import type { RequireAsync } from '@/vm/types'
 import { Merge } from 'type-fest'
 import type { DevEventEmitter } from './events'
@@ -15,7 +14,7 @@ export interface DevContext extends Merge<BaseContext, DevState & DevMethods> {
 
 type PageSetupHook = (url: ParsedUrl) => Promisable<void>
 
-export interface DevState extends Required<RequireAsyncState> {
+export interface DevState {
   app: App
   events: DevEventEmitter
   server: vite.ViteDevServer
@@ -31,6 +30,5 @@ export interface DevState extends Required<RequireAsyncState> {
 export interface DevMethods {
   hotReload: HotReloadFn
   require: RequireAsync
-  ssrRequire: RequireAsync
   ssrForceReload?: (id: string) => boolean
 }

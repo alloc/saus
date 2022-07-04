@@ -1,29 +1,29 @@
-import { babel \} from '@/babel'
-import { vite \} from '@/core'
-import { debug \} from '@/debug'
-import { relativeToCwd \} from '@/node/relativeToCwd'
-import { loadSourceMap, resolveMapSources, SourceMap \} from '@/node/sourceMap'
-import { servedPathForFile \} from '@/node/toDevPath'
-import { createModuleProvider \} from '@/plugins/moduleProvider'
-import { dedupe \} from '@/utils/dedupe'
-import { bareImportRE, relativePathRE \} from '@/utils/importRegex'
-import { plural \} from '@/utils/plural'
-import { getViteTransform \} from '@/vite/transform'
-import { compileEsm, exportsId, requireAsyncId \} from '@/vm/compileEsm'
-import { ForceLazyBindingHook \} from '@/vm/types'
-import { codeFrameColumns \} from '@babel/code-frame'
-import { createFilter \} from '@rollup/pluginutils'
+import { babel } from '@/babel'
+import { vite } from '@/core'
+import { debug } from '@/debug'
+import { relativeToCwd } from '@/node/relativeToCwd'
+import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
+import { servedPathForFile } from '@/node/toDevPath'
+import { createModuleProvider } from '@/plugins/moduleProvider'
+import { dedupe } from '@/utils/dedupe'
+import { bareImportRE, relativePathRE } from '@/utils/importRegex'
+import { plural } from '@/utils/plural'
+import { getViteTransform } from '@/vite/transform'
+import { compileEsm, exportsId, requireAsyncId } from '@/vm/compileEsm'
+import { ForceLazyBindingHook } from '@/vm/types'
+import { codeFrameColumns } from '@babel/code-frame'
+import { createFilter } from '@rollup/pluginutils'
 import builtinModules from 'builtin-modules'
 import escalade from 'escalade/sync'
 import fs from 'fs'
-import { bold \} from 'kleur/colors'
+import { bold } from 'kleur/colors'
 import MagicString from 'magic-string'
-import { startTask \} from 'misty/task'
-import { dirname, isAbsolute, relative, resolve \} from 'path'
+import { startTask } from 'misty/task'
+import { dirname, isAbsolute, relative, resolve } from 'path'
 import * as rollup from 'rollup'
-import { BundleContext \} from './context'
-import { findLiveBindings, LiveBinding, matchLiveBinding \} from './liveBindings'
-import { RouteImports \} from './routeImports'
+import { BundleContext } from './context'
+import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
+import { RouteImports } from './routeImports'
 
 export type IsolatedModuleMap = Record<string, IsolatedModule>
 export type IsolatedModule = {
@@ -207,7 +207,9 @@ export async function isolateRoutes(
     },
     async load(id) {
       try {
-        var transformed = await transform(servedPathForFile(id, config.root, true))
+        var transformed = await transform(
+          servedPathForFile(id, config.root, true)
+        )
       } catch (e: any) {
         // Acorn parsing error
         const loc = /\((\d+):(\d+)\)$/.exec(e.message)
@@ -270,7 +272,7 @@ export async function isolateRoutes(
     Array.from(routeImports.values(), resolved => resolved.file)
   )
   const layoutEntryPoints = dedupe(
-    context.routes.map(route => route.layoutEntry || context.defaultLayoutId)
+    context.routes.map(route => route.layoutEntry || context.defaultLayout.id)
   )
 
   debug(`route entries: %O`, routeEntryPoints)

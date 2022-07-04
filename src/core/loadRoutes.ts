@@ -3,32 +3,23 @@ import fs from 'fs'
 import MagicString from 'magic-string'
 import { SausContext } from './context'
 import { debug } from './debug'
-import { getRequireFunctions } from './getRequireFunctions'
 import { setRoutesModule } from './global'
+import { servedPathForFile } from './node/servedPathForFile'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from './vm/moduleMap'
-import { ModuleMap, RequireAsync } from './vm/types'
+import { RequireAsync } from './vm/types'
 
 export async function loadRoutes(context: SausContext) {
   const time = Date.now()
-  const moduleMap = context.moduleMap || {}
-
-  const { require, ssrRequire } = (
-    !context.ssrRequire && context.command == 'build'
-      ? getRequireFunctions(context, moduleMap)
-      : context
-  ) as {
-    require: RequireAsync
-    ssrRequire: RequireAsync
-  }
 
   const routesModule =
-    moduleMap[context.routesPath] ||
-    (await compileRoutesModule(context, moduleMap, (id, importer, isDynamic) =>
-      (isDynamic ? ssrRequire : require)(id, importer, isDynamic)
+    context.moduleMap[context.routesPath] ||
+    (await compileRoutesModule(context, (id, importer, isDynamic) =>
+      // Dynamic imports are assumed to *not* be Node.js modules
+      context[isDynamic ? 'ssrRequire' : 'require'](id, importer, isDynamic)
     ))
 
   const routesConfig = setRoutesModule({
@@ -36,12 +27,12 @@ export async function loadRoutes(context: SausContext) {
     defaultRoute: undefined,
     defaultState: [],
     htmlProcessors: undefined,
-    routes: [],
-    runtimeHooks: [],
+    layoutEntries: new Set(),
     requestHooks: undefined,
     responseHooks: undefined,
-    layoutEntries: new Set(),
-    ssrRequire,
+    routes: [],
+    runtimeHooks: [],
+    ssrRequire: context.ssrRequire,
   })
   try {
     await executeModule(routesModule)
@@ -51,33 +42,28 @@ export async function loadRoutes(context: SausContext) {
     routesModule.package?.delete(routesModule)
     routesModule.package = undefined
 
-    // for (const route of routesConfig.routes) {
-    //   if (!route.moduleId) continue
-    //   if (route.generated) {
-    //     let resolved = await context.resolveId(
-    //       route.moduleId,
-    //       context.routesPath
-    //     )
-    //     if (!resolved) {
-    //       const error = Error(
-    //         `Cannot find module "${
-    //           route.moduleId
-    //         }" (imported by ${relativeToCwd(context.routesPath)})`
-    //       )
-    //       throw Object.assign(error, {
-    //         code: 'ERR_MODULE_NOT_FOUND',
-    //       })
-    //     }
-    //     route.moduleId = toDevPath(resolved.id, context.root)
-    //   }
-    // }
+    // Resolve route modules of generated routes to ensure they exist.
+    for (const route of routesConfig.routes) {
+      if (!route.moduleId || !route.generated) {
+        continue
+      }
+      let resolved = await context.resolveId(route.moduleId, route.file)
+      if (!resolved) {
+        const error = Error(`Cannot find module "${route.moduleId}"`)
+        throw Object.assign(error, {
+          code: 'ERR_MODULE_NOT_FOUND',
+          importer: route.file,
+        })
+      }
+      route.moduleId = servedPathForFile(resolved.id, context.root)
+    }
 
     await callPlugins(context.plugins, 'receiveRoutes', routesConfig)
     Object.assign(context, routesConfig)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
-    formatAsyncStack(error, moduleMap, [], context.config.filterStack)
+    formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
     throw error
   } finally {
     setRoutesModule(null)
@@ -86,7 +72,6 @@ export async function loadRoutes(context: SausContext) {
 
 async function compileRoutesModule(
   context: SausContext,
-  moduleMap: ModuleMap,
   requireAsync: RequireAsync
 ) {
   const { resolveId, routesPath, root } = context
@@ -115,7 +100,7 @@ async function compileRoutesModule(
   }
 
   return registerModuleOnceCompiled(
-    moduleMap,
+    context.moduleMap,
     compileNodeModule(
       editor.toString(),
       routesPath,

@@ -1,4 +1,4 @@
-import { MagicString \} from '@/babel'
+import { MagicString } from '@/babel'
 import {
   ClientFunction,
   ClientFunctions,
@@ -6,25 +6,25 @@ import {
   endent,
   RuntimeConfig,
   SausContext,
-  unwrapBuffer
-\} from '@/core'
-import { debug \} from '@/debug'
-import { inferGitHubRepo, resolveGitHubToken \} from '@/git'
-import { relativeToCwd \} from '@/node/relativeToCwd'
-import { servedPathForFile \} from '@/node/servedPathForFile'
-import { resolveMapSources, SourceMap \} from '@/node/sourceMap'
-import { bundleDir, clientDir, httpDir \} from '@/paths'
-import { debugForbiddenImports \} from '@/plugins/debug'
-import { rewriteHttpImports \} from '@/plugins/httpImport'
-import { createModuleProvider \} from '@/plugins/moduleProvider'
-import { overrideBareImport, redirectModule \} from '@/plugins/moduleRedirection'
-import { copyPublicDir \} from '@/plugins/publicDir'
-import { routesPlugin \} from '@/plugins/routes'
-import { Profiling \} from '@/profiling'
-import { RouteClient \} from '@/routeClients'
-import { callPlugins \} from '@/utils/callPlugins'
-import { serializeImports \} from '@/utils/imports'
-import { vite \} from '@/vite'
+  unwrapBuffer,
+} from '@/core'
+import { debug } from '@/debug'
+import { inferGitHubRepo, resolveGitHubToken } from '@/git'
+import { relativeToCwd } from '@/node/relativeToCwd'
+import { servedPathForFile } from '@/node/servedPathForFile'
+import { resolveMapSources, SourceMap } from '@/node/sourceMap'
+import { bundleDir, clientDir, httpDir } from '@/paths'
+import { debugForbiddenImports } from '@/plugins/debug'
+import { rewriteHttpImports } from '@/plugins/httpImport'
+import { createModuleProvider } from '@/plugins/moduleProvider'
+import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
+import { copyPublicDir } from '@/plugins/publicDir'
+import { routesPlugin } from '@/plugins/routes'
+import { Profiling } from '@/profiling'
+import { RouteClient } from '@/routeClients'
+import { callPlugins } from '@/utils/callPlugins'
+import { serializeImports } from '@/utils/imports'
+import { vite } from '@/vite'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
@@ -32,15 +32,15 @@ import etag from 'etag'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
-import { BundleConfig, BundleContext \} from '../bundle'
-import { loadConfigHooks \} from '../core/loadConfigHooks'
-import { compileClients \} from './clients'
-import { IsolatedModuleMap \} from './isolateRoutes'
-import type { BundleOptions \} from './options'
-import { preferExternal \} from './preferExternal'
-import { resolveRouteImports \} from './routeImports'
-import type { ClientEntries \} from './runtime/bundle/clientEntries'
-import type { ClientAsset, ClientChunk, OutputBundle \} from './types'
+import { BundleConfig, BundleContext } from '../bundle'
+import { loadConfigHooks } from '../core/loadConfigHooks'
+import { compileClients } from './clients'
+import { IsolatedModuleMap } from './isolateRoutes'
+import type { BundleOptions } from './options'
+import { preferExternal } from './preferExternal'
+import { resolveRouteImports } from './routeImports'
+import type { ClientEntries } from './runtime/bundle/clientEntries'
+import type { ClientAsset, ClientChunk, OutputBundle } from './types'
 
 export async function bundle(
   context: BundleContext,
@@ -64,9 +64,8 @@ export async function bundle(
     bundleType: context.bundle.type,
     command: 'bundle',
     debugBase: context.bundle.debugBase,
-    defaultLayoutId: context.defaultLayoutId,
+    defaultLayout: context.defaultLayout,
     defaultPath: context.defaultPath,
-    delayModulePreload: config.saus.delayModulePreload,
     githubRepo,
     githubToken,
     htmlTimeout: config.saus.htmlTimeout,
@@ -76,10 +75,10 @@ export async function bundle(
     renderConcurrency: config.saus.renderConcurrency,
     ssrRoutesId: servedPathForFile(context.routesPath, config.root, true),
     stateModuleBase: config.saus.stateModuleBase!,
-    stripLinkTags: config.saus.stripLinkTags,
     // These are set by the `compileClients` function.
-    clientHelpersId: '',
     clientCacheId: '',
+    clientHelpersId: '',
+    clientRuntimeId: '',
   }
 
   await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
@@ -192,11 +191,6 @@ async function generateSsrBundle(
     const clientEntry = clientChunks.find(
       chunk => !chunk.isDebug && chunk.isEntry && client.id in chunk.modules
     )!
-    const clientEntryId = servedPathForFile(
-      clientEntry.fileName,
-      context.root,
-      true
-    )
     const layoutModuleId = servedPathForFile(
       client.layoutEntry,
       context.root,
@@ -204,7 +198,7 @@ async function generateSsrBundle(
     )
     const [route] = context.routeClients.routesByClientId[client.id]
     clientEntries[layoutModuleId] ||= {}
-    clientEntries[layoutModuleId][route.moduleId!] = clientEntryId
+    clientEntries[layoutModuleId][route.moduleId!] = clientEntry.fileName
   }
 
   modules.addModule({
@@ -274,7 +268,7 @@ async function generateSsrBundle(
     id: context.bundleModuleId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
-      import "${context.defaultLayoutId}"
+      import "${context.defaultLayout.id}"
       import "${context.routesPath}"
 
       export * from "${runtimeId}"

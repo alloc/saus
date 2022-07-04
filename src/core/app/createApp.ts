@@ -168,7 +168,7 @@ export function createApp(
   const debugBase = config.debugBase || ''
   const debugBaseRE = debugBase ? baseToRegex(debugBase) : null
 
-  const resolveRoute: RouteResolver = url => {
+  const resolveRoute: RouteResolver = (url, opts) => {
     const negotiate = createNegotiator(url.headers.accept)
     const routedPath = debugBaseRE
       ? url.path.replace(debugBaseRE, '/')
@@ -318,7 +318,7 @@ function createClientPropsLoader(
   const { debugBase } = config
 
   return async (url, route) => {
-    const requestUrl = makeRequestUrl(url, 'GET')
+    const requestUrl = makeRequestUrl(url)
     const request = makeRequest(requestUrl, noop)
 
     const timestamp = Date.now()

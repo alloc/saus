@@ -12,6 +12,7 @@ import { moduleRedirection, redirectModule } from '@/plugins/moduleRedirection'
 import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
+import { ssrLayoutPlugin } from '@/plugins/ssrLayout'
 import { prependBase } from '@/utils/base'
 import { callPlugins } from '@/utils/callPlugins'
 import { defer } from '@/utils/defer'
@@ -25,7 +26,7 @@ import { ModuleMap } from '@/vm/types'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import http from 'http'
-import { bold, gray, green, red } from 'kleur/colors'
+import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
@@ -54,6 +55,7 @@ export async function createServer(
       servePlugin(e => events.emit('error', e)),
       routesPlugin(),
       routeClientsPlugin,
+      ssrLayoutPlugin,
       clientContextPlugin,
       clientLayoutPlugin,
       clientStatePlugin,
@@ -73,7 +75,7 @@ export async function createServer(
   events.on('restart', restart)
 
   let server: vite.ViteDevServer | null = null
-  let serverPromise = startServer(context, moduleMap, events)
+  let serverPromise = startServer(context, events)
 
   // Stop promises from crashing the process.
   process.on('unhandledRejection', onError)
@@ -86,7 +88,7 @@ export async function createServer(
 
       context.logger.clearScreen('info')
       context = await createContext()
-      server = await startServer(context, (moduleMap = {}), events, true)
+      server = await startServer(context, events, true)
       return server
     })
     serverPromise.catch(onError)
@@ -143,16 +145,12 @@ export async function createServer(
 
 async function startServer(
   context: DevContext,
-  moduleMap: ModuleMap,
   events: DevEventEmitter,
   isRestart?: boolean
-) {
+): Promise<vite.ViteDevServer> {
   const { resolveConfig, logger } = context
 
   context.events = events
-  context.moduleMap = moduleMap
-  context.externalExports = new Map()
-  context.linkedModules = {}
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
   context.routeClients = renderRouteClients(context)
@@ -162,15 +160,17 @@ async function startServer(
   // The `loadRoutes` call expects `context.resolveId` to exist,
   // which depends on a plugin container. Since the Vite dev server
   // isn't created yet, we'll have to create our own container.
-  const pluginContainer = await createPluginContainer(context.config)
+  let pluginContainer = await createPluginContainer(context.config)
   context.pluginContainer = pluginContainer
   Object.assign(context, getViteFunctions(pluginContainer))
+
+  // Plugins may use `buildStart` hook to initialize internal state.
+  await pluginContainer.buildStart({})
 
   // Force all node_modules to be reloaded
   context.ssrForceReload = createFullReload()
   try {
     await loadRoutes(context)
-    context.logger.info(green('✔︎ Routes are ready!'))
     context.configHooks = await loadConfigHooks(context)
   } catch (e: any) {
     events.emit('error', e)
@@ -179,15 +179,17 @@ async function startServer(
   }
 
   const config = await resolveConfig('serve', context.configHooks)
+  context.config = config
   context.plugins = await getSausPlugins(context, config)
   await callPlugins(context.plugins, 'receiveRoutes', context)
 
   const server = await vite.createServer(config)
   context.server = server
   context.watcher = server.watcher!
+  context.pluginContainer = server.pluginContainer as any
+  Object.assign(context, getViteFunctions(context.pluginContainer))
   injectRoutesMap(context)
 
-  // Listen immediately to ensure `buildStart` hook is called.
   if (server.httpServer) {
     await listen(server, events, isRestart)
 
@@ -355,13 +357,13 @@ async function prepareDevApp(context: DevContext) {
 
 // Some "saus/client" exports depend on project config.
 function setupClientInjections(context: DevContext) {
-  const modulePath = path.resolve(__dirname, '../client/baseUrl.cjs')
+  const modulePath = path.resolve(__dirname, '../../client/baseUrl.cjs')
   context.liveModulePaths.add(modulePath)
   context.liveModulePaths.add(
     // This module re-exports us, so it's also live.
     path.resolve(modulePath, '../index.cjs')
   )
-  context.pageSetupHooks.push(() => {
+  const injectConfigBasedExports = () => {
     const { config } = context
     injectNodeModule(modulePath, {
       BASE_URL: config.base,
@@ -370,6 +372,10 @@ function setupClientInjections(context: DevContext) {
         return prependBase(uri, base)
       },
     })
+  }
+  injectConfigBasedExports()
+  context.pageSetupHooks.push(() => {
+    injectConfigBasedExports()
     return context.hotReload(modulePath)
   })
 }

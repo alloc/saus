@@ -13,6 +13,7 @@ import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { getRequireFunctions } from '../core/getRequireFunctions'
 import { getSausPlugins } from '../core/getSausPlugins'
 import { internalRedirects, ssrRedirects } from './moduleRedirects'
 import { preBundleSsrRuntime } from './runtimeBundle'
@@ -138,6 +139,7 @@ export async function loadBundleContext<
 
   context.pluginContainer = await createPluginContainer(config)
   Object.assign(context, getViteFunctions(context.pluginContainer))
+  Object.assign(context, getRequireFunctions(context as BuildContext))
 
   context.loadRoutes = () => {
     const loading = (async () => {

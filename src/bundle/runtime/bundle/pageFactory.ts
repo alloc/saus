@@ -1,5 +1,6 @@
 import { App } from '@/app/types'
 import { globalCache } from '@/runtime/cache'
+import { getLayoutEntry } from '@/runtime/getLayoutEntry'
 import { renderPageScript } from '@/runtime/renderPageScript'
 import { prependBase } from '@/utils/base'
 import { getPageFilename } from '@/utils/getPageFilename'
@@ -10,10 +11,8 @@ import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
 import { applyHtmlProcessors } from '../core/api'
 import clientEntries from './clientEntries'
-import config from './config'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
-import { getModuleUrl } from './getModuleUrl'
 import { PageBundle } from './types'
 
 export const createPageFactory: App.Plugin = app => {
@@ -103,42 +102,38 @@ export const createPageFactory: App.Plugin = app => {
         })
       }
 
-      // The hydrating module is inlined.
-      // const hydrateModule = clientModules[clientModules[hydrateImport]]
-      // hydrateModule.imports?.forEach(addModule)
+      if (route !== page.route) {
+        debugger
+        route = page.route
+      }
 
-      const pageStateId = filename + '.js'
-      const routeClientId =
-        clientEntries[page.route.layoutEntry!][page.route.moduleId!]
-
-      // Hydrate the page. The route module is imported dynamically to ensure
-      // it's executed *after* the page state module is.
-      bodyTags.push({
-        tag: 'script',
-        attrs: { type: 'module' },
-        children: renderPageScript({
-          pageStateId: config.base + pageStateId,
-          sausClientId: config.base + config.clientCacheId,
-          routeClientId: prependBase(routeClientId, config.base),
-        }),
-      })
+      let pageStateId: string | undefined
+      let routeClientId: string | undefined
+      if (route.moduleId) {
+        const routeLayoutId = getLayoutEntry(route, config.defaultLayout.id)
+        routeClientId = clientEntries[routeLayoutId]?.[route.moduleId!]
+        if (routeClientId) {
+          pageStateId = filename + '.js'
+          bodyTags.push({
+            tag: 'script',
+            attrs: { type: 'module' },
+            children: renderPageScript({
+              pageStateId: config.base + pageStateId,
+              sausClientId: config.base + config.clientCacheId,
+              routeClientId: config.base + routeClientId,
+            }),
+          })
+        }
+      }
 
       let html = page.html
-
-      if (config.stripLinkTags)
-        page.head.stylesheet
-          .concat(page.head.prefetch, ...Object.values(page.head.preload))
-          .sort((a, b) => b.start - a.start)
-          .forEach(tag => {
-            html = html.slice(0, tag.start) + html.slice(tag.end)
-          })
-
       if (bodyTags.length) {
         html = injectToBody(html, bodyTags)
       }
 
       let postHtmlProcessors = context.htmlProcessors?.post || []
       if (isDebug) {
+        debugger // Might be able to remove this code block.
         postHtmlProcessors = [
           ...postHtmlProcessors,
           // SSR modules are unaware of the `isDebug` value, so they never use
@@ -157,30 +152,30 @@ export const createPageFactory: App.Plugin = app => {
       ).then(async html => {
         const [styleUrls, assetUrls] = generateAssetUrls(assets)
 
-        if (page && entryModule) {
-          const existingLinks = new Set(
-            page.head.stylesheet
-              .concat(page.head.prefetch, ...Object.values(page.head.preload))
-              .map(tag => tag.value)
-          )
+        const existingLinks = new Set(
+          page.head.stylesheet
+            .concat(page.head.prefetch, ...Object.values(page.head.preload))
+            .map(tag => tag.value)
+        )
 
-          for (const styleUrl of styleUrls) {
-            if (!existingLinks.has(styleUrl)) {
-              page.head.stylesheet.push({
-                value: styleUrl,
-                start: -1,
-                end: -1,
-              })
-            }
+        for (const styleUrl of styleUrls) {
+          if (!existingLinks.has(styleUrl)) {
+            page.head.stylesheet.push({
+              value: styleUrl,
+              start: -1,
+              end: -1,
+            })
           }
-          for (const assetUrl of assetUrls) {
-            if (!existingLinks.has(assetUrl)) {
-              page.head.prefetch.push({ value: assetUrl, start: -1, end: -1 })
-            }
+        }
+        for (const assetUrl of assetUrls) {
+          if (!existingLinks.has(assetUrl)) {
+            page.head.prefetch.push({ value: assetUrl, start: -1, end: -1 })
           }
+        }
 
-          // The page's state module is rendered after HTML post processors
-          // run to ensure all <link> tags are included.
+        // The page's state module is rendered after HTML post processors
+        // run to ensure all <link> tags are included.
+        if (pageStateId) {
           files.push({
             id: pageStateId,
             data: Buffer.from(renderPageState(page)),
@@ -188,27 +183,21 @@ export const createPageFactory: App.Plugin = app => {
           })
         }
 
-        if (!config.stripLinkTags) {
-          const headTags: HtmlTagDescriptor[] = []
+        const headTags: HtmlTagDescriptor[] = []
 
-          getTagsForStyles(styleUrls, headTags)
-          getTagsForAssets(assetUrls, headTags)
+        getTagsForStyles(styleUrls, headTags)
+        getTagsForAssets(assetUrls, headTags)
 
-          if (headTags.length) {
-            html = injectToHead(html, headTags, true)
-            headTags.length = 0
-          }
+        // Prepend stylesheet + prefetch tags
+        if (headTags.length) {
+          html = injectToHead(html, headTags, true)
+          headTags.length = 0
+        }
 
-          const moduleUrls = !config.delayModulePreload
-            ? Array.from(modules, getModuleUrl)
-            : entryModule
-            ? [getModuleUrl(pageStateId)]
-            : null
-
-          if (moduleUrls) {
-            getPreloadTagsForModules(moduleUrls, headTags)
-            html = injectToHead(html, headTags)
-          }
+        // Append modulepreload tag if the page is hydrated
+        if (pageStateId) {
+          getPreloadTagsForModules([config.base + pageStateId], headTags)
+          html = injectToHead(html, headTags)
         }
 
         const finishedPage: PageBundle = {

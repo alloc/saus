@@ -1,4 +1,3 @@
-import { getRequireFunctions } from '@/getRequireFunctions'
 import { getGitRepoByName } from '@/git'
 import { noop } from '@/utils/noop'
 import { vite } from '@/vite'
@@ -109,9 +108,6 @@ export async function loadDeployContext(
   // This affects `saus secrets add` for example, so unnecessary
   // calls are avoided.
   context.addDeployAction = () => new Promise(noop)
-
-  context.moduleMap = {}
-  Object.assign(context, getRequireFunctions(context))
 
   injectDeployContext(context)
   return context

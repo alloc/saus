@@ -54,7 +54,7 @@ export async function loadConfigHooks(
   })
 
   const importers = await Promise.all(
-    [...context.layoutEntries, context.defaultLayoutId].map(async url => {
+    [...context.layoutEntries, context.defaultLayout.id].map(async url => {
       const resolved = await context.resolveId(url)
       if (!resolved) {
         throw Error(`Failed to resolve "${url}"`)

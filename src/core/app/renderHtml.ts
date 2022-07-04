@@ -3,7 +3,7 @@ import { RenderRequest } from '../renderer'
 import { RETURN } from '../tokens'
 
 export async function renderHtml(
-  layout: RouteLayout<any, any, string>,
+  layout: RouteLayout<any, any, any, string>,
   request: RenderRequest,
   serverProps?: Record<string, any>
 ): Promise<string> {

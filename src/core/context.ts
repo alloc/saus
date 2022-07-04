@@ -27,6 +27,8 @@ import {
 } from './vite'
 import { ViteFunctions } from './vite/functions'
 import { PluginContainer } from './vite/pluginContainer'
+import { RequireAsyncState } from './vm/asyncRequire'
+import { RequireAsync } from './vm/types'
 
 export type SausCommand = SausContext['command']
 export type SausContext = BuildContext | DeployContext | DevContext
@@ -38,18 +40,37 @@ export interface BaseContext
   extends RoutesModule,
     HtmlContext,
     ViteFunctions,
+    Required<RequireAsyncState>,
     Partial<DevState>,
     Partial<DevMethods> {
+  /** The URL prefix for all pages */
+  basePath: string
+  /** Clear any matching pages (loading or loaded) */
+  clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   command: SausCommand
-  root: string
-  plugins: readonly SausPlugin[]
-  logger: vite.Logger
+  /** The cache for compiled SSR modules */
+  compileCache: CompileCache
   config: ResolvedConfig
-  configPath: string | undefined
   configHooks?: ConfigHookRef[]
-  userConfig: vite.UserConfig
+  configPath: string | undefined
+  /** Path to the default layout */
+  defaultLayout: { id: string; hydrated?: boolean }
+  /** The `saus.defaultPath` option from Vite config */
+  defaultPath: string
+  /** Visit every cached page. Loading pages are waited for. */
+  forCachedPages: (
+    onPage: (pagePath: string, pageResult: RenderPageResult) => void
+  ) => Promise<void>
+  /** Load a page if not cached */
+  getCachedPage: typeof getCachedState
+  logger: vite.Logger
   pluginContainer: PluginContainer
+  plugins: readonly SausPlugin[]
   publicDir: PublicDirOptions | null
+  /**
+   * Like `ssrRequire` but for Node.js modules.
+   */
+  require: RequireAsync
   /**
    * Use this instead of `this.config` when an extra Vite build is needed,
    * or else you risk corrupting the Vite plugin state.
@@ -59,28 +80,14 @@ export interface BaseContext
     configHooks?: ConfigHookRef[],
     inlineConfig?: vite.UserConfig
   ) => Promise<ResolvedConfig>
-  /** The cache for compiled SSR modules */
-  compileCache: CompileCache
-  /** The URL prefix for all pages */
-  basePath: string
-  /** The `saus.defaultPath` option from Vite config */
-  defaultPath: string
-  /** Path to the routes module */
-  routesPath: string
+  root: string
   /** Lazy generator of route clients */
   routeClients: RouteClients
-  /** Path to the default layout */
-  defaultLayoutId: string
+  /** Path to the routes module */
+  routesPath: string
   /** Track which files are responsible for state modules */
   stateModulesByFile: Record<string, string[]>
-  /** Load a page if not cached */
-  getCachedPage: typeof getCachedState
-  /** Visit every cached page. Loading pages are waited for. */
-  forCachedPages: (
-    onPage: (pagePath: string, pageResult: RenderPageResult) => void
-  ) => Promise<void>
-  /** Clear any matching pages (loading or loaded) */
-  clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
+  userConfig: vite.UserConfig
 }
 
 export type { DevContext, BuildContext, BundleContext, DeployContext }
@@ -119,34 +126,45 @@ function createContext(
   }
 
   return {
+    basePath: config.base,
+    clearCachedPages: filter => clearCachedState(filter, pageCache),
     command,
-    root: config.root,
-    plugins: [],
-    pluginContainer: null!,
-    publicDir: null,
-    logger: config.logger,
+    compileCache: new CompileCache('node_modules/.saus', config.root),
     config,
     configPath: config.configFile,
-    userConfig: config.inlineConfig,
-    resolveConfig,
-    compileCache: new CompileCache('node_modules/.saus', config.root),
-    basePath: config.base,
+    defaultLayout: { id: config.saus.defaultLayoutId! },
     defaultPath: config.saus.defaultPath!,
-    defaultLayoutId: config.saus.defaultLayoutId!,
-    layoutEntries: new Set(),
-    routesPath: config.saus.routes,
-    routes: [],
-    routeClients: null!,
-    runtimeHooks: [],
     defaultState: [],
-    stateModulesByFile: {},
-    getCachedPage: withCache(pageCache),
+    externalExports: new Map(),
     forCachedPages,
-    clearCachedPages: filter => clearCachedState(filter, pageCache),
+    getCachedPage: withCache(pageCache),
+    layoutEntries: new Set(),
+    linkedModules: {},
+    logger: config.logger,
+    moduleMap: {},
+    pluginContainer: null!,
+    plugins: [],
+    publicDir: null,
+    require: null!,
+    resolveConfig,
+    root: config.root,
+    routeClients: null!,
+    routes: [],
+    routesPath: config.saus.routes,
+    runtimeHooks: [],
     ssrRequire: null!,
+    stateModulesByFile: {},
+    userConfig: config.inlineConfig,
   }
 }
 
+/**
+ * The following context properties must be initialized manually:
+ *   - `pluginContainer`
+ *   - `routeClients`
+ *   - `require`
+ *   - `ssrRequire`
+ */
 export async function loadContext<T extends Context>(
   command: SausCommand,
   inlineConfig?: vite.InlineConfig,
@@ -283,6 +301,11 @@ function getConfigResolver(
       viteCommand,
       defaultMode
     )) as ResolvedConfig
+
+    // Since `resolveConfig` sets NODE_ENV for some reason,
+    // we need to set it here to avoid SSR issues.
+    process.env.NODE_ENV =
+      config.mode == 'production' ? 'production' : undefined
 
     // @ts-ignore
     config.configFile = loadResult.path

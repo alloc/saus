@@ -125,22 +125,6 @@ export interface SausConfig {
    */
   stateModuleBase?: string
   /**
-   * Any `<link>` tags produced by renderers are stripped in favor of injecting
-   * them through the page's state module via the `applyHead` client API. This
-   * can drastically reduce the elapsed time before `<script>` tags are executed.
-   * Always measure performance with and without this option, to see if you
-   * actually need it.
-   * @experimental
-   */
-  stripLinkTags?: boolean
-  /**
-   * Improve the TTFP (time to first paint) of each page by injecting `modulepreload`
-   * tags after the first paint. The default behavior includes these tags in the
-   * pre-rendered HTML.
-   * @experimental
-   */
-  delayModulePreload?: boolean
-  /**
    * Assume this page path when using the default route in build mode
    * and SSR mode.
    * @default "/404"

@@ -12,7 +12,7 @@ import { Promisable } from 'type-fest'
 import { injectRoutesMap } from '../core/injectRoutesMap'
 import { DevContext } from './context'
 
-const clientDir = path.resolve(__dirname, '../client') + '/'
+const clientDir = path.resolve(__dirname, '../../client') + '/'
 
 export interface HotReloadFn {
   (file: string): Promise<void>
@@ -225,9 +225,9 @@ export function createHotReload(
       scheduleReload()
       return getPendingReload()
     }
-    // In the event of a syntax error, these modules won't exist in the module map,
-    // but they still need to be reloaded on file change.
-    if (file == context.renderPath || file == context.routesPath) {
+    // In the event of a syntax error, the routes module won't exist in the
+    // module map, but it still needs to be reloaded on file change.
+    if (file == context.routesPath) {
       dirtyFiles.add(file)
       scheduleReload()
       return getPendingReload()

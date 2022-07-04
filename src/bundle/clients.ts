@@ -60,14 +60,7 @@ export async function compileClients(
   const clientRuntimeEntry = path.join(clientDir, 'index.ts')
   entryPaths.push('/@fs/' + clientRuntimeEntry)
 
-  // Vite replaces `process.env.NODE_ENV` in client modules with the value
-  // at compile time (strangely), so we need to reset it here.
-  const isProduction = config.mode == 'production'
-  if (isProduction) {
-    process.env.NODE_ENV = undefined
-  }
-
-  let sourceMaps = userConfig.build?.sourcemap ?? (!isProduction && 'inline')
+  let sourceMaps = userConfig.build?.sourcemap
   if (sourceMaps === true || sourceMaps === 'hidden') {
     sourceMaps = false
     context.logger.warn(
@@ -75,6 +68,8 @@ export async function compileClients(
         JSON.stringify(sourceMaps) +
         '` is not supported for SSR bundles; use "inline" instead.'
     )
+  } else if (config.mode !== 'production') {
+    sourceMaps ??= 'inline'
   }
 
   const { base, minify } = runtimeConfig
@@ -103,8 +98,9 @@ export async function compileClients(
       modules,
       moduleRedirection(clientRedirects),
       routesPlugin(clientRouteMap)(),
-      clientLayoutPlugin(),
       rewriteHttpImports(context.logger, true),
+      // ssrLayoutPlugin(),
+      clientLayoutPlugin(),
       clientContextPlugin(),
       clientStatePlugin(),
     ],

@@ -27,11 +27,13 @@ export interface RouteClient {
 
 export const clientPreloadsMarker = '__CLIENT_PRELOADS__'
 
-export function renderRouteClients(context: {
+type Context = {
   config: ResolvedConfig
-  defaultLayoutId: string
+  defaultLayout: { id: string; hydrated?: boolean }
   ssrRequire: RequireAsync
-}): RouteClients {
+}
+
+export function renderRouteClients(context: Context): RouteClients {
   const clientsById: Record<string, RouteClient> = {}
   const clientsByRoute = new Map<Route, RouteClient>()
   const routesByClientId: Record<string, Route[]> = {}
@@ -45,12 +47,15 @@ export function renderRouteClients(context: {
     if (!layout.hydrator) {
       return null
     }
+    const { config, defaultLayout } = context
+    if (layoutModuleId == defaultLayout.id) {
+      defaultLayout.hydrated = true
+    }
     return renderRouteClient({
       routeModuleId,
       layoutModuleId,
       hydratorId: layout.hydrator,
-      preExport:
-        context.config.command == 'build' ? clientPreloadsMarker + '\n' : '',
+      preExport: config.command == 'build' ? clientPreloadsMarker + '\n' : '',
     })
   }
 
@@ -62,7 +67,7 @@ export function renderRouteClients(context: {
     },
     addRoute(route) {
       if (route.moduleId) {
-        const layoutEntry = route.layoutEntry || context.defaultLayoutId
+        const layoutEntry = route.layoutEntry || context.defaultLayout.id
         const clientHash = md5Hex([layoutEntry, route.moduleId]).slice(0, 8)
         const clientFile = 'route.client.' + clientHash + '.js'
         const clientId = '\0' + clientFile

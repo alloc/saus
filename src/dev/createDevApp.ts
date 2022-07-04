@@ -1,16 +1,16 @@
-import { cachePages \} from '@/app/cachePages'
-import { createApp \} from '@/app/createApp'
-import { renderErrorFallback \} from '@/app/errorFallback'
-import { throttleRender \} from '@/app/throttleRender'
-import { App, RenderPageOptions \} from '@/app/types'
-import { DevContext \} from '@/context'
-import { Route, RuntimeConfig \} from '@/core'
-import { globalCachePath \} from '@/paths'
-import { callPlugins \} from '@/utils/callPlugins'
-import { throttle \} from '@/utils/throttle'
-import { clearExports \} from '@/vm/moduleMap'
+import { cachePages } from '@/app/cachePages'
+import { createApp } from '@/app/createApp'
+import { renderErrorFallback } from '@/app/errorFallback'
+import { throttleRender } from '@/app/throttleRender'
+import { App, RenderPageOptions } from '@/app/types'
+import { DevContext } from '@/context'
+import { Route, RuntimeConfig } from '@/core'
+import { globalCachePath } from '@/paths'
+import { callPlugins } from '@/utils/callPlugins'
+import { throttle } from '@/utils/throttle'
+import { clearExports } from '@/vm/moduleMap'
 import os from 'os'
-import { createHotReload \} from './hotReload'
+import { createHotReload } from './hotReload'
 
 export async function createDevApp(
   context: DevContext,
@@ -20,16 +20,17 @@ export async function createDevApp(
   const runtimeConfig: RuntimeConfig = {
     assetsDir: viteConfig.build.assetsDir,
     base: context.basePath,
-    command: 'dev',
-    defaultLayoutId: context.defaultLayoutId,
-    defaultPath: context.defaultPath,
+    clientCacheId: '@fs' + globalCachePath,
     clientHelpersId: '@id/saus/src/client/helpers.ts',
+    clientRuntimeId: '@id/saus/client',
+    command: 'dev',
+    defaultLayout: context.defaultLayout,
+    defaultPath: context.defaultPath,
     htmlTimeout: viteConfig.saus.htmlTimeout,
     minify: false,
     mode: viteConfig.mode,
     publicDir: viteConfig.publicDir,
     ssrRoutesId: '/@fs' + context.routesPath,
-    clientCacheId: '/@fs' + globalCachePath,
     stateModuleBase: viteConfig.saus.stateModuleBase!,
   }
 
@@ -123,7 +124,7 @@ function isolatePages(context: DevContext): App.Plugin {
     if (route.moduleId) {
       routeModuleIds.add(route.moduleId)
     }
-    layoutModuleIds.add(route.layoutEntry || context.defaultLayoutId)
+    layoutModuleIds.add(route.layoutEntry || context.defaultLayout.id)
   }
 
   context.routes.forEach(onRoute)

@@ -45,16 +45,15 @@ export function routeClientsPlugin(): Plugin {
     },
     transformIndexHtml: {
       enforce: 'pre',
-      async transform(_, { filename, path }) {
+      async transform(_, { filename, path: pagePath }) {
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
-          filename = getPageFilename(path.replace(/\?.*$/, ''))
+          filename = getPageFilename(pagePath.replace(/\?.*$/, ''))
         }
 
         type CachedPage = [RenderedPage, any]
 
-        const pagePath = '/' + filename.replace(/(index)?\.html$/, '')
         const [page, error] =
           (await context.getCachedPage<CachedPage>(pagePath)) || []
 
@@ -85,13 +84,11 @@ export function routeClientsPlugin(): Plugin {
             .then(mod => mod && collectCss(mod, server, importedCss))
         }
 
-        const routeModuleId = page.route.moduleId
-        if (routeModuleId) {
-          await findImportedCss(routeModuleId)
-        }
+        const routeModuleId = page.route.moduleId!
+        await findImportedCss(routeModuleId)
 
         const routeClient = routeClients.addRoute(page.route)
-        if (routeClient && routeModuleId) {
+        if (routeClient) {
           // Whether or not the layout is hydrated, we still
           // need to preload any imported stylesheets.
           await findImportedCss(routeClient.layoutEntry)
@@ -106,7 +103,7 @@ export function routeClientsPlugin(): Plugin {
               children: renderPageScript({
                 pageStateId,
                 sausClientId,
-                routeClientId: routeClient.url,
+                routeClientId: prependBase(routeClient.url, base),
                 catchHandler:
                   config.mode == 'development'
                     ? 'Saus.renderErrorPage'

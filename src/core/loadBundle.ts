@@ -131,12 +131,7 @@ export async function loadBundle({
 
   const runtimeConfig: Partial<MutableRuntimeConfig> | undefined = cached && {
     ...pick(context.config.build, ['assetsDir']),
-    ...pick(context.config.saus, [
-      'delayModulePreload',
-      'htmlTimeout',
-      'renderConcurrency',
-      'stripLinkTags',
-    ]),
+    ...pick(context.config.saus, ['htmlTimeout', 'renderConcurrency']),
     ...(typeof runtimeUserConfig == 'function'
       ? runtimeUserConfig(context)
       : runtimeUserConfig),

@@ -1,7 +1,6 @@
 import { Headers, normalizeHeaders } from '@/http'
+import { getModuleUrl } from '@/utils/getModuleUrl'
 import QuickLRU, { Options } from 'quick-lru'
-import { getModuleUrl } from '../getModuleUrl'
-import type { ClientModule } from '../types'
 
 type BoundHeadersFn = () => Headers | null | undefined
 type HeadersParam =

@@ -6,10 +6,7 @@ import { createAsyncRequire } from './vm/asyncRequire'
 import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 import { ResolveIdHook } from './vm/types'
 
-export function getRequireFunctions(
-  context: SausContext,
-  moduleMap = context.moduleMap || {}
-) {
+export function getRequireFunctions(context: SausContext) {
   const {
     root,
     config,
@@ -17,6 +14,7 @@ export function getRequireFunctions(
     externalExports,
     linkedModules,
     liveModulePaths,
+    moduleMap,
     watcher,
   } = context
 
@@ -31,7 +29,10 @@ export function getRequireFunctions(
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
 
   const isLiveModule =
-    liveModulePaths && ((id: string) => liveModulePaths.has(id))
+    liveModulePaths &&
+    ((id: string) => {
+      return liveModulePaths.has(id)
+    })
 
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')

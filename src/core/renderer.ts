@@ -8,6 +8,7 @@ import { AnyToObject } from './utils/types'
  */
 export interface RenderRequest<
   Props extends object = any,
+  Module extends object = any,
   Params extends object = any
 > {
   /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
@@ -17,7 +18,7 @@ export interface RenderRequest<
   /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
   query?: string
   /** The entry module imported by the route */
-  module: RouteModule
+  module: AnyToObject<Module, RouteModule>
   /** Page props provided by the route */
   props: CommonClientProps & AnyToObject<Props>
   /** Named strings extracted with a route pattern */

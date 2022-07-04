@@ -87,7 +87,8 @@ export function createRenderPageFn(
       })
     }
 
-    if (page.html) {
+    if (html) {
+      page.html = html
       page.head = parseHead(page.html)
     }
 
@@ -101,7 +102,7 @@ export function createRenderPageFn(
     if (typeof route.layout == 'function') {
       layoutModule = await route.layout()
     } else {
-      const layoutEntry = route.layoutEntry || config.defaultLayoutId
+      const layoutEntry = route.layoutEntry || config.defaultLayout.id
       layoutModule = await ssrImport(layoutEntry)
     }
     return unwrapDefault<RouteLayout>(layoutModule)

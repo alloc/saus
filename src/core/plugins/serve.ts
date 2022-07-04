@@ -1,4 +1,5 @@
-import { ServerResponse } from 'http'
+import { stripHtmlSuffix } from '@/utils/stripHtmlSuffix'
+import { IncomingMessage, ServerResponse } from 'http'
 import os from 'os'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
@@ -9,6 +10,19 @@ import { makeRequestUrl } from '../makeRequest'
 import { parseUrl } from '../node/url'
 import { writeResponse } from '../node/writeResponse'
 import { streamToBuffer } from '../utils/streamToBuffer'
+import { vite } from '../vite'
+
+/**
+ * The route functions are resolved before Vite middleware runs,
+ * in case Saus routes want to override default Vite behavior.
+ * Those route functions are cached here so the `processRequest`
+ * function can easily access them.
+ */
+const functionsByRequest = new WeakMap<IncomingMessage, ResolvedFunctions>()
+type ResolvedFunctions = {
+  url: Endpoint.RequestUrl
+  functions: readonly Endpoint.Function[]
+}
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
   // The server starts before Saus is ready, so we stall
@@ -19,6 +33,29 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
 
   let context: DevContext
   let fileCache: Record<string, RenderedFile> = {}
+
+  let serveApp: vite.Connect.NextHandleFunction
+  serveApp = (req, res, next) =>
+    functionsByRequest.has(req) &&
+    processRequest(context, req, res, next).catch(error => {
+      onError(error)
+
+      const negotiate = createNegotiator(req.headers.accept)
+      const [responseType] = negotiate
+        ? negotiate(['text/html', 'application/json'])
+        : []
+
+      if (!responseType) {
+        return writeResponse(res, 500)
+      }
+
+      writeResponse(
+        res,
+        200,
+        { 'content-type': responseType },
+        renderError(error, responseType, context.root)
+      )
+    })
 
   return {
     name: 'saus:serve',
@@ -34,62 +71,60 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
         },
       }
     },
-    configureServer: server => () =>
+    configureServer: server => {
       server.middlewares.use(async (req, res, next) => {
         await init
-
-        let path = req.originalUrl!
-        if (!path.startsWith(context.basePath)) {
+        let url = req.url!
+        if (!url.startsWith(context.basePath)) {
           return process.nextTick(next)
         }
-
-        // Remove URL fragment, but keep querystring
-        path = path.replace(/#[^?]*/, '')
-        // Remove base path
-        path = path.slice(context.basePath.length - 1) || '/'
-
-        if (path in fileCache) {
-          const { data, mime } = fileCache[path]
+        req.url = url = (req.originalUrl = url).slice(
+          context.basePath.length - 1
+        )
+        if (url in fileCache) {
+          const { data, mime } = fileCache[url]
           res.setHeader('Content-Type', mime)
           res.write(typeof data == 'string' ? data : Buffer.from(data.buffer))
           return res.end()
         }
+        const [functions, route] = resolveFunctions(req, context)
+        if (functions.length && route !== context.defaultRoute) {
+          serveApp(req, res, err => {
+            req.url = req.originalUrl
+            next(err)
+          })
+        } else {
+          req.url = req.originalUrl
+          process.nextTick(next)
+        }
+      })
 
-        const url = makeRequestUrl(
-          parseUrl(path),
-          req.method!,
-          req.headers,
-          () => streamToBuffer(req)
-        )
-
-        url.object = req
-
-        await processRequest(context, url, res, next).catch(error => {
-          onError(error)
-
-          const negotiate = createNegotiator(req.headers.accept)
-          const [responseType] = negotiate
-            ? negotiate(['text/html', 'application/json'])
-            : []
-
-          if (!responseType) {
-            return writeResponse(res, 500)
-          }
-
-          writeResponse(
-            res,
-            200,
-            { 'content-type': responseType },
-            renderError(error, responseType, context.root)
-          )
-        })
-      }),
+      return () => {
+        server.middlewares.use(serveApp)
+      }
+    },
   }
+}
+
+function resolveFunctions(_req: IncomingMessage, context: DevContext) {
+  const url = parseUrl(stripHtmlSuffix(_req.url!))
+  const req = makeRequestUrl(url, {
+    object: _req,
+    method: _req.method!,
+    headers: _req.headers,
+    read: () => streamToBuffer(_req),
+  })
+  const [functions, route] = context.app.resolveRoute(req)
+  functionsByRequest.set(_req, {
+    url: req,
+    functions,
+  })
+  return [functions, route] as const
 }
 
 async function processRequest(
   context: DevContext,
-  req: Endpoint.RequestUrl,
+  req: IncomingMessage,
   res: ServerResponse,
   next: () => void
 ): Promise<void> {
@@ -98,12 +133,16 @@ async function processRequest(
     hotReload: { nonce },
   } = context
 
-  const { status, headers, body } = await app.callEndpoints(req)
+  const { url, functions } = functionsByRequest.get(req)!
+  const { status, headers, body } = await app.callEndpoints(url, functions)
 
   // Reprocess the request if modules were changed during.
   if (nonce !== context.hotReload.nonce) {
     return waitForReload(context, () => {
-      return processRequest(context, req, res, next)
+      const [functions] = resolveFunctions(req, context)
+      return functions.length
+        ? processRequest(context, req, res, next)
+        : process.nextTick(next)
     })
   }
 

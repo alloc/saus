@@ -7,19 +7,11 @@ import type {
   RouteConfig,
   RouteLoader,
 } from '@/routes'
-import { getCurrentModule } from '@/runtime/ssrModules'
 import { httpMethods } from '@/utils/httpMethods'
+import { parseLazyImport } from '@/utils/parseLazyImport'
 import { parseRoutePath } from '@/utils/parseRoutePath'
-import { getLayoutEntry } from '../getLayoutEntry'
-
-const importRE = /\b\(["']([^"']+)["']\)/
-const parseDynamicImport = (fn: Function, path: string) => {
-  try {
-    return importRE.exec(fn.toString())![1]
-  } catch (e: any) {
-    throw Error(`Failed to parse "moduleId" for route: "${path}"\n` + e.message)
-  }
-}
+import { getLayoutEntry } from './getLayoutEntry'
+import { getCurrentModule } from './ssrModules'
 
 const routeStack: Route[] = []
 const privateRoute: ParsedRoute = {
@@ -81,7 +73,10 @@ export function route(
   }
 
   if (load) {
-    moduleId = parseDynamicImport(load, path)
+    moduleId = parseLazyImport(load)
+    if (!moduleId) {
+      throw Error(`Failed to parse "moduleId" for route: "${path}"`)
+    }
   } else if (moduleId) {
     const id = moduleId
     const importer = getCurrentModule()

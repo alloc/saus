@@ -1,7 +1,8 @@
-export type ClientEntryUrl = string
+type ClientEntryId = string
+
 export type ClientEntries = {
   [layoutModuleId: string]: {
-    [routeModuleId: string]: ClientEntryUrl
+    [routeModuleId: string]: ClientEntryId
   }
 }
 

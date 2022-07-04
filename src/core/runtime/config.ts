@@ -10,9 +10,8 @@ export interface RuntimeConfig {
   clientRuntimeId: string
   command: 'dev' | 'bundle'
   debugBase?: string
-  defaultLayoutId: string
+  defaultLayout: { id: string; hydrated?: boolean }
   defaultPath: string
-  delayModulePreload?: boolean
   githubRepo?: string
   githubToken?: string
   htmlTimeout?: number
@@ -22,7 +21,6 @@ export interface RuntimeConfig {
   renderConcurrency?: number
   ssrRoutesId: string
   stateModuleBase: string
-  stripLinkTags?: boolean
 }
 
 // These properties are baked into the client modules, and so they

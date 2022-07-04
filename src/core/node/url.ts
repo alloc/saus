@@ -2,7 +2,7 @@ import { URLSearchParams } from 'url'
 import { baseToRegex } from '../utils/base'
 import { joinUrl } from '../utils/joinUrl'
 
-const rawUrlRE = /^(\/[^#?]*)(?:#[^?]*)?(?:\?(.+)?)?$/
+const rawUrlRE = /^(\/[^?]*)(?:\?(.+)?)?$/
 
 export { joinUrl }
 export type { URLSearchParams }
@@ -79,10 +79,9 @@ export function cloneUrl<Url extends ParsedUrl>(
 }
 
 /**
- * Expects a string like `"/foo#bar?baz"`
+ * Expects a string like `"/foo?bar"`
  *
- * The url fragment (aka "hash") is stripped out, and the query string
- * (aka "search") is separated from the pathname.
+ * The query string (aka "search") is separated from the pathname.
  */
 export function parseUrl(url: string) {
   const match = rawUrlRE.exec(url)

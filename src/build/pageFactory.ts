@@ -91,7 +91,7 @@ export function loadPageFactory(bundle: BundleDescriptor) {
   return (pagePath: string): void =>
     void init.then(app => {
       const url = parseUrl(pagePath)
-      const [, route] = app.resolveRoute(makeRequestUrl(url, 'GET'))
+      const [, route] = app.resolveRoute(makeRequestUrl(url))
       if (!route) {
         return
       }

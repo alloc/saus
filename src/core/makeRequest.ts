@@ -1,4 +1,3 @@
-import { Writable } from 'type-fest'
 import { emptyHeaders } from './app/global'
 import type { Endpoint } from './endpoint'
 import type { RequestHeaders } from './http'
@@ -9,25 +8,26 @@ import { defer } from './utils/defer'
 const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)
 const emptyRead = async () => emptyBody
 
+const defaultProps = {
+  method: 'GET',
+  headers: emptyHeaders,
+  read: emptyRead,
+  json: readJson,
+}
+
 /**
  * Attach `method` and `headers` properties to the given URL.
  */
-export function makeRequestUrl<Params extends {}>(
+export const makeRequestUrl = <Params extends {}>(
   url: ParsedUrl<Params>,
-  method: string,
-  headers: Readonly<RequestHeaders> = emptyHeaders,
-  read = emptyRead
-): Endpoint.RequestUrl<Params> {
-  if (isRequestUrl(url)) {
-    return url
-  }
-  const requestUrl = url as Writable<Endpoint.RequestUrl<Params>>
-  requestUrl.method = method
-  requestUrl.headers = headers
-  requestUrl.read = read
-  requestUrl.json = readJson
-  return requestUrl
-}
+  props: {
+    method?: string
+    headers?: Readonly<RequestHeaders>
+    read?: typeof emptyRead
+    object?: any
+  } = {}
+): Endpoint.RequestUrl<Params> =>
+  isRequestUrl(url) ? url : Object.assign(url, defaultProps, props)
 
 async function readJson(this: Endpoint.RequestUrl) {
   const data = await this.read()
@@ -53,7 +53,7 @@ export function makeRequest<Params extends {}>(
   ) as Endpoint.Request<Params>
   request.respondWith = respondWith
   request.promise = respondWithPromise
-  return assignDefaults<any>(request, url.routeParams)
+  return assignDefaults<any, any>(request, url.routeParams)
 }
 
 function respondWithPromise(this: Endpoint.Request) {

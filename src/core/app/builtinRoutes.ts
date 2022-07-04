@@ -52,7 +52,9 @@ export function defineBuiltinRoutes(
         : pagePath
     )
     const [, route] = app.resolveRoute(
-      makeRequestUrl(pageUrl, 'GET', { accept: 'text/html' })
+      makeRequestUrl(pageUrl, {
+        headers: { accept: 'text/html' },
+      })
     )
     if (route) {
       const [page, error] = await renderPage(pageUrl, route, app)
