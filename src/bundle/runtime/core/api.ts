@@ -18,6 +18,3 @@ setRenderModule(context)
 // want to avoid processing that module, since it has heavy
 // dependencies that bog down Rollup.
 export const defineClient = (x: any) => x
-
-// Ignore config hooks in SSR bundle.
-export const addConfigHook = () => {}

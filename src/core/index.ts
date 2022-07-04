@@ -2,7 +2,6 @@ import exec from '@cush/exec'
 
 export * as esbuild from 'esbuild'
 export * from './api'
-export * from './configHooks'
 export * from './defineClient'
 export * from './loadBundle'
 export * from './node/emptyDir'

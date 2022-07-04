@@ -5,7 +5,6 @@ import {
   dataToEsm,
   endent,
   RuntimeConfig,
-  SausContext,
   unwrapBuffer,
 } from '@/core'
 import { debug } from '@/debug'
@@ -33,7 +32,6 @@ import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
 import { BundleConfig, BundleContext } from '../bundle'
-import { loadConfigHooks } from '../core/loadConfigHooks'
 import { compileClients } from './clients'
 import { IsolatedModuleMap } from './isolateRoutes'
 import type { BundleOptions } from './options'
@@ -48,7 +46,6 @@ export async function bundle(
 ): Promise<OutputBundle> {
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
-  context.configHooks = await loadConfigHooks(context as SausContext)
 
   const [githubRepo, githubToken, routeImports] = await Promise.all([
     inferGitHubRepo(context),

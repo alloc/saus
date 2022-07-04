@@ -1,5 +1,4 @@
 import { debug } from '@/debug'
-import { loadConfigHooks } from '@/loadConfigHooks'
 import { loadRoutes } from '@/loadRoutes'
 import { clearCachedState } from '@/runtime/clearCachedState'
 import { prependBase } from '@/utils/base'
@@ -9,7 +8,6 @@ import { CompiledModule, isLinkedModule, LinkedModule } from '@/vm/types'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
-import { injectRoutesMap } from '../core/injectRoutesMap'
 import { DevContext } from './context'
 
 const clientDir = path.resolve(__dirname, '../../client') + '/'
@@ -101,23 +99,7 @@ export function createHotReload(
       try {
         logger.info(yellow('⨠ Reloading routes...'))
         await loadRoutes(context)
-        injectRoutesMap(context)
         logger.info(green('✔︎ Routes are ready!'), { clear: true })
-
-        const oldConfigHooks = context.configHooks || []
-        const newConfigHooks = await loadConfigHooks(context)
-
-        const oldConfigPaths = oldConfigHooks.map(ref => ref.path)
-        const newConfigPaths = newConfigHooks.map(ref => ref.path)
-
-        // Were the imports of any config providers added or removed?
-        const needsRestart =
-          oldConfigPaths.some(file => !newConfigPaths.includes(file)) ||
-          newConfigPaths.some(file => !oldConfigPaths.includes(file))
-
-        if (needsRestart) {
-          return events.emit('restart')
-        }
 
         // Reload the client-side routes map.
         if (handler.clientChange) {

@@ -1,8 +1,7 @@
 import { App } from '@/app/types'
 import { loadContext } from '@/context'
-import { createPluginContainer, Endpoint } from '@/core'
+import { Endpoint } from '@/core'
 import { getRequireFunctions } from '@/getRequireFunctions'
-import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir, runtimeDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
@@ -30,8 +29,6 @@ import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
-import { injectRoutesMap } from '../core/injectRoutesMap'
-import { loadConfigHooks } from '../core/loadConfigHooks'
 import { renderRouteClients } from '../core/routeClients'
 import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
@@ -148,47 +145,14 @@ async function startServer(
   events: DevEventEmitter,
   isRestart?: boolean
 ): Promise<vite.ViteDevServer> {
-  const { resolveConfig, logger } = context
+  const server = await vite.createServer(context.config)
 
-  context.events = events
-  context.liveModulePaths = new Set()
-  context.pageSetupHooks = []
-  context.routeClients = renderRouteClients(context)
-  Object.assign(context, getRequireFunctions(context))
-  setupClientInjections(context)
-
-  // The `loadRoutes` call expects `context.resolveId` to exist,
-  // which depends on a plugin container. Since the Vite dev server
-  // isn't created yet, we'll have to create our own container.
-  let pluginContainer = await createPluginContainer(context.config)
-  context.pluginContainer = pluginContainer
-  Object.assign(context, getViteFunctions(pluginContainer))
-
-  // Plugins may use `buildStart` hook to initialize internal state.
-  await pluginContainer.buildStart({})
-
-  // Force all node_modules to be reloaded
-  context.ssrForceReload = createFullReload()
-  try {
-    await loadRoutes(context)
-    context.configHooks = await loadConfigHooks(context)
-  } catch (e: any) {
-    events.emit('error', e)
-  } finally {
-    context.ssrForceReload = undefined
-  }
-
-  const config = await resolveConfig('serve', context.configHooks)
-  context.config = config
-  context.plugins = await getSausPlugins(context, config)
-  await callPlugins(context.plugins, 'receiveRoutes', context)
-
-  const server = await vite.createServer(config)
   context.server = server
   context.watcher = server.watcher!
   context.pluginContainer = server.pluginContainer as any
   Object.assign(context, getViteFunctions(context.pluginContainer))
-  injectRoutesMap(context)
+
+  const { logger } = context
 
   if (server.httpServer) {
     await listen(server, events, isRestart)
@@ -199,6 +163,24 @@ async function startServer(
       server.bindShortcuts()
       logger.info('')
     }
+  }
+
+  context.events = events
+  context.liveModulePaths = new Set()
+  context.pageSetupHooks = []
+  context.routeClients = renderRouteClients(context)
+  Object.assign(context, getRequireFunctions(context))
+  Object.assign(context, getViteFunctions(server.pluginContainer))
+  setupClientInjections(context)
+
+  // Force all node_modules to be reloaded
+  context.ssrForceReload = createFullReload()
+  try {
+    await loadRoutes(context)
+  } catch (e: any) {
+    events.emit('error', e)
+  } finally {
+    context.ssrForceReload = undefined
   }
 
   // Ensure the Vite config is watched.

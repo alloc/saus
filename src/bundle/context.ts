@@ -1,5 +1,4 @@
 import { BaseContext, loadContext, SausContext } from '@/context'
-import { injectRoutesMap } from '@/injectRoutesMap'
 import { loadRoutes } from '@/loadRoutes'
 import {
   moduleRedirection,
@@ -7,7 +6,12 @@ import {
 } from '@/plugins/moduleRedirection'
 import { assignDefaults } from '@/utils/assignDefaults'
 import { plural } from '@/utils/plural'
-import { SausBundleConfig, vite } from '@/vite'
+import {
+  BundleConfig,
+  BundleConfigDefaults,
+  UserBundleConfig,
+  vite,
+} from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
 import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
@@ -21,25 +25,10 @@ import { preBundleSsrRuntime } from './runtimeBundle'
 type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'clientStore' | 'target'
 
 export interface InlineBundleConfig
-  extends Pick<SausBundleConfig, InheritedKeys> {
+  extends Pick<UserBundleConfig, InheritedKeys> {
   appVersion?: string
   outFile?: string
   write?: boolean
-}
-
-const BundleConfigDefaults = {
-  type: 'script',
-  format: 'cjs',
-  target: 'node14',
-  clientStore: 'inline',
-} as const
-
-/** @internal */
-export interface BundleConfig
-  extends Omit<SausBundleConfig, keyof typeof BundleConfigDefaults>,
-    Required<Pick<SausBundleConfig, keyof typeof BundleConfigDefaults>> {
-  entry: string | null
-  outFile?: string
 }
 
 /** Used by both `saus build` and `saus bundle` commands. */
@@ -145,7 +134,6 @@ export async function loadBundleContext<
     const loading = (async () => {
       const loading = startTask('Loading routes...')
       await loadRoutes(context as BuildContext)
-      injectRoutesMap(context as BuildContext)
 
       const routeCount =
         context.routes.length +
