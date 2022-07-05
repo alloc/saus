@@ -45,8 +45,12 @@ export interface PurgeContext<T extends CompiledModule | LinkedModule> {
     module: CompiledModule,
     dep?: CompiledModule | LinkedModule
   ) => boolean
-  onPurge: (module: T, isAccepted: boolean) => void
+  onPurge: PurgeHandler<T>
 }
+
+export type PurgeHandler<
+  T extends CompiledModule | LinkedModule = CompiledModule | LinkedModule
+> = (module: T, isAccepted: boolean, stopPropagation: () => void) => void
 
 /**
  * Remove the given module from its module map, then invalidate any modules
@@ -60,11 +64,18 @@ export function purgeModule(
   const { touched } = context
   if (!touched.has(module.id)) {
     touched.add(module.id)
+
+    let propagationStopped = false
     const isAccepted = context.accept(module)
-    context.onPurge(module, isAccepted)
-    for (const importer of module.importers) {
-      unloadModuleAndImporters(importer, context, isAccepted, module)
-    }
+    context.onPurge(module, isAccepted, () => {
+      propagationStopped = true
+    })
+
+    if (!propagationStopped)
+      for (const importer of module.importers) {
+        unloadModuleAndImporters(importer, context, isAccepted, module)
+      }
+
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
       moduleMaps.delete(module)
@@ -102,10 +113,17 @@ export function unloadModuleAndImporters(
     if (!isAccepted) {
       isAccepted = !isLinkedModule(module) && context.accept(module, dep)
     }
-    context.onPurge(module, isAccepted)
-    for (const importer of module.importers) {
-      unloadModuleAndImporters(importer, context, isAccepted, module)
-    }
+
+    let propagationStopped = false
+    context.onPurge(module, isAccepted, () => {
+      propagationStopped = true
+    })
+
+    if (!propagationStopped)
+      for (const importer of module.importers) {
+        unloadModuleAndImporters(importer, context, isAccepted, module)
+      }
+
     if (isLinkedModule(module)) {
       const nodeModule = getNodeModule(module.id)
       if (nodeModule && nodeModule.reload !== false) {

@@ -20,7 +20,7 @@ let cachePlugin: CachePlugin | undefined
  * Note that returning a `CacheEntry` with an undefined state is
  * the same as returning an undefined entry.
  */
-export function useCachePlugin(plugin: CachePlugin) {
+export function injectCachePlugin(plugin: CachePlugin) {
   cachePlugin = plugin
 }
 

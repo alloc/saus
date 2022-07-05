@@ -22,7 +22,7 @@ export function clearCachedState(
       }
     }
     for (const key of found) {
-      debug('clearCachedState(%O)', key)
+      console.log('clearCachedState(%O)', key)
     }
   } else {
     let found = false
@@ -32,7 +32,7 @@ export function clearCachedState(
       }
     }
     if (found) {
-      debug('clearCachedState(%O)', filter)
+      console.log('clearCachedState(%O)', filter)
     }
   }
 }

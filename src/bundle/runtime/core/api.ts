@@ -1,5 +1,5 @@
 // This overrides the "saus/core" entry in SSR bundles.
-import { setRenderModule, setRoutesModule } from '@/global'
+import { setRoutesModule } from '@/global'
 import { context } from '../bundle/context'
 import { addRenderers } from '../bundle/render'
 
@@ -12,7 +12,6 @@ export { addRenderers }
 // In SSR bundles, these globals are mutated at the top level
 // immediately, so they need to be defined now.
 setRoutesModule(context)
-setRenderModule(context)
 
 // This is also exported by "saus/src/core/client" but we
 // want to avoid processing that module, since it has heavy

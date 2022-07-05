@@ -8,13 +8,12 @@ import { ResolveIdHook } from './vm/types'
 
 export function getRequireFunctions(context: SausContext) {
   const {
-    root,
     config,
-    compileCache,
     externalExports,
     linkedModules,
     liveModulePaths,
     moduleMap,
+    root,
     watcher,
   } = context
 
@@ -78,8 +77,7 @@ export function getRequireFunctions(context: SausContext) {
           fs.readFileSync(id, 'utf8'),
           id,
           require,
-          compileCache,
-          config.env
+          context
         )
       },
       get shouldReload() {

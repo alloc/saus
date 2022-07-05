@@ -52,6 +52,7 @@ export interface BaseContext
   ) => Promise<void>
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
+  importMeta: Record<string, any>
   logger: vite.Logger
   pluginContainer: PluginContainer
   plugins: readonly SausPlugin[]
@@ -124,6 +125,7 @@ async function createContext(props: {
     externalExports: new Map(),
     forCachedPages,
     getCachedPage: withCache(pageCache),
+    importMeta: config.env,
     layoutEntries: new Set(),
     linkedModules: {},
     logger: config.logger,
@@ -167,16 +169,16 @@ export async function loadContext<T extends Context>(
       ? userConfig.publicDir || null
       : { root: userConfig.publicDir }
 
-  const resolveConfig = async (inlineConfig?: vite.InlineConfig) => {
-    const inServeMode = command == 'serve'
+  const resolveConfig = async (inlineConfig: vite.InlineConfig = {}) => {
+    inlineConfig = vite.mergeConfig(userConfig, inlineConfig)
+    inlineConfig.configFile = false
+    inlineConfig.publicDir = publicDir ? publicDir.root : false
+
+    const configEnv = getConfigEnv(command, inlineConfig.mode)
     const config = (await vite.resolveConfig(
-      {
-        ...userConfig,
-        // Vite expects a string, false, or undefined.
-        publicDir: publicDir ? publicDir.root : false,
-      },
-      inServeMode ? command : 'build',
-      inServeMode ? 'development' : 'production'
+      inlineConfig,
+      configEnv.command,
+      configEnv.mode
     )) as ResolvedConfig
 
     // Since `resolveConfig` sets NODE_ENV for some reason,
@@ -184,15 +186,12 @@ export async function loadContext<T extends Context>(
     process.env.NODE_ENV =
       config.mode == 'production' ? 'production' : undefined
 
-    // @ts-ignore
-    config.configFile = loadResult.path
-
     config.optimizeDeps.entries = [
       ...arrify(config.optimizeDeps.entries),
       // Skip "saus/client" in build mode, so we don't get warnings
       // from trying to resolve imports for modules included in the
       // bundled Saus runtime (see "../bundle/runtimeBundle.ts").
-      ...arrify(inServeMode ? toSausPath('client/index.js') : undefined),
+      ...arrify(command == 'serve' ? toSausPath('client/index.js') : undefined),
     ]
 
     return config

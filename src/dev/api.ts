@@ -2,6 +2,7 @@ import { App } from '@/app/types'
 import { loadContext } from '@/context'
 import { Endpoint } from '@/core'
 import { getRequireFunctions } from '@/getRequireFunctions'
+import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir, runtimeDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
@@ -12,6 +13,7 @@ import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
 import { ssrLayoutPlugin } from '@/plugins/ssrLayout'
+import { toArray } from '@/utils/array'
 import { prependBase } from '@/utils/base'
 import { callPlugins } from '@/utils/callPlugins'
 import { defer } from '@/utils/defer'
@@ -33,6 +35,7 @@ import { renderRouteClients } from '../core/routeClients'
 import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
 import { DevEventEmitter } from './events'
+import { getEntryModules } from './getEntryModules'
 import { createHotReload } from './hotReload'
 
 export interface SausDevServer {
@@ -145,14 +148,46 @@ async function startServer(
   events: DevEventEmitter,
   isRestart?: boolean
 ): Promise<vite.ViteDevServer> {
-  const server = await vite.createServer(context.config)
+  const { config, logger } = context
 
+  const server = await vite.createServer(config)
   context.server = server
   context.watcher = server.watcher!
   context.pluginContainer = server.pluginContainer as any
-  Object.assign(context, getViteFunctions(context.pluginContainer))
+  Object.assign(context, getViteFunctions(server.pluginContainer))
+  Object.assign(context, getRequireFunctions(context))
+  context.events = events
+  context.liveModulePaths = new Set()
+  context.pageSetupHooks = []
+  context.routeClients = renderRouteClients(context)
+  setupClientInjections(context)
 
-  const { logger } = context
+  // We want to load routes before the `runOptimize` call that's made
+  // by Vite internals after `buildStart` hooks have finished.
+  // Why? Because adding route/layout modules to `optimizeDeps.entries`
+  // as soon as possible lets us avoid unnecessary browser reloads.
+  const plugins = config.plugins as vite.Plugin[]
+  plugins.push({
+    name: 'saus:loadRoutes',
+    async buildStart() {
+      // Force all node_modules to be reloaded
+      context.ssrForceReload = createFullReload()
+      try {
+        context.plugins = await getSausPlugins(context)
+        await loadRoutes(context)
+        console.log(context.stateModulesByFile)
+        config.optimizeDeps.entries = toArray(
+          config.optimizeDeps.entries
+        ).concat(await getEntryModules(context))
+
+        console.log(config.optimizeDeps.entries)
+      } catch (e: any) {
+        events.emit('error', e)
+      } finally {
+        context.ssrForceReload = undefined
+      }
+    },
+  })
 
   if (server.httpServer) {
     await listen(server, events, isRestart)
@@ -163,24 +198,6 @@ async function startServer(
       server.bindShortcuts()
       logger.info('')
     }
-  }
-
-  context.events = events
-  context.liveModulePaths = new Set()
-  context.pageSetupHooks = []
-  context.routeClients = renderRouteClients(context)
-  Object.assign(context, getRequireFunctions(context))
-  Object.assign(context, getViteFunctions(server.pluginContainer))
-  setupClientInjections(context)
-
-  // Force all node_modules to be reloaded
-  context.ssrForceReload = createFullReload()
-  try {
-    await loadRoutes(context)
-  } catch (e: any) {
-    events.emit('error', e)
-  } finally {
-    context.ssrForceReload = undefined
   }
 
   // Ensure the Vite config is watched.
@@ -358,7 +375,7 @@ function setupClientInjections(context: DevContext) {
   injectConfigBasedExports()
   context.pageSetupHooks.push(() => {
     injectConfigBasedExports()
-    return context.hotReload(modulePath)
+    return context.hotReload(modulePath, true)
   })
 }
 

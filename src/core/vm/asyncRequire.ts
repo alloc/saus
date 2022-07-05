@@ -165,18 +165,24 @@ export function createAsyncRequire(
    */
   const trackLinkedModule = (
     file: string,
-    importer: string | null | undefined
+    importer: string | null | undefined,
+    getExports: () => any
   ) => {
     let linkedModule = linkedModules[file]
     if (!linkedModule) {
       watchFile(file)
       linkedModule = linkedModules[file] = {
         id: file,
+        exports: null,
         imports: new Set(),
         importers: new Set(),
         [kLinkedModule]: true,
       }
     }
+    Object.defineProperty(linkedModule, 'exports', {
+      get: getExports,
+      configurable: true,
+    })
     if (importer) {
       trackImport(importer, linkedModule)
     }
@@ -202,7 +208,9 @@ export function createAsyncRequire(
             resolve(id, importer)
 
           if (isLinkedModuleId(resolvedId)) {
-            trackLinkedModule(resolvedId, importer)
+            trackLinkedModule(resolvedId, importer, () => {
+              return getNodeModule(resolvedId)?.exports
+            })
           }
 
           return resolvedId
@@ -425,7 +433,7 @@ export function createAsyncRequire(
           trackImport(importer, module, isDynamic, internalPathRE.test(id))
         }
       } else if (resolvedId && isLinkedModuleId(resolvedId)) {
-        trackLinkedModule(resolvedId, importer)
+        trackLinkedModule(resolvedId, importer, () => exports)
       }
     }
 

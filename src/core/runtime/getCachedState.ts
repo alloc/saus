@@ -3,6 +3,8 @@ import { CacheControl, StateOptions, withCache } from './withCache'
 
 type Promisable<T> = T | PromiseLike<T>
 
+console.log('getCachedState(globalCache = %s)', globalCache.id)
+
 /** Load state if missing from the global cache */
 export const getCachedState = /* @__PURE__ */ withCache(globalCache) as {
   <State = any>(

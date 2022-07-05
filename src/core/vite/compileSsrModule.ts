@@ -1,3 +1,4 @@
+import { isLiveModule } from '@/vm/isLiveModule'
 import { SausContext } from '..'
 import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
@@ -5,6 +6,7 @@ import { isPackageRef } from '../utils/isPackageRef'
 import { compileModule } from '../vite/compileModule'
 import {
   compileEsm,
+  EsmCompilerOptions,
   exportsId,
   importAsyncId,
   importMetaId,
@@ -17,11 +19,17 @@ export async function compileSsrModule(
   id: string,
   context: SausContext
 ): Promise<CompiledModule | null> {
-  const { config } = context
+  const { config, liveModulePaths, moduleMap } = context
 
   let module = await compileModule(id, context, {
-    transform: ssrCompileEsm,
     cache: context.compileCache,
+    transform: ssrCompileEsm({
+      forceLazyBinding: (_, id) =>
+        !isPackageRef(id) ||
+        (liveModulePaths &&
+          moduleMap[id] &&
+          isLiveModule(moduleMap[id]!, liveModulePaths)),
+    }),
   })
 
   const importMeta = {
@@ -51,21 +59,23 @@ export async function compileSsrModule(
   }
 }
 
-async function ssrCompileEsm(code: string, id: string) {
-  const esmHelpers = new Set<Function>()
-  const editor = await compileEsm({
-    code,
-    filename: id,
-    esmHelpers,
-    forceLazyBinding: (_, id) => !isPackageRef(id),
-  })
+function ssrCompileEsm(esmOptions: Partial<EsmCompilerOptions>) {
+  return async (code: string, id: string) => {
+    const esmHelpers = new Set<Function>()
+    const editor = await compileEsm({
+      ...esmOptions,
+      code,
+      filename: id,
+      esmHelpers,
+    })
 
-  editor.append(
-    '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
-  )
+    editor.append(
+      '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
+    )
 
-  return {
-    code: editor.toString(),
-    map: editor.generateMap({ hires: true }),
+    return {
+      code: editor.toString(),
+      map: editor.generateMap({ hires: true }),
+    }
   }
 }

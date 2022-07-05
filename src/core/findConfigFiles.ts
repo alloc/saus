@@ -1,4 +1,4 @@
-import { readdirSync } from 'fs'
+import { readdirSync, realpathSync } from 'fs'
 import { join } from 'path'
 
 export function findConfigFiles(root: string) {
@@ -10,7 +10,7 @@ export function findConfigFiles(root: string) {
       files.includes(file)
     )
     if (configFile) {
-      configFiles.push(join(dir, configFile))
+      configFiles.push(realpathSync(join(dir, configFile)))
     }
   }
   for (const name of readDir(nodeModulesDir)) {

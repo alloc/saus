@@ -106,13 +106,7 @@ async function compileRoutesModule(
 
   return registerModuleOnceCompiled(
     context.moduleMap,
-    compileNodeModule(
-      editor.toString(),
-      routesPath,
-      requireAsync,
-      context.compileCache,
-      context.config.env
-    )
+    compileNodeModule(editor.toString(), routesPath, requireAsync, context)
   )
 }
 
@@ -153,7 +147,7 @@ function injectRoutesMap(context: SausContext) {
       // is changed, thereby merging the two reload passes.
       context.watcher.on('change', file => {
         if (file === context.routesPath) {
-          context.hotReload(routesMapPath)
+          context.hotReload(routesMapPath, true)
         }
       })
     }

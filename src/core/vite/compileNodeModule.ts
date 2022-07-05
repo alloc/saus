@@ -13,15 +13,25 @@ import {
   requireAsyncId,
 } from '../vm/compileEsm'
 import { ImporterSet } from '../vm/ImporterSet'
-import { CompiledModule, RequireAsync, Script } from '../vm/types'
+import { isLiveModule } from '../vm/isLiveModule'
+import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
 import { overwriteScript } from './overwriteScript'
 
 export async function compileNodeModule(
   code: string,
   filename: string,
   requireAsync: RequireAsync,
-  compileCache?: CompileCache | null,
-  importMeta?: Record<string, any>
+  {
+    compileCache,
+    importMeta,
+    liveModulePaths,
+    moduleMap,
+  }: {
+    compileCache?: CompileCache | null
+    importMeta?: Record<string, any>
+    liveModulePaths?: Set<string>
+    moduleMap?: ModuleMap
+  } = {}
 ): Promise<CompiledModule> {
   const env = {
     require: Module.createRequire(filename),
@@ -66,7 +76,12 @@ export async function compileNodeModule(
       code: script.code,
       filename,
       esmHelpers,
-      forceLazyBinding: (_, id) => !isPackageRef(id),
+      forceLazyBinding: (_, id) =>
+        !isPackageRef(id) ||
+        (liveModulePaths &&
+          moduleMap &&
+          moduleMap[id] &&
+          isLiveModule(moduleMap[id]!, liveModulePaths)),
     })
 
     const topLevelId = '__compiledModule'

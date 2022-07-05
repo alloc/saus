@@ -18,6 +18,7 @@ export function isLinkedModule(
  */
 export interface LinkedModule {
   id: string
+  exports: any
   imports: Set<LinkedModule>
   importers: Set<CompiledModule | LinkedModule>
   [kLinkedModule]: true
@@ -57,7 +58,7 @@ export type ForceLazyBindingHook = (
   imported: string[],
   source: string,
   importer: string
-) => string[] | boolean
+) => string[] | boolean | undefined
 
 type Promisable<T> = T | Promise<T>
 

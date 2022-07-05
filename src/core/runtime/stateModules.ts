@@ -2,7 +2,7 @@ import { md5Hex } from '../utils/md5-hex'
 import { sortObjects } from '../utils/sortObjects'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
 
-export { useCachePlugin } from './cachePlugin'
+export { injectCachePlugin } from './cachePlugin'
 
 export const stateModulesById = new Map<string, StateModule>()
 

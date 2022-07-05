@@ -21,15 +21,7 @@ export const requireAsyncId = '__requireAsync'
 
 export type CompiledEsm = MagicString & { hoistIndex: number }
 
-export async function compileEsm({
-  code,
-  filename,
-  esmHelpers,
-  keepImportCalls,
-  keepImportMeta,
-  forceLazyBinding,
-  resolveId,
-}: {
+export type EsmCompilerOptions = {
   code: string
   filename: string
   esmHelpers: Set<Function>
@@ -41,7 +33,17 @@ export async function compileEsm({
     importer?: string | null,
     isDynamic?: boolean
   ) => Promise<string>
-}) {
+}
+
+export async function compileEsm({
+  code,
+  filename,
+  esmHelpers,
+  keepImportCalls,
+  keepImportMeta,
+  forceLazyBinding,
+  resolveId,
+}: EsmCompilerOptions) {
   const ast = getBabelProgram(code, filename)
   let editor = new MagicString(code)
 
@@ -225,7 +227,10 @@ function rewriteImport(
   editor: MagicString,
   bindings: BindingMap,
   esmHelpers: Set<Function>,
-  forceLazyBinding: (imported: string[], source: string) => string[] | boolean
+  forceLazyBinding: (
+    imported: string[],
+    source: string
+  ) => string[] | boolean | undefined
 ) {
   const { start, end } = path.node as {
     start: number
@@ -454,7 +459,10 @@ export function generateRequireCalls(
   source: string,
   bindings: BindingMap,
   esmHelpers: Set<Function>,
-  forceLazyBinding: (imported: string[], source: string) => string[] | boolean
+  forceLazyBinding: (
+    imported: string[],
+    source: string
+  ) => string[] | boolean | undefined
 ) {
   const requireCall = awaitRequire(source)
 
@@ -564,7 +572,7 @@ function needsModuleAlias(
 function findLazyBindings(
   source: string,
   specifiers: NodePath[],
-  filter: (imported: string[], source: string) => boolean | string[]
+  filter: (imported: string[], source: string) => boolean | string[] | undefined
 ) {
   const imported: string[] = []
   for (const spec of specifiers) {
@@ -581,7 +589,7 @@ function findLazyBindings(
 
   if (imported.length) {
     const forced = filter(imported, source)
-    return forced == true ? imported : forced == false ? [] : forced
+    return forced == true ? imported : forced || []
   }
   return imported
 }

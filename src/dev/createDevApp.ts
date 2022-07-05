@@ -4,12 +4,13 @@ import { renderErrorFallback } from '@/app/errorFallback'
 import { throttleRender } from '@/app/throttleRender'
 import { App, RenderPageOptions } from '@/app/types'
 import { DevContext } from '@/context'
-import { Route, RuntimeConfig } from '@/core'
+import { RuntimeConfig } from '@/core'
 import { globalCachePath } from '@/paths'
 import { callPlugins } from '@/utils/callPlugins'
 import { throttle } from '@/utils/throttle'
 import { clearExports } from '@/vm/moduleMap'
 import os from 'os'
+import { getEntryModules } from './getEntryModules'
 import { createHotReload } from './hotReload'
 
 export async function createDevApp(
@@ -117,31 +118,10 @@ const createPageEndpoint =
  * stateful modules between each other.
  */
 function isolatePages(context: DevContext): App.Plugin {
-  const routeModuleIds = new Set<string>()
-  const layoutModuleIds = new Set<string>()
-
-  const onRoute = (route: Route) => {
-    if (route.moduleId) {
-      routeModuleIds.add(route.moduleId)
-    }
-    layoutModuleIds.add(route.layoutEntry || context.defaultLayout.id)
-  }
-
-  context.routes.forEach(onRoute)
-  context.defaultRoute && onRoute(context.defaultRoute)
-  context.catchRoute && onRoute(context.catchRoute)
-
   let entryPaths: string[]
 
   const reload: RenderPageOptions['setup'] = async (route, url) => {
-    entryPaths ||= (
-      await Promise.all(
-        [...routeModuleIds, ...layoutModuleIds].map(async moduleId => {
-          const resolved = await context.resolveId(moduleId)
-          return resolved?.id
-        })
-      )
-    ).filter(Boolean) as string[]
+    entryPaths ||= await getEntryModules(context)
 
     // Reset all modules used by every route or layout, because we can't know
     // which modules have side effects and are also used by the route matched
@@ -158,6 +138,7 @@ function isolatePages(context: DevContext): App.Plugin {
     const oldHotReload = context.hotReload
     context.hotReload = createHotReload(context, {
       schedule: throttle(queueMicrotask),
+      ssr: true,
     })
 
     // This hook exists for URL-based module injection, which needs

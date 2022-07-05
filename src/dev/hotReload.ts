@@ -3,7 +3,12 @@ import { loadRoutes } from '@/loadRoutes'
 import { clearCachedState } from '@/runtime/clearCachedState'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
-import { purgeModule, unloadModuleAndImporters } from '@/vm/moduleMap'
+import { isLiveModule } from '@/vm/isLiveModule'
+import {
+  PurgeHandler,
+  purgeModule,
+  unloadModuleAndImporters,
+} from '@/vm/moduleMap'
 import { CompiledModule, isLinkedModule, LinkedModule } from '@/vm/types'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
@@ -13,7 +18,7 @@ import { DevContext } from './context'
 const clientDir = path.resolve(__dirname, '../../client') + '/'
 
 export interface HotReloadFn {
-  (file: string): Promise<void>
+  (file: string, ssr?: boolean): Promise<void>
   get promise(): Promise<void>
   get nonce(): number
 }
@@ -33,18 +38,20 @@ export interface HotReloadHandler {
 export interface HotReloadConfig {
   schedule: (reload: () => void) => void
   start?: (info: HotReloadInfo) => Promisable<HotReloadHandler>
+  ssr?: boolean
 }
 
 export function createHotReload(
   context: DevContext,
   reloadConfig: HotReloadConfig
 ): HotReloadFn {
-  const { server, events, logger } = context
+  const { server, events, liveModulePaths, logger } = context
   const { schedule, start = (): HotReloadHandler => ({}) } = reloadConfig
 
   const dirtyFiles = new Set<string>()
   const dirtyStateModules = new Set<CompiledModule>()
   const dirtyClientModules = new Set<string>()
+  const dirtyLiveModules = new Map<string, Record<string, any>>()
 
   let nonce = 0
   let imminent = false
@@ -75,6 +82,12 @@ export function createHotReload(
       nonce,
       routesChanged,
     })
+
+    for (let [moduleId, liveExports] of dirtyLiveModules) {
+      const exports = await context.ssrRequire(moduleId)
+      replaceLiveExports(liveExports, exports)
+    }
+    dirtyLiveModules.clear()
 
     const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
@@ -119,7 +132,7 @@ export function createHotReload(
     currentReload = undefined
   }
 
-  async function reloadFile(file: string) {
+  async function reloadFile(file: string, ssr = reloadConfig.ssr) {
     const getPendingReload = () => {
       return (pendingReload ||= defer()).promise
     }
@@ -142,6 +155,7 @@ export function createHotReload(
       const stateModules = new Set(
         Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
       )
+
       const acceptModule = (
         module: CompiledModule,
         dep?: CompiledModule | LinkedModule
@@ -158,6 +172,7 @@ export function createHotReload(
         }
         return false
       }
+
       const resetStateModule = (module: CompiledModule) => {
         // Invalidate any cached state when a state module is reset.
         if (stateModules.has(module)) {
@@ -174,31 +189,48 @@ export function createHotReload(
           }
         }
       }
-      if (isLinkedModule(changedModule)) {
-        unloadModuleAndImporters(changedModule, {
-          touched: dirtyFiles,
-          accept: acceptModule,
-          onPurge(module, isAccepted) {
+
+      const clearExports = isLinkedModule(changedModule)
+        ? (module: CompiledModule | LinkedModule) => {
             if (isLinkedModule(module)) {
               context.externalExports.delete(module.id)
             } else {
               resetStateModule(module)
             }
-            if (!isAccepted) {
-              dirtyClientModules.add(module.id)
-            }
-          },
+          }
+        : resetStateModule
+
+      const onPurge: PurgeHandler = (module, isAccepted, stopPropagation) => {
+        // Live modules never have their exports destructured by importers,
+        // so we don't have to reload those importers.
+        if (ssr && isLiveModule(module, liveModulePaths)) {
+          dirtyLiveModules.set(module.id, module.exports)
+          stopPropagation()
+
+          // Live importers must also be reloaded, in case they
+          // have re-exported this module.
+          for (const importer of module.importers)
+            if (isLiveModule(importer, liveModulePaths))
+              queueMicrotask(() => {
+                reloadFile(importer.id, ssr)
+              })
+        }
+        clearExports(module as any)
+        if (!isAccepted && !ssr) {
+          dirtyClientModules.add(module.id)
+        }
+      }
+      if (isLinkedModule(changedModule)) {
+        unloadModuleAndImporters(changedModule, {
+          touched: dirtyFiles,
+          accept: acceptModule,
+          onPurge,
         })
       } else {
         purgeModule(changedModule, {
           touched: dirtyFiles,
           accept: acceptModule,
-          onPurge(module, isAccepted) {
-            resetStateModule(module)
-            if (!isAccepted) {
-              dirtyClientModules.add(module.id)
-            }
-          },
+          onPurge,
         })
       }
       if (skipRoutesPath) {
@@ -236,4 +268,21 @@ export function createHotReload(
     enumerable: true,
   })
   return hotReload
+}
+
+function replaceLiveExports(
+  liveExports: Record<string, any>,
+  exports: Record<string, any>
+) {
+  for (const key in Object.getOwnPropertyDescriptors(liveExports)) {
+    if (!(key in exports)) {
+      delete liveExports[key]
+    }
+  }
+  for (const key in Object.getOwnPropertyDescriptors(exports)) {
+    Object.defineProperty(liveExports, key, {
+      ...Object.getOwnPropertyDescriptor(exports, key),
+      configurable: true,
+    })
+  }
 }

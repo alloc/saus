@@ -69,6 +69,11 @@ export async function loadUserConfig(
     ? vite.mergeConfig(loadResult.config, inlineConfig)
     : inlineConfig || {}
 
+  if (loadResult)
+    Object.assign(userConfig, {
+      configFile: loadResult.path,
+    })
+
   const sausConfig = userConfig.saus
   assertSausConfig(sausConfig)
   assertSausConfig(sausConfig, 'routes')
