@@ -146,6 +146,7 @@ export async function compileEsm({
         imported.source,
         editor,
         importedBindings,
+        hotLinks,
         esmHelpers,
         forceLazy
       )
@@ -342,6 +343,7 @@ function rewriteImport(
   source: string,
   editor: MagicString,
   bindings: BindingMap,
+  hotLinks: Set<string> | undefined,
   esmHelpers: Set<Function>,
   forceLazyBinding: (
     imported: string[],
@@ -356,6 +358,7 @@ function rewriteImport(
     path,
     source,
     bindings,
+    hotLinks,
     esmHelpers,
     forceLazyBinding
   )
@@ -591,6 +594,7 @@ export function generateRequireCalls(
   path: NodePath<t.ImportDeclaration>,
   source: string,
   bindings: BindingMap,
+  hotLinks: Set<string> | undefined,
   esmHelpers: Set<Function>,
   forceLazyBinding: (
     imported: string[],
@@ -673,6 +677,7 @@ export function generateRequireCalls(
       declarators.push(`${alias} = ${moduleAlias}.${imported}`)
     }
   } else if (constBindings.length) {
+    hotLinks?.add(source)
     for (const [alias, imported] of constBindings) {
       declarators.push(alias == imported ? imported : `${imported}: ${alias}`)
     }
@@ -687,6 +692,7 @@ export function generateRequireCalls(
     const argument = moduleAlias || requireCall
     declarators.push(`${defaultAlias} = __importDefault(${argument})`)
     esmHelpers.add(__importDefault)
+    hotLinks?.add(source)
   }
 
   return 'const ' + declarators.join(', ')

@@ -1,6 +1,7 @@
 import endent from 'endent'
 import { afterEach, describe, expect, test } from 'vitest'
 import { compileEsm } from './compileEsm'
+import { ForceLazyBindingHook } from './types'
 
 describe('compileEsm', () => {
   test('import references', async () => {
@@ -183,6 +184,29 @@ describe('compileEsm', () => {
       __exportLet(__exports, \\"b\\", () => __importDefault(_b))
       __exports.c = c;
       "
+    `)
+  })
+  test('forceLazyBinding returns false', async () => {
+    forceLazyBinding = () => false
+    let result = await transform`
+      import Foo from 'foo'
+      import {Bar} from 'bar'
+      export default () => [Foo, Bar]
+    `
+
+    expect(result).toMatchInlineSnapshot(`
+      "const Foo = __importDefault(await __requireAsync(\\"foo\\"));
+      const { Bar } = await __requireAsync(\\"bar\\");
+      __exports.default = () => [Foo, Bar]"
+    `)
+
+    // Since the import bindings are not lazy,
+    // this module is hot-linked to the imported modules.
+    expect(hotLinks).toMatchInlineSnapshot(`
+      Set {
+        "foo",
+        "bar",
+      }
     `)
   })
   test('interleaved import/export', async () => {
@@ -381,7 +405,10 @@ const skippedId = 'skipped'
 const esmHelpers = new Set<Function>()
 const hotLinks = new Set<string>()
 
+let forceLazyBinding: ForceLazyBindingHook | undefined
+
 afterEach(() => {
+  forceLazyBinding = undefined
   esmHelpers.clear()
   hotLinks.clear()
 })
@@ -391,6 +418,7 @@ function edit(code: TemplateStringsArray, ...values: any[]) {
     code: endent(code, ...values),
     filename: 'test.js',
     resolveId: async id => (id === skippedId ? '' : id),
+    forceLazyBinding,
     esmHelpers,
     hotLinks,
   })
