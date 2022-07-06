@@ -1,8 +1,42 @@
 import endent from 'endent'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import { compileEsm } from './compileEsm'
 
 describe('compileEsm', () => {
+  test('import references', async () => {
+    let result = await transform`
+      import foo from 'foo'
+      export { foo }
+      export default () => {
+        foo({ foo })
+      }
+    `
+    expect(result).toMatchInlineSnapshot(`
+      "const _foo = await __requireAsync(\\"foo\\");
+      __exportLet(__exports, \\"foo\\", () => _foo.default);
+      __exports.default = () => {
+        _foo.default({ foo: _foo.default })
+      }"
+    `)
+  })
+  test('preserved imports', async () => {
+    let result = await transform`
+      import {render} from './render'
+      import {defineLayout} from '${skippedId}'
+      export default defineLayout({
+        render,
+      })
+    `
+    expect(result).toMatchInlineSnapshot(
+      `
+      "import {defineLayout} from 'skipped'
+      const _render = await __requireAsync(\\"./render\\");
+      __exports.default = defineLayout({
+        render: _render.render,
+      })"
+    `
+    )
+  })
   test('import default and named', async () => {
     let result = await transform`
       import A, { B } from 'mod'
@@ -34,8 +68,7 @@ describe('compileEsm', () => {
     `
     expect(result).toMatchInlineSnapshot(`
       "const a = 1
-      __exports.a = a;
-      "
+      __exports.a = a;"
     `)
   })
   test('export const multiple', async () => {
@@ -74,8 +107,7 @@ describe('compileEsm', () => {
       "function foo () {}
       __exports.foo = foo;
       class Foo {}
-      __exports.Foo = Foo;
-      "
+      __exports.Foo = Foo;"
     `)
   })
   test('export default function/class', async () => {
@@ -84,8 +116,7 @@ describe('compileEsm', () => {
     `
     expect(result).toMatchInlineSnapshot(`
       "function foo () {}
-      __exports.default = foo;
-      "
+      __exports.default =  foo;"
     `)
     result = await transform`
       export default function () { return 1 }
@@ -105,8 +136,7 @@ describe('compileEsm', () => {
     expect(result).toMatchInlineSnapshot(
       `
       "class Foo { a = 1 }
-      __exports.default = Foo;
-      "
+      __exports.default =  Foo;"
     `
     )
     result = await transform`
@@ -170,13 +200,93 @@ describe('compileEsm', () => {
       })"
     `)
   })
+  describe('exported declaration', () => {
+    test('default object', async () => {
+      let result = await transform`
+        export default {}
+      `
+      expect(result).toMatchInlineSnapshot('"__exports.default = {}"')
+    })
+    test('default anonymous function', async () => {
+      let result = await transform`
+        export default function () {}
+      `
+      expect(result).toMatchInlineSnapshot(
+        '"__exports.default = function () {}"'
+      )
+    })
+    test('default named function', async () => {
+      let result = await transform`
+        export default function test() {}
+      `
+      expect(result).toMatchInlineSnapshot(`
+        "function test() {}
+        __exports.default =  test;"
+      `)
+    })
+    test('default anonymous class', async () => {
+      let result = await transform`
+        export default class {}
+      `
+      expect(result).toMatchInlineSnapshot('"__exports.default = class {}"')
+    })
+    test('default named class', async () => {
+      let result = await transform`
+        export default class Foo {}
+      `
+      expect(result).toMatchInlineSnapshot(`
+        "class Foo {}
+        __exports.default =  Foo;"
+      `)
+    })
+    test('const class', async () => {
+      let result = await transform`
+        export class Foo {}
+      `
+      expect(result).toMatchInlineSnapshot(`
+        "class Foo {}
+        __exports.Foo = Foo;"
+      `)
+    })
+    test('const function', async () => {
+      let result = await transform`
+        export function test() {}
+      `
+      expect(result).toMatchInlineSnapshot(`
+        "function test() {}
+        __exports.test = test;
+        "
+      `)
+    })
+    test('const binding', async () => {
+      let result = await transform`
+        export const test = 1
+      `
+      expect(result).toMatchInlineSnapshot(`
+        "const test = 1
+        __exports.test = test;
+        "
+      `)
+    })
+  })
+})
+
+const skippedId = 'skipped'
+const esmHelpers = new Set<Function>()
+const hotLinks = new Set<string>()
+
+afterEach(() => {
+  esmHelpers.clear()
+  hotLinks.clear()
 })
 
 function edit(code: TemplateStringsArray, ...values: any[]) {
   return compileEsm({
     code: endent(code, ...values),
     filename: 'test.js',
-    esmHelpers: new Set(),
+    resolveId: async id => (id === skippedId ? '' : id),
+    esmHelpers,
+    hotLinks,
   })
 }
 

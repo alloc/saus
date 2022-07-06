@@ -24,6 +24,9 @@ export type CompiledEsm = MagicString & { hoistIndex: number }
 export type EsmCompilerOptions = {
   code: string
   filename: string
+  /** Mutated by `compileEsm` when an imported module directly affects the exported values of this module. */
+  hotLinks: Set<string>
+  /** Mutated by `compileEsm` when a helper function is required. */
   esmHelpers: Set<Function>
   keepImportCalls?: boolean
   keepImportMeta?: boolean
@@ -90,44 +93,71 @@ export async function compileEsm({
     : () => true
 
   let hoistIndex = 0
-  let hasPreservedImports = false
+  const preservedImports = new Set<NodePath>()
+  const resolvedImports = new Map<NodePath, ImportDescription>()
 
   // 1. Remove all import and export statements
   for (const path of ast.get('body')) {
     if (path.isImportDeclaration() || path.isExportDeclaration()) {
-      const { start, end } = path.node as { start: number; end: number }
-      editor.remove(start, Math.min(end + 1, code.length))
+      const imported = await resolveStaticImport(path.node, filename)
+
+      if (imported) {
+        if (!imported.skip) {
+          resolvedImports.set(path, imported)
+        } else if (path.isImportDeclaration()) {
+          preservedImports.add(path)
+          continue
+        }
+      }
+
+      let { start, end } = path.node as {
+        start: number
+        end: number
+      }
+
+      if (path.isExportNamedDeclaration() && path.node.declaration) {
+        end = start + kExportKeyword.length + 1
+      } else if (path.isExportDefaultDeclaration()) {
+        end = start + kExportDefault.length + 1
+      } else {
+        end = Math.min(end + 1, code.length)
+      }
+
+      editor.remove(start, end)
+
+      if (imported?.skip && path.isExportDeclaration()) {
+        preservedImports.add(path)
+        injectAliasedImport(path, imported, editor)
+      }
     }
   }
 
   // 2. Rewrite all import statements, hoisting them together.
   for (const path of ast.get('body')) {
     if (path.isImportDeclaration()) {
-      const imported = (await resolveStaticImport(path.node, filename))!
-      if (imported.skip) {
-        hasPreservedImports = true
-      } else {
-        hoistIndex = rewriteImport(
-          hoistIndex,
-          path,
-          imported.source,
-          editor,
-          importedBindings,
-          esmHelpers,
-          forceLazy
-        )
+      if (preservedImports.has(path)) {
+        continue
       }
+      const imported = resolvedImports.get(path)!
+      hoistIndex = rewriteImport(
+        hoistIndex,
+        path,
+        imported.source,
+        editor,
+        importedBindings,
+        esmHelpers,
+        forceLazy
+      )
     }
   }
 
   // 3. Rewrite all export statements
   for (const path of ast.get('body')) {
     if (path.isExportDeclaration()) {
-      const imported = await resolveStaticImport(path.node, filename)
-      if (imported?.skip) {
-        hasPreservedImports = true
-        injectAliasedImport(path, imported, editor)
+      if (preservedImports.has(path)) {
+        continue
       }
+      const imported = resolvedImports.get(path)!
       rewriteExport(
         path,
         imported,
@@ -139,7 +169,7 @@ export async function compileEsm({
     }
   }
 
-  // Rewrite any references to imported bindings.
+  // 4. Rewrite any references to imported bindings
   for (const [{ referencePaths }, binding] of importedBindings) {
     for (const path of referencePaths) {
       const parent = path.parentPath!
@@ -171,7 +201,8 @@ export async function compileEsm({
   // the end of the final ESM import is located.
   hoistIndex = 0
 
-  if (hasPreservedImports) {
+  // Hoist any preserved imports above rewritten imports/exports.
+  if (preservedImports.size > 0) {
     const map = editor.generateMap({ hires: true })
     code = editor.toString()
     editor = new MagicString(code)
@@ -205,7 +236,7 @@ function findStatementEnd(code: string, pos: number) {
   let allowBreakOnSameLine = false
   while (++pos < code.length) {
     const char = code[pos - 1]
-    if (char === '\n') {
+    if (char === kReturn) {
       break
     }
     if (whitespaceRE.test(char)) {
@@ -230,6 +261,8 @@ function attachInputSourcemap(
   return editor
 }
 
+const kSemi = ';'
+const kReturn = '\n'
 const kSemiReturn = ';\n'
 
 function rewriteImport(
@@ -328,7 +361,6 @@ function rewriteExport(
     source: string
   ) => string[] | boolean | undefined
 ) {
-  const code = editor.original
   const { start, end } = path.node as {
     start: number
     end: number
@@ -405,14 +437,12 @@ function rewriteExport(
           )
         )
       })
-      editor.appendRight(start, exported.join('\n') + kSemiReturn)
+      editor.appendRight(start, exported.join(kReturn) + kSemiReturn)
     } else if (decl.isFunctionDeclaration() || decl.isClassDeclaration()) {
       const { name } = decl.node.id!
       editor.appendRight(
-        start,
-        code.slice(start + kExportKeyword.length + 1, end) +
-          `\n${exportsId}.${name} = ${name}` +
-          kSemiReturn
+        end,
+        kReturn + `${exportsId}.${name} = ${name}` + kSemi
       )
     } else if (decl.isVariableDeclaration()) {
       const { kind, declarations } = decl.node
@@ -422,14 +452,14 @@ function rewriteExport(
         )
       }
       const { name } = declarations[0].id as t.Identifier
-      let compiled = code.slice(start + kExportKeyword.length + 1, end) + '\n'
+      let compiled: string
       if (kind == 'const') {
-        compiled += `${exportsId}.${name} = ${name}`
+        compiled = `${exportsId}.${name} = ${name}`
       } else {
         esmHelpers.add(__exportLet)
-        compiled += `__exportLet(${exportsId}, "${name}", () => ${name})`
+        compiled = `__exportLet(${exportsId}, "${name}", () => ${name})`
       }
-      editor.appendRight(start, compiled + kSemiReturn)
+      editor.appendLeft(end, kReturn + compiled + kSemi)
     }
   } else if (imported && path.isExportAllDeclaration()) {
     const fromExpr = imported.alias || awaitRequire(imported.source)
@@ -439,24 +469,18 @@ function rewriteExport(
     )
     esmHelpers.add(__exportAll)
   } else if (path.isExportDefaultDeclaration()) {
-    const replacement = `${exportsId}.default =`
     const defaultDecl = path.get('declaration')
+
+    let compiled = `${exportsId}.default = `
     if (
       (defaultDecl.isFunctionDeclaration() ||
         defaultDecl.isClassDeclaration()) &&
       defaultDecl.node.id
     ) {
-      editor.appendRight(
-        start,
-        code.slice(start + kExportDefault.length + 1, end) +
-          `\n${replacement} ${defaultDecl.node.id.name}` +
-          kSemiReturn
-      )
+      compiled += ` ${defaultDecl.node.id.name}`
+      editor.appendLeft(end, kReturn + compiled + kSemi)
     } else {
-      editor.appendRight(
-        start,
-        replacement + code.slice(start + kExportDefault.length, end)
-      )
+      editor.appendRight(start, compiled)
     }
   }
 }
