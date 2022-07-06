@@ -239,7 +239,7 @@ export async function compileEsm({
   return editor as CompiledEsm
 }
 
-function isTopLevelReference(path: NodePath) {
+function isTopLevelReference(path: NodePath): boolean {
   const scopedParent = path.findParent(
     parent => parent.isScopable() && !parent.isBlockStatement()
   )!
@@ -585,6 +585,8 @@ function rewriteExportSpecifier(
   return `__exportLet(${exportsId}, "${property}", () => ${local})`
 }
 
+const kDefaultAccessor = '.default'
+
 export function generateRequireCalls(
   path: NodePath<t.ImportDeclaration>,
   source: string,
@@ -637,7 +639,7 @@ export function generateRequireCalls(
       if (isConstBinding) {
         defaultAlias = alias
       } else {
-        accessor = '.default'
+        accessor = kDefaultAccessor
       }
     } else if (spec.isImportSpecifier()) {
       const { imported } = spec.node
@@ -649,7 +651,14 @@ export function generateRequireCalls(
     }
     if (accessor) {
       moduleAlias ||= path.scope.generateUid(sourceAlias(source))
-      bindings.set(binding, moduleAlias + accessor)
+
+      let reference = moduleAlias + accessor
+      if (accessor == kDefaultAccessor && !/^\.\.?(\/|$)/.test(source)) {
+        esmHelpers.add(__importDefault)
+        reference = `__importDefault(${moduleAlias})`
+      }
+
+      bindings.set(binding, reference)
     }
   }
   if (needsModuleAlias(constBindings, namespaceAlias, defaultAlias)) {

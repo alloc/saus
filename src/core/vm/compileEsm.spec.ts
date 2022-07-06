@@ -6,16 +6,22 @@ describe('compileEsm', () => {
   test('import references', async () => {
     let result = await transform`
       import foo from 'foo'
-      export { foo }
+      import bar from './bar'
+      export { bar }
       export default () => {
         foo({ foo })
       }
     `
+    // Notice how the `bar` reference is transformed into `_bar.default`
+    // while the `foo` references use the `__importDefault` helper.
+    // It's assumed that import bindings from a relative module
+    // are never CommonJS-based, so no interop is needed.
     expect(result).toMatchInlineSnapshot(`
       "const _foo = await __requireAsync(\\"foo\\");
-      __exportLet(__exports, \\"foo\\", () => _foo.default);
+      const _bar = await __requireAsync(\\"./bar\\");
+      __exportLet(__exports, \\"bar\\", () => _bar.default);
       __exports.default = () => {
-        _foo.default({ foo: _foo.default })
+        __importDefault(_foo)({ foo: __importDefault(_foo) })
       }"
     `)
   })
@@ -46,9 +52,9 @@ describe('compileEsm', () => {
     expect(result).toMatchInlineSnapshot(`
       "const _mod = await __requireAsync(\\"mod\\");
       const _x = await __requireAsync(\\"x\\");
-      __exportLet(__exports, \\"A\\", () => _mod.default)
+      __exportLet(__exports, \\"A\\", () => __importDefault(_mod))
       __exportLet(__exports, \\"B\\", () => _mod.B)
-      __exportLet(__exports, \\"X\\", () => _x.default);
+      __exportLet(__exports, \\"X\\", () => __importDefault(_x));
       "
     `)
   })
@@ -174,7 +180,7 @@ describe('compileEsm', () => {
       const _b = await __requireAsync(\\"b\\");
       const c = __importAll(await __requireAsync(\\"c\\"));
       __exportLet(__exports, \\"a\\", () => _a.a)
-      __exportLet(__exports, \\"b\\", () => _b.default)
+      __exportLet(__exports, \\"b\\", () => __importDefault(_b))
       __exports.c = c;
       "
     `)
