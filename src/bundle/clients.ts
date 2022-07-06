@@ -11,6 +11,7 @@ import { createModuleProvider } from '@/plugins/moduleProvider'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { routesPlugin } from '@/plugins/routes'
 import { clientPreloadsMarker, renderRouteClients } from '@/routeClients'
+import { RouteRenderer } from '@/routeRenderer'
 import { RuntimeConfig } from '@/runtime/config'
 import { prependBase } from '@/utils/base'
 import { dataToEsm } from '@/utils/dataToEsm'
@@ -27,7 +28,8 @@ type OutputAsset = Exclude<OutputArray[number], OutputChunk>
 
 export async function compileClients(
   context: BundleContext,
-  runtimeConfig: RuntimeConfig
+  runtimeConfig: RuntimeConfig,
+  renderers: RouteRenderer[]
 ) {
   let {
     bundle: { debugBase = '' },
@@ -36,7 +38,7 @@ export async function compileClients(
   } = context
 
   const { addRoute, clientsById, routesByClientId } = (context.routeClients =
-    renderRouteClients(context))
+    renderRouteClients(context, renderers))
 
   context.routes.forEach(addRoute)
   context.defaultRoute && addRoute(context.defaultRoute)
@@ -88,7 +90,7 @@ export async function compileClients(
   )
 
   // debug('Resolving "build" config for client bundle')
-  config = await context.resolveConfig('build', context.configHooks, {
+  config = await context.resolveConfig({
     plugins: [
       debugForbiddenImports([
         'vite',
@@ -153,10 +155,12 @@ export async function compileClients(
   const createDebugChunk = (chunk: OutputChunk) => {
     let debugText = chunk.code
     if (baseUrlPath in chunk.modules) {
-      debugText = debugText.replace(
-        /\b(BASE_URL = )"[^"]+"/,
-        (_, assign) => assign + JSON.stringify(debugBase)
-      )
+      debugText = debugText
+        .replace(/isDebug = false/, 'isDebug = true')
+        .replace(
+          /\b(BASE_URL = )"[^"]+"/,
+          (_, assign) => assign + JSON.stringify(debugBase)
+        )
     } else if (staticRoutesPath in chunk.modules) {
       chunk.code = useDebugRoutes(chunk.code, base, debugBase)
     }

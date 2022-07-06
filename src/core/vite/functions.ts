@@ -5,7 +5,6 @@ import {
   SourceDescription,
   TransformResult,
 } from 'rollup'
-import { Promisable } from 'type-fest'
 import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
 import { Script } from '../vm/types'
@@ -15,13 +14,13 @@ export interface ViteFunctions {
   resolveId: (
     id: string,
     importer?: string | null
-  ) => Promisable<PartialResolvedId | null | undefined>
-  load: (id: string) => Promisable<SourceDescription | null | undefined>
+  ) => Promise<PartialResolvedId | null | undefined>
+  load: (id: string) => Promise<SourceDescription | null | undefined>
   transform: (
     code: string,
     id: string,
     inMap?: SourceMap
-  ) => Promisable<TransformResult>
+  ) => Promise<TransformResult>
   /**
    * Load and transform a module with Vite plugins.
    */

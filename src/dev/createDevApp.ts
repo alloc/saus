@@ -5,12 +5,12 @@ import { throttleRender } from '@/app/throttleRender'
 import { App, RenderPageOptions } from '@/app/types'
 import { DevContext } from '@/context'
 import { RuntimeConfig } from '@/core'
+import { getEntryModules } from '@/getEntryModules'
 import { globalCachePath } from '@/paths'
 import { callPlugins } from '@/utils/callPlugins'
 import { throttle } from '@/utils/throttle'
 import { clearExports } from '@/vm/moduleMap'
 import os from 'os'
-import { getEntryModules } from './getEntryModules'
 import { createHotReload } from './hotReload'
 
 export async function createDevApp(
@@ -22,7 +22,7 @@ export async function createDevApp(
     assetsDir: viteConfig.build.assetsDir,
     base: context.basePath,
     clientCacheId: '@fs' + globalCachePath,
-    clientHelpersId: '@id/saus/src/client/helpers.ts',
+    clientHelpersId: '@id/saus/src/core/client/helpers.ts',
     clientRuntimeId: '@id/saus/client',
     command: 'dev',
     defaultLayout: context.defaultLayout,

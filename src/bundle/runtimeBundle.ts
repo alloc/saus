@@ -152,11 +152,16 @@ async function compileSsrRuntime(context: BundleContext) {
   if (entryBundles.every(Boolean)) {
     bundleInfo = JSON.parse(cache.get('_bundle.json')!)
   } else {
-    const config = await context.resolveConfig('build', [], {
-      plugins: [moduleRedirection(internalRedirects)],
-    })
-
-    const { pluginContainer } = await vite.createTransformContext(config, false)
+    const { pluginContainer } = await vite.createTransformContext(
+      await vite.resolveConfig(
+        {
+          plugins: [moduleRedirection(internalRedirects)],
+          configFile: false,
+        },
+        'build'
+      ),
+      false
+    )
 
     const markSausExternals: esbuild.Plugin = {
       name: 'markSausExternals',

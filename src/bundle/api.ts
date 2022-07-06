@@ -21,9 +21,10 @@ import { copyPublicDir } from '@/plugins/publicDir'
 import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { RouteClient } from '@/routeClients'
+import { getRouteRenderers } from '@/routeRenderer'
 import { callPlugins } from '@/utils/callPlugins'
 import { serializeImports } from '@/utils/imports'
-import { vite } from '@/vite'
+import { BundleConfig, vite } from '@/vite'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
@@ -31,9 +32,9 @@ import etag from 'etag'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
-import { BundleConfig, BundleContext } from '../bundle'
+import { BundleContext } from '../bundle'
 import { compileClients } from './clients'
-import { IsolatedModuleMap } from './isolateRoutes'
+import { IsolatedModuleMap, isolateRoutes } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { preferExternal } from './preferExternal'
 import { resolveRouteImports } from './routeImports'
@@ -47,9 +48,10 @@ export async function bundle(
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
 
-  const [githubRepo, githubToken, routeImports] = await Promise.all([
+  const [githubRepo, githubToken, renderers, routeImports] = await Promise.all([
     inferGitHubRepo(context),
     resolveGitHubToken(context),
+    getRouteRenderers(context),
     resolveRouteImports(context),
   ])
 
@@ -80,20 +82,23 @@ export async function bundle(
 
   await callPlugins(context.plugins, 'onRuntimeConfig', runtimeConfig)
 
-  const { pluginContainer } = context
-  await pluginContainer.buildStart({})
-
   // Isolate the server modules while bundling the client modules.
   const isolatedModules: IsolatedModuleMap = {}
-  // const isolatedRoutes = isolateRoutes(context, routeImports, isolatedModules)
-  const isolatedRoutes: any = {}
-  // await isolatedRoutes
-  // debugger
+  const isolatedRoutes = isolateRoutes(
+    context,
+    renderers,
+    routeImports,
+    isolatedModules
+  )
+
+  const { pluginContainer } = context
+  await pluginContainer.buildStart({})
 
   Profiling.mark('generate client modules')
   const { clientRouteMap, clientChunks, clientAssets } = await compileClients(
     context,
-    runtimeConfig
+    runtimeConfig,
+    renderers
   )
 
   Profiling.mark('generate ssr bundle')
@@ -189,7 +194,7 @@ async function generateSsrBundle(
       chunk => !chunk.isDebug && chunk.isEntry && client.id in chunk.modules
     )!
     const layoutModuleId = servedPathForFile(
-      client.layoutEntry,
+      client.renderer.layoutModuleId,
       context.root,
       true
     )
@@ -265,7 +270,6 @@ async function generateSsrBundle(
     id: context.bundleModuleId,
     code: endent`
       ${serializeImports(Array.from(pluginImports))}
-      import "${context.defaultLayout.id}"
       import "${context.routesPath}"
 
       export * from "${runtimeId}"
@@ -298,7 +302,7 @@ async function generateSsrBundle(
     (options.preferExternal || undefined) && preferExternal(context)
 
   debug('Resolving "build" config for SSR bundle')
-  const config = await context.resolveConfig('build', context.configHooks, {
+  const config = await context.resolveConfig({
     plugins: [
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,

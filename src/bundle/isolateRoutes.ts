@@ -2,10 +2,11 @@ import { babel } from '@/babel'
 import { vite } from '@/core'
 import { debug } from '@/debug'
 import { relativeToCwd } from '@/node/relativeToCwd'
+import { servedPathForFile } from '@/node/servedPathForFile'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
-import { servedPathForFile } from '@/node/toDevPath'
 import { createModuleProvider } from '@/plugins/moduleProvider'
-import { dedupe } from '@/utils/dedupe'
+import { RouteRenderer } from '@/routeRenderer'
+import { dataToEsm } from '@/utils/dataToEsm'
 import { bareImportRE, relativePathRE } from '@/utils/importRegex'
 import { plural } from '@/utils/plural'
 import { getViteTransform } from '@/vite/transform'
@@ -14,6 +15,7 @@ import { ForceLazyBindingHook } from '@/vm/types'
 import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
 import builtinModules from 'builtin-modules'
+import endent from 'endent'
 import escalade from 'escalade/sync'
 import fs from 'fs'
 import { bold } from 'kleur/colors'
@@ -42,11 +44,12 @@ export type IsolatedModule = {
  */
 export async function isolateRoutes(
   context: BundleContext,
+  renderers: RouteRenderer[],
   routeImports: RouteImports,
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
   const modules = createModuleProvider()
-  const config = await context.resolveConfig('build', context.configHooks, {
+  const config = await context.resolveConfig({
     resolve: {
       conditions: ['ssr'],
     },
@@ -55,6 +58,10 @@ export async function isolateRoutes(
       sourcemap: true,
       ssr: true,
       target: 'esnext',
+      minify: false,
+    },
+    esbuild: {
+      jsx: 'transform',
     },
   })
 
@@ -74,6 +81,10 @@ export async function isolateRoutes(
       external: [],
     },
   })
+
+  // Vite and Rollup plugins may initialize internal state
+  // within the buildStart hook.
+  await pluginContainer.buildStart({})
 
   const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
@@ -266,24 +277,32 @@ export async function isolateRoutes(
     },
   }
 
+  const rendererIds: string[] & {
+    byRouteModuleId: Record<string, string>
+  } = [] as any
+
+  rendererIds.byRouteModuleId = {}
+
+  for (const { fileName, layoutModuleId, routeModuleId, routes } of renderers) {
+    const rendererId = '\0' + fileName
+    rendererIds.push(rendererId)
+    rendererIds.byRouteModuleId[routeModuleId] = rendererId
+    modules.addModule({
+      id: rendererId,
+      code: endent`
+        export { default as layout } from "${layoutModuleId}"
+        export * as routeModule from "${routeModuleId}"
+        ${dataToEsm(
+          Array.from(routes, route => route.path),
+          'routes'
+        )}
+      `,
+    })
+  }
+
   const task = startTask(`Bundling routes...`)
 
-  const routeEntryPoints = dedupe(
-    Array.from(routeImports.values(), resolved => resolved.file)
-  )
-  const layoutEntryPoints = dedupe(
-    context.routes.map(route => route.layoutEntry || context.defaultLayout.id)
-  )
-
-  debug(`route entries: %O`, routeEntryPoints)
-  debug(`layout entries: %O`, layoutEntryPoints)
-
-  const bundleInputs = [
-    context.routesPath, //
-    ...layoutEntryPoints,
-    ...routeEntryPoints,
-  ]
-
+  const bundleInputs = [context.routesPath, ...rendererIds]
   const importCycles: string[][] = []
 
   const bundle = await rollup.rollup({
@@ -315,7 +334,7 @@ export async function isolateRoutes(
 
   await pluginContainer.close()
 
-  task.finish(`${plural(routeEntryPoints.length, 'route')} bundled.`)
+  task.finish(`${plural(renderers.length, 'renderer')} bundled.`)
 
   const routesUrl = servedPathForFile(context.routesPath, config.root)
 
@@ -432,11 +451,8 @@ export async function isolateRoutes(
     }
 
     if (ssrId == routesUrl) {
-      const routeModulePaths = new Set(
-        Array.from(routeImports.values(), resolved => resolved.file)
-      )
-      for (const file of routeModulePaths) {
-        editor.prepend(`import "${file}"\n`)
+      for (const id of rendererIds) {
+        editor.prepend(`import "${rolledModulePaths[id]}"\n`)
       }
     }
 

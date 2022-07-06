@@ -91,7 +91,7 @@ export function routeClientsPlugin(): Plugin {
         if (routeClient) {
           // Whether or not the layout is hydrated, we still
           // need to preload any imported stylesheets.
-          await findImportedCss(routeClient.layoutEntry)
+          await findImportedCss(routeClient.renderer.layoutModuleId)
 
           // We don't know if the page is hydrated until the
           // client promise is resolved with a non-empty string.

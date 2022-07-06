@@ -318,7 +318,6 @@ function createClientPropsLoader(
   const { debugBase } = config
 
   return async function loadClientProps(url, route) {
-    console.log('loadClientProps: %O', url.path)
     const requestUrl = makeRequestUrl(url)
     const request = makeRequest(requestUrl, noop)
 

@@ -1,9 +1,10 @@
 import endent from 'endent'
+import { getRouteRenderer, RouteRenderer } from './routeRenderer'
 import type { Route } from './routes'
 import type { RouteLayout } from './runtime/layouts'
-import { md5Hex } from './utils/md5-hex'
 import { unwrapDefault } from './utils/unwrapDefault'
-import { ResolvedConfig } from './vite'
+import type { ResolvedConfig } from './vite'
+import type { ViteFunctions } from './vite/functions'
 import type { RequireAsync } from './vm'
 
 export interface RouteClients {
@@ -21,7 +22,7 @@ export interface RouteClients {
 export interface RouteClient {
   id: string
   url: string
-  layoutEntry: string
+  renderer: RouteRenderer
   promise: Promise<string | null>
 }
 
@@ -30,31 +31,39 @@ export const clientPreloadsMarker = '__CLIENT_PRELOADS__'
 type Context = {
   config: ResolvedConfig
   defaultLayout: { id: string; hydrated?: boolean }
+  resolveId: ViteFunctions['resolveId']
   ssrRequire: RequireAsync
 }
 
-export function renderRouteClients(context: Context): RouteClients {
+export function renderRouteClients(
+  context: Context,
+  renderers?: RouteRenderer[]
+): RouteClients {
   const clientsById: Record<string, RouteClient> = {}
   const clientsByRoute = new Map<Route, RouteClient>()
   const routesByClientId: Record<string, Route[]> = {}
 
   const loadRouteClient = async (
-    routeModuleId: string,
-    layoutModuleId: string
+    clientId: string,
+    { layoutModuleId, routeModuleId }: RouteRenderer
   ): Promise<string | null> => {
     const layoutModule = await context.ssrRequire(layoutModuleId)
     const layout = unwrapDefault<RouteLayout>(layoutModule)
     if (!layout.hydrator) {
       return null
     }
+    const hydratorId = (await context.resolveId(layout.hydrator, clientId))?.id
+    if (!hydratorId) {
+      throw Error(`Hydrator module not found: "${layout.hydrator}"`)
+    }
     const { config, defaultLayout } = context
     if (layoutModuleId == defaultLayout.id) {
       defaultLayout.hydrated = true
     }
     return renderRouteClient({
+      hydratorId,
       routeModuleId,
       layoutModuleId,
-      hydratorId: layout.hydrator,
       preExport: config.command == 'build' ? clientPreloadsMarker + '\n' : '',
     })
   }
@@ -67,15 +76,16 @@ export function renderRouteClients(context: Context): RouteClients {
     },
     addRoute(route) {
       if (route.moduleId) {
-        const layoutEntry = route.layoutEntry || context.defaultLayout.id
-        const clientHash = md5Hex([layoutEntry, route.moduleId]).slice(0, 8)
-        const clientFile = 'route.client.' + clientHash + '.js'
+        const renderer = renderers
+          ? renderers.find(r => r.routes.includes(route))!
+          : getRouteRenderer(route, context)
+        const clientFile = 'client/' + renderer.fileName
         const clientId = '\0' + clientFile
         const client = (clientsById[clientId] ||= {
           id: clientId,
           url: '/.saus/' + clientFile,
-          layoutEntry: layoutEntry,
-          promise: loadRouteClient(route.moduleId, layoutEntry),
+          renderer,
+          promise: loadRouteClient(clientId, renderer),
         })
         const routes = (routesByClientId[clientId] ||= [])
         clientsByRoute.set(route, client)

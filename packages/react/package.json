@@ -5,7 +5,20 @@
   "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-  "types": "index.d.ts",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./types/plugin.d.ts",
+      "import": "./dist/plugin.mjs",
+      "default": "./dist/plugin.js"
+    },
+    "./hydrator": "./client/hydrate.ts"
+  },
   "files": [
     "src",
     "dist",

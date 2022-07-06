@@ -92,6 +92,15 @@ export async function compileEsm({
   let hoistIndex = 0
   let hasPreservedImports = false
 
+  // 1. Remove all import and export statements
+  for (const path of ast.get('body')) {
+    if (path.isImportDeclaration() || path.isExportDeclaration()) {
+      const { start, end } = path.node as { start: number; end: number }
+      editor.remove(start, Math.min(end + 1, code.length))
+    }
+  }
+
+  // 2. Rewrite all import statements, hoisting them together.
   for (const path of ast.get('body')) {
     if (path.isImportDeclaration()) {
       const imported = (await resolveStaticImport(path.node, filename))!
@@ -111,6 +120,7 @@ export async function compileEsm({
     }
   }
 
+  // 3. Rewrite all export statements
   for (const path of ast.get('body')) {
     if (path.isExportDeclaration()) {
       const imported = await resolveStaticImport(path.node, filename)
@@ -220,6 +230,8 @@ function attachInputSourcemap(
   return editor
 }
 
+const kSemiReturn = ';\n'
+
 function rewriteImport(
   hoistIndex: number,
   path: NodePath<t.ImportDeclaration>,
@@ -243,11 +255,9 @@ function rewriteImport(
     esmHelpers,
     forceLazyBinding
   )
-  editor.overwrite(start, end + 1, requireCalls)
-  if (start !== hoistIndex) {
-    editor.move(start, end + 1, hoistIndex)
-  } else {
-    hoistIndex = end + 1
+  editor.appendRight(hoistIndex, requireCalls + kSemiReturn)
+  if (start == hoistIndex) {
+    hoistIndex = Math.min(end + 1, editor.original.length)
   }
   return hoistIndex
 }
@@ -284,7 +294,9 @@ function injectAliasedImport(
     t.isExportNamespaceSpecifier(specs[0])
   ) {
     imported.alias = path.scope.generateUid(sourceAlias(imported.source))
-    editor.prepend(`import * as ${imported.alias} from "${imported.source}"\n`)
+    editor.prepend(
+      `import * as ${imported.alias} from "${imported.source}"` + kSemiReturn
+    )
   } else {
     const declarators: string[] = []
     imported.aliasMap = {}
@@ -294,10 +306,14 @@ function injectAliasedImport(
       imported.aliasMap[local.name] = alias
     }
     editor.prepend(
-      `import { ${declarators.join(', ')} } from "${imported.source}"\n`
+      `import { ${declarators.join(', ')} } from "${imported.source}"` +
+        kSemiReturn
     )
   }
 }
+
+const kExportDefault = 'export default'
+const kExportKeyword = 'export'
 
 const awaitRequire = (source: string) => `await ${requireAsyncId}("${source}")`
 
@@ -307,12 +323,17 @@ function rewriteExport(
   bindings: BindingMap,
   editor: MagicString,
   esmHelpers: Set<Function>,
-  forceLazyBinding: (imported: string[], source: string) => string[] | boolean
+  forceLazyBinding: (
+    imported: string[],
+    source: string
+  ) => string[] | boolean | undefined
 ) {
+  const code = editor.original
   const { start, end } = path.node as {
     start: number
     end: number
   }
+
   const decl = path.get('declaration') as NodePath<t.Declaration>
   if (path.isExportNamedDeclaration()) {
     const { node } = path
@@ -320,7 +341,11 @@ function rewriteExport(
       if (t.isExportNamespaceSpecifier(node.specifiers[0])) {
         const { name } = node.specifiers[0].exported
         const fromExpr = imported.alias || awaitRequire(imported.source)
-        editor.overwrite(start, end, `${exportsId}.${name} = ${fromExpr}`)
+        esmHelpers.add(__importAll)
+        editor.appendRight(
+          start,
+          `${exportsId}.${name} = __importAll(${fromExpr})` + kSemiReturn
+        )
       } else {
         // An alias map is defined when the caller wants to use identifiers
         // declared by an uncompiled import declaration. Otherwise, we need
@@ -330,14 +355,10 @@ function rewriteExport(
           path.scope.generateUid(sourceAlias(imported.source))
 
         if (alias) {
-          editor.overwrite(
+          editor.appendRight(
             start,
-            end,
-            `const ${alias} = ${awaitRequire(imported.source)}`
+            `const ${alias} = ${awaitRequire(imported.source)}` + kSemiReturn
           )
-        } else {
-          // An import declaration was prepended to the file.
-          editor.remove(start, end + 1)
         }
 
         const lazyBindings = findLazyBindings(
@@ -358,7 +379,7 @@ function rewriteExport(
             esmHelpers
           )
 
-          editor.appendLeft(end, `\n${exportStmt}`)
+          editor.appendRight(start, exportStmt + kSemiReturn)
         }
       }
     } else if (node.specifiers.length) {
@@ -384,11 +405,15 @@ function rewriteExport(
           )
         )
       })
-      editor.overwrite(start, end, exported.join('\n'))
+      editor.appendRight(start, exported.join('\n') + kSemiReturn)
     } else if (decl.isFunctionDeclaration() || decl.isClassDeclaration()) {
       const { name } = decl.node.id!
-      editor.remove(start, start + `export `.length)
-      editor.appendLeft(end, `\n${exportsId}.${name} = ${name};`)
+      editor.appendRight(
+        start,
+        code.slice(start + kExportKeyword.length + 1, end) +
+          `\n${exportsId}.${name} = ${name}` +
+          kSemiReturn
+      )
     } else if (decl.isVariableDeclaration()) {
       const { kind, declarations } = decl.node
       if (declarations.length > 1) {
@@ -397,30 +422,41 @@ function rewriteExport(
         )
       }
       const { name } = declarations[0].id as t.Identifier
-      editor.remove(start, start + `export `.length)
+      let compiled = code.slice(start + kExportKeyword.length + 1, end) + '\n'
       if (kind == 'const') {
-        editor.appendLeft(end, `\n${exportsId}.${name} = ${name};`)
+        compiled += `${exportsId}.${name} = ${name}`
       } else {
         esmHelpers.add(__exportLet)
-        editor.appendLeft(
-          end,
-          `\n__exportLet(${exportsId}, "${name}", () => ${name});`
-        )
+        compiled += `__exportLet(${exportsId}, "${name}", () => ${name})`
       }
+      editor.appendRight(start, compiled + kSemiReturn)
     }
   } else if (imported && path.isExportAllDeclaration()) {
     const fromExpr = imported.alias || awaitRequire(imported.source)
-    editor.overwrite(start, end, `__exportAll(${exportsId}, ${fromExpr})`)
+    editor.appendRight(
+      start,
+      `__exportAll(${exportsId}, ${fromExpr})` + kSemiReturn
+    )
     esmHelpers.add(__exportAll)
   } else if (path.isExportDefaultDeclaration()) {
-    const replaced = 'export default'
     const replacement = `${exportsId}.default =`
     const defaultDecl = path.get('declaration')
-    if (defaultDecl.isFunctionDeclaration() && defaultDecl.node.id) {
-      editor.remove(start, start + replaced.length + 1)
-      editor.appendLeft(end, `\n${replacement} ${defaultDecl.node.id.name};`)
+    if (
+      (defaultDecl.isFunctionDeclaration() ||
+        defaultDecl.isClassDeclaration()) &&
+      defaultDecl.node.id
+    ) {
+      editor.appendRight(
+        start,
+        code.slice(start + kExportDefault.length + 1, end) +
+          `\n${replacement} ${defaultDecl.node.id.name}` +
+          kSemiReturn
+      )
     } else {
-      editor.overwrite(start, start + replaced.length, replacement)
+      editor.appendRight(
+        start,
+        replacement + code.slice(start + kExportDefault.length, end)
+      )
     }
   }
 }
@@ -468,7 +504,7 @@ export function generateRequireCalls(
 
   const specifiers = path.get('specifiers')
   if (!specifiers.length) {
-    return `${requireCall};\n`
+    return requireCall
   }
 
   const lazyBindings = findLazyBindings(source, specifiers, forceLazyBinding)
@@ -489,9 +525,7 @@ export function generateRequireCalls(
       // Technically, a "default" binding is a constant binding, but
       // special handling is needed for the `__importDefault` helper.
       const isConstBinding =
-        imported.name !== 'default' &&
-        !lazyBindings.includes(imported.name) &&
-        !isExported(binding)
+        !lazyBindings.includes(imported.name) && !isExported(binding)
 
       if (isConstBinding) {
         constBindings.push([alias, imported.name])
@@ -502,15 +536,18 @@ export function generateRequireCalls(
     if (spec.isImportNamespaceSpecifier()) {
       namespaceAlias = alias
     } else if (spec.isImportDefaultSpecifier()) {
-      defaultAlias = alias
+      const isConstBinding =
+        !lazyBindings.includes('default') && !isExported(binding)
+
+      if (isConstBinding) {
+        defaultAlias = alias
+      } else {
+        accessor = '.default'
+      }
     } else if (spec.isImportSpecifier()) {
       const { imported } = spec.node
       if (t.isIdentifier(imported)) {
-        if (imported.name == 'default') {
-          defaultAlias = alias
-        } else {
-          accessor = '.' + imported.name
-        }
+        accessor = '.' + imported.name
       } else {
         accessor = `["${imported.value}"]`
       }
@@ -535,7 +572,7 @@ export function generateRequireCalls(
     for (const [alias, imported] of constBindings) {
       declarators.push(alias == imported ? imported : `${imported}: ${alias}`)
     }
-    return `const { ${declarators.join(', ')} } = ${requireCall};\n`
+    return `const { ${declarators.join(', ')} } = ${requireCall}`
   }
   if (namespaceAlias) {
     const argument = moduleAlias || requireCall
@@ -548,7 +585,7 @@ export function generateRequireCalls(
     esmHelpers.add(__importDefault)
   }
 
-  return 'const ' + declarators.join(', ') + ';\n'
+  return 'const ' + declarators.join(', ')
 }
 
 function isExported(binding: Binding) {
@@ -580,9 +617,11 @@ function findLazyBindings(
       ? spec.node.local
       : spec.isImportSpecifier()
       ? spec.node.imported
+      : spec.isImportDefaultSpecifier()
+      ? t.identifier('default')
       : null
 
-    if (t.isIdentifier(used) && used.name !== 'default') {
+    if (t.isIdentifier(used)) {
       imported.push(used.name)
     }
   }

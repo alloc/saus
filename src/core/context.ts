@@ -3,6 +3,7 @@ import type { BuildContext, BundleContext } from '../bundle'
 import type { DeployContext } from '../deploy'
 import type { DevContext, DevMethods, DevState } from '../dev/context'
 import type { RenderPageResult } from './app/types'
+import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
 import { CompileCache } from './node/compileCache'
@@ -14,7 +15,7 @@ import { clearCachedState } from './runtime/clearCachedState'
 import { getCachedState } from './runtime/getCachedState'
 import { Cache, withCache } from './runtime/withCache'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
-import { getConfigEnv, loadUserConfig } from './vite/config'
+import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
 import { PluginContainer } from './vite/pluginContainer'
 import { RequireAsyncState } from './vm/asyncRequire'
@@ -87,6 +88,7 @@ type Context = Omit<BaseContext, keyof ViteFunctions>
 
 async function createContext(props: {
   config: ResolvedConfig
+  configPath: string | undefined
   command: SausCommand
   publicDir: PublicDirOptions | null
   resolveConfig: (inlineConfig?: vite.InlineConfig) => Promise<ResolvedConfig>
@@ -118,7 +120,6 @@ async function createContext(props: {
     basePath: config.base,
     clearCachedPages: filter => clearCachedState(filter, pageCache),
     compileCache: new CompileCache('node_modules/.saus', config.root),
-    configPath: config.configFile,
     defaultLayout: { id: config.saus.defaultLayoutId! },
     defaultPath: config.saus.defaultPath!,
     defaultState: [],
@@ -156,12 +157,32 @@ export async function loadContext<T extends Context>(
   inlineConfig: vite.InlineConfig = {},
   inlinePlugins?: InlinePlugin[]
 ): Promise<T> {
-  let userConfig = await loadUserConfig(command, inlineConfig)
-  if (inlinePlugins) {
-    const configEnv = getConfigEnv(command, inlineConfig.mode)
-    const plugins = inlinePlugins.map(p => p(userConfig.saus, configEnv))
-    userConfig = vite.mergeConfig({ plugins }, userConfig) as any
+  // The plugins created from the `inlinePlugins` argument
+  // are shared between `resolveConfig` calls.
+  let sharedPlugins: vite.Plugin[]
+
+  const getUserConfig = async (inlineConfig?: vite.InlineConfig) => {
+    let userConfig = await loadUserConfig(command, inlineConfig)
+
+    // The `inlinePlugins` array is initialized once and its plugin
+    // objects are reused by future `resolveConfig` calls.
+    if (inlinePlugins && !sharedPlugins) {
+      const configEnv = getConfigEnv(command, inlineConfig?.mode)
+      userConfig = vite.mergeConfig(
+        {
+          plugins: (sharedPlugins = inlinePlugins
+            .map(p => p(userConfig.saus, configEnv))
+            .flat()),
+        },
+        userConfig
+      ) as typeof userConfig
+    }
+
+    return userConfig
   }
+
+  const userConfig = await getUserConfig(inlineConfig)
+  const configPath = userConfig.configFile
 
   const publicDir: PublicDirOptions | null =
     typeof userConfig.publicDir == 'object' ||
@@ -169,10 +190,14 @@ export async function loadContext<T extends Context>(
       ? userConfig.publicDir || null
       : { root: userConfig.publicDir }
 
-  const resolveConfig = async (inlineConfig: vite.InlineConfig = {}) => {
-    inlineConfig = vite.mergeConfig(userConfig, inlineConfig)
-    inlineConfig.configFile = false
-    inlineConfig.publicDir = publicDir ? publicDir.root : false
+  const resolveConfig = async (
+    userConfig: vite.InlineConfig | LoadedUserConfig
+  ) => {
+    const inlineConfig: vite.InlineConfig = {
+      ...userConfig,
+      configFile: false,
+      publicDir: publicDir ? publicDir.root : false,
+    }
 
     const configEnv = getConfigEnv(command, inlineConfig.mode)
     const config = (await vite.resolveConfig(
@@ -197,12 +222,22 @@ export async function loadContext<T extends Context>(
     return config
   }
 
-  const config = await resolveConfig()
+  const config = await resolveConfig(userConfig)
   const context = await createContext({
     config,
+    configPath,
     command,
     publicDir,
-    resolveConfig,
+    async resolveConfig(inlineConfig) {
+      const userConfig = await getUserConfig(inlineConfig)
+      const config = await resolveConfig(userConfig)
+      await getSausPlugins(context as any, config)
+      if (sharedPlugins) {
+        const plugins = config.plugins as vite.Plugin[]
+        plugins.unshift(...sharedPlugins)
+      }
+      return config
+    },
   })
 
   setResponseCache(loadResponseCache(userConfig.root!))

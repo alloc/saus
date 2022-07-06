@@ -14,7 +14,7 @@ import { createPluginContainer } from './pluginContainer'
 export async function esbuildViteBridge(
   context: BundleContext
 ): Promise<esbuild.Plugin> {
-  const config = await context.resolveConfig('build', [], {
+  const config = await context.resolveConfig({
     plugins: context.bundlePlugins,
   })
 

@@ -74,7 +74,7 @@ export function defineBuiltinRoutes(
   route(`${context.config.stateModuleBase}*.js`)
     .get(async req => {
       const cacheKey = req.wild
-      const id = cacheKey.slice(0, cacheKey.lastIndexOf('.'))
+      const id = cacheKey.replace(/\.[^.]+$/, '')
 
       const stateModule = stateModulesById.get(id)
       if (stateModule) {

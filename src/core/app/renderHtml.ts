@@ -9,7 +9,7 @@ export async function renderHtml(
 ): Promise<string> {
   let html = await layout.render(request)
   if (!/^\s*<body( |>)/.test(html)) {
-    html = `<body>${RETURN}${html}${RETURN}</body>`
+    html = `<body>${RETURN}<div id="root">${html}</div>${RETURN}</body>`
   }
   if (layout.head) {
     const headRequest = serverProps

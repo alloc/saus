@@ -32,7 +32,6 @@ export function loadStateModule<T, Args extends any[]>(
 
   const loadStateModule = async (cacheControl: CacheControl) => {
     debug(`Loading "%s" state`, cacheKey)
-    console.log('loadStateModule: %s %s', cacheKey, args)
     try {
       let result: any
       if (CachePlugin.loader) {

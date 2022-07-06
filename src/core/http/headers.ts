@@ -115,7 +115,7 @@ export class DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders> {
     this.headers = headers as any
     return (this.proxy = new Proxy(this, {
       get(self: any, key: string, proxy: any) {
-        if (self[key]) {
+        if (self[key] || self.hasOwnProperty(key)) {
           return self[key]
         }
         if (shortcutHeaderNames.includes(key as any)) {

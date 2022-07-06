@@ -2,7 +2,7 @@ import { HttpRedirect } from '@/http/redirect'
 import etag from 'etag'
 import * as mime from 'mrmime'
 import { connect } from './connect'
-import { FileCache } from './fileCache'
+import type { FileCache } from './fileCache'
 
 export const serveCachedFiles =
   (cache: FileCache): connect.Middleware =>

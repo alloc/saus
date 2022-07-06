@@ -35,7 +35,7 @@ export const loadConfigFile = (
 
 export async function loadUserConfig(
   command: SausCommand,
-  inlineConfig?: vite.InlineConfig
+  { plugins: inlinePlugins, ...inlineConfig }: vite.InlineConfig = {}
 ): Promise<LoadedUserConfig> {
   const inServeMode = command == 'serve'
   const sausDefaults: vite.InlineConfig = {
@@ -65,16 +65,20 @@ export async function loadUserConfig(
 
   const loadResult = await loadConfigFile(command, undefined, inlineConfig)
 
-  let userConfig: vite.UserConfig = loadResult
-    ? vite.mergeConfig(loadResult.config, inlineConfig)
-    : inlineConfig || {}
+  let config = inlineConfig as vite.UserConfig & { configFile?: string }
+  if (loadResult) {
+    config = vite.mergeConfig(loadResult.config, inlineConfig)
+    config.configFile = loadResult.path
+  }
 
-  if (loadResult)
-    Object.assign(userConfig, {
-      configFile: loadResult.path,
-    })
+  // Prepend any plugins from `inlineConfig`
+  if (inlinePlugins) {
+    config.plugins = config.plugins
+      ? [...inlinePlugins, ...config.plugins]
+      : inlinePlugins
+  }
 
-  const sausConfig = userConfig.saus
+  const sausConfig = config.saus
   assertSausConfig(sausConfig)
   assertSausConfig(sausConfig, 'routes')
   sausConfig.routes = resolve(root, sausConfig.routes)
@@ -82,7 +86,7 @@ export async function loadUserConfig(
   sausConfig.stateModuleBase ||= '/state/'
   sausConfig.defaultLayoutId ||= '/src/layouts/default'
 
-  const userPlugins = toArray(userConfig.plugins).flat()
+  const userPlugins = toArray(config.plugins).flat()
   const userPluginIds = userPlugins
     .map(p => p && p.name)
     .filter(Boolean) as string[]
@@ -91,7 +95,7 @@ export async function loadUserConfig(
     p && !userPluginIds.includes(p.name)
 
   let autoConfig: vite.UserConfig | undefined
-  for (const configFile of findConfigFiles(userConfig.root!)) {
+  for (const configFile of findConfigFiles(config.root!)) {
     const loadResult = await loadConfigFile(command, configFile)
     if (loadResult) {
       const { plugins, ...config } = loadResult.config
@@ -107,12 +111,12 @@ export async function loadUserConfig(
     }
   }
 
-  userConfig.plugins = userPlugins
+  config.plugins = userPlugins
   if (autoConfig) {
-    userConfig = vite.mergeConfig(userConfig, autoConfig) as any
+    config = vite.mergeConfig(config, autoConfig) as any
   }
 
-  return userConfig as LoadedUserConfig
+  return config as LoadedUserConfig
 }
 
 function assertSausConfig(

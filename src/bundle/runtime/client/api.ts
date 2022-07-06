@@ -1,9 +1,9 @@
-import { BASE_URL } from '@/client/baseUrl'
+import { BASE_URL, isDebug } from '@/client/baseUrl'
 import { prependBase as prepend } from '@/utils/base'
 
 export * from '@/client/node/api'
 export { default as routes } from '@/client/routes'
-export { BASE_URL }
+export { BASE_URL, isDebug }
 
 export function prependBase(uri: string, base = BASE_URL) {
   return prepend(uri, base)

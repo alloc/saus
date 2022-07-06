@@ -73,20 +73,22 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
     },
     configureServer: server => {
       server.middlewares.use(async (req, res, next) => {
-        await init
         let url = req.url!
         if (!url.startsWith(context.basePath)) {
           return process.nextTick(next)
         }
-        req.url = url = (req.originalUrl = url).slice(
-          context.basePath.length - 1
-        )
+        url = (req.originalUrl = url).slice(context.basePath.length - 1)
+        if (url.startsWith('/@id/') || url.startsWith('/@fs/')) {
+          return process.nextTick(next)
+        }
+        await init
         if (url in fileCache) {
           const { data, mime } = fileCache[url]
           res.setHeader('Content-Type', mime)
           res.write(typeof data == 'string' ? data : Buffer.from(data.buffer))
           return res.end()
         }
+        req.url = url
         const [functions, route] = resolveFunctions(req, context)
         if (functions.length && route !== context.defaultRoute) {
           serveApp(req, res, err => {

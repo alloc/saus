@@ -1,6 +1,7 @@
 import { App } from '@/app/types'
 import { loadContext } from '@/context'
 import { Endpoint } from '@/core'
+import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
@@ -13,6 +14,7 @@ import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
 import { ssrLayoutPlugin } from '@/plugins/ssrLayout'
+import { renderRouteClients } from '@/routeClients'
 import { toArray } from '@/utils/array'
 import { prependBase } from '@/utils/base'
 import { callPlugins } from '@/utils/callPlugins'
@@ -31,11 +33,9 @@ import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
-import { renderRouteClients } from '../core/routeClients'
 import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
 import { DevEventEmitter } from './events'
-import { getEntryModules } from './getEntryModules'
 import { createHotReload } from './hotReload'
 
 export interface SausDevServer {
@@ -175,12 +175,10 @@ async function startServer(
       try {
         context.plugins = await getSausPlugins(context)
         await loadRoutes(context)
-        console.log(context.stateModulesByFile)
+        // TODO: ignore dependencies of defineStateModule loaders
         config.optimizeDeps.entries = toArray(
           config.optimizeDeps.entries
         ).concat(await getEntryModules(context))
-
-        console.log(config.optimizeDeps.entries)
       } catch (e: any) {
         events.emit('error', e)
       } finally {

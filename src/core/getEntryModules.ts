@@ -1,7 +1,7 @@
 import { dedupe } from '@/utils/dedupe'
-import { DevContext } from './context'
+import { SausContext } from './context'
 
-export async function getEntryModules(context: DevContext) {
+export async function getEntryModules(context: SausContext) {
   const routes = [...context.routes]
   context.defaultRoute && routes.push(context.defaultRoute)
   context.catchRoute && routes.push(context.catchRoute)

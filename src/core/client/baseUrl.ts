@@ -6,3 +6,8 @@
  * them in the debug view. Only use this variable for links.
  */
 export const BASE_URL = import.meta.env.BASE_URL
+
+/**
+ * Equals true when rendering in debug view.
+ */
+export const isDebug = false
