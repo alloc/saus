@@ -254,19 +254,119 @@ describe('compileEsm', () => {
       `
       expect(result).toMatchInlineSnapshot(`
         "function test() {}
-        __exports.test = test;
-        "
+        __exports.test = test;"
       `)
     })
     test('const binding', async () => {
       let result = await transform`
-        export const test = 1
+        export const a = 1
+        export const b = 2
       `
       expect(result).toMatchInlineSnapshot(`
-        "const test = 1
-        __exports.test = test;
-        "
+        "const a = 1
+        __exports.a = a;
+        const b = 2
+        __exports.b = b;"
       `)
+    })
+  })
+  describe('hotLinks option', () => {
+    test('reference in exported object', async () => {
+      await transform`
+        import A from 'a'
+        import {b} from 'b'
+        export default { A }
+        const B = { b }
+        export { B }
+      `
+      expect(hotLinks).toMatchInlineSnapshot(`
+        Set {
+          "a",
+          "b",
+        }
+      `)
+    })
+    test('reference in exported function', async () => {
+      // This should *not* mutate hotLinks, since the
+      // reference is within a function scope.
+      await transform`
+        import A from 'a'
+        export function getA() {
+          return A
+        }
+      `
+      expect(hotLinks).toMatchInlineSnapshot('Set {}')
+
+      // This *should* mutate hotLinks, because the function
+      // is called at the top-level.
+      await transform`
+        import A from 'a'
+        export function getA() {
+          return A
+        }
+        getA()
+      `
+      expect(hotLinks).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `)
+
+      // Same here, but with const binding.
+      await transform`
+        import A from 'a'
+        export const getA = () => {
+          return A
+        }
+        getA()
+      `
+      expect(hotLinks).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `)
+
+      // Mutable bindings can only mutate `hotLinks` if not re-assigned.
+      await transform`
+        import A from 'a'
+        export let getA = () => {
+          return A
+        }
+
+        import B from 'b'
+        export let getB
+        getB = () => B
+
+        getA()
+        getB()
+      `
+      expect(hotLinks).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `)
+    })
+    test('reference in object method', async () => {
+      // This should *not* mutate hotLinks, since the
+      // reference is within a function scope.
+      await transform`
+        import A from 'a'
+        export default {
+          getA: () => A,
+        }
+      `
+      expect(hotLinks).toMatchInlineSnapshot('Set {}')
+
+      // This *could* mutate hotLinks, but the edge cases around
+      // object methods are numerous, so avoid it for consistency.
+      await transform`
+        import A from 'a'
+        export const foo = {
+          getA: () => A,
+        }
+        foo.getA()
+      `
+      expect(hotLinks).toMatchInlineSnapshot('Set {}')
     })
   })
 })

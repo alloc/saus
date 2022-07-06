@@ -25,7 +25,7 @@ export type EsmCompilerOptions = {
   code: string
   filename: string
   /** Mutated by `compileEsm` when an imported module directly affects the exported values of this module. */
-  hotLinks: Set<string>
+  hotLinks?: Set<string>
   /** Mutated by `compileEsm` when a helper function is required. */
   esmHelpers: Set<Function>
   keepImportCalls?: boolean
@@ -41,6 +41,7 @@ export type EsmCompilerOptions = {
 export async function compileEsm({
   code,
   filename,
+  hotLinks,
   esmHelpers,
   keepImportCalls,
   keepImportMeta,
@@ -174,6 +175,18 @@ export async function compileEsm({
     for (const path of referencePaths) {
       const parent = path.parentPath!
 
+      // Top-level references create a hot link to the
+      // imported module.
+      if (hotLinks && isTopLevelReference(path)) {
+        const id = path.toString()
+        const source = (
+          path.scope.getBinding(id)!.path.parentPath!
+            .node as t.ImportDeclaration
+        ).source.value
+
+        hotLinks.add(source)
+      }
+
       // Skip exported references as those are already rewritten.
       if (parent.isExportSpecifier()) {
         continue
@@ -224,6 +237,64 @@ export async function compileEsm({
   editor.hoistIndex = hoistIndex
 
   return editor as CompiledEsm
+}
+
+function isTopLevelReference(path: NodePath) {
+  const scopedParent = path.findParent(
+    parent => parent.isScopable() && !parent.isBlockStatement()
+  )!
+
+  if (scopedParent.isProgram()) {
+    return true
+  }
+
+  // Unsupported detection.
+  if (!scopedParent.isFunction()) {
+    return false
+  }
+
+  let name: string | undefined
+  let scope!: import('@babel/traverse').Scope
+
+  if (scopedParent.isFunctionDeclaration() && scopedParent.node.id) {
+    name = scopedParent.node.id.name
+    scope = scopedParent.scope
+  }
+
+  if (!name) {
+    const namedParent = scopedParent.findParent(
+      parent =>
+        parent.isVariableDeclarator() ||
+        parent.isObjectExpression() ||
+        parent.isArrayExpression()
+    ) as NodePath<any> | null
+
+    if (namedParent?.isVariableDeclarator()) {
+      const nameNode: t.Node = namedParent.node.id
+      if (t.isIdentifier(nameNode)) {
+        name = nameNode.name
+        scope = namedParent.scope
+      }
+    }
+
+    // Unsupported detection.
+    if (!name) {
+      return false
+    }
+  }
+
+  const binding = scope.getBinding(name)
+  if (!binding || !binding.constant) {
+    return false
+  }
+
+  return binding.referencePaths.some(ref => {
+    const refParent = ref.parentPath
+    if (refParent?.isCallExpression()) {
+      const scopedParent = refParent.findParent(parent => parent.isScopable())!
+      return scopedParent.isProgram() || isTopLevelReference(scopedParent)
+    }
+  })
 }
 
 /**
