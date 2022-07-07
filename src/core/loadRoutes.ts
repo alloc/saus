@@ -5,9 +5,9 @@ import path from 'path'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
-import { injectRoutesMap } from './injectRoutesMap'
 import { servedPathForFile } from './node/servedPathForFile'
-import { Route } from './routes'
+import { renderRouteClients } from './routeClients'
+import { getRouteRenderers } from './routeRenderer'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
@@ -62,9 +62,10 @@ export async function loadRoutes(context: SausContext) {
       route.moduleId = servedPathForFile(resolved.id, context.root)
     }
 
-    await callPlugins(context.plugins, 'receiveRoutes', routesConfig)
     Object.assign(context, routesConfig)
-    injectRoutesMap(context)
+    context.renderers = await getRouteRenderers(context)
+    context.routeClients = renderRouteClients(context)
+    injectClientRoutes(context)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
@@ -73,6 +74,8 @@ export async function loadRoutes(context: SausContext) {
   } finally {
     setRoutesModule(null)
   }
+
+  await callPlugins(context.plugins, 'receiveRoutes', context)
 }
 
 async function compileRoutesModule(
@@ -113,41 +116,29 @@ async function compileRoutesModule(
 /**
  * This injects the `routes` object exported by `saus/client`.
  */
-function injectRoutesMap(context: SausContext) {
-  const routesMap: Record<string, string> = {}
-
-  const loaders: Record<string, () => Promise<any>> = {}
-  Object.defineProperty(routesMap, 'loaders', {
-    value: loaders,
-    configurable: true,
-  })
-
-  let route: Route | undefined
-  if ((route = context.defaultRoute)) {
-    routesMap.default = route.moduleId!
-    loaders.default = route.load
-  }
-  for (let i = context.routes.length; --i >= 0; ) {
-    route = context.routes[i]
-    if (route.moduleId) {
-      routesMap[route.path] = route.moduleId
-      loaders[route.path] = route.load
+function injectClientRoutes(context: SausContext) {
+  const clientRoutes: Record<string, string> = {}
+  for (const { fileName, routes } of context.renderers) {
+    const clientId = '\0client/' + fileName
+    const client = context.routeClients.clientsById[clientId]!
+    for (const route of routes) {
+      clientRoutes[route.path] = client.url
     }
   }
 
-  const routesMapPath = path.resolve(__dirname, '../client/routes.cjs')
-  injectNodeModule(routesMapPath, routesMap)
+  const modulePath = path.resolve(__dirname, '../client/routes.cjs')
+  injectNodeModule(modulePath, clientRoutes)
 
   if (context.command == 'serve') {
     // Do nothing if already registered.
-    if (!context.liveModulePaths.has(routesMapPath)) {
-      context.liveModulePaths.add(routesMapPath)
+    if (!context.liveModulePaths.has(modulePath)) {
+      context.liveModulePaths.add(modulePath)
 
       // Eagerly invalidate our importers when the routes module
       // is changed, thereby merging the two reload passes.
       context.watcher.on('change', file => {
         if (file === context.routesPath) {
-          context.hotReload(routesMapPath, true)
+          context.hotReload(modulePath, true)
         }
       })
     }

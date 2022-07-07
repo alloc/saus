@@ -3,12 +3,14 @@ import { prependBase } from '@/utils/base'
 import { getPageFilename } from '@/utils/getPageFilename'
 import { collectCss } from '@/vite/collectCss'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
-import path from 'path'
 import { DevContext } from '../context'
 import { Plugin, RenderedPage, RuntimeConfig, vite } from '../core'
 import { debug } from '../debug'
 import { CommonServerProps } from '../getModuleRenderer'
 import { RouteClients } from '../routeClients'
+import { renderRouteEntry } from '../routeEntries'
+
+const routeClientPrefix = '/.saus/client/route.'
 
 /**
  * This plugin is responsible for serving the generated client
@@ -28,20 +30,30 @@ export function routeClientsPlugin(): Plugin {
     },
     saus(c) {
       context = c as DevContext
-      routeClients = c.routeClients
       return {
+        receiveRoutes() {
+          routeClients = c.routeClients
+        },
         onRuntimeConfig(c) {
           config = c
         },
       }
     },
-    resolveId(id, importer) {
-      if (id.startsWith('/.saus/')) {
-        return '\0' + path.basename(id)
-      }
+    resolveId(id) {
+      const routeClient = routeClients.clientsByUrl[id]
+      return routeClient?.id
     },
-    load(id) {
-      return routeClients.clientsById[id]?.promise
+    async load(id, opts) {
+      if (!routeClients) {
+        debugger
+      }
+      const client = routeClients.clientsById[id]
+      if (client) {
+        if (opts?.ssr) {
+          return renderRouteEntry(client.renderer)
+        }
+        return client.promise
+      }
     },
     transformIndexHtml: {
       enforce: 'pre',

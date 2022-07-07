@@ -14,7 +14,6 @@ import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
 import { ssrLayoutPlugin } from '@/plugins/ssrLayout'
-import { renderRouteClients } from '@/routeClients'
 import { toArray } from '@/utils/array'
 import { prependBase } from '@/utils/base'
 import { callPlugins } from '@/utils/callPlugins'
@@ -159,8 +158,10 @@ async function startServer(
   context.events = events
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
-  context.routeClients = renderRouteClients(context)
   setupClientInjections(context)
+
+  // Make the dev context available to internal functions.
+  injectNodeModule(path.resolve(__dirname, '../../core/context.cjs'), context)
 
   // We want to load routes before the `runOptimize` call that's made
   // by Vite internals after `buildStart` hooks have finished.

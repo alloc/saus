@@ -10,21 +10,6 @@ export interface RouteRenderer {
   routes: Route[]
 }
 
-export function getRouteRenderer(
-  route: Route,
-  context: Pick<SausContext, 'defaultLayout'>
-): RouteRenderer {
-  assert(route.moduleId)
-  const layoutModuleId = route.layoutEntry || context.defaultLayout.id
-  const hash = md5Hex([layoutModuleId, route.moduleId]).slice(0, 8)
-  return {
-    fileName: 'route.' + hash + '.js',
-    routeModuleId: route.moduleId,
-    layoutModuleId,
-    routes: [route],
-  }
-}
-
 type UsedKeys =
   | 'routes'
   | 'catchRoute'
@@ -53,8 +38,10 @@ export async function getRouteRenderers(context: Pick<SausContext, UsedKeys>) {
     const renderer = getRouteRenderer(route, context)
     const existing = renderers[renderer.fileName]
     if (existing) {
+      route.renderer = existing
       existing.routes.push(route)
     } else {
+      route.renderer = renderer
       renderers[renderer.fileName] = renderer
       resolving.push(
         resolve(renderer, 'layoutModuleId'),
@@ -69,4 +56,19 @@ export async function getRouteRenderers(context: Pick<SausContext, UsedKeys>) {
 
   await Promise.all(resolving)
   return Object.values(renderers)
+}
+
+function getRouteRenderer(
+  route: Route,
+  context: Pick<SausContext, 'defaultLayout'>
+): RouteRenderer {
+  assert(route.moduleId)
+  const layoutModuleId = route.layoutEntry || context.defaultLayout.id
+  const hash = md5Hex([layoutModuleId, route.moduleId]).slice(0, 8)
+  return {
+    fileName: 'route.' + hash + '.js',
+    routeModuleId: route.moduleId,
+    layoutModuleId,
+    routes: [route],
+  }
 }

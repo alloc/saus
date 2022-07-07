@@ -6,7 +6,6 @@ import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { ModuleProvider } from './plugins/moduleProvider'
 import type { PublicDirOptions, PublicFile } from './publicDir'
-import { RoutesModule } from './routes'
 import type { RuntimeConfig } from './runtime/config'
 import type { TestPlugin } from './testPlugin'
 import type { AbortSignal } from './utils/AbortController'
@@ -273,10 +272,10 @@ export interface SausPlugin {
    */
   onRuntimeConfig?: (config: RuntimeConfig) => Promisable<void>
   /**
-   * Called after the routes are loaded or reloaded. Plugins can
-   * modify the routes if they want.
+   * Called after the routes are loaded or reloaded. \
+   * Adding or mutating routes in this hook is discouraged.
    */
-  receiveRoutes?: (context: RoutesModule) => Promisable<void>
+  receiveRoutes?: (context: SausContext) => Promisable<void>
   /**
    * Called after the dev app is created or replaced.
    */

@@ -10,6 +10,7 @@ import { CompileCache } from './node/compileCache'
 import { toSausPath } from './paths'
 import { PublicDirOptions } from './publicDir'
 import { RouteClients } from './routeClients'
+import { RouteRenderer } from './routeRenderer'
 import { RoutesModule } from './routes'
 import { clearCachedState } from './runtime/clearCachedState'
 import { getCachedState } from './runtime/getCachedState'
@@ -59,6 +60,13 @@ export interface BaseContext
   plugins: readonly SausPlugin[]
   publicDir: PublicDirOptions | null
   /**
+   * Each "route renderer" consists of a layout module, a route module,
+   * and the list of routes that use it.
+   *
+   * Note: This is undefined until `loadRoutes` is called.
+   */
+  renderers: RouteRenderer[]
+  /**
    * Like `ssrRequire` but for Node.js modules.
    */
   require: RequireAsync
@@ -68,7 +76,11 @@ export interface BaseContext
    */
   resolveConfig: (inlineConfig?: vite.InlineConfig) => Promise<ResolvedConfig>
   root: string
-  /** Lazy generator of route clients */
+  /**
+   * Lazy generator of route clients.
+   *
+   * Note: This is undefined until `loadRoutes` is called.
+   */
   routeClients: RouteClients
   /** Path to the routes module */
   routesPath: string
@@ -133,6 +145,7 @@ async function createContext(props: {
     moduleMap: {},
     pluginContainer: null!,
     plugins: [],
+    renderers: null!,
     require: null!,
     root: config.root,
     routeClients: null!,
@@ -148,14 +161,15 @@ async function createContext(props: {
 /**
  * The following context properties must be initialized manually:
  *   - `pluginContainer`
- *   - `routeClients`
+ *   - `renderers`
  *   - `require`
+ *   - `routeClients`
  *   - `ssrRequire`
  */
 export async function loadContext<T extends Context>(
   command: SausCommand,
-  inlineConfig: vite.InlineConfig = {},
-  inlinePlugins?: InlinePlugin[]
+  defaultConfig: vite.InlineConfig = {},
+  defaultPlugins?: InlinePlugin[]
 ): Promise<T> {
   // The plugins created from the `inlinePlugins` argument
   // are shared between `resolveConfig` calls.
@@ -166,11 +180,11 @@ export async function loadContext<T extends Context>(
 
     // The `inlinePlugins` array is initialized once and its plugin
     // objects are reused by future `resolveConfig` calls.
-    if (inlinePlugins && !sharedPlugins) {
+    if (defaultPlugins && !sharedPlugins) {
       const configEnv = getConfigEnv(command, inlineConfig?.mode)
       userConfig = vite.mergeConfig(
         {
-          plugins: (sharedPlugins = inlinePlugins
+          plugins: (sharedPlugins = defaultPlugins
             .map(p => p(userConfig.saus, configEnv))
             .flat()),
         },
@@ -181,7 +195,7 @@ export async function loadContext<T extends Context>(
     return userConfig
   }
 
-  const userConfig = await getUserConfig(inlineConfig)
+  const userConfig = await getUserConfig(defaultConfig)
   const configPath = userConfig.configFile
 
   const publicDir: PublicDirOptions | null =
@@ -229,6 +243,9 @@ export async function loadContext<T extends Context>(
     command,
     publicDir,
     async resolveConfig(inlineConfig) {
+      inlineConfig = inlineConfig
+        ? vite.mergeConfig(defaultConfig, inlineConfig)
+        : defaultConfig
       const userConfig = await getUserConfig(inlineConfig)
       const config = await resolveConfig(userConfig)
       await getSausPlugins(context as any, config)

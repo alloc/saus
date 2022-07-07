@@ -157,6 +157,9 @@ async function compileSsrRuntime(context: BundleContext) {
         {
           plugins: [moduleRedirection(internalRedirects)],
           configFile: false,
+          resolve: {
+            extensions: ['.ts'],
+          },
         },
         'build'
       ),
@@ -174,6 +177,7 @@ async function compileSsrRuntime(context: BundleContext) {
           const resolved = await pluginContainer.resolveId(id, importer, {
             ssr: true,
           })
+
           if (!resolved) {
             return
           }

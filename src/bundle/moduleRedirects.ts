@@ -7,8 +7,8 @@ const emptyModule = path.join(runtimeDir, 'emptyModule.ts')
 // Used when pre-bundling the Saus runtime.
 export const internalRedirects = [
   redirectModule(
-    path.join(clientDir, 'node/loadPageModule.ts'),
-    path.join(bundleDir, 'client/loadPageModule.ts')
+    path.join(clientDir, 'node/pageClient.ts'),
+    path.join(bundleDir, 'client/pageClient.ts')
   ),
   redirectModule(
     path.join(coreDir, 'constants.ts'),

@@ -11,9 +11,10 @@ export type Hydrator<RenderResult = any> = (
 ) => Promise<void> | void
 
 export interface RouteClient {
-  route: { url: string; module: object }
-  layout: Pick<RouteLayout, 'render' | 'clientHooks'>
   hydrate: Hydrator
+  layout: Pick<RouteLayout, 'render' | 'clientHooks'>
+  routeModule: object
+  routeModuleUrl: string
 }
 
 export const defineHydrator = <RenderResult = any>(
@@ -21,12 +22,12 @@ export const defineHydrator = <RenderResult = any>(
 ) => hydrate
 
 export async function hydrate(
-  { route, layout, hydrate }: RouteClient,
+  { hydrate, layout, routeModule, routeModuleUrl }: RouteClient,
   props: CommonClientProps,
   root: HTMLElement
 ) {
   // Update client routes map.
-  routes[props.routePath] = route.url
+  routes[props.routePath] = routeModuleUrl
 
   // Cache page props in global cache.
   const path = location.pathname
@@ -37,7 +38,7 @@ export async function hydrate(
     file: getPageFilename(path, import.meta.env.BASE_URL),
     query: location.search.slice(1),
     params: props.routeParams,
-    module: route.module,
+    module: routeModule,
     props,
   }
 

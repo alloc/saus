@@ -5,8 +5,7 @@ import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { createModuleProvider } from '@/plugins/moduleProvider'
-import { RouteRenderer } from '@/routeRenderer'
-import { dataToEsm } from '@/utils/dataToEsm'
+import { renderRouteEntry } from '@/routeEntries'
 import { bareImportRE, relativePathRE } from '@/utils/importRegex'
 import { plural } from '@/utils/plural'
 import { getViteTransform } from '@/vite/transform'
@@ -15,7 +14,6 @@ import { ForceLazyBindingHook } from '@/vm/types'
 import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
 import builtinModules from 'builtin-modules'
-import endent from 'endent'
 import escalade from 'escalade/sync'
 import fs from 'fs'
 import { bold } from 'kleur/colors'
@@ -44,7 +42,6 @@ export type IsolatedModule = {
  */
 export async function isolateRoutes(
   context: BundleContext,
-  renderers: RouteRenderer[],
   routeImports: RouteImports,
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
@@ -277,26 +274,13 @@ export async function isolateRoutes(
     },
   }
 
-  const rendererIds: string[] & {
-    byRouteModuleId: Record<string, string>
-  } = [] as any
-
-  rendererIds.byRouteModuleId = {}
-
-  for (const { fileName, layoutModuleId, routeModuleId, routes } of renderers) {
-    const rendererId = '\0' + fileName
+  const rendererIds: string[] = []
+  for (const renderer of context.renderers) {
+    const rendererId = '\0' + renderer.fileName
     rendererIds.push(rendererId)
-    rendererIds.byRouteModuleId[routeModuleId] = rendererId
     modules.addModule({
       id: rendererId,
-      code: endent`
-        export { default as layout } from "${layoutModuleId}"
-        export * as routeModule from "${routeModuleId}"
-        ${dataToEsm(
-          Array.from(routes, route => route.path),
-          'routes'
-        )}
-      `,
+      code: renderRouteEntry(renderer),
     })
   }
 
@@ -334,7 +318,12 @@ export async function isolateRoutes(
 
   await pluginContainer.close()
 
-  task.finish(`${plural(renderers.length, 'renderer')} bundled.`)
+  task.finish(
+    `${plural(
+      context.renderers.reduce((count, { routes }) => count + routes.length, 0),
+      'route'
+    )} isolated.`
+  )
 
   const routesUrl = servedPathForFile(context.routesPath, config.root)
 

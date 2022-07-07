@@ -406,14 +406,10 @@ function cloneRouteContext(context: AppContext): AppContext {
   return {
     ...context,
     ...klona(
-      pick(context, [
-        'routes',
-        'defaultState',
-        'htmlProcessors',
-        'requestHooks',
-        'responseHooks',
-      ])
+      pick(context, ['htmlProcessors', 'requestHooks', 'responseHooks'])
     ),
+    defaultState: [...context.defaultState],
+    routes: [...context.routes],
   }
 }
 

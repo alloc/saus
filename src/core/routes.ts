@@ -2,6 +2,7 @@ import { RouteLayout } from '@/runtime/layouts'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
+import { RouteRenderer } from './routeRenderer'
 import type { RuntimeHook } from './runtime/config'
 import type { StateModule } from './runtime/stateModules'
 import type { OneOrMany } from './utils/types'
@@ -141,6 +142,11 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   load: RouteLoader<T>
   moduleId: string | null
   layoutEntry?: string
+  /**
+   * This is set by the `getRouteRenderers` function and it's always
+   * undefined from inside the `saus.receiveRoutes` plugin hook.
+   */
+  renderer?: RouteRenderer
   /** The file this route was declared from. */
   file?: string
   generated?: boolean

@@ -4,7 +4,7 @@ import { bundleDir, clientDir } from '../paths'
 import { Plugin } from '../vite'
 
 const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
-const serverRouteMapStubPath = path.join(bundleDir, 'routes.ts')
+const serverRouteMapStubPath = path.join(bundleDir, 'bundle/routes.ts')
 
 /**
  * This plugin extracts the `route` calls from the routes module,
@@ -18,15 +18,10 @@ export const routesPlugin =
       saus(context) {
         const isBuild = context.config.command == 'build'
 
-        this.load = async function (id) {
+        this.load = id => {
           const isClient = id == clientRouteMapStubPath
           if (isClient || id == serverRouteMapStubPath) {
-            return compileRoutesMap(
-              { isBuild, isClient },
-              context,
-              this.resolve.bind(this),
-              clientRouteMap
-            )
+            return compileRoutesMap({ isBuild, isClient }, context)
           }
         }
 
@@ -34,6 +29,7 @@ export const routesPlugin =
           fileName: string
           code: string
           modules: Record<string, any>
+          isEntry: boolean
         }
 
         this.generateBundle = async function (_, bundle) {
@@ -42,24 +38,29 @@ export const routesPlugin =
           ) as Chunk[]
 
           for (const chunk of chunks) {
-            if (chunk.code.includes(routeMarker)) {
+            if (chunk.modules[clientRouteMapStubPath]) {
               chunk.code = chunk.code.replace(
                 new RegExp(routeMarker + '\\("(.+?)"\\)', 'g'),
-                (_, routeModuleId) => {
+                (_, routeClientId) => {
+                  // Babel escapes null byte, so we have to unescape it.
+                  routeClientId = routeClientId.replace('\\0', '\0')
+
                   let routeChunkUrl =
-                    clientRouteMap && clientRouteMap[routeModuleId]
+                    clientRouteMap && clientRouteMap[routeClientId]
+
                   if (!routeChunkUrl) {
                     const routeChunk = chunks.find(
-                      chunk => chunk.modules[routeModuleId]
+                      chunk => chunk.isEntry && chunk.modules[routeClientId]
                     )
                     if (!routeChunk) {
-                      throw Error(`Route chunk not found: "${routeModuleId}"`)
+                      throw Error(`Route chunk not found: "${routeClientId}"`)
                     }
                     routeChunkUrl = context.basePath + routeChunk.fileName
                     if (clientRouteMap) {
-                      clientRouteMap[routeModuleId] = routeChunkUrl
+                      clientRouteMap[routeClientId] = routeChunkUrl
                     }
                   }
+
                   return `"${routeChunkUrl}"`
                 }
               )

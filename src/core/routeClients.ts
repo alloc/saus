@@ -1,17 +1,17 @@
+import { LazyPromise } from '@/utils/LazyPromise'
 import endent from 'endent'
-import { getRouteRenderer, RouteRenderer } from './routeRenderer'
+import type { SausContext } from './context'
+import type { RouteRenderer } from './routeRenderer'
 import type { Route } from './routes'
 import type { RouteLayout } from './runtime/layouts'
 import { unwrapDefault } from './utils/unwrapDefault'
-import type { ResolvedConfig } from './vite'
-import type { ViteFunctions } from './vite/functions'
-import type { RequireAsync } from './vm'
 
 export interface RouteClients {
   /** Route clients by virtual ID */
-  clientsById: Record<string, RouteClient | undefined>
-  routesByClientId: Record<string, Route[]>
-  getClientByRoute(route: Route): Promise<RouteClient | undefined>
+  clientsById: Readonly<Record<string, RouteClient | undefined>>
+  clientsByUrl: Readonly<Record<string, RouteClient | undefined>>
+  routesByClientId: Readonly<Record<string, Route[]>>
+  getClientByRoute(route: Route): RouteClient | undefined
   /**
    * Add a route only if you'll need its client soon. \
    * The client URL is returned.
@@ -23,23 +23,14 @@ export interface RouteClient {
   id: string
   url: string
   renderer: RouteRenderer
-  promise: Promise<string | null>
+  promise: LazyPromise<string | null>
 }
 
 export const clientPreloadsMarker = '__CLIENT_PRELOADS__'
 
-type Context = {
-  config: ResolvedConfig
-  defaultLayout: { id: string; hydrated?: boolean }
-  resolveId: ViteFunctions['resolveId']
-  ssrRequire: RequireAsync
-}
-
-export function renderRouteClients(
-  context: Context,
-  renderers?: RouteRenderer[]
-): RouteClients {
+export function renderRouteClients(context: SausContext): RouteClients {
   const clientsById: Record<string, RouteClient> = {}
+  const clientsByUrl: Record<string, RouteClient> = {}
   const clientsByRoute = new Map<Route, RouteClient>()
   const routesByClientId: Record<string, Route[]> = {}
 
@@ -68,31 +59,44 @@ export function renderRouteClients(
     })
   }
 
+  const addRoute = (route: Route) => {
+    const { renderer } = route
+    if (renderer) {
+      const clientFile = 'client/' + renderer.fileName
+      const clientId = '\0' + clientFile
+
+      let client = clientsById[clientId]
+      if (!client) {
+        const clientUrl = '/.saus/' + clientFile
+        client = {
+          id: clientId,
+          url: clientUrl,
+          renderer,
+          promise: new LazyPromise(resolve => {
+            resolve(loadRouteClient(clientId, renderer))
+          }),
+        }
+        clientsById[clientId] = client
+        clientsByUrl[clientUrl] = client
+      }
+
+      const routes = (routesByClientId[clientId] ||= [])
+      clientsByRoute.set(route, client)
+      routes.push(route)
+      return client
+    }
+  }
+
+  context.routes.forEach(addRoute)
+  context.defaultRoute && addRoute(context.defaultRoute)
+  context.catchRoute && addRoute(context.catchRoute)
+
   return {
     clientsById,
+    clientsByUrl,
     routesByClientId,
-    async getClientByRoute(route) {
-      return clientsByRoute.get(route)
-    },
-    addRoute(route) {
-      if (route.moduleId) {
-        const renderer = renderers
-          ? renderers.find(r => r.routes.includes(route))!
-          : getRouteRenderer(route, context)
-        const clientFile = 'client/' + renderer.fileName
-        const clientId = '\0' + clientFile
-        const client = (clientsById[clientId] ||= {
-          id: clientId,
-          url: '/.saus/' + clientFile,
-          renderer,
-          promise: loadRouteClient(clientId, renderer),
-        })
-        const routes = (routesByClientId[clientId] ||= [])
-        clientsByRoute.set(route, client)
-        routes.push(route)
-        return client
-      }
-    },
+    getClientByRoute: clientsByRoute.get.bind(clientsByRoute),
+    addRoute,
   }
 }
 
@@ -110,16 +114,9 @@ export const renderRouteClient = (opts: {
   /** Code inserted before `export default` statement */
   preExport?: string
 }) => endent`
-  import layout from "${opts.layoutModuleId}"
-  import hydrate from "${opts.hydratorId}"
-  import * as routeModule from "${opts.routeModuleId}"
   ${opts.preExport || ''}
-  export default {
-    layout,
-    hydrate,
-    route: {
-      url: "${opts.routeModuleId}",
-      module: routeModule,
-    }
-  }
+  export { default as hydrate } from "${opts.hydratorId}"
+  export { default as layout } from "${opts.layoutModuleId}"
+  export * as routeModule from "${opts.routeModuleId}"
+  export const routeModuleUrl = "${opts.routeModuleId}"
 `

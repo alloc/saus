@@ -21,7 +21,6 @@ import { copyPublicDir } from '@/plugins/publicDir'
 import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { RouteClient } from '@/routeClients'
-import { getRouteRenderers } from '@/routeRenderer'
 import { callPlugins } from '@/utils/callPlugins'
 import { serializeImports } from '@/utils/imports'
 import { BundleConfig, vite } from '@/vite'
@@ -48,12 +47,16 @@ export async function bundle(
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
 
-  const [githubRepo, githubToken, renderers, routeImports] = await Promise.all([
+  const [githubRepo, githubToken, routeImports] = await Promise.all([
     inferGitHubRepo(context),
     resolveGitHubToken(context),
-    getRouteRenderers(context),
     resolveRouteImports(context),
   ])
+
+  const resolved = await context.resolveId(context.defaultLayout.id)
+  if (resolved) {
+    context.defaultLayout.id = servedPathForFile(resolved.id, context.root)
+  }
 
   const { config, userConfig } = context
   const outDir = path.resolve(config.root, config.build.outDir)
@@ -84,9 +87,8 @@ export async function bundle(
 
   // Isolate the server modules while bundling the client modules.
   const isolatedModules: IsolatedModuleMap = {}
-  const isolatedRoutes = isolateRoutes(
+  const isolatedRoutesPlugin = isolateRoutes(
     context,
-    renderers,
     routeImports,
     isolatedModules
   )
@@ -97,8 +99,7 @@ export async function bundle(
   Profiling.mark('generate client modules')
   const { clientRouteMap, clientChunks, clientAssets } = await compileClients(
     context,
-    runtimeConfig,
-    renderers
+    runtimeConfig
   )
 
   Profiling.mark('generate ssr bundle')
@@ -110,7 +111,7 @@ export async function bundle(
     clientAssets,
     clientRouteMap,
     isolatedModules,
-    [await isolatedRoutes]
+    [await isolatedRoutesPlugin]
   )
 
   const bundle: OutputBundle = {
@@ -304,13 +305,13 @@ async function generateSsrBundle(
   debug('Resolving "build" config for SSR bundle')
   const config = await context.resolveConfig({
     plugins: [
+      modules,
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
       ...workerPlugins,
       copyPublicDir(),
       routesPlugin(clientRouteMap)(),
       context.bundlePlugins,
-      modules,
       debugForbiddenImports([
         'vite',
         './babel/index.js',

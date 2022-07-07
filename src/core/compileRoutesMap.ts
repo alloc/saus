@@ -1,51 +1,23 @@
-import { warn } from 'misty'
-import path from 'path'
+import { prependBase } from '@/utils/base'
 import { babel, t } from './babel'
 import { SausContext } from './context'
 
 export const routeMarker = '__sausRoute'
 
-type ResolvedId = { id: string }
-
 export async function compileRoutesMap(
   options: { isBuild?: boolean; isClient?: boolean },
-  context: SausContext,
-  resolveId: (id: string, importer: string) => Promise<ResolvedId | null>,
-  clientRouteMap?: Record<string, string>
+  context: SausContext
 ) {
-  const unresolvedRoutes: [string, string][] = []
-  for (const route of context.routes) {
-    if (route.moduleId)
-      unresolvedRoutes.push([
-        context.basePath + route.path.slice(1),
-        route.moduleId,
-      ])
-  }
-  if (context.defaultRoute) {
-    unresolvedRoutes.push(['default', context.defaultRoute.moduleId!])
-  }
+  const routes = context.routes.map(
+    route => [context.basePath + route.path.slice(1), route] as const
+  )
+  context.defaultRoute && routes.push(['default', context.defaultRoute])
+  context.catchRoute && routes.push(['error', context.catchRoute])
 
-  const routePaths = new Set<string>()
-  const resolvedRoutes: t.ObjectProperty[] = []
-
-  await Promise.all(
-    unresolvedRoutes.reverse().map(async ([routePath, routeModuleId]) => {
-      // Protect against duplicate route paths.
-      if (routePaths.has(routePath)) return
-      routePaths.add(routePath)
-
-      let resolvedId = clientRouteMap && clientRouteMap[routeModuleId]
-      if (!resolvedId) {
-        const resolved = await resolveId(routeModuleId, context.routesPath)
-        if (!resolved) {
-          return warn(`Failed to resolve route: "${routeModuleId}"`)
-        }
-        resolvedId = resolved.id
-        if (clientRouteMap) {
-          clientRouteMap[routeModuleId] = resolvedId
-        }
-      }
-
+  const routeMappings: t.ObjectProperty[] = []
+  for (const [key, route] of routes.reverse()) {
+    const routeClient = context.routeClients.getClientByRoute(route)
+    if (routeClient) {
       let propertyValue: t.Expression
       if (options.isBuild) {
         // For the client-side route map, the resolved module path
@@ -54,39 +26,38 @@ export async function compileRoutesMap(
         // is replaced in the `generateBundle` plugin hook.
         if (options.isClient) {
           propertyValue = t.callExpression(t.identifier(routeMarker), [
-            t.stringLiteral(resolvedId),
+            t.stringLiteral(routeClient.id),
           ])
         }
         // For the server-side route map, the route is mapped to
-        // a dev URL, since the SSR module system uses that.
+        // a SSR module ID that's associated with a module wrapper
+        // using the `__d` function.
         else {
-          propertyValue = t.stringLiteral(
-            '/' + path.relative(context.root, resolvedId)
-          )
+          propertyValue = t.stringLiteral(routeClient.id.replace('client/', ''))
         }
       } else {
         // In dev mode, the route mapping points to a dev URL.
         propertyValue = t.stringLiteral(
-          context.basePath +
-            (resolvedId.startsWith(context.root + '/')
-              ? resolvedId.slice(context.root.length + 1)
-              : '@fs/' + resolvedId)
+          prependBase(routeClient.url, context.basePath)
         )
       }
 
-      resolvedRoutes.push(
-        t.objectProperty(t.stringLiteral(routePath), propertyValue)
-      )
-    })
-  )
+      routeMappings.push(t.objectProperty(t.stringLiteral(key), propertyValue))
+    }
+  }
 
   const transformer: babel.Visitor = {
     ObjectExpression(path) {
-      path.node.properties.push(...resolvedRoutes)
+      routeMappings.forEach(prop => path.node.properties.push(prop))
     },
   }
 
-  const result = babel.transformSync(`export default {}`, {
+  const name = options.isClient
+    ? 'clientEntriesByRoute'
+    : 'serverEntriesByRoute'
+
+  const template = `const ${name} = {}\nexport default ${name}`
+  const result = babel.transformSync(template, {
     plugins: [{ visitor: transformer }],
   }) as { code: string }
 

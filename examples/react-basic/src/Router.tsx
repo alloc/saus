@@ -1,6 +1,6 @@
 import navaid, { Router as NavAid } from 'navaid'
 import React from 'react'
-import { loadPageModule, RouteModule, RouteParams, routes } from 'saus/client'
+import { loadRouteEntry, RouteModule, RouteParams, routes } from 'saus/client'
 
 let router: NavAid | undefined
 let setPage: (page: JSX.Element) => void
@@ -45,7 +45,7 @@ function loadPage(route: string, params?: RouteParams) {
   if (!router) return
 
   // Bail out if the route changes while loading.
-  const page = (nextPage = loadPageModule(route, params).then(module => {
+  const page = (nextPage = loadRouteEntry(route, params).then(module => {
     if (page == nextPage) {
       setPage(renderPage(module, params))
     }

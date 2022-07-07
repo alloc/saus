@@ -4,8 +4,10 @@ import { removeSourceMapUrls } from '../node/sourceMap'
 import { parseStackTrace, StackFrame, traceStackFrame } from '../node/stack'
 import { ModuleMap } from './types'
 
-const ignoredFrameRE = /(^node:|\/saus\/(?!examples|packages))/
 const kFormattedStack = Symbol.for('saus:formattedStack')
+const ignoredFrameRE = !process.env.DEBUG
+  ? /(^node:|\/saus\/(?!examples|packages))/
+  : /^$/
 
 export function formatAsyncStack(
   error: any,
