@@ -1,12 +1,7 @@
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
 import { getBabelProgram, MagicString, NodePath, t } from '../babel'
-import {
-  __exportAll,
-  __exportLet,
-  __importAll,
-  __importDefault,
-} from '../node/esmInterop'
+import { __exportFrom, __exportLet, __importDefault } from '../node/esmInterop'
 import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
 import { ForceLazyBindingHook } from './types'
@@ -447,10 +442,9 @@ function rewriteExport(
       if (t.isExportNamespaceSpecifier(node.specifiers[0])) {
         const { name } = node.specifiers[0].exported
         const fromExpr = imported.alias || awaitRequire(imported.source)
-        esmHelpers.add(__importAll)
         editor.appendRight(
           start,
-          `${exportsId}.${name} = __importAll(${fromExpr})` + kSemiReturn
+          `${exportsId}.${name} = ${fromExpr}` + kSemiReturn
         )
       } else {
         // An alias map is defined when the caller wants to use identifiers
@@ -539,9 +533,9 @@ function rewriteExport(
     const fromExpr = imported.alias || awaitRequire(imported.source)
     editor.appendRight(
       start,
-      `__exportAll(${exportsId}, ${fromExpr})` + kSemiReturn
+      `__exportFrom(${exportsId}, ${fromExpr})` + kSemiReturn
     )
-    esmHelpers.add(__exportAll)
+    esmHelpers.add(__exportFrom)
   } else if (path.isExportDefaultDeclaration()) {
     const defaultDecl = path.get('declaration')
 
@@ -685,8 +679,7 @@ export function generateRequireCalls(
   }
   if (namespaceAlias) {
     const argument = moduleAlias || requireCall
-    declarators.push(`${namespaceAlias} = __importAll(${argument})`)
-    esmHelpers.add(__importAll)
+    declarators.push(`${namespaceAlias} = ${argument}`)
   }
   if (defaultAlias) {
     const argument = moduleAlias || requireCall

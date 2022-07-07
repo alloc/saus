@@ -98,8 +98,8 @@ describe('compileEsm', () => {
     `
     expect(result).toMatchInlineSnapshot(
       `
-      "const Bar = __importAll(await __requireAsync(\\"bar\\"));
-      __exports.Foo = __importAll(await __requireAsync(\\"foo\\"));
+      "const Bar = await __requireAsync(\\"bar\\");
+      __exports.Foo = await __requireAsync(\\"foo\\");
       __exports.Bar = Bar;
       "
     `
@@ -179,7 +179,7 @@ describe('compileEsm', () => {
     expect(result).toMatchInlineSnapshot(`
       "const _a = await __requireAsync(\\"a\\");
       const _b = await __requireAsync(\\"b\\");
-      const c = __importAll(await __requireAsync(\\"c\\"));
+      const c = await __requireAsync(\\"c\\");
       __exportLet(__exports, \\"a\\", () => _a.a)
       __exportLet(__exports, \\"b\\", () => __importDefault(_b))
       __exports.c = c;
@@ -222,7 +222,7 @@ describe('compileEsm', () => {
     editor.append('\n})')
     expect(editor.toString()).toMatchInlineSnapshot(`
       "__d(\\"test.js\\", async (__exports) => {
-      const NotFound = __importAll(await __requireAsync(\\"../pages/NotFound.js\\"));
+      const NotFound = await __requireAsync(\\"../pages/NotFound.js\\");
       const _default = await __requireAsync(\\"../layouts/default.js\\");
       __exportLet(__exports, \\"layout\\", () => _default.default);
       __exports.routeModule = NotFound;
