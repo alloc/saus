@@ -1,4 +1,4 @@
-import { __exportAll } from '@/node/esmInterop'
+import { __exportNamed } from '@/node/esmInterop'
 import { __d } from '@/runtime/ssrModules'
 import * as clientExports from '../client/api'
 
@@ -7,7 +7,7 @@ import * as clientExports from '../client/api'
  */
 export function injectSausClient(overrides?: Record<string, any>) {
   __d('saus/client', async __exports => {
-    __exportAll(__exports, clientExports)
-    overrides && __exportAll(__exports, overrides)
+    __exportNamed(__exports, clientExports)
+    overrides && __exportNamed(__exports, overrides)
   })
 }

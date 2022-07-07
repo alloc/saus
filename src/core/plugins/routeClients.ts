@@ -10,8 +10,6 @@ import { CommonServerProps } from '../getModuleRenderer'
 import { RouteClients } from '../routeClients'
 import { renderRouteEntry } from '../routeEntries'
 
-const routeClientPrefix = '/.saus/client/route.'
-
 /**
  * This plugin is responsible for serving the generated client
  * modules in serve mode.
@@ -44,9 +42,6 @@ export function routeClientsPlugin(): Plugin {
       return routeClient?.id
     },
     async load(id, opts) {
-      if (!routeClients) {
-        debugger
-      }
       const client = routeClients.clientsById[id]
       if (client) {
         if (opts?.ssr) {

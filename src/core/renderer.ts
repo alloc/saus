@@ -11,18 +11,16 @@ export interface RenderRequest<
   Module extends object = any,
   Params extends object = any
 > {
-  /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
-  path: string
-  /** The `.html` file associated with this page */
-  file: string
-  /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
-  query?: string
   /** The entry module imported by the route */
   module: AnyToObject<Module, RouteModule>
-  /** Page props provided by the route */
-  props: CommonClientProps & AnyToObject<Props>
   /** Named strings extracted with a route pattern */
   params: AnyToObject<Params, RouteParams>
+  /** The pathname from the URL (eg: `/a?b=1` → `"/a"`) */
+  path: string
+  /** Page props provided by the route */
+  props: CommonClientProps & AnyToObject<Props>
+  /** The search query from the URL (eg: `/a?b=1` → `"b=1"`) */
+  query?: string
 }
 
 export type RenderApi = {

@@ -9,7 +9,6 @@ import type {
   RuntimeConfig,
 } from '../core'
 import { ParsedUrl } from '../node/url'
-import { getPageFilename } from '../utils/getPageFilename'
 import { limitTime } from '../utils/limitTime'
 import { noop } from '../utils/noop'
 import { parseHead } from '../utils/parseHead'
@@ -47,7 +46,6 @@ export function createRenderPageFn(
     const { path } = url
     const request: RenderRequest = {
       path,
-      file: getPageFilename(path, config.base),
       query: url.search,
       params: url.routeParams,
       module: routeModule,

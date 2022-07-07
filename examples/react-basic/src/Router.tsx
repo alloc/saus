@@ -1,6 +1,12 @@
 import navaid, { Router as NavAid } from 'navaid'
 import React from 'react'
-import { loadRouteEntry, RouteModule, RouteParams, routes } from 'saus/client'
+import {
+  getPagePath,
+  loadPageClient,
+  prependBase,
+  RouteParams,
+  routes,
+} from 'saus/client'
 
 let router: NavAid | undefined
 let setPage: (page: JSX.Element) => void
@@ -45,16 +51,19 @@ function loadPage(route: string, params?: RouteParams) {
   if (!router) return
 
   // Bail out if the route changes while loading.
-  const page = (nextPage = loadRouteEntry(route, params).then(module => {
+  const page = (nextPage = loadPageClient(route, params).then(client => {
     if (page == nextPage) {
-      setPage(renderPage(module, params))
+      const pagePath = getPagePath(route, params)
+      const pageUrl = new URL(location.origin + prependBase(pagePath))
+      setPage(
+        client.layout.render({
+          module: client.routeModule,
+          params: params || {},
+          path: pageUrl.pathname,
+          query: pageUrl.search,
+          props: client.props,
+        })
+      )
     }
   }))
-}
-
-// This function needs to match what the server does.
-// TODO: It should probably be generated?
-function renderPage(mod: RouteModule, params?: RouteParams) {
-  const Page = mod.default as React.ComponentType<any>
-  return <Page {...params} />
 }

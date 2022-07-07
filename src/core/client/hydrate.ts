@@ -1,7 +1,6 @@
 import type { CommonClientProps, RenderRequest } from '../core'
 import { globalCache } from '../runtime/cache'
 import type { RouteLayout } from '../runtime/layouts'
-import { getPageFilename } from '../utils/getPageFilename'
 import routes from './routes'
 
 export type Hydrator<RenderResult = any> = (
@@ -35,7 +34,6 @@ export async function hydrate(
 
   const req: RenderRequest = {
     path,
-    file: getPageFilename(path, import.meta.env.BASE_URL),
     query: location.search.slice(1),
     params: props.routeParams,
     module: routeModule,
