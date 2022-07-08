@@ -1,44 +1,24 @@
+import { defineLazy } from '@/utils/defineLazy'
 import { klona } from 'klona'
-import { CommonClientProps } from '../client'
 import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
-import { getModuleRenderer } from '../getModuleRenderer'
 import { setRoutesModule } from '../global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../html'
-import { DeclaredHeaders, ResponseHeaders } from '../http/headers'
-import { HttpRedirect } from '../http/redirect'
-import { makeRequest, makeRequestUrl } from '../makeRequest'
-import {
-  matchRoute,
-  Route,
-  RouteEndpointMap,
-  RouteIncludeOption,
-} from '../routes'
+import { matchRoute, Route, RouteEndpointMap } from '../routes'
 import { RuntimeConfig, RuntimeHook } from '../runtime/config'
-import { StateModule } from '../runtime/stateModules'
 import { toArray } from '../utils/array'
-import { baseToRegex, prependBase } from '../utils/base'
-import { noop } from '../utils/noop'
-import { pick, pickAllExcept } from '../utils/pick'
+import { baseToRegex } from '../utils/base'
+import { pick } from '../utils/pick'
 import { plural } from '../utils/plural'
-import { defineBuiltinRoutes } from './builtinRoutes'
-import {
-  emptyArray,
-  headPropsCache,
-  inlinedStateMap,
-  stateModulesMap,
-} from './global'
-import { handleNestedState } from './handleNestedState'
+import { defineBuiltinRoutes } from './createApp/builtinRoutes'
+import { wrapEndpoints } from './createApp/endpoints'
+import { createClientPropsLoader } from './createApp/loadClientProps'
+import { getPageFactory } from './createApp/renderPage'
+import { getPageStateFactory } from './createApp/renderPageState'
+import { getStateModuleFactory } from './createApp/renderStateModule'
+import { emptyArray } from './global'
 import { createNegotiator } from './negotiator'
-import { createRenderPageFn } from './renderPage'
-import { createStateModuleMap, loadIncludedState } from './stateModules'
-import {
-  App,
-  AppContext,
-  ClientPropsLoader,
-  ProfiledEventHandler,
-  RouteResolver,
-} from './types'
+import { App, AppContext, RenderedPage, RouteResolver } from './types'
 
 /**
  * Create a Saus application that can run anywhere. It can render pages
@@ -46,64 +26,8 @@ import {
  *
  * Note: This function does not use Vite for anything.
  */
-export function createApp(
-  context: AppContext,
-  plugins: App.Plugin[] = []
-): App {
-  const { config, onError, profile } = context
-  const moduleRenderer = getModuleRenderer(context)
-
-  // Use an isolated context for each `createApp` instance, since
-  // runtime hooks can define anything the routes module can.
-  context = cloneRouteContext(context)
-
-  setRoutesModule(context)
-  callRuntimeHooks(context.runtimeHooks, plugins, config, onError)
-  defineBuiltinRoutes(context, moduleRenderer)
-  setRoutesModule(null)
-
-  let {
-    defaultState,
-    routes,
-    catchRoute,
-    defaultRoute,
-    requestHooks,
-    responseHooks,
-  } = context
-
-  // Routes are matched in reverse order.
-  routes = [...routes].reverse()
-
-  const routeCount = routes.length + (defaultRoute ? 1 : 0)
-  debug('Loaded %s', plural(routeCount, 'route'))
-
-  // Any HTML processors with `enforce: post` will be applied by the
-  // `servePage` function, after any Vite `transformIndexHtml` hooks.
-  const htmlProcessors = context.htmlProcessors
-  const preProcessHtml =
-    htmlProcessors &&
-    mergeHtmlProcessors(
-      htmlProcessors, //
-      page => ({ page, config }),
-      ['pre', 'default']
-    )
-
-  const loadClientProps = createClientPropsLoader(
-    config,
-    defaultState,
-    defaultRoute,
-    profile
-  )
-
-  const renderPage = createRenderPageFn(
-    config,
-    context.ssrRequire,
-    (url, route) => app.loadClientProps(url, route),
-    preProcessHtml,
-    catchRoute,
-    onError,
-    profile
-  )
+export function createApp(ctx: AppContext, plugins: App.Plugin[] = []): App {
+  const { config } = ctx
 
   const resolveEndpoints = (
     route: Route,
@@ -168,14 +92,15 @@ export function createApp(
   const debugBase = config.debugBase || ''
   const debugBaseRE = debugBase ? baseToRegex(debugBase) : null
 
-  const resolveRoute: RouteResolver = (url, opts) => {
+  const resolveRoute: RouteResolver = url => {
     const negotiate = createNegotiator(url.headers.accept)
     const routedPath = debugBaseRE
       ? url.path.replace(debugBaseRE, '/')
       : url.path
 
     let route: Route | undefined
-    for (route of routes) {
+    for (let i = ctx.routes.length; --i >= 0; ) {
+      const route = ctx.routes[i]
       const params = matchRoute(routedPath, route)
       if (params) {
         const endpoints = resolveEndpoints(route, url.method, negotiate)
@@ -185,7 +110,7 @@ export function createApp(
         }
       }
     }
-    if ((route = defaultRoute)) {
+    if ((route = ctx.defaultRoute)) {
       const endpoints = resolveEndpoints(route, url.method, negotiate)
       if (endpoints) {
         return [endpoints, route]
@@ -194,222 +119,77 @@ export function createApp(
     return [emptyArray]
   }
 
-  const callEndpoints: App['callEndpoints'] = async (
-    url,
-    endpoints = resolveRoute(url)[0]
-  ) => {
-    let promise: Endpoint.ResponsePromise | undefined
-    let response: Endpoint.Response | undefined
-    let headers = new DeclaredHeaders(null as ResponseHeaders | null)
-    let request = makeRequest(
-      url,
-      function respondWith(arg1, body?: Endpoint.ResponseTuple[1]) {
-        if (response) return
-        if (arg1 instanceof Promise) {
-          promise = arg1
-        } else {
-          response = createResponse(headers, arg1, body)
-        }
-      }
-    )
-
-    if (requestHooks) {
-      endpoints = requestHooks.concat(endpoints)
-    }
-
-    for (const endpoint of endpoints) {
-      const returned = await endpoint(request, headers, app)
-      if (response) {
-        break
-      }
-      if (promise) {
-        const resolved = await promise
-        promise = undefined
-        if (resolved) {
-          const [arg1, body] = resolved
-          response = createResponse(headers, arg1, body)
-          break
-        }
-      }
-      if (returned) {
-        if (returned instanceof HttpRedirect) {
-          headers.location(returned.location)
-          response = createResponse(headers, 301)
-        } else {
-          headers.merge(returned.headers)
-          response = createResponse(headers, returned.status, {
-            buffer: returned.data,
-          })
-        }
-        break
-      }
-    }
-
-    if (responseHooks && response?.status)
-      for (const onResponse of responseHooks) {
-        await onResponse(request, response, app)
-      }
-
-    return response || {}
-  }
-
   const app = {
     config,
     resolveRoute,
     getEndpoints: null,
-    callEndpoints,
-    loadClientProps,
-    renderPage,
-    ...moduleRenderer,
-    preProcessHtml,
-    postProcessHtml:
-      htmlProcessors &&
-      ((page, timeout = config.htmlTimeout) =>
-        applyHtmlProcessors(
-          page.html,
-          htmlProcessors.post,
-          { page, config },
-          timeout
-        )),
   } as App
 
-  for (const plugin of plugins) {
-    Object.assign(app, plugin(app))
-  }
+  defineLazy(app, {
+    callEndpoints: () => wrapEndpoints(app, ctx),
+    renderPage: () => getPageFactory(app, ctx),
+    renderPageState: () => getPageStateFactory(app, ctx),
+    renderStateModule: () => getStateModuleFactory(app, ctx),
+    loadClientProps: () => createClientPropsLoader(ctx),
+    preProcessHtml: () =>
+      ctx.htmlProcessors &&
+      mergeHtmlProcessors(ctx.htmlProcessors, page => ({ page, config }), [
+        'pre',
+        'default',
+      ]),
+    postProcessHtml() {
+      const htmlPostProcessors = ctx.htmlProcessors?.post
+      return (
+        htmlPostProcessors &&
+        ((page: RenderedPage, timeout = config.htmlTimeout) =>
+          applyHtmlProcessors(
+            page.html,
+            htmlPostProcessors,
+            { page, config },
+            timeout
+          ))
+      )
+    },
+  })
+
+  // Use an isolated context for each `createApp` instance, since
+  // runtime hooks can define anything the routes module can.
+  ctx = cloneRouteContext(ctx)
+
+  setRoutesModule(ctx)
+  prepareApp(app, ctx, plugins)
+  setRoutesModule(null)
+
+  const routeCount = ctx.routes.length + (ctx.defaultRoute ? 1 : 0)
+  debug('Created app with %s', plural(routeCount, 'route'))
 
   return app
 }
 
-function createResponse(
-  headers: DeclaredHeaders<ResponseHeaders | null>,
-  arg1: number | Endpoint.ResponseTuple | Endpoint.ResponseStream | undefined,
-  body?: Endpoint.ResponseTuple[1]
-): Endpoint.Response {
-  let status: number
-  if (Array.isArray(arg1)) {
-    body = arg1[1]
-    arg1 = arg1[0]
-  }
-  if (!arg1 || typeof arg1 == 'number') {
-    status = arg1!
-    if (body) {
-      headers.merge(body.headers)
-      body = pickAllExcept(body, ['headers'])
-    }
-  } else {
-    status = arg1.statusCode!
-    headers.merge(arg1.headers)
-    body = { stream: arg1 }
-  }
-  return {
-    ok: status >= 200 && status < 400,
-    status,
-    headers,
-    body: body as Endpoint.AnyBody,
-  }
-}
-
-function createClientPropsLoader(
-  config: RuntimeConfig,
-  defaultState: RouteIncludeOption[],
-  defaultRoute: Route | undefined,
-  profile: ProfiledEventHandler | undefined
-): ClientPropsLoader {
-  const { debugBase } = config
-
-  return async function loadClientProps(url, route) {
-    const requestUrl = makeRequestUrl(url)
-    const request = makeRequest(requestUrl, noop)
-
-    const timestamp = Date.now()
-    const stateModules = createStateModuleMap()
-    const routeConfig = route.config
-      ? await route.config(request, route)
-      : route
-
-    // Put the promises returned by route config functions here.
-    const deps: Promise<any>[] = []
-
-    // Start loading state modules before the route state is awaited.
-    const routeInclude = defaultState.concat([routeConfig.include || []])
-    for (const included of routeInclude) {
-      deps.push(stateModules.include(included, request, route))
-    }
-
-    let inlinedState: Set<StateModule>
-    if (routeConfig.inline) {
-      const loadInlinedState = (state: StateModule) => {
-        return state.load().then(loaded => {
-          inlinedState.add(state)
-          return loaded
+function prepareApp(app: App, ctx: AppContext, plugins: App.Plugin[]) {
+  callRuntimeHooks(ctx.runtimeHooks, plugins, ctx.config, ctx.onError)
+  defineBuiltinRoutes(app, ctx)
+  plugins.forEach(plugin => {
+    const overrides = plugin(app)
+    if (overrides)
+      for (const [key, value] of Object.entries(overrides)) {
+        Object.defineProperty(app, key, {
+          value,
+          enumerable: true,
+          configurable: true,
         })
       }
-      inlinedState = new Set()
-      deps.push(
-        loadIncludedState(routeConfig.inline, request, route, loadInlinedState)
-      )
-    }
-
-    const clientProps: CommonClientProps = (
-      typeof routeConfig.props == 'function'
-        ? await routeConfig.props(request, route)
-        : { ...routeConfig.props }
-    ) as any
-
-    clientProps.routePath =
-      route !== defaultRoute && debugBase && url.startsWith(debugBase)
-        ? prependBase(route.path, debugBase)
-        : route.path
-    clientProps.routeParams = url.routeParams
-
-    // Load any embedded state modules.
-    const props = handleNestedState(clientProps, stateModules)
-    Object.defineProperty(props, '_client', {
-      value: clientProps,
-    })
-
-    // Wait for state modules to load.
-    await Promise.all(deps)
-    await Promise.all(stateModules.values())
-
-    stateModulesMap.set(props, Array.from(stateModules.keys()))
-    inlinedStateMap.set(props, inlinedState!)
-
-    profile?.('load state', {
-      url: url.toString(),
-      timestamp,
-      duration: Date.now() - timestamp,
-    })
-
-    if (config.command == 'dev')
-      Object.defineProperty(props, '_ts', {
-        value: Date.now(),
-      })
-
-    const { headProps } = routeConfig
-    if (headProps) {
-      headPropsCache.set(
-        props,
-        typeof headProps == 'function'
-          ? await headProps(request, props)
-          : { ...headProps }
-      )
-    }
-
-    return props
-  }
+  })
 }
 
 type ContentNegotiater = (provided: string[]) => string[]
 
-function cloneRouteContext(context: AppContext): AppContext {
+function cloneRouteContext(ctx: AppContext): AppContext {
   return {
-    ...context,
-    ...klona(
-      pick(context, ['htmlProcessors', 'requestHooks', 'responseHooks'])
-    ),
-    defaultState: [...context.defaultState],
-    routes: [...context.routes],
+    ...ctx,
+    ...klona(pick(ctx, ['htmlProcessors', 'requestHooks', 'responseHooks'])),
+    defaultState: [...ctx.defaultState],
+    routes: [...ctx.routes],
   }
 }
 

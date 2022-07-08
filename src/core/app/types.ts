@@ -2,23 +2,20 @@ import type { PageBundle, PageBundleOptions } from '../../bundle/types'
 import type { Buffer } from '../client/buffer'
 import type {
   AnyClientProps,
-  BeforeRenderHook,
-  Client,
+  CommonClientProps,
   MergedHtmlProcessor,
-  Renderer,
   Route,
   RoutesModule,
   RuntimeConfig,
   SausContext,
-  WrappedNode,
 } from '../core'
 import type { Endpoint } from '../endpoint'
-import type { ModuleRenderer } from '../getModuleRenderer'
 import type { ParsedUrl } from '../node/url'
+import { CacheEntry } from '../runtime/withCache'
 import type { ParsedHead } from '../utils/parseHead'
 import type { Falsy } from '../utils/types'
 
-export interface App extends ModuleRenderer {
+export interface App {
   config: RuntimeConfig
   resolveRoute: RouteResolver
   getEndpoints: Endpoint.Generator | null
@@ -38,12 +35,31 @@ export interface App extends ModuleRenderer {
     route: Route,
     options?: PageBundleOptions
   ) => Promise<PageBundle | null>
+  /**
+   * The entry module of a specific page, which includes page-specific state,
+   * possibly some `<head>` tags, and preloaded state modules.
+   */
+  renderPageState(
+    { path, props, stateModules, head }: RenderedPage,
+    preloadUrls?: string[]
+  ): string
+  /**
+   * Convert a "state module" (defined with a build-time `defineStateModule` call)
+   * into an ES module that is ready for the browser. Once loaded, their state is
+   * stored in the client's global cache, which allows for synchronous access via
+   * the `StateModule#get` method.
+   */
+  renderStateModule(
+    cacheKey: string,
+    cachedState: CacheEntry<any>,
+    inline?: boolean
+  ): string
   preProcessHtml?: MergedHtmlProcessor
   postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>
 }
 
 export namespace App {
-  export type Plugin = (app: App) => Partial<App>
+  export type Plugin = (app: App) => Partial<App> | void
 }
 
 export interface AppContext extends RoutesModule {
@@ -122,46 +138,18 @@ export type RenderPageOptions = {
   setup?: (route: Route, url: ParsedUrl) => any
 }
 
-type BundledFunction = {
-  function: string
-  referenced: string[]
-  transformResult?: undefined
-}
-
-type DevFunction = {
-  referenced: WrappedNode<any>[]
-  transformResult?: BundledFunction
-}
-
-export type ClientFunction = (BundledFunction | DevFunction) & {
-  start: number
-  route?: string
-  function: string
-}
-
-export type RenderFunction = ClientFunction & {
-  didRender?: ClientFunction
-}
-
-/* Stub module replaced at build time */
-export interface ClientFunctions {
-  filename: string
-  beforeRender: ClientFunction[]
-  render: RenderFunction[]
-}
-
 export type ResolvedRoute =
   | [endpoints: readonly Endpoint[], route: Route]
   | [endpoints: readonly Endpoint[], route?: undefined]
 
 export type RouteResolver = (url: Endpoint.RequestUrl) => ResolvedRoute
 
-export type ClientResolver = (
-  renderer: Renderer,
-  beforeHooks: BeforeRenderHook[]
-) => Promise<Client | undefined>
-
 export type ClientPropsLoader = (
   url: ParsedUrl,
   route: Route
 ) => Promise<AnyClientProps>
+
+export interface CommonServerProps extends CommonClientProps {
+  _client: CommonClientProps
+  _ts?: number
+}

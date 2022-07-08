@@ -1,6 +1,5 @@
 import { babel } from '@/babel'
 import { vite } from '@/core'
-import { debug } from '@/debug'
 import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
@@ -16,7 +15,7 @@ import { createFilter } from '@rollup/pluginutils'
 import builtinModules from 'builtin-modules'
 import escalade from 'escalade/sync'
 import fs from 'fs'
-import { bold } from 'kleur/colors'
+import { bold, yellow } from 'kleur/colors'
 import MagicString from 'magic-string'
 import { startTask } from 'misty/task'
 import { dirname, isAbsolute, relative, resolve } from 'path'
@@ -289,6 +288,9 @@ export async function isolateRoutes(
   const bundleInputs = [context.routesPath, ...rendererIds]
   const importCycles: string[][] = []
 
+  const isDebug = !!process.env.DEBUG
+  let hasWarnedCircularImport = false
+
   const bundle = await rollup.rollup({
     plugins: [bridge],
     input: bundleInputs,
@@ -298,10 +300,18 @@ export async function isolateRoutes(
       if (warning.code == 'CIRCULAR_DEPENDENCY') {
         const cycle = warning.cycle!.map(id => resolve(config.root, id))
         importCycles.push(cycle)
-        debug(
-          `Circular import may lead to unexpected behavior\n `,
-          cycle.map(relativeToCwd).join(' → ')
-        )
+        if (isDebug || !hasWarnedCircularImport) {
+          if (!hasWarnedCircularImport) {
+            context.logger.warn('')
+          }
+          hasWarnedCircularImport = true
+          context.logger.warn(
+            bold(`Circular import may lead to unexpected behavior`) +
+              '\n  ' +
+              yellow(cycle.map(relativeToCwd).join(' → ')) +
+              '\n'
+          )
+        }
       } else {
         warn(warning)
       }
@@ -374,6 +384,7 @@ export async function isolateRoutes(
 
   const circularImports = importCycles.map(cycle =>
     cycle
+      .filter(id => rolledModulePaths[id])
       .slice(-2)
       .map(id => rolledModulePaths[id])
       .join(' > ')

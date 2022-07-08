@@ -1,3 +1,4 @@
+import { Promisable } from 'type-fest'
 import type { CacheControl, CacheEntry } from './withCache'
 
 /**
@@ -6,8 +7,17 @@ import type { CacheControl, CacheEntry } from './withCache'
  * Only "state modules" are cached with this.
  */
 export interface CachePlugin {
-  get: (name: string) => Promise<CacheEntry | undefined>
-  put?: (name: string, state: any, expiresAt?: number) => Promise<boolean>
+  /**
+   * Retrieve a cache entry by name.
+   *
+   * You should leave this undefined if you don't care about reloading
+   * a possibly cached state module when used by an uncached page.
+   */
+  get?: (name: string) => Promisable<CacheEntry | undefined>
+  /**
+   * Upsert a cache entry with freshly loaded state.
+   */
+  put?: (name: string, state: any, expiresAt?: number) => Promisable<void>
 }
 
 let cachePlugin: CachePlugin | undefined
@@ -32,14 +42,14 @@ export const CachePlugin = {
     return cachePlugin?.put
   },
   get loader() {
-    if (cachePlugin) {
+    if (cachePlugin?.get) {
       return loader
     }
   },
 }
 
 const loader = async (name: string, cacheControl: CacheControl) => {
-  const entry = await cachePlugin!.get(name)
+  const entry = await cachePlugin!.get!(name)
   if (entry) {
     if (entry[1]) {
       cacheControl.maxAge = (entry[1] - Date.now()) / 1e3

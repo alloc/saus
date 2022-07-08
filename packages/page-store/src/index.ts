@@ -2,17 +2,23 @@ import { onResponse, route, setup } from 'saus'
 import {
   AssetStore,
   assignDefaults,
-  Endpoint,
   getPageFilename,
   getRequestMetadata,
+  injectCachePlugin,
+  ParsedUrl,
+  parseUrl,
   pick,
   unwrapBody,
 } from 'saus/core'
-import { ResponseHeaders } from 'saus/http'
+import { normalizeHeaders, RequestHeaders, ResponseHeaders } from 'saus/http'
+
+export type PageRuleContext = ParsedUrl & {
+  headers: Readonly<RequestHeaders>
+}
 
 export interface PageRule {
   pathPattern: RegExp
-  headers: (req: Endpoint.Request) => ResponseHeaders
+  headers: (req: PageRuleContext) => ResponseHeaders
 }
 
 export interface PageStoreConfig {
@@ -29,12 +35,46 @@ export interface PageStoreConfig {
 }
 
 export function setupPageStore(config: PageStoreConfig) {
-  setup(env => {
+  setup(env => app => {
     if (env.command !== 'bundle') {
       return // Disabled in development.
     }
 
-    onResponse(1e9, (req, res, app) => {
+    const resolveHeaders = (
+      req: PageRuleContext,
+      headers: ResponseHeaders = {}
+    ) => {
+      const pageRules = config.pageRules?.filter(rule =>
+        rule.pathPattern.test(req.path)
+      )
+      if (pageRules?.length) {
+        pageRules.forEach(rule => {
+          assignDefaults(headers, rule.headers(req))
+        })
+      }
+      headers = normalizeHeaders(headers)
+      if (config.store.supportedHeaders) {
+        headers = pick(headers, config.store.supportedHeaders)
+      }
+      return headers
+    }
+
+    injectCachePlugin({
+      put(name, state, expiresAt) {
+        const req = parseUrl(
+          env.stateModuleBase + name + '.js'
+        ) as PageRuleContext
+        req.headers = {}
+
+        return config.store.put(
+          req.path.slice(1),
+          app.renderStateModule(name, [state, expiresAt]),
+          resolveHeaders(req)
+        )
+      },
+    })
+
+    onResponse(1e9, (req, res) => {
       if (!res.ok) {
         return // Skip failed responses.
       }
@@ -42,8 +82,7 @@ export function setupPageStore(config: PageStoreConfig) {
         return // Skip authorized requests.
       }
       if (res.body && res.headers.has('content-type', /^text\/html\b/)) {
-        const html = unwrapBody(res.body)
-        if (!html) {
+        if ('stream' in res.body) {
           return // HTML streams are not supported.
         }
 
@@ -52,22 +91,10 @@ export function setupPageStore(config: PageStoreConfig) {
           return // HTML not rendered with Saus.
         }
 
-        let headers = res.headers.toJSON() || {}
-        if (config.store.supportedHeaders) {
-          headers = pick(headers, config.store.supportedHeaders)
-        }
-
-        const pageRules = config.pageRules?.filter(rule =>
-          rule.pathPattern.test(req.path)
-        )
-        if (pageRules?.length) {
-          pageRules.forEach(rule => {
-            assignDefaults(headers, rule.headers(req))
-          })
-        }
-
         const file = getPageFilename(req.path)
-        config.store.put(file, html, headers)
+        const headers = resolveHeaders(req, res.headers.toJSON() || {})
+
+        config.store.put(file, unwrapBody(res.body) as string, headers)
         config.store.put(file + '.js', app.renderPageState(page), headers)
       }
     })

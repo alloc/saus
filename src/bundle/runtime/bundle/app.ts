@@ -1,5 +1,5 @@
 import { createApp as create } from '@/app/createApp'
-import type { App, AppContext, PageContext, RenderedPage } from '@/app/types'
+import type { App, AppContext, RenderedPage } from '@/app/types'
 import { loadDeployedEnv } from '@/runtime/deployedEnv'
 import { setRequestMetadata } from '@/runtime/requestMetadata'
 import { ssrClearCache, ssrImport } from '@/runtime/ssrModules'
@@ -9,7 +9,6 @@ import config from './config'
 import { context } from './context'
 import { injectSausClient } from './injectSausClient'
 import { createPageFactory } from './pageFactory'
-import { loadRenderers } from './render'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 injectSausClient()
@@ -39,7 +38,7 @@ function isolatePages(context: AppContext): App.Plugin {
       const callerSetup = options.setup
       return renderPage(url, route, {
         ...options,
-        async setup(pageContext: PageContext) {
+        async setup(route, url) {
           await ssrClearCache()
           injectSausClient({
             BASE_URL: options.isDebug
@@ -50,13 +49,8 @@ function isolatePages(context: AppContext): App.Plugin {
               return prependBase(uri, base)
             },
           })
-          context.renderers = []
-          context.defaultRenderer = undefined
-          context.beforeRenderHooks = []
-          await loadRenderers(url.path)
-          Object.assign(pageContext, context)
           if (callerSetup) {
-            await callerSetup(pageContext, route, url)
+            await callerSetup(route, url)
           }
         },
       })

@@ -1,40 +1,33 @@
+import { ParsedUrl } from '@/node/url'
 import { RouteLayout } from '@/runtime/layouts'
+import { limitTime } from '@/utils/limitTime'
+import { noop } from '@/utils/noop'
+import { parseHead } from '@/utils/parseHead'
+import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
 import type {
   CommonClientProps,
-  MergedHtmlProcessor,
   RenderRequest,
   Route,
   RouteModule,
-  RuntimeConfig,
-} from '../core'
-import { ParsedUrl } from '../node/url'
-import { limitTime } from '../utils/limitTime'
-import { noop } from '../utils/noop'
-import { parseHead } from '../utils/parseHead'
-import { unwrapDefault } from '../utils/unwrapDefault'
-import { headPropsCache, stateModulesMap } from './global'
-import { renderHtml } from './renderHtml'
+} from '../../core'
+import { headPropsCache, stateModulesMap } from '../global'
+import { renderHtml } from '../renderHtml'
 import {
-  ClientPropsLoader,
-  ProfiledEventHandler,
+  App,
+  AppContext,
   RenderedPage,
   RenderPageFn,
   RenderPageOptions,
   RenderPageResult,
-} from './types'
+} from '../types'
 
 const debug = createDebug('saus:pages')
 
-export function createRenderPageFn(
-  config: RuntimeConfig,
-  ssrImport: <T = any>(id: string) => Promise<T>,
-  loadClientProps: ClientPropsLoader,
-  processHtml: MergedHtmlProcessor | undefined,
-  catchRoute: Route | undefined,
-  onError: (e: any) => void,
-  profile?: ProfiledEventHandler
-): RenderPageFn {
+export function getPageFactory(app: App, ctx: AppContext): RenderPageFn {
+  const { config } = app
+  const { onError, profile } = ctx
+
   // The main logic for HTML document generation.
   const renderRouteLayout = async (
     url: ParsedUrl,
@@ -75,9 +68,9 @@ export function createRenderPageFn(
       stateModules: stateModulesMap.get(props) || [],
     }
 
-    if (processHtml) {
+    if (app.preProcessHtml) {
       timestamp = Date.now()
-      html = await processHtml(html, page, config.htmlTimeout)
+      html = await app.preProcessHtml(html, page, config.htmlTimeout)
       profile?.('process html', {
         url: url.toString(),
         timestamp,
@@ -101,7 +94,7 @@ export function createRenderPageFn(
       layoutModule = await route.layout()
     } else {
       const layoutEntry = route.layoutEntry || config.defaultLayout.id
-      layoutModule = await ssrImport(layoutEntry)
+      layoutModule = await ctx.ssrRequire(layoutEntry)
     }
     return unwrapDefault<RouteLayout>(layoutModule)
   }
@@ -115,7 +108,7 @@ export function createRenderPageFn(
     // @ts-ignore
     url.routeParams.error = error
 
-    const promisedProps = loadClientProps(url, route)
+    const promisedProps = app.loadClientProps(url, route)
     promisedProps.catch(noop)
 
     let props!: CommonClientProps
@@ -192,9 +185,9 @@ export function createRenderPageFn(
       }
     }
 
-    if (catchRoute) {
+    if (ctx.catchRoute) {
       onError(error)
-      return await renderErrorPage(url, error, catchRoute, options)
+      return await renderErrorPage(url, error, ctx.catchRoute, options)
     }
 
     error.url = url.toString()
@@ -206,7 +199,7 @@ export function createRenderPageFn(
     route,
     options = {}
   ): Promise<RenderPageResult> {
-    options.props ||= await loadClientProps(url, route)
+    options.props ||= await app.loadClientProps(url, route)
     debug(`Page in progress: %s`, url)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)

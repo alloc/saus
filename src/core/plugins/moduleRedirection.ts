@@ -41,10 +41,6 @@ export function moduleRedirection(
       )
     },
     async resolveId(id, importer) {
-      if (id.includes('routes')) {
-        console.log('resolveId:', { id, importer })
-      }
-
       if (bareImportRE.test(id))
         for (const plugin of plugins) {
           if (plugin.resolveBareImport) {

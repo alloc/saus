@@ -1,6 +1,6 @@
 import { AmzCredentials } from '@saus/aws-utils'
 import { deployedEnv } from 'saus'
-import { AssetStore, defer, Deferred } from 'saus/core'
+import { AssetStore, defer, Deferred, wrapBody } from 'saus/core'
 import { deleteObjects } from '../deleteObjects'
 import { putObject } from '../putObject'
 
@@ -28,7 +28,7 @@ export function createStore(bucket: string, region: string): AssetStore {
       await putObject(region)({
         bucket,
         key: name,
-        body: data,
+        body: wrapBody(data),
         headers,
         creds,
       })

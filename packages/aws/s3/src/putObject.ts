@@ -29,8 +29,12 @@ export function putObject(region: string) {
           query: null,
           headers: {
             ...paramsToHeaders(params, ['Key']),
-            'content-type': mime.lookup(params.Key),
-            'content-length': Buffer.byteLength(body),
+            'content-length': '' + Buffer.byteLength(body),
+            'content-type':
+              mime.lookup(params.Key) ||
+              (typeof body == 'string'
+                ? 'text/plain'
+                : 'application/octet-stream'),
             'x-amz-content-sha256': createHash('sha256')
               .update(body)
               .digest('hex'),

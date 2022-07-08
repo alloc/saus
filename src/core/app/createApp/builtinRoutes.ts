@@ -1,25 +1,21 @@
+import { Endpoint } from '@/endpoint'
+import type { Headers } from '@/http'
+import { makeRequestUrl } from '@/makeRequest'
+import { ParsedUrl, parseUrl } from '@/node/url'
+import type { Route } from '@/routes'
+import { globalCache } from '@/runtime/cache'
+import { CachePlugin } from '@/runtime/cachePlugin'
+import { getCachedState } from '@/runtime/getCachedState'
+import { route } from '@/runtime/routes'
+import { stateModulesById } from '@/runtime/stateModules'
+import { prependBase } from '@/utils/base'
+import { defer } from '@/utils/defer'
 import etag from 'etag'
-import { Endpoint } from '../endpoint'
-import { ModuleRenderer } from '../getModuleRenderer'
-import type { Headers } from '../http'
-import { makeRequestUrl } from '../makeRequest'
-import { ParsedUrl, parseUrl } from '../node/url'
-import type { Route } from '../routes'
-import { globalCache } from '../runtime/cache'
-import { CachePlugin } from '../runtime/cachePlugin'
-import { getCachedState } from '../runtime/getCachedState'
-import { route } from '../runtime/routes'
-import { stateModulesById } from '../runtime/stateModules'
-import { prependBase } from '../utils/base'
-import { defer } from '../utils/defer'
-import type { App, AppContext, RenderPageResult } from './types'
+import type { App, AppContext, RenderPageResult } from '../types'
 
 const indexFileRE = /(^|\/)index$/
 
-export function defineBuiltinRoutes(
-  context: AppContext,
-  renderer: ModuleRenderer
-) {
+export function defineBuiltinRoutes(app: App, context: AppContext) {
   const { debugBase } = context.config
   const isBundle = context.config.command == 'bundle'
 
@@ -64,7 +60,7 @@ export function defineBuiltinRoutes(
         const module = `throw Object.assign(Error(), ${JSON.stringify(props)})`
         sendModule(req, module)
       } else if (page?.props) {
-        const module = renderer.renderPageState(page)
+        const module = app.renderPageState(page)
         sendModule(req, module)
       }
     }
@@ -95,7 +91,7 @@ export function defineBuiltinRoutes(
 
         const stateEntry = globalCache.loaded[cacheKey]
         if (stateEntry) {
-          const module = renderer.renderStateModule(cacheKey, stateEntry)
+          const module = app.renderStateModule(cacheKey, stateEntry)
           sendModule(req, module)
         }
       }
