@@ -1,5 +1,6 @@
 import { createApp as create } from '@/app/createApp'
 import type { App, AppContext, RenderedPage } from '@/app/types'
+import { defineEndpoint } from '@/endpoint'
 import { loadDeployedEnv } from '@/runtime/deployedEnv'
 import { setRequestMetadata } from '@/runtime/requestMetadata'
 import { ssrClearCache, ssrImport } from '@/runtime/ssrModules'
@@ -8,7 +9,7 @@ import { LazyPromise } from '@/utils/LazyPromise'
 import config from './config'
 import { context } from './context'
 import { injectSausClient } from './injectSausClient'
-import { createPageFactory } from './pageFactory'
+import { providePageBundles } from './pageBundles'
 
 // Allow `ssrImport("saus/client")` outside page rendering.
 injectSausClient()
@@ -23,7 +24,7 @@ export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
   await routeSetup
   return create(context, [
     isolatePages(context),
-    createPageFactory,
+    providePageBundles,
     createPageEndpoint(context),
     ...plugins,
   ])
@@ -63,20 +64,24 @@ function createPageEndpoint(context: AppContext): App.Plugin {
     getEndpoints: (method, route) =>
       route.moduleId !== null &&
       method == 'GET' &&
-      (async (req, headers) => {
-        const page = await app.renderPageBundle(req, route, {
-          receivePage: (page: RenderedPage | null) =>
-            page && setRequestMetadata(req, { page }),
-        })
-        if (page) {
-          headers.content({
-            type: 'text/html; charset=utf-8',
-            length: Buffer.byteLength(page.html),
+      defineEndpoint({
+        method: 'GET',
+        contentTypes: ['text/html'],
+        async run(req, headers) {
+          const page = await app.renderPageBundle(req, route, {
+            receivePage: (page: RenderedPage | null) =>
+              page && setRequestMetadata(req, { page }),
           })
-          req.respondWith(200, {
-            text: page.html,
-          })
-        }
+          if (page) {
+            headers.content({
+              type: 'text/html; charset=utf-8',
+              length: Buffer.byteLength(page.html),
+            })
+            req.respondWith(200, {
+              text: page.html,
+            })
+          }
+        },
       }),
   })
 }

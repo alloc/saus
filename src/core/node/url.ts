@@ -1,6 +1,8 @@
 import { URLSearchParams } from 'url'
+import type { RouteParams } from '../routes'
 import { baseToRegex } from '../utils/base'
 import { joinUrl } from '../utils/joinUrl'
+import { AnyToObject } from '../utils/types'
 
 const rawUrlRE = /^(\/[^?]*)(?:\?(.+)?)?$/
 
@@ -9,11 +11,11 @@ export type { URLSearchParams }
 
 const emptyParams: any = Object.freeze({})
 
-export class ParsedUrl<RouteParams extends {} = Record<string, string>> {
+export class ParsedUrl<Params extends object = any> {
   constructor(
     public path: string,
     public searchParams: URLSearchParams,
-    public routeParams: Readonly<RouteParams> = emptyParams
+    public routeParams: Readonly<AnyToObject<Params, RouteParams>> = emptyParams
   ) {
     searchParams.sort()
   }

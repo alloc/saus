@@ -1,12 +1,5 @@
 import { MagicString } from '@/babel'
-import {
-  ClientFunction,
-  ClientFunctions,
-  dataToEsm,
-  endent,
-  RuntimeConfig,
-  unwrapBuffer,
-} from '@/core'
+import { dataToEsm, endent, RuntimeConfig, unwrapBuffer } from '@/core'
 import { debug } from '@/debug'
 import { inferGitHubRepo, resolveGitHubToken } from '@/git'
 import { relativeToCwd } from '@/node/relativeToCwd'
@@ -306,12 +299,12 @@ async function generateSsrBundle(
   const config = await context.resolveConfig({
     plugins: [
       modules,
+      context.bundlePlugins,
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
       ...workerPlugins,
       copyPublicDir(),
       routesPlugin(clientRouteMap)(),
-      context.bundlePlugins,
       debugForbiddenImports([
         'vite',
         './babel/index.js',
@@ -424,31 +417,6 @@ function defineNodeConstants(): vite.Plugin {
     },
   }
 }
-
-/**
- * The renderers from the `saus.render` module are transformed at build time
- * for client-side use, so the SSR bundle can serve them from memory as-is.
- *
- * This function prepares a manifest for piecing together a hydration script
- * based on which renderer is used for a given page.
- */
-const serializeClientFunctions = (functions: ClientFunctions) =>
-  dataToEsm({
-    filename: functions.filename,
-    beforeRender: functions.beforeRender.map(serializeClientFunction),
-    render: functions.render.map(renderFn => ({
-      ...serializeClientFunction(renderFn),
-      didRender: renderFn.didRender
-        ? serializeClientFunction(renderFn.didRender)
-        : undefined,
-    })),
-  })
-
-const serializeClientFunction = (func: ClientFunction) => ({
-  start: func.start,
-  route: func.route,
-  ...func.transformResult,
-})
 
 // Technically, top-level await is available since Node 14.8 but Esbuild
 // complains when this feature is used with a "node14" target environment.

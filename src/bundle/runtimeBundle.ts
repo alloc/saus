@@ -15,6 +15,7 @@ import { internalRedirects } from './moduleRedirects'
 // These modules are dynamically defined at build time.
 const sausExternals = [
   'bundle/runtime/bundle/clientAssets.ts',
+  'bundle/runtime/bundle/clientEntries.ts',
   'bundle/runtime/bundle/clientModules.ts',
   'bundle/runtime/bundle/config.ts',
   'bundle/runtime/bundle/debugBase.ts',

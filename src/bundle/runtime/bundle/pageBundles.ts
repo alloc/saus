@@ -15,7 +15,7 @@ import { context } from './context'
 import { injectDebugBase } from './debugBase'
 import { PageBundle } from './types'
 
-export const createPageFactory: App.Plugin = app => {
+export const providePageBundles: App.Plugin = app => {
   const { config, renderPageState, renderStateModule } = app
 
   // Enable "debug view" when this begins the URL pathname.

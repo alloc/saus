@@ -11,15 +11,24 @@ import type {
 import type { ParsedUrl } from './node/url'
 import type { InferRouteParams, Route, RouteParams } from './routes'
 import type { httpMethods } from './utils/httpMethods'
-import type { Falsy, Promisable } from './utils/types'
+import type { AnyToObject, Falsy, Promisable } from './utils/types'
 
-export interface Endpoint<Params extends {} = {}>
-  extends Endpoint.Function<Params> {
+export interface Endpoint<Params extends object = any>
+  extends Endpoint.Function<AnyToObject<Params, RouteParams>> {
   /** This function responds to this HTTP method. */
   method: string
   /** This function responds to these MIME type requests. */
   contentTypes: Endpoint.ContentType[]
 }
+
+export type EndpointConfig<Params extends object = any> = {
+  run: Endpoint.Function<Params>
+} & Partial<Endpoint<Params>>
+
+/** Used by `App.Plugin`s that override `getEndpoints` */
+export const defineEndpoint = //
+  <Params extends object = any>({ run, ...props }: EndpointConfig<Params>) =>
+    Object.assign(run, props) as Endpoint.Generated
 
 export namespace Endpoint {
   export type Generated = Function<RouteParams> & Partial<Endpoint>
@@ -67,16 +76,19 @@ export namespace Endpoint {
     app: App
   ) => Promisable<any>
 
-  export type Function<Params extends {} = {}> = (
+  export type Function<Params extends object = any> = (
     request: Request<Params>,
     responseHeaders: DeclaredHeaders,
     app: App
   ) => Promisable<Result>
 
-  export type Request<RouteParams extends {} = {}> = unknown &
-    RequestUrl<RouteParams> &
+  export type Request<Params extends object = any> = unknown &
+    RequestUrl<Params> &
     RequestMethods &
-    Omit<RouteParams, keyof RequestMethods | keyof RequestUrl>
+    AnyToObject<
+      Omit<Params, keyof RequestMethods | keyof RequestUrl>,
+      RouteParams
+    >
 
   interface RequestMethods {
     respondWith: RespondWith
@@ -97,8 +109,8 @@ export namespace Endpoint {
     (promise: ResponsePromise): void
   }
 
-  export interface RequestUrl<RouteParams extends {} = Record<string, string>>
-    extends ParsedUrl<RouteParams> {
+  export interface RequestUrl<Params extends object = any>
+    extends ParsedUrl<Params> {
     readonly method: string
     readonly headers: Readonly<RequestHeaders>
     readonly read: () => Promise<Buffer>
