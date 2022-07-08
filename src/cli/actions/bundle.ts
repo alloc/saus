@@ -10,11 +10,16 @@ command(bundle, '[outFile]')
     '--mode <mode>',
     `[string] override the client mode (eg: development)`
   )
+  .option(
+    '--assetsDir <path>',
+    `[string] override build.assetsDir and force-write chunks/assets`
+  )
   .option('--entry [file]', `[string|boolean] set the bundle entry`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--sourcemap', `[boolean] enable/disable source maps`)
 
 export type BundleFlags = InlineBundleConfig & {
+  assetsDir?: string
   load?: boolean
   minify?: boolean
   mode?: string
@@ -24,10 +29,14 @@ export type BundleFlags = InlineBundleConfig & {
 export async function bundle(outFile: string, options: BundleFlags) {
   const viteOptions: vite.InlineConfig = {
     mode: options.mode,
-    build: { sourcemap: options.sourcemap },
+    build: {
+      assetsDir: options.assetsDir,
+      sourcemap: options.sourcemap,
+    },
   }
 
   const bundleOptions: BundleOptions = {
+    forceWriteAssets: !!options.assetsDir,
     minify: options.minify,
   }
 

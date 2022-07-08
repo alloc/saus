@@ -3,6 +3,7 @@ import { PublicDirMode } from '@/publicDir'
 export interface BundleOptions {
   absoluteSources?: boolean
   isBuild?: boolean
+  forceWriteAssets?: boolean
   minify?: boolean
   preferExternal?: boolean
   appVersion?: string

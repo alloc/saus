@@ -51,14 +51,15 @@ export async function bundle(
     context.defaultLayout.id = servedPathForFile(resolved.id, context.root)
   }
 
-  const { config, userConfig } = context
+  const { bundle: bundleConfig, config, userConfig } = context
   const outDir = path.resolve(config.root, config.build.outDir)
+
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
     base: config.base,
-    bundleType: context.bundle.type,
+    bundleType: bundleConfig.type,
     command: 'bundle',
-    debugBase: context.bundle.debugBase,
+    debugBase: bundleConfig.debugBase,
     defaultLayout: context.defaultLayout,
     defaultPath: context.defaultPath,
     githubRepo,
@@ -108,7 +109,7 @@ export async function bundle(
   )
 
   const bundle: OutputBundle = {
-    path: context.bundle.outFile,
+    path: bundleConfig.outFile,
     code,
     map: map as SourceMap | undefined,
     files: {},
@@ -132,7 +133,7 @@ export async function bundle(
     }
     fs.writeFileSync(bundle.path, bundle.code)
 
-    if (!context.bundle.entry) {
+    if (!bundleConfig.entry) {
       fs.copyFileSync(
         path.resolve(__dirname, '../bundle/index.d.ts'),
         bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
@@ -149,7 +150,7 @@ export async function bundle(
       fs.writeFileSync(file, unwrapBuffer(buffer))
     }
 
-    if (context.bundle.clientStore == 'local') {
+    if (options.forceWriteAssets || bundleConfig.clientStore == 'local') {
       let file: string
       for (const chunk of clientChunks) {
         file = path.join(outDir, chunk.fileName)

@@ -25,7 +25,7 @@ export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
   return create(context, [
     isolatePages(context),
     providePageBundles,
-    createPageEndpoint(context),
+    servePageRequests,
     ...plugins,
   ])
 }
@@ -59,29 +59,27 @@ function isolatePages(context: AppContext): App.Plugin {
   })
 }
 
-function createPageEndpoint(context: AppContext): App.Plugin {
-  return app => ({
-    getEndpoints: (method, route) =>
-      route.moduleId !== null &&
-      method == 'GET' &&
-      defineEndpoint({
-        method: 'GET',
-        contentTypes: ['text/html'],
-        async run(req, headers) {
-          const page = await app.renderPageBundle(req, route, {
-            receivePage: (page: RenderedPage | null) =>
-              page && setRequestMetadata(req, { page }),
+const servePageRequests: App.Plugin = app => ({
+  getEndpoints: (method, route) =>
+    route.moduleId !== null &&
+    method == 'GET' &&
+    defineEndpoint({
+      method: 'GET',
+      contentTypes: ['text/html'],
+      async run(req, headers) {
+        const page = await app.renderPageBundle(req, route, {
+          receivePage: (page: RenderedPage | null) =>
+            page && setRequestMetadata(req, { page }),
+        })
+        if (page) {
+          headers.content({
+            type: 'text/html; charset=utf-8',
+            length: Buffer.byteLength(page.html),
           })
-          if (page) {
-            headers.content({
-              type: 'text/html; charset=utf-8',
-              length: Buffer.byteLength(page.html),
-            })
-            req.respondWith(200, {
-              text: page.html,
-            })
-          }
-        },
-      }),
-  })
-}
+          req.respondWith(200, {
+            text: page.html,
+          })
+        }
+      },
+    }),
+})
