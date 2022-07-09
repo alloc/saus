@@ -149,11 +149,53 @@ export namespace Endpoint {
     body?: Body & { headers?: ResponseHeaders | null }
   ]
 
+  export type Stream = {
+    pipe(
+      writable: { write(v: string): void },
+      options?: { end?: boolean }
+    ): void
+  }
+
+  export type WebStream = {
+    pipeTo(writable: WritableStream): void
+  }
+
   export type Body =
     | { buffer: Buffer }
-    | { stream: NodeJS.ReadableStream }
+    | { stream: Stream }
+    | { webStream: WebStream }
     | { text: string }
-    | { json?: any }
+    | { json: any }
 
   export type AnyBody = Simplify<Partial<UnionToIntersection<Body>>>
+  export type Utf8 = string | Buffer | Stream | WebStream
+}
+
+/** This Streams API interface provides a standard abstraction for writing
+ * streaming data to a destination, known as a sink. This object comes with
+ * built-in backpressure and queuing. */
+export interface WritableStream<W = any> {
+  readonly locked: boolean
+  abort(reason?: any): Promise<void>
+  close(): Promise<void>
+  getWriter(): {
+    write(v: string): void
+    close(): void
+  }
+}
+
+export function isStream(stream: any): stream is Endpoint.Stream {
+  return (
+    stream !== null &&
+    typeof stream === 'object' &&
+    typeof stream.pipe === 'function'
+  )
+}
+
+export function isWebStream(stream: any): stream is Endpoint.WebStream {
+  return (
+    stream !== null &&
+    typeof stream === 'object' &&
+    typeof stream.pipeTo === 'function'
+  )
 }

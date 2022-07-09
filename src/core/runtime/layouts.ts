@@ -42,5 +42,5 @@ export interface RouteLayout<
  * You should `export default` the returned object.
  */
 export const defineLayout = defineLayoutRenderer({
-  toString: (html: string) => html,
+  serialize: (html: string) => html,
 })

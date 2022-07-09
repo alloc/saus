@@ -1,15 +1,15 @@
 import { Promisable } from 'type-fest'
+import { Endpoint } from '../endpoint'
 import type { RouteLayout } from './layouts'
 import { getCurrentModule } from './ssrModules'
 
-// The first instance of a layout module is reused.
-const layouts: { [file: string]: RouteLayout } = {}
-
 export interface LayoutRenderer<RenderResult = any> {
-  /** Stringify the SSR result of a layout's `render` method. */
-  toString: (result: RenderResult) => Promisable<string>
+  /** Serialize the SSR result of a layout's `render` method. */
+  serialize: (result: RenderResult) => Promisable<Endpoint.Utf8>
   /** Path to module responsible for hydrating the client. */
   hydrator?: string
+  /** Modify the `<head>` of every layout using this renderer. */
+  head?: RouteLayout<any, any, any, RenderResult>['head']
 }
 
 /**
@@ -20,35 +20,29 @@ export interface LayoutRenderer<RenderResult = any> {
  * the `../plugins/clientLayout` module.
  */
 export const defineLayoutRenderer = <RenderResult>({
-  toString,
+  serialize: toString,
   hydrator,
+  head: getGlobalHead,
 }: LayoutRenderer<RenderResult>) =>
   function <
     ClientProps extends object = any,
     ServerProps extends object = any,
     RouteModule extends object = any
   >(
-    config: Omit<
-      RouteLayout<ClientProps, ServerProps, RouteModule, RenderResult>,
-      'file'
-    >
-  ): RouteLayout<ClientProps, ServerProps, RouteModule, string> {
-    const { render } = config
-    config.hydrator ||= hydrator
+    config: RouteLayout<ClientProps, ServerProps, RouteModule, RenderResult>
+  ): RouteLayout<ClientProps, ServerProps, RouteModule, Endpoint.Utf8> {
+    const { head: getHead, render } = config
+    if (getGlobalHead) {
+      config.head = async req => {
+        const head = await Promise.all([getGlobalHead(req), getHead?.(req)])
+        return head.join('\n')
+      }
+    }
     config.render = async req => {
       const rendered = await render(req)
       return toString(rendered) as any
     }
-    const file: string = ((config as any).file ||= getCurrentModule())
-    return config
-    // const layout = layouts[file]
-    // if (layout) {
-    //   return Object.assign(layout, {
-    //     clientHooks: undefined,
-    //     head: undefined,
-    //     hydrator: undefined,
-    //     ...config,
-    //   })
-    // }
-    // return (layouts[file] = config as any)
+    config.hydrator ||= hydrator
+    config.file = getCurrentModule()
+    return config as any
   }
