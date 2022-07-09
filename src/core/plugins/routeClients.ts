@@ -38,7 +38,7 @@ export function routeClientsPlugin(): Plugin {
       }
     },
     resolveId(id) {
-      const routeClient = routeClients.clientsByUrl[id]
+      const routeClient = routeClients?.clientsByUrl[id]
       return routeClient?.id
     },
     async load(id, opts) {

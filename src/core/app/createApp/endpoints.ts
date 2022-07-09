@@ -9,6 +9,8 @@ import { App, AppContext } from '../types'
 export const wrapEndpoints =
   (app: App, ctx: AppContext): App['callEndpoints'] =>
   async (url, resolved = app.resolveRoute(url)) => {
+    const route = resolved[1]
+
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.Response | undefined
     let headers = new DeclaredHeaders(null as ResponseHeaders | null)
@@ -19,7 +21,7 @@ export const wrapEndpoints =
         if (arg1 instanceof Promise) {
           promise = arg1
         } else {
-          response = createResponse(headers, arg1, body)
+          response = createResponse(route, headers, arg1, body)
         }
       }
     )
