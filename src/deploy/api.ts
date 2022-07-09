@@ -5,6 +5,7 @@ import { toObjectHash } from '@/utils/objectHash'
 import { plural } from '@/utils/plural'
 import { Promisable } from '@/utils/types'
 import exec from '@cush/exec'
+import { omitKeys } from '@saus/deploy-utils'
 import assert from 'assert'
 import { addExitCallback } from 'catch-exit'
 import fs from 'fs'
@@ -170,7 +171,7 @@ export async function deploy(
       const savedTarget = await savedTargets.match(target, plugin)
       if (savedTarget) {
         changed = {}
-        if (!diffObjects(savedTarget, target, changed)) {
+        if (!diffObjects(savedTarget, omitEphemeral(target, plugin), changed)) {
           markTargetReused(savedTarget)
           break deploy // Nothing changed.
         }
@@ -262,10 +263,16 @@ export async function deploy(
         targetId = target._id
       }
 
+      // Hoist identifying keys so they show first in cached state.
+      let state = hoistKeys(target, Object.keys(targetId.values))
+
+      if (plugin.ephemeral) {
+        state = omitEphemeral(state, plugin)
+      }
+
       newCache.targets.push({
         plugin: pluginName,
-        // Hoist identifying keys so they show first in cached state.
-        state: hoistKeys(target, Object.keys(targetId.values)),
+        state,
       })
     }
 
@@ -542,4 +549,8 @@ function createPluginCache<T>(
     load: async (entry, name) =>
       (name && cache[name]) || (loading[entry] ||= load(entry, cache)),
   }
+}
+
+function omitEphemeral(state: Record<string, any>, plugin: DeployPlugin) {
+  return omitKeys(state, (_, key) => plugin.ephemeral!.includes(key))
 }

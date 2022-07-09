@@ -101,6 +101,10 @@ export namespace DeployPlugin {
      */
     name: string
     /**
+     * Specify which target state shouldn't be cached.
+     */
+    ephemeral?: (keyof Merge<Props, State>)[]
+    /**
      * Return data that identifies the target. \
      * Exclude data that only configures behavior.
      */
