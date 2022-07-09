@@ -1,0 +1,42 @@
+{
+  "name": "@saus/solid",
+  "version": "0.4.9",
+  "description": "Saus renderer for Solid components",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./types/plugin.d.ts",
+      "import": "./dist/plugin.mjs",
+      "default": "./dist/plugin.js"
+    },
+    "./hydrator": "./client/hydrate.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*",
+    "solid-js": "*"
+  },
+  "dependencies": {
+    "vite-plugin-solid": "^2.2.6"
+  }
+}
