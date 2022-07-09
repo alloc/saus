@@ -18,10 +18,10 @@ import { gray, red, yellow } from 'kleur/colors'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
+import { runBundle } from '../bundle/run'
 import type { PageBundle } from '../bundle/types'
 import { Multicast } from './multicast'
 import { BundleDescriptor, loadPageFactory, PageEvents } from './pageFactory'
-import { runBundle } from './runBundle'
 import type { BuildWorker } from './worker'
 
 export type FailedPage = { path: string; reason: string }

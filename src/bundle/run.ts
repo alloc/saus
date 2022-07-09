@@ -19,5 +19,5 @@ export function runBundle({
 
   const exports: any = {}
   initialize(exports, require)
-  return exports as typeof import('../bundle/runtime/bundle/api')
+  return exports as typeof import('./runtime/bundle/api')
 }

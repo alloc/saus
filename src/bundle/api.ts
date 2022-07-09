@@ -274,6 +274,18 @@ async function generateSsrBundle(
     moduleSideEffects: 'no-treeshake',
   })
 
+  const preRenderer = modules.addModule({
+    id: '\0saus/preRenderer.js',
+    code: endent`
+      import createApp from '${runtimeId}'
+      let app
+      return async function preRender() {
+        app ||= await createApp()
+        return app.renderPageBundle()
+      }
+    `,
+  })
+
   // Avoid using Node built-ins for `get` function.
   const isWorker = bundleConfig.type == 'worker'
   const workerPlugins: vite.PluginOption[] = []
@@ -335,7 +347,7 @@ async function generateSsrBundle(
       minify: bundleConfig.minify == true,
       sourcemap: context.userConfig.build?.sourcemap ?? true,
       rollupOptions: {
-        input: bundleConfig.entry || context.bundleModuleId,
+        input: [bundleConfig.entry || context.bundleModuleId, preRenderer.id],
         output: {
           dir: bundleOutDir,
           format: bundleConfig.format,

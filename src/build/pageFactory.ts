@@ -6,9 +6,9 @@ import { resolveStackTrace } from '@/node/stack'
 import { parseUrl } from '@/node/url'
 import { MutableRuntimeConfig } from '@/runtime/config'
 import { isMainThread, MessagePort } from 'worker_threads'
+import { runBundle } from '../bundle/run'
 import type { PageBundle, PageBundleOptions } from '../bundle/types'
 import { Multicast } from './multicast'
-import { runBundle } from './runBundle'
 
 export interface BundleDescriptor {
   root: string
