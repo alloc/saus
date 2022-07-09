@@ -17,11 +17,13 @@ import type { Falsy } from '../utils/types'
 
 export interface App {
   config: RuntimeConfig
+  catchRoute: Route | undefined
+  defaultRoute: Route | undefined
   resolveRoute: RouteResolver
   getEndpoints: Endpoint.Generator | null
   callEndpoints(
     url: Endpoint.RequestUrl,
-    endpoints?: readonly Endpoint.Function[]
+    resolved?: ResolvedRoute
   ): Promise<Partial<Endpoint.Response>>
   loadClientProps: ClientPropsLoader
   renderPage: RenderPageFn

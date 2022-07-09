@@ -138,6 +138,7 @@ export namespace Endpoint {
 
   export type Response = {
     ok: boolean
+    route?: Route
     status: number
     headers: DeclaredHeaders<ResponseHeaders | null>
     body?: AnyBody

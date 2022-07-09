@@ -1,7 +1,6 @@
 import type { CommonClientProps, RenderRequest } from '../core'
 import { globalCache } from '../runtime/cache'
 import type { RouteLayout } from '../runtime/layouts'
-import routes from './routes'
 
 export type Hydrator<RenderResult = any> = (
   root: HTMLElement,
@@ -13,7 +12,6 @@ export interface RouteClient {
   hydrate: Hydrator
   layout: Pick<RouteLayout, 'render' | 'clientHooks'>
   routeModule: object
-  routeModuleUrl: string
 }
 
 export const defineHydrator = <RenderResult = any>(
@@ -21,13 +19,10 @@ export const defineHydrator = <RenderResult = any>(
 ) => hydrate
 
 export async function hydrate(
-  { hydrate, layout, routeModule, routeModuleUrl }: RouteClient,
+  { hydrate, layout, routeModule }: RouteClient,
   props: CommonClientProps,
   root: HTMLElement
 ) {
-  // Update client routes map.
-  routes[props.routePath] = routeModuleUrl
-
   // Cache page props in global cache.
   const path = location.pathname
   globalCache.loaded[path] = [props]

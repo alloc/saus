@@ -5,7 +5,7 @@ import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
 import { RenderedFile } from '../app/types'
 import { DevContext } from '../context'
-import { Endpoint, Plugin } from '../core'
+import { Endpoint, Plugin, Route } from '../core'
 import { makeRequestUrl } from '../makeRequest'
 import { parseUrl } from '../node/url'
 import { writeResponse } from '../node/writeResponse'
@@ -18,10 +18,12 @@ import { vite } from '../vite'
  * Those route functions are cached here so the `processRequest`
  * function can easily access them.
  */
-const functionsByRequest = new WeakMap<IncomingMessage, ResolvedFunctions>()
-type ResolvedFunctions = {
+const requestMetas = new WeakMap<IncomingMessage, RequestMeta>()
+
+type RequestMeta = {
   url: Endpoint.RequestUrl
-  functions: readonly Endpoint.Function[]
+  route: Route | undefined
+  functions: readonly Endpoint[]
 }
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
@@ -36,7 +38,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
 
   let serveApp: vite.Connect.NextHandleFunction
   serveApp = (req, res, next) =>
-    functionsByRequest.has(req) &&
+    requestMetas.has(req) &&
     processRequest(context, req, res, next).catch(error => {
       onError(error)
 
@@ -117,8 +119,9 @@ function resolveFunctions(_req: IncomingMessage, context: DevContext) {
     read: () => streamToBuffer(_req),
   })
   const [functions, route] = context.app.resolveRoute(req)
-  functionsByRequest.set(_req, {
+  requestMetas.set(_req, {
     url: req,
+    route,
     functions,
   })
   return [functions, route] as const
@@ -135,8 +138,11 @@ async function processRequest(
     hotReload: { nonce },
   } = context
 
-  const { url, functions } = functionsByRequest.get(req)!
-  const { status, headers, body } = await app.callEndpoints(url, functions)
+  const { url, route, functions } = requestMetas.get(req)!
+  const { status, headers, body } = await app.callEndpoints(url, [
+    functions,
+    route,
+  ])
 
   // Reprocess the request if modules were changed during.
   if (nonce !== context.hotReload.nonce) {

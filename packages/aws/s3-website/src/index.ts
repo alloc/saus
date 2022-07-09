@@ -31,9 +31,6 @@ export async function useS3Website(
           new aws.S3.Bucket({
             ...props,
             AccessControl: 'PublicRead',
-            OwnershipControls: {
-              Rules: [{ ObjectOwnership: 'BucketOwnerEnforced' }],
-            },
           })
         )
         ref(

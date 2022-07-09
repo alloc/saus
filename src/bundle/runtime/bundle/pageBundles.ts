@@ -119,7 +119,7 @@ export const providePageBundles: App.Plugin = app => {
             attrs: { type: 'module' },
             children: renderPageScript({
               pageStateId: config.base + pageStateId,
-              sausClientId: config.base + config.clientCacheId,
+              sausClientId: config.base + config.clientHelpersId,
               routeClientId: config.base + routeClientId,
             }),
           })

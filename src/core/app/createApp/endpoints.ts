@@ -2,12 +2,13 @@ import { Endpoint } from '@/endpoint'
 import { DeclaredHeaders, ResponseHeaders } from '@/http/headers'
 import { HttpRedirect } from '@/http/redirect'
 import { makeRequest } from '@/makeRequest'
+import type { Route } from '@/routes'
 import { pickAllExcept } from '@/utils/pick'
 import { App, AppContext } from '../types'
 
 export const wrapEndpoints =
   (app: App, ctx: AppContext): App['callEndpoints'] =>
-  async (url, endpoints = app.resolveRoute(url)[0]) => {
+  async (url, resolved = app.resolveRoute(url)) => {
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.Response | undefined
     let headers = new DeclaredHeaders(null as ResponseHeaders | null)
@@ -23,6 +24,7 @@ export const wrapEndpoints =
       }
     )
 
+    let endpoints = resolved[0] as readonly Endpoint.Function[]
     if (ctx.requestHooks) {
       endpoints = ctx.requestHooks.concat(endpoints)
     }
@@ -37,17 +39,17 @@ export const wrapEndpoints =
         promise = undefined
         if (resolved) {
           const [arg1, body] = resolved
-          response = createResponse(headers, arg1, body)
+          response = createResponse(route, headers, arg1, body)
           break
         }
       }
       if (returned) {
         if (returned instanceof HttpRedirect) {
           headers.location(returned.location)
-          response = createResponse(headers, 301)
+          response = createResponse(route, headers, 301)
         } else {
           headers.merge(returned.headers)
-          response = createResponse(headers, returned.status, {
+          response = createResponse(route, headers, returned.status, {
             buffer: returned.data,
           })
         }
@@ -64,6 +66,7 @@ export const wrapEndpoints =
   }
 
 function createResponse(
+  route: Route | undefined,
   headers: DeclaredHeaders<ResponseHeaders | null>,
   arg1: number | Endpoint.ResponseTuple | Endpoint.ResponseStream | undefined,
   body?: Endpoint.ResponseTuple[1]
@@ -89,5 +92,6 @@ function createResponse(
     status,
     headers,
     body: body as Endpoint.AnyBody,
+    route,
   }
 }

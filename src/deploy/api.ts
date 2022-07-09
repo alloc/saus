@@ -215,6 +215,27 @@ export async function deploy(
   let newTargetCache: DeployFile | undefined
   let deployFailed = false
 
+  const onError = async (e: any) => {
+    deployFailed = true
+    if (!options.dryRun) {
+      if (options.noRevert) {
+        newTargetCache = await refreshTargetCache()
+        await saveTargetCache()
+      } else
+        for (const revert of revertFns.reverse()) {
+          try {
+            await revert()
+          } catch (e: any) {
+            logger.error(e)
+          }
+        }
+    }
+  }
+
+  addExitCallback((_signal, _code, error) => {
+    !deployFailed && error && onError(error)
+  })
+
   const refreshTargetCache = async () => {
     const newCache: DeployFile = { version: 1, targets: [], plugins: {} }
 
@@ -376,22 +397,7 @@ export async function deploy(
         )
       )
 
-    deployFailed = true
-    if (!options.dryRun) {
-      if (options.noRevert) {
-        newTargetCache = await refreshTargetCache()
-        await saveTargetCache()
-      } else
-        for (const revert of revertFns.reverse()) {
-          try {
-            await revert()
-          } catch (e: any) {
-            logger.error(e)
-          }
-        }
-    }
-
-    return
+    return onError(e)
   } finally {
     deployLockfile.delete()
     task?.finish()

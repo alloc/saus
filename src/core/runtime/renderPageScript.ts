@@ -16,7 +16,7 @@ export function renderPageScript(opts: {
     import props from "${opts.pageStateId}"
     import * as Saus from "${opts.sausClientId}"
 
-    import("${opts.routeClientId}").then(({ default: client }) => {
+    import("${opts.routeClientId}").then(client => {
       Saus.hydrate(client, props, document.getElementById("root"))${
         opts.catchHandler ? `.catch(${opts.catchHandler})` : ``
       }

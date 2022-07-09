@@ -1,6 +1,6 @@
 import * as S3 from '@saus/aws-s3'
 import { OutputBundle } from 'saus'
-import { joinUrl, md5Hex, plural, scanPublicDir, wrapBody } from 'saus/core'
+import { md5Hex, plural, scanPublicDir, wrapBody } from 'saus/core'
 import { getDeployContext, GitFiles } from 'saus/deploy'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
@@ -123,12 +123,8 @@ export async function syncStaticFiles(
   for (const asset of bundle.clientAssets) {
     assetStore.upload(asset.fileName, Buffer.from(asset.source))
   }
-  for (const chunk of bundle.clientModules) {
-    assetStore.upload(mod.id, mod.text)
-    if (debugBase && mod.debugText) {
-      const debugId = joinUrl(debugBase, mod.id).slice(1)
-      assetStore.upload(debugId, mod.debugText)
-    }
+  for (const chunk of bundle.clientChunks) {
+    assetStore.upload(chunk.fileName, chunk.code)
   }
 
   const publicStore = syncPublicDir()

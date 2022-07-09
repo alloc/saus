@@ -44,9 +44,11 @@ export async function loadPageClient<
     // before executing the route entry.
     applyHead(pagePath)
 
-    const client: PageClient = await import(/* @vite-ignore */ clientUrl)
-    client.props = pageProps
-    return client
+    const clientModule = await import(/* @vite-ignore */ clientUrl)
+    return {
+      ...clientModule,
+      props: pageProps,
+    }
   } catch (error: any) {
     if (error.code == 'PAGE_404') {
       if (routes['default'] && routePath !== 'default') {

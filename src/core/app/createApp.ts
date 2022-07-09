@@ -126,6 +126,8 @@ export function createApp(ctx: AppContext, plugins: App.Plugin[] = []): App {
   } as App
 
   defineLazy(app, {
+    catchRoute: () => ctx.catchRoute,
+    defaultRoute: () => ctx.defaultRoute,
     callEndpoints: () => wrapEndpoints(app, ctx),
     renderPage: () => getPageFactory(app, ctx),
     renderPageState: () => getPageStateFactory(app, ctx),

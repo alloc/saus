@@ -118,5 +118,4 @@ export const renderRouteClient = (opts: {
   export { default as hydrate } from "${opts.hydratorId}"
   export { default as layout } from "${opts.layoutModuleId}"
   export * as routeModule from "${opts.routeModuleId}"
-  export const routeModuleUrl = "${opts.routeModuleId}"
 `

@@ -2,6 +2,7 @@ import { onResponse, route, setup } from 'saus'
 import {
   AssetStore,
   assignDefaults,
+  Endpoint,
   getPageFilename,
   getRequestMetadata,
   injectCachePlugin,
@@ -74,27 +75,38 @@ export function setupPageStore(config: PageStoreConfig) {
       },
     })
 
-    onResponse(1e9, (req, res) => {
-      if (!res.ok) {
-        return // Skip failed responses.
-      }
-      if (config.skipAuthorized && req.headers['authorization']) {
-        return // Skip authorized requests.
-      }
-      if (res.body && res.headers.has('content-type', /^text\/html\b/)) {
-        if ('stream' in res.body) {
-          return // HTML streams are not supported.
-        }
+    const shouldSkipResponse = (
+      req: Endpoint.Request,
+      res: Endpoint.Response
+    ): boolean =>
+      !res.ok ||
+      !res.body ||
+      !!res.body.stream ||
+      !res.route ||
+      res.route == app.defaultRoute ||
+      res.route == app.catchRoute ||
+      !!(config.skipAuthorized && req.headers['authorization'])
 
+    onResponse(1e9, (req, res) => {
+      if (shouldSkipResponse(req, res)) {
+        return
+      }
+      const headers = resolveHeaders(req, res.headers.toJSON() || {})
+      const body = unwrapBody(res.body!) as string | Buffer
+      // Someone visited a page through client-side routing.
+      if (req.path.endsWith('.html.js')) {
+        config.store.put(req.path.slice(1), body, headers)
+      }
+      // Someone visited a page through external link.
+      else if (res.headers.has('content-type', /^text\/html\b/)) {
         const { page } = getRequestMetadata(req)
         if (!page) {
           return // HTML not rendered with Saus.
         }
 
         const file = getPageFilename(req.path)
-        const headers = resolveHeaders(req, res.headers.toJSON() || {})
 
-        config.store.put(file, unwrapBody(res.body) as string, headers)
+        config.store.put(file, body, headers)
         config.store.put(file + '.js', app.renderPageState(page), headers)
       }
     })
