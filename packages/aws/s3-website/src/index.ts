@@ -25,7 +25,7 @@ export async function useS3Website(
       const createBucket = (
         id: string,
         props?: ConstructorParameters<typeof S3.Bucket>[0]
-      ) => {
+      ): ResourceRef => {
         const bucket = ref(id, new aws.S3.Bucket(props))
         ref(
           id + 'BucketPolicy',
@@ -48,12 +48,24 @@ export async function useS3Website(
         return bucket
       }
 
+      const websiteBuckets = new Set<ResourceRef>()
+      const createWebsiteBucket = (
+        id: string,
+        props?: ConstructorParameters<typeof S3.Bucket>[0]
+      ) => {
+        const bucket = createBucket(id, {
+          ...props,
+          WebsiteConfiguration: {
+            IndexDocument: 'index.html',
+            ...props?.WebsiteConfiguration,
+          },
+        })
+        websiteBuckets.add(bucket)
+        return bucket
+      }
+
       // This bucket mirrors the ./public/ folder of your project.
-      const publicDir = createBucket('PublicDir', {
-        WebsiteConfiguration: {
-          IndexDocument: 'index.html',
-        },
-      })
+      const publicDir = createWebsiteBucket('PublicDir')
 
       // This bucket holds the content-hashed modules that are
       // loaded by the browser for client-side logic.
@@ -71,21 +83,13 @@ export async function useS3Website(
       // This bucket holds pre-rendered pages, which tend to be
       // the most popular pages (hence the name).
       const popularPages =
-        bucketConfig.popularPages &&
-        createBucket('PopularPages', {
-          WebsiteConfiguration: {
-            IndexDocument: 'index.html',
-          },
-        })
+        bucketConfig.popularPages && createWebsiteBucket('PopularPages')
 
       // This bucket holds pages rendered just-in-time. This reduces
       // load on the origin server for often requested dynamic pages.
       const onDemandPages =
         bucketConfig.onDemandPages &&
-        createBucket('OnDemandPages', {
-          WebsiteConfiguration: {
-            IndexDocument: 'index.html',
-          },
+        createWebsiteBucket('OnDemandPages', {
           LifecycleConfiguration: {
             Rules: [
               {
@@ -111,7 +115,9 @@ export async function useS3Website(
         extra?: Partial<OriginConfig>
       ): OriginConfig => ({
         Id: bucket.id,
-        DomainName: bucket.get('DomainName'),
+        DomainName: websiteBuckets.has(bucket)
+          ? aws.Fn.Select(1, aws.Fn.Split('://', bucket.get('WebsiteURL')))
+          : bucket.get('RegionalDomainName'),
         CustomOriginConfig: httpsOnly,
         ...extra,
       })
@@ -281,8 +287,7 @@ export async function useS3Website(
       bundle,
       ctx.files,
       config,
-      awsInfra.outputs.buckets || {},
-      debugBase
+      awsInfra.outputs.buckets || {}
     )
   })
 

@@ -266,11 +266,11 @@ importers:
 
   packages/deploy-utils:
     specifiers:
-      '@cush/exec': ^1.7.1
+      '@cush/exec': ^1.8.0
       '@types/prompts': ^2.0.14
       prompts: ^2.4.2
     dependencies:
-      '@cush/exec': 1.7.1
+      '@cush/exec': 1.8.0
       '@types/prompts': 2.0.14
       prompts: 2.4.2
 
@@ -907,19 +907,11 @@ packages:
       to-fast-properties: 2.0.0
     dev: false
 
-  /@cush/exec/1.7.1:
-    resolution: {integrity: sha512-VhUZ39FqmWhXqMiKKsV1XzcNt0jTnc/vYYCn1TYHttrW1QGYWweD+f7MlgPABfLsAQDhYLVTvOjPdfY+1o0nsA==}
-    dependencies:
-      shell-quote: 1.7.3
-      type-error: 1.0.3
-    dev: false
-
   /@cush/exec/1.8.0:
     resolution: {integrity: sha512-wwWjZPAMyPP58ja9Ad1o3oo2mPqd0AXOPD+Zotn3amK1ZpLDJM4ci6xNAeupI9KvkXYMPWSxg1h1sUeUoMajOQ==}
     dependencies:
       shell-quote: 1.7.3
       type-error: 1.0.3
-    dev: true
 
   /@cush/execall/1.0.0:
     resolution: {integrity: sha512-pbrDxZOGgTbyLunPdgDgTeJCVFctqlGMoS0yEzuYQbaBvnSCAgh//74/Elhmx/gKG6gkutPvPWs/UwdEHFGV7w==}

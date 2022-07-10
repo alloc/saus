@@ -13,8 +13,7 @@ export async function syncStaticFiles(
   bundle: OutputBundle,
   files: GitFiles,
   config: WebsiteConfig,
-  buckets: { assets: string; oldAssets: string; publicDir: string },
-  debugBase: string
+  buckets: { assets: string; oldAssets: string; publicDir: string }
 ): Promise<void> {
   const ctx = getDeployContext()
   const bucketConfig = config.buckets || {}

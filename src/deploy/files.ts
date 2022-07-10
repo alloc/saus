@@ -142,7 +142,10 @@ export class YamlFile<T = any> extends File {
     return text ? yaml.parse(text) : undefined
   }
   setData(data: T, replacer?: Replacer) {
-    const text = yaml.stringify(data, replacer, 2)
+    const text = yaml.stringify(data, replacer, {
+      indent: 2,
+      aliasDuplicateObjects: false,
+    })
     this.setBuffer(Buffer.from(text))
   }
 }

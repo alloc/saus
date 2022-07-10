@@ -10,6 +10,8 @@ export function wrapBody(body: any): Endpoint.Body | undefined {
     ? { text: body }
     : body instanceof Buffer
     ? { buffer: body }
+    : globalThis.Buffer.isBuffer(body)
+    ? { buffer: Buffer.from(body.buffer) }
     : isReadableStream(body)
     ? { stream: body }
     : { json: body }

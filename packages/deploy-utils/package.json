@@ -22,7 +22,7 @@
     "prepare": "yarn build"
   },
   "dependencies": {
-    "@cush/exec": "^1.7.1",
+    "@cush/exec": "^1.8.0",
     "@types/prompts": "^2.0.14",
     "prompts": "^2.4.2"
   }

@@ -11,10 +11,12 @@ export default defineDeployHook(ctx => {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
-      if (config.commit !== false) {
+      if (config.commit !== false && !(await git('status --porcelain'))) {
         const message = config.commit?.message || ctx.lastCommitHeader
-        await git('add -u')
-        await git('commit -m', [message])
+        await git('add -A')
+        await git('commit -m', [message], {
+          noThrow: true,
+        })
       }
 
       return {
