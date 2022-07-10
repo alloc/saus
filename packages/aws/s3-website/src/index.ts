@@ -26,16 +26,7 @@ export async function useS3Website(
         id: string,
         props?: ConstructorParameters<typeof S3.Bucket>[0]
       ) => {
-        const bucket = ref(
-          id,
-          new aws.S3.Bucket({
-            ...props,
-            WebsiteConfiguration: {
-              IndexDocument: 'index.html',
-              ...props?.WebsiteConfiguration,
-            },
-          })
-        )
+        const bucket = ref(id, new aws.S3.Bucket(props))
         ref(
           id + 'BucketPolicy',
           new aws.S3.BucketPolicy({
@@ -58,7 +49,11 @@ export async function useS3Website(
       }
 
       // This bucket mirrors the ./public/ folder of your project.
-      const publicDir = createBucket('PublicDir')
+      const publicDir = createBucket('PublicDir', {
+        WebsiteConfiguration: {
+          IndexDocument: 'index.html',
+        },
+      })
 
       // This bucket holds the content-hashed modules that are
       // loaded by the browser for client-side logic.
@@ -76,13 +71,21 @@ export async function useS3Website(
       // This bucket holds pre-rendered pages, which tend to be
       // the most popular pages (hence the name).
       const popularPages =
-        bucketConfig.popularPages && createBucket('PopularPages')
+        bucketConfig.popularPages &&
+        createBucket('PopularPages', {
+          WebsiteConfiguration: {
+            IndexDocument: 'index.html',
+          },
+        })
 
       // This bucket holds pages rendered just-in-time. This reduces
       // load on the origin server for often requested dynamic pages.
       const onDemandPages =
         bucketConfig.onDemandPages &&
         createBucket('OnDemandPages', {
+          WebsiteConfiguration: {
+            IndexDocument: 'index.html',
+          },
           LifecycleConfiguration: {
             Rules: [
               {

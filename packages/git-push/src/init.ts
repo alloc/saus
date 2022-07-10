@@ -27,12 +27,15 @@ export function gitInit(config: InitConfig) {
 
     if (!ctx.dryRun) {
       if (existsSync(path.join(cwd, '.git'))) {
+        if (await git('status --porcelain')) {
+          throw Error('Cannot push with uncommitted changes: ' + cwd)
+        }
         await git('remote set-url origin', [origin.url])
       } else {
         await git('init')
         await git('remote add origin', [origin.url])
       }
-      await git('branch -u origin', [origin.branch])
+      await git(`branch -u origin/${origin.branch}`)
       await git(`reset --hard origin/${origin.branch}`)
     }
 
