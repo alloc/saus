@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { dirname, resolve } from 'path'
-import { unwrapBuffer } from '../buffer'
+import { unwrapBuffer } from '../node/buffer'
 import type { CacheEntry } from '../runtime/withCache'
 import { md5Hex } from '../utils/md5-hex'
 import { readJson } from '../utils/readJson'

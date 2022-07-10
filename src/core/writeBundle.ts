@@ -2,7 +2,7 @@ import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
 import { OutputBundle } from '../bundle/types'
-import { unwrapBuffer } from './buffer'
+import { unwrapBuffer } from './node/buffer'
 
 export function writeBundle(
   bundle: OutputBundle,

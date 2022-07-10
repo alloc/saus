@@ -5,6 +5,7 @@ import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
 import { urlToHttpOptions } from './internal/urlToHttpOptions'
+import { normalizeHeaders } from './normalizeHeaders'
 import { Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
 
@@ -37,6 +38,13 @@ export function http(
   return new Promise<Response>((resolve, reject) => {
     const req = createRequest(url, opts)
     req.method = method
+
+    // Textual bodies may have a mime type attached.
+    const body = opts?.body as Endpoint.AnyBody | undefined
+    if (body?.mime) {
+      req.headers = normalizeHeaders(req.headers || {})
+      req.headers['content-type'] = body.mime
+    }
 
     if (opts?.beforeSend) {
       opts.beforeSend(req, opts.body)

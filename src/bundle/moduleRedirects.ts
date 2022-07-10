@@ -37,7 +37,7 @@ export const clientRedirects = [
     path.join(clientDir, 'index.prod.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'buffer.ts'),
+    path.join(coreDir, 'node/buffer.ts'),
     path.join(clientDir, 'buffer.ts')
   ),
   redirectModule(

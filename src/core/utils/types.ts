@@ -58,7 +58,7 @@ export type Changed<T> = Remap<
   }
 >
 
-export type AnyToObject<T, U extends object = Record<string, any>> = [
+export type AnyToObject<T, U extends object | null = Record<string, any>> = [
   T
 ] extends [Any]
   ? U

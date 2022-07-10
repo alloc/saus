@@ -152,7 +152,7 @@ export namespace Endpoint {
   export type Body =
     | { buffer: Buffer }
     | { stream: NodeJS.ReadableStream }
-    | { text: string }
+    | { text: string; mime?: string }
     | { json?: any }
 
   export type AnyBody = Simplify<Partial<UnionToIntersection<Body>>>

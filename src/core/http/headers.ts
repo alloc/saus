@@ -2,6 +2,7 @@ import { CamelCase } from 'type-fest'
 import { PickResult, PossibleKeys } from '../core'
 import { writeHeaders } from '../node/writeHeaders'
 import { pick } from '../utils/pick'
+import { AnyToObject } from '../utils/types'
 import { normalizeHeaders } from './normalizeHeaders'
 
 export interface CommonHeaders
@@ -101,15 +102,15 @@ type WrappedHeaders = ResponseHeaders | null
  * functional style via this-chaining. The methods mutate the given
  * `headers` object, so chaining the calls is not strictly required.
  */
-export class DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders> {
+export class DeclaredHeaders<T extends WrappedHeaders = any> {
   private proxy: DeclaredHeaders<T>
   private headers: Record<string, string | string[]> | null
   constructor(
-    headers: T,
+    headers: AnyToObject<T, WrappedHeaders>,
     private filter: (
       name: string,
       newValue: string | string[] | undefined,
-      headers: Exclude<T, null>
+      headers: Exclude<AnyToObject<T, WrappedHeaders>, null>
     ) => boolean = () => true
   ) {
     this.headers = headers as any
@@ -151,10 +152,12 @@ export class DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders> {
   }
   /** Coerce to a `Headers` object or null. */
   toJSON() {
-    return this.headers
+    return this.headers as Headers | null
   }
   /** Get a new object with only the given header names. */
-  pick<P extends PossibleKeys<T>>(names: P[]): PickResult<T, P> {
+  pick<P extends PossibleKeys<T>>(
+    names: P[]
+  ): PickResult<AnyToObject<T, WrappedHeaders>, P> {
     return pick(this.headers || {}, names, Boolean) as any
   }
   /**
@@ -220,10 +223,10 @@ export class DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders> {
   }
 }
 
-export interface DeclaredHeaders<T extends WrappedHeaders = WrappedHeaders>
+export interface DeclaredHeaders<T extends WrappedHeaders = any>
   extends GeneratedMethods<T> {}
 
-type GeneratedMethods<T extends WrappedHeaders = WrappedHeaders> = {
+type GeneratedMethods<T extends WrappedHeaders = any> = {
   readonly [P in keyof CommonHeaders as CamelCase<P>]: (
     value: CommonHeaders[P] | undefined
   ) => DeclaredHeaders<T>

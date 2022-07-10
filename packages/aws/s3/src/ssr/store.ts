@@ -1,6 +1,7 @@
 import { AmzCredentials } from '@saus/aws-utils'
 import { deployedEnv } from 'saus'
-import { AssetStore, defer, Deferred, wrapBody } from 'saus/core'
+import { AssetStore, defer, Deferred } from 'saus/core'
+import { wrapBody } from 'saus/http'
 import { deleteObjects } from '../deleteObjects'
 import { putObject } from '../putObject'
 

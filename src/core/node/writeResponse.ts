@@ -1,6 +1,7 @@
 import type { ServerResponse } from 'http'
 import type { Endpoint } from '../endpoint'
-import type { DeclaredHeaders, Headers } from '../http/headers'
+import { DeclaredHeaders, Headers } from '../http/headers'
+import { normalizeHeaders } from '../http/normalizeHeaders'
 import { writeBody } from './writeBody'
 import { writeHeaders } from './writeHeaders'
 
@@ -8,16 +9,21 @@ export function writeResponse(
   res: ServerResponse,
   status: number,
   headers?: Headers | DeclaredHeaders | null,
-  body?: Endpoint.Body
+  body?: Endpoint.AnyBody
 ) {
   if (headers) {
-    headers =
-      typeof headers.toJSON == 'function'
-        ? headers.toJSON()
-        : (headers as Headers)
-  }
-  if (headers) {
-    writeHeaders(res, headers)
+    if (headers instanceof DeclaredHeaders) {
+      headers = headers.toJSON()
+    }
+    if (body?.mime) {
+      headers = {
+        ...normalizeHeaders(headers),
+        'content-type': body.mime,
+      }
+    }
+    if (headers) {
+      writeHeaders(res, headers)
+    }
   }
   res.writeHead(status)
   if (body) {

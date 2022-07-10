@@ -1,7 +1,8 @@
 import * as S3 from '@saus/aws-s3'
 import { OutputBundle } from 'saus'
-import { md5Hex, plural, scanPublicDir, wrapBody } from 'saus/core'
+import { md5Hex, plural, scanPublicDir } from 'saus/core'
 import { getDeployContext, GitFiles } from 'saus/deploy'
+import { wrapBody } from 'saus/http'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 

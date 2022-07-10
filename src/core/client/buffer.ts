@@ -4,6 +4,10 @@
 export class Buffer {
   protected constructor(readonly buffer: ArrayBuffer) {}
 
+  static isBuffer(buf: any): buf is Buffer {
+    return buf instanceof Buffer
+  }
+
   static from(data: ArrayBuffer) {
     return new Buffer(data)
   }
@@ -12,4 +16,8 @@ export class Buffer {
     const decoder = new TextDecoder(encoding)
     return decoder.decode(this.buffer)
   }
+}
+
+export function unwrapBuffer(buf: Buffer) {
+  return buf // Client buffers remain unchanged.
 }
