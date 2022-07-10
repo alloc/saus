@@ -203,10 +203,15 @@ export async function useS3Website(
       type CacheBehavior = CloudFront.Distribution.CacheBehavior
 
       const CacheBehavior = (
-        props: Omit<CacheBehavior, 'ViewerProtocolPolicy'>
+        target: string | ResourceRef,
+        props: Omit<CacheBehavior, 'ViewerProtocolPolicy' | 'TargetOriginId'>
       ): CacheBehavior => ({
-        ViewerProtocolPolicy: 'redirect-to-https',
+        TargetOriginId: typeof target !== 'string' ? target.id : target,
         CachePolicyId: defaultCachePolicy,
+        ViewerProtocolPolicy:
+          typeof target !== 'string' && websiteBuckets.has(target)
+            ? 'allow-all'
+            : 'redirect-to-https',
         OriginRequestPolicyId: managedRequestPolicies.AllViewer,
         ResponseHeadersPolicyId: config.injectSecurityHeaders
           ? managedResponseHeaderPolicies.SecurityHeaders
@@ -215,14 +220,12 @@ export async function useS3Website(
       })
 
       const cacheBehaviors: CacheBehavior[] = defalsify([
-        CacheBehavior({
-          TargetOriginId: assets.id,
+        CacheBehavior(assets, {
           PathPattern: assetsDir + '/*',
           CachePolicyId: managedCachePolicies.CachingOptimized,
         }),
         debugBase &&
-          CacheBehavior({
-            TargetOriginId: assets.id,
+          CacheBehavior(assets, {
             PathPattern: debugBase.slice(1) + assetsDir + '/*',
             CachePolicyId: managedCachePolicies.CachingOptimized,
           }),
@@ -239,9 +242,8 @@ export async function useS3Website(
           CustomOriginConfig: httpsOnly,
         })
         cacheBehaviors.push(
-          CacheBehavior({
+          CacheBehavior(origin.origin, {
             PathPattern: origin.prefix + '/*',
-            TargetOriginId: origin.origin,
             CachePolicyId: origin.noCache
               ? managedCachePolicies.CachingDisabled
               : defaultCachePolicy,
@@ -257,9 +259,8 @@ export async function useS3Website(
             Origins: origins,
             OriginGroups: items(originGroups),
             CacheBehaviors: cacheBehaviors,
-            DefaultCacheBehavior: CacheBehavior({
+            DefaultCacheBehavior: CacheBehavior(publicDir, {
               PathPattern: undefined!,
-              TargetOriginId: publicDir.id,
             }),
           },
         })
