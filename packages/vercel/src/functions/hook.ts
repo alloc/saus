@@ -1,4 +1,4 @@
-import { exec } from '@saus/deploy-utils'
+import { bindExec, exec } from '@saus/deploy-utils'
 import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
@@ -166,12 +166,4 @@ async function bundleFunctions(
   })
 
   return outputFiles
-}
-
-function bindExec(...boundArgs: exec.Args): typeof exec.async
-function bindExec(cmd: string, ...boundArgs: exec.Args): typeof exec.async
-function bindExec(...boundArgs: any[]) {
-  const boundCmd = typeof boundArgs[0] == 'string' ? boundArgs.shift() : ''
-  return (cmd: string, ...args: exec.Args) =>
-    exec((boundCmd ? boundCmd + ' ' : '') + cmd, ...args, ...boundArgs)
 }

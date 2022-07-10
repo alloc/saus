@@ -1,0 +1,41 @@
+import { bindExec } from '@saus/deploy-utils'
+import { existsSync } from 'fs'
+import path from 'path'
+import { onDeploy } from 'saus/deploy'
+import { InitConfig } from './config'
+
+/**
+ * Call this before producing any build artifacts
+ * so the local clone can be initialized and (most importantly)
+ * synchronized with its remote repository.
+ */
+export function gitInit(config: InitConfig) {
+  return onDeploy(async ctx => {
+    const cwd = path.resolve(ctx.root, config.root)
+    const git = bindExec('git', { cwd })
+
+    // Sanity check to avoid data loss.
+    if (cwd == ctx.root) {
+      throw Error('@saus/git-push cannot be used on project root')
+    }
+
+    let { origin } = config
+    if (typeof origin == 'string') {
+      const [url, branch = 'master'] = origin.split('#')
+      origin = { url, branch }
+    }
+
+    if (!ctx.dryRun) {
+      if (existsSync(path.join(cwd, '.git'))) {
+        await git('remote set-url origin', [origin.url])
+      } else {
+        await git('init')
+        await git('remote add origin', [origin.url])
+      }
+      await git('branch -u origin', [origin.branch])
+      await git(`reset --hard origin/${origin.branch}`)
+    }
+
+    return { ...config, origin }
+  })
+}

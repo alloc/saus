@@ -7,7 +7,7 @@ import { Promisable } from '@/utils/types'
 import exec from '@cush/exec'
 import { omitKeys } from '@saus/deploy-utils'
 import assert from 'assert'
-import { addExitCallback } from 'catch-exit'
+import { addExitCallback, removeExitCallback } from 'catch-exit'
 import fs from 'fs'
 import { bold, gray, green, red, yellow } from 'kleur/colors'
 import { success } from 'misty'
@@ -216,25 +216,16 @@ export async function deploy(
   let newTargetCache: DeployFile | undefined
   let deployFailed = false
 
-  const onError = async (e: any) => {
-    deployFailed = true
-    if (!options.dryRun) {
-      if (options.noRevert) {
-        newTargetCache = await refreshTargetCache()
-        await saveTargetCache()
-      } else
-        for (const revert of revertFns.reverse()) {
-          try {
-            await revert()
-          } catch (e: any) {
-            logger.error(e)
-          }
-        }
-    }
-  }
-
-  addExitCallback((_signal, _code, error) => {
-    !deployFailed && error && onError(error)
+  const onCrash = addExitCallback((_signal, _code, error) => {
+    if (!deployFailed && error)
+      logger.warn(
+        '\n' +
+          yellow(
+            (activePlugin ? `Plugin "${activePlugin.name}"` : `Something`) +
+              ` crashed the process and so any changes made before then` +
+              ` could not be rolled back!`
+          )
+      )
   })
 
   const refreshTargetCache = async () => {
@@ -265,10 +256,7 @@ export async function deploy(
 
       // Hoist identifying keys so they show first in cached state.
       let state = hoistKeys(target, Object.keys(targetId.values))
-
-      if (plugin.ephemeral) {
-        state = omitEphemeral(state, plugin)
-      }
+      state = omitEphemeral(state, plugin)
 
       newCache.targets.push({
         plugin: pluginName,
@@ -404,11 +392,28 @@ export async function deploy(
         )
       )
 
-    return onError(e)
+    deployFailed = true
+    if (!options.dryRun) {
+      if (options.noRevert) {
+        newTargetCache = await refreshTargetCache()
+        await saveTargetCache()
+      } else
+        for (const revert of revertFns.reverse()) {
+          try {
+            await revert()
+          } catch (e: any) {
+            logger.error(e)
+          }
+        }
+    }
+
+    return
   } finally {
     deployLockfile.delete()
     task?.finish()
   }
+
+  removeExitCallback(onCrash)
 
   if (options.dryRun) {
     const debugFile = path.resolve(context.root, 'targets.debug.yaml')
@@ -552,5 +557,8 @@ function createPluginCache<T>(
 }
 
 function omitEphemeral(state: Record<string, any>, plugin: DeployPlugin) {
-  return omitKeys(state, (_, key) => plugin.ephemeral!.includes(key))
+  if (plugin.ephemeral) {
+    return omitKeys(state, (_, key) => plugin.ephemeral!.includes(key))
+  }
+  return state
 }

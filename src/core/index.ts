@@ -19,4 +19,5 @@ export * from './vite/compileModule'
 export * from './vite/esbuildPlugin'
 export * from './vite/functions'
 export * from './vite/pluginContainer'
+export * from './writeBundle'
 export { exec }

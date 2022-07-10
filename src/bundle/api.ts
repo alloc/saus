@@ -1,5 +1,5 @@
 import { MagicString } from '@/babel'
-import { dataToEsm, endent, RuntimeConfig, unwrapBuffer } from '@/core'
+import { dataToEsm, RuntimeConfig } from '@/core'
 import { debug } from '@/debug'
 import { inferGitHubRepo, resolveGitHubToken } from '@/git'
 import { relativeToCwd } from '@/node/relativeToCwd'
@@ -15,8 +15,8 @@ import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { RouteClient } from '@/routeClients'
 import { callPlugins } from '@/utils/callPlugins'
-import { serializeImports } from '@/utils/imports'
 import { BundleConfig, vite } from '@/vite'
+import { writeBundle } from '@/writeBundle'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
@@ -29,6 +29,7 @@ import { compileClients } from './clients'
 import { IsolatedModuleMap, isolateRoutes } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { preferExternal } from './preferExternal'
+import { renderBundleModule } from './renderBundleModule'
 import { resolveRouteImports } from './routeImports'
 import type { ClientEntries } from './runtime/bundle/clientEntries'
 import type { ClientAsset, ClientChunk, OutputBundle } from './types'
@@ -124,45 +125,11 @@ export async function bundle(
       kleur.bold('[saus]') +
         ` Saving bundle as ${kleur.green(relativeToCwd(bundle.path))}`
     )
-
-    fs.mkdirSync(path.dirname(bundle.path), { recursive: true })
-    if (bundle.map) {
-      fs.writeFileSync(bundle.path + '.map', JSON.stringify(bundle.map))
-      bundle.code +=
-        '\n//# ' + 'sourceMappingURL=' + path.basename(bundle.path) + '.map'
-    }
-    fs.writeFileSync(bundle.path, bundle.code)
-
-    if (!bundleConfig.entry) {
-      fs.copyFileSync(
-        path.resolve(__dirname, '../bundle/index.d.ts'),
-        bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
-      )
-    }
-
-    const outDir = path.resolve(
-      context.config.root,
-      context.config.build.outDir
-    )
-
-    for (let [file, buffer] of Object.entries(bundle.files)) {
-      file = path.resolve(outDir, file)
-      fs.writeFileSync(file, unwrapBuffer(buffer))
-    }
-
-    if (options.forceWriteAssets || bundleConfig.clientStore == 'local') {
-      let file: string
-      for (const chunk of clientChunks) {
-        file = path.join(outDir, chunk.fileName)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, chunk.code)
-      }
-      for (const asset of clientAssets) {
-        file = path.join(outDir, asset.fileName)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, asset.source)
-      }
-    }
+    writeBundle(bundle, outDir, {
+      writeIndexTypes: !bundleConfig.entry,
+      writeAssets:
+        options.forceWriteAssets || bundleConfig.clientStore == 'local',
+    })
   }
 
   return bundle
@@ -244,7 +211,7 @@ async function generateSsrBundle(
       code: `export function injectDebugBase() {}`,
     })
 
-  const runtimeConfigModule = modules.addModule({
+  modules.addModule({
     id: path.join(bundleDir, 'bundle/config.ts'),
     code: dataToEsm(runtimeConfig),
   })
@@ -260,17 +227,9 @@ async function generateSsrBundle(
     }
   }
 
-  const runtimeId = `/@fs/${path.join(bundleDir, 'bundle/api.ts')}`
   modules.addModule({
     id: context.bundleModuleId,
-    code: endent`
-      ${serializeImports(Array.from(pluginImports))}
-      import "${context.routesPath}"
-
-      export * from "${runtimeId}"
-      export { default } from "${runtimeId}"
-      export { default as config } from "${runtimeConfigModule.id}"
-    `,
+    code: renderBundleModule(context.routesPath, pluginImports),
     moduleSideEffects: 'no-treeshake',
   })
 

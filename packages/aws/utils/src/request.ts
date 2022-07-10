@@ -1,4 +1,9 @@
-import { isObject, rewriteKeys, rewriteObjectKeys } from '@saus/deploy-utils'
+import {
+  isObject,
+  omitKeys,
+  rewriteKeys,
+  rewriteObjectKeys,
+} from '@saus/deploy-utils'
 import * as aws4 from 'aws4'
 import { Agent } from 'https'
 import {
@@ -347,13 +352,4 @@ function formatQuery(obj: Record<string, any> | null) {
       }, [] as string[])
       .join('&')
   )
-}
-
-function omitKeys<T extends object, P extends keyof T>(
-  obj: T,
-  shouldOmit: (value: T[P], key: P) => boolean
-): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).filter(prop => !shouldOmit(prop[1], prop[0] as P))
-  ) as any
 }

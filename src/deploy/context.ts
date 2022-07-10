@@ -30,6 +30,8 @@ export interface DeployContext extends BundleContext {
   rootPackage: PackageJson
   /** The HEAD commit of the project repository. */
   lastCommitHash: string
+  /** The header of the project's HEAD commit. Includes hash and title, but not message body. */
+  lastCommitHeader: string
   /** For git operations, deploy to this repository. */
   gitRepo: { name: string; url: string }
   /** When true, skip any real deployment. */
@@ -82,6 +84,10 @@ export async function loadDeployContext(
     options.gitRepo || (await getGitRepoByName('origin', context))
 
   context.lastCommitHash = await exec('git rev-parse --short head', {
+    cwd: context.root,
+  })
+
+  context.lastCommitHeader = await exec('git log -1 --oneline', {
     cwd: context.root,
   })
 

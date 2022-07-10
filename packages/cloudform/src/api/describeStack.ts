@@ -1,3 +1,4 @@
+import createDebug from 'debug'
 import { dset } from 'dset'
 import secrets from '../secrets'
 import { Stack } from '../types'
@@ -44,6 +45,9 @@ export async function describeStack(
       const action = opts.action || ''
       if (stackStatus.includes(action + '_IN_PROGRESS')) {
         return new Promise(resolve => {
+          if (process.env.DEBUG) {
+            logStackEvents(stack)
+          }
           setTimeout(() => {
             resolve(describeStack(stack, opts, trace))
           }, 20e3)
@@ -69,6 +73,29 @@ export async function describeStack(
   return {
     id: undefined,
     outputs: {},
+  }
+}
+
+const debug = createDebug('saus:cloudform')
+const loggedEvents = new Set<string>()
+
+async function logStackEvents(stack: Stack) {
+  const events = await describeStackEvents(stack)
+  for (const event of events) {
+    if (event.resourceType == 'AWS::CloudFormation::Stack') {
+      return // We've reached the previous stack update.
+    }
+    const status = event.resourceStatus
+    if (!status || status.includes('ROLLBACK') || status.endsWith('_FAILED')) {
+      continue
+    }
+    const log = `${status} ${event.stackName}::${
+      event.logicalResourceId || event.resourceType
+    }`
+    if (!loggedEvents.has(log)) {
+      debug(log)
+      loggedEvents.add(log)
+    }
   }
 }
 

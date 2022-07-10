@@ -9,7 +9,8 @@ export function startRequest(
   reject: (e: any) => void,
   resolve: (resp: Response) => void,
   redirectCount: number,
-  onRedirect: (url: string) => void
+  onRedirect: (url: string) => void,
+  retryCount = 0
 ): http.ClientRequest {
   const { request } = opts.protocol == 'http:' ? http : https
 
@@ -47,7 +48,18 @@ export function startRequest(
     })
   })
 
-  client.on('error', e => {
+  client.on('error', (e: Error & { code?: string }) => {
+    if (e.code == 'ECONNRESET' && retryCount < 8) {
+      return startRequest(
+        { headers, ...opts },
+        trace,
+        reject,
+        resolve,
+        redirectCount,
+        onRedirect,
+        retryCount + 1
+      )
+    }
     trace.message = e.message
     reject(trace)
   })

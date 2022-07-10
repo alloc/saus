@@ -30,7 +30,10 @@ export async function useS3Website(
           id,
           new aws.S3.Bucket({
             ...props,
-            AccessControl: 'PublicRead',
+            WebsiteConfiguration: {
+              IndexDocument: 'index.html',
+              ...props?.WebsiteConfiguration,
+            },
           })
         )
         ref(
@@ -42,11 +45,10 @@ export async function useS3Website(
               Version: '2012-10-17',
               Statement: [
                 {
-                  Sid: 'PublicRead',
                   Effect: 'Allow',
-                  Principal: '*',
                   Action: ['s3:GetObject'],
                   Resource: [aws.Fn.Join('/', [bucket.get('Arn'), '*'])],
+                  Principal: '*',
                 },
               ],
             },

@@ -16,7 +16,6 @@ export function moveObjects(region: string) {
   }
 
   return async (opts: Options) => {
-    const moved: string[] = []
     const moving = opts.keys.map(key =>
       S3.copyObject({
         key,
@@ -28,7 +27,7 @@ export function moveObjects(region: string) {
     await Promise.all(moving)
     await S3.deleteObjects({
       bucket: opts.bucket,
-      delete: { objects: moved.map(key => ({ key })) },
+      delete: { objects: opts.keys.map(key => ({ key })) },
       creds: opts.creds,
     })
   }
