@@ -17,6 +17,7 @@ import yaml from 'yaml'
 import { createCommit, vite } from '../core'
 import { DeployContext, loadDeployContext } from './context'
 import { loadDeployFile, loadDeployPlugin } from './loader'
+import { setLogFunctions } from './logger'
 import { DeployOptions } from './options'
 import {
   DeployFile,
@@ -326,7 +327,13 @@ export async function deploy(
   context.addDeployAction = action => {
     const promise = new Promise<any>(resolve => {
       if (context.command == 'deploy') {
-        resolve(action(context as any, addRevertFn))
+        let actionContext: any = context
+        if (typeof action !== 'function') {
+          actionContext = { ...context }
+          setLogFunctions(actionContext, action)
+          action = action.run
+        }
+        resolve(action(actionContext, addRevertFn))
       }
     })
     actions.push(promise)

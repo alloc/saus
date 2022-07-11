@@ -1,8 +1,10 @@
 import { bindExec } from '@saus/deploy-utils'
 import { existsSync } from 'fs'
 import path from 'path'
+import { relativeToCwd } from 'saus/core'
 import { onDeploy } from 'saus/deploy'
 import { InitConfig } from './config'
+import { stashedRoots } from './stash'
 
 /**
  * Call this before producing any build artifacts
@@ -10,35 +12,46 @@ import { InitConfig } from './config'
  * synchronized with its remote repository.
  */
 export function gitInit(config: InitConfig) {
-  return onDeploy(async ctx => {
-    const cwd = path.resolve(ctx.root, config.root)
-    const git = bindExec('git', { cwd })
+  return onDeploy({
+    name: '@saus/git-push',
+    async run(ctx, onRevert) {
+      const cwd = path.resolve(ctx.root, config.root)
+      const git = bindExec('git', { cwd })
 
-    // Sanity check to avoid data loss.
-    if (cwd == ctx.root) {
-      throw Error('@saus/git-push cannot be used on project root')
-    }
-
-    let { origin } = config
-    if (typeof origin == 'string') {
-      const [url, branch = 'master'] = origin.split('#')
-      origin = { url, branch }
-    }
-
-    if (!ctx.dryRun) {
-      if (existsSync(path.join(cwd, '.git'))) {
-        if (await git('status --porcelain')) {
-          throw Error('Cannot push with uncommitted changes: ' + cwd)
-        }
-        await git('remote set-url origin', [origin.url])
-      } else {
-        await git('init')
-        await git('remote add origin', [origin.url])
+      // Sanity check to avoid data loss.
+      if (cwd == ctx.root) {
+        throw Error('@saus/git-push cannot be used on project root')
       }
-      await git(`branch -u origin/${origin.branch}`)
-      await git(`reset --hard origin/${origin.branch}`)
-    }
 
-    return { ...config, origin }
+      let { origin } = config
+      if (typeof origin == 'string') {
+        const [url, branch = 'master'] = origin.split('#')
+        origin = { url, branch }
+      }
+
+      if (!ctx.dryRun) {
+        if (existsSync(path.join(cwd, '.git'))) {
+          if (await git('status --porcelain')) {
+            ctx.logActivity(`stashing changes in ${relativeToCwd(cwd)}/`)
+            await git('stash --include-untracked')
+            stashedRoots.add(cwd)
+            onRevert(async () => {
+              if (stashedRoots.has(cwd)) {
+                await git('stash pop')
+                stashedRoots.delete(cwd)
+              }
+            })
+          }
+          await git('remote set-url origin', [origin.url])
+        } else {
+          await git('init')
+          await git('remote add origin', [origin.url])
+        }
+        await git(`branch -u origin/${origin.branch}`)
+        await git(`reset --hard origin/${origin.branch}`)
+      }
+
+      return { ...config, origin }
+    },
   })
 }

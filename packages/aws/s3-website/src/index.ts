@@ -283,13 +283,10 @@ export async function useS3Website(
     },
   })
 
-  await onDeploy(async () => {
-    await syncStaticFiles(
-      bundle,
-      ctx.files,
-      config,
-      awsInfra.outputs.buckets || {}
-    )
+  await onDeploy({
+    name: '@saus/aws-s3-website',
+    run: ctx =>
+      syncStaticFiles(ctx, bundle, config, awsInfra.outputs.buckets || {}),
   })
 
   return {

@@ -1,7 +1,9 @@
 import { bindExec } from '@saus/deploy-utils'
 import path from 'path'
+import { relativeToCwd } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
 import { PushConfig } from './config'
+import { stashedRoots } from './stash'
 
 export default defineDeployHook(ctx => {
   return {
@@ -11,7 +13,7 @@ export default defineDeployHook(ctx => {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
-      if (config.commit !== false && !(await git('status --porcelain'))) {
+      if (config.commit !== false && (await git('status --porcelain'))) {
         const message = config.commit?.message || ctx.lastCommitHeader
         await git('add -A')
         await git('commit -m', [message], {
@@ -30,7 +32,17 @@ export default defineDeployHook(ctx => {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
+      ctx.logActivity(`pushing ${relativeToCwd(cwd)}/`)
       await git('push')
+
+      if (stashedRoots.has(cwd)) {
+        await git('stash pop')
+        stashedRoots.delete(cwd)
+      }
+
+      return async () => {
+        await git('reset --hard HEAD^')
+      }
     },
     update(config, _, onRevert) {
       return this.spawn(config, onRevert)

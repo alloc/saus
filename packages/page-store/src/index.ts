@@ -9,9 +9,13 @@ import {
   ParsedUrl,
   parseUrl,
   pick,
-  unwrapBody,
 } from 'saus/core'
-import { normalizeHeaders, RequestHeaders, ResponseHeaders } from 'saus/http'
+import {
+  normalizeHeaders,
+  RequestHeaders,
+  ResponseHeaders,
+  unwrapBody,
+} from 'saus/http'
 
 export type PageRuleContext = ParsedUrl & {
   headers: Readonly<RequestHeaders>

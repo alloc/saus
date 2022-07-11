@@ -1,7 +1,7 @@
 import * as S3 from '@saus/aws-s3'
 import { OutputBundle } from 'saus'
 import { md5Hex, plural, scanPublicDir } from 'saus/core'
-import { getDeployContext, GitFiles } from 'saus/deploy'
+import { DeployContext } from 'saus/deploy'
 import { wrapBody } from 'saus/http'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
@@ -11,16 +11,15 @@ type ContentHash = string
 type PublicFileHashes = { [name: string]: ContentHash }
 
 export async function syncStaticFiles(
+  ctx: DeployContext,
   bundle: OutputBundle,
-  files: GitFiles,
   config: WebsiteConfig,
   buckets: { assets: string; oldAssets: string; publicDir: string }
 ): Promise<void> {
-  const ctx = getDeployContext()
   const bucketConfig = config.buckets || {}
 
   const syncAssets = () => {
-    const memory = files.get<AssetList>('s3-website/assets.json')
+    const memory = ctx.files.get<AssetList>('s3-website/assets.json')
     const oldAssetNames = memory.getData() || []
     const assetNames: AssetList = []
     const uploading: Promise<any>[] = []
@@ -45,9 +44,12 @@ export async function syncStaticFiles(
         }
       },
       async finalize() {
-        if (ctx.dryRun) {
-          ctx.logPlan(`would upload ${plural(assetNames.length, 'asset')}`)
-        } else {
+        if (assetNames.length) {
+          const log = ctx.dryRun ? ctx.logPlan : ctx.logActivity
+          const verb = ctx.dryRun ? 'would upload' : 'uploading'
+          log(`${verb} ${plural(assetNames.length, 'client asset')}`)
+        }
+        if (!ctx.dryRun) {
           await Promise.all(uploading)
           const missingAssets = oldAssetNames.filter(
             name => !assetNames.includes(name)
@@ -67,7 +69,7 @@ export async function syncStaticFiles(
   }
 
   const syncPublicDir = () => {
-    const memory = files.get<PublicFileHashes>('s3-website/public.json')
+    const memory = ctx.files.get<PublicFileHashes>('s3-website/public.json')
     const oldHashes = memory.getData() || {}
     const hashes: PublicFileHashes = {}
     const uploading: Promise<any>[] = []
@@ -96,11 +98,13 @@ export async function syncStaticFiles(
       },
       /** Move old public files into the "oldAssets" bucket. */
       async finalize() {
-        if (ctx.dryRun) {
-          ctx.logPlan(
-            `would upload ${plural(Object.keys(hashes).length, 'public file')}`
-          )
-        } else {
+        const fileCount = Object.keys(hashes).length
+        if (fileCount) {
+          const log = ctx.dryRun ? ctx.logPlan : ctx.logActivity
+          const verb = ctx.dryRun ? 'would upload' : 'uploading'
+          log(`${verb} ${plural(fileCount, 'public file')}`)
+        }
+        if (!ctx.dryRun) {
           await Promise.all(uploading)
           const missingFiles = Object.keys(oldHashes).filter(
             name => !hashes[name]

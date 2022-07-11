@@ -1,3 +1,8 @@
+export interface GitOrigin {
+  url: string
+  branch: string
+}
+
 export interface InitConfig {
   /**
    * Directory path where `.git` lives
@@ -12,7 +17,7 @@ export interface InitConfig {
    *
    * Can be `"<url>#<branch>"` or an object.
    */
-  origin: string | { url: string; branch: string }
+  origin: string | GitOrigin
 }
 
 export interface PushConfig {

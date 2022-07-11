@@ -2,7 +2,14 @@ import { Changed } from '@/utils/types'
 import { Merge, Promisable } from 'type-fest'
 import { DeployContext } from './context'
 
-export type DeployAction<T = any> = (
+export type DeployAction<T = any> =
+  | DeployActionFn<T>
+  | {
+      name: string
+      run: DeployActionFn<T>
+    }
+
+export type DeployActionFn<T = any> = (
   context: DeployContext & { command: 'deploy' },
   onRevert: (revertFn: RevertFn) => void
 ) => Promisable<T>
