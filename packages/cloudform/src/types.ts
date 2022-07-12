@@ -43,6 +43,7 @@ export interface AttributeRef<T = any> extends IntrinsicFunction {
 
 export interface ResourceRef extends IntrinsicFunction {
   readonly id: string
+  readonly properties: any
   get: <T = any>(attribute: Value<string>) => AttributeRef<T>
   dependsOn: (...resources: ResourceRef[]) => this
 }

@@ -14,30 +14,32 @@ export default defineDeployHook(ctx => ({
   identify: stack => ({
     name: stack.name,
   }),
-  async spawn(stack, onRevert) {
-    stack.outputs
-    if (ctx.dryRun) {
-      return ctx.logPlan(
-        `would create ${
-          Object.keys(stack.template.resources).length
-        } AWS resources`
-      )
-    }
-    ctx.logActivity(`Spawning the "${stack.name}" stack...`)
-    const spawned = await spawnStack(stack, toTemplateString(stack.template))
-    onRevert(async () => {
-      await this.kill(stack, onRevert)
-    })
-    stack.id = spawned.stackId
-    Object.assign(
-      stack,
-      await describeStack(stack, {
-        action: 'CREATE',
-      })
+  spawn(stack, onRevert) {
+    return ctx.logPlan(
+      `create ${
+        Object.keys(stack.template.resources).length
+      } AWS resources for "${stack.name}" stack`,
+      async () => {
+        const spawned = await spawnStack(
+          stack,
+          toTemplateString(stack.template)
+        )
+        onRevert(async () => {
+          await this.kill(stack, onRevert)
+        })
+        stack.id = spawned.stackId
+        Object.assign(
+          stack,
+          await describeStack(stack, {
+            action: 'CREATE',
+          })
+        )
+      }
     )
   },
   async update(stack, _, onRevert) {
-    if (!stack.id) {
+    const stackId = stack.id
+    if (!stackId) {
       throw Error('Expected stack.id to exist')
     }
     const prevTemplate = await getTemplate(stack)
@@ -46,60 +48,60 @@ export default defineDeployHook(ctx => ({
         `Previous template not found for existing stack: ${stack.name}`
       )
     }
-    if (ctx.dryRun) {
-      return ctx.logPlan(
-        `would update ${
-          Object.keys(stack.template.resources).length
-        } AWS resources`
-      )
-    }
-    ctx.logActivity(`Updating the "${stack.name}" stack...`)
-    const updateStack = signedRequest.action('UpdateStack', {
-      creds: secrets,
-      region: stack.region,
-    })
-    await updateStack({
-      stackName: stack.id,
-      templateBody: toTemplateString(stack.template),
-    }).catch(e => {
-      if (/^No updates/.test(e.message)) {
-        return // Everything is up-to-date!
+    return ctx.logPlan(
+      `update ${
+        Object.keys(stack.template.resources).length
+      } AWS resources for "${stack.name}" stack`,
+      async () => {
+        const updateStack = signedRequest.action('UpdateStack', {
+          creds: secrets,
+          region: stack.region,
+        })
+        await updateStack({
+          stackName: stackId,
+          templateBody: toTemplateString(stack.template),
+        }).catch(e => {
+          if (/^No updates/.test(e.message)) {
+            return // Everything is up-to-date!
+          }
+          throw e
+        })
+        onRevert(async () => {
+          const spawned = await spawnStack(stack, prevTemplate)
+          stack.id = spawned.stackId
+        })
+        Object.assign(
+          stack,
+          await describeStack(stack, {
+            action: 'UPDATE',
+          })
+        )
       }
-      throw e
-    })
-    onRevert(async () => {
-      const spawned = await spawnStack(stack, prevTemplate)
-      stack.id = spawned.stackId
-    })
-    Object.assign(
-      stack,
-      await describeStack(stack, {
-        action: 'UPDATE',
-      })
     )
   },
   async kill(stack) {
-    if (!stack.id) {
+    const stackId = stack.id
+    if (!stackId) {
       throw Error('Expected stack.id to exist')
     }
-    if (ctx.dryRun) {
-      return ctx.logPlan(
-        `would destroy ${
-          Object.keys(stack.template.resources).length
-        } AWS resources`
-      )
-    }
-    ctx.logActivity(`Deleting the "${stack.name}" stack...`)
-    const deleteStack = signedRequest.action('DeleteStack', {
-      creds: secrets,
-      region: stack.region,
-    })
-    await deleteStack({
-      stackName: stack.id,
-    })
-    return () => {
-      this.spawn(stack, () => {})
-    }
+    return ctx.logPlan(
+      `would destroy ${
+        Object.keys(stack.template.resources).length
+      } AWS resources`,
+      async () => {
+        ctx.logActivity(`Deleting the "${stack.name}" stack...`)
+        const deleteStack = signedRequest.action('DeleteStack', {
+          creds: secrets,
+          region: stack.region,
+        })
+        await deleteStack({
+          stackName: stackId,
+        })
+        return () => {
+          this.spawn(stack, () => {})
+        }
+      }
+    )
   },
 }))
 

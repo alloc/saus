@@ -52,6 +52,7 @@ async function defineStack({ name, region, template }: StackOptions) {
       id: { value: id },
       get: { value: ref.get },
       dependsOn: { value: ref.dependsOn },
+      properties: { value: resource },
     })
   }
 

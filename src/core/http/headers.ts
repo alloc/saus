@@ -10,8 +10,30 @@ export interface CommonHeaders
     CommonResponseHeaders {}
 
 export interface CommonRequestHeaders {
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept */
+  accept: string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Charset */
+  'accept-charset': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding */
+  'accept-encoding': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language */
+  'accept-language': string
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization */
   authorization: string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match */
+  'if-match': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since */
+  'if-modified-since': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match */
+  'if-none-match': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since */
+  'if-unmodified-since': string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin */
+  origin: string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer */
+  referer: string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent */
+  'user-agent': string
 }
 
 export interface CommonResponseHeaders {

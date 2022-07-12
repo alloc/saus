@@ -51,14 +51,12 @@ export default defineDeployHook(ctx => ({
   identify: target => ({
     gitBranch: target.gitBranch,
   }),
-  async spawn(target) {
-    if (ctx.dryRun) {
-      return ctx.logPlan(
-        `would deploy ${plural(target.entries.length, 'serverless function')}`
-      )
-    }
-    await pushFunctions(target, ctx)
-    // TODO: return rollback function
+  // TODO: return rollback function
+  spawn(target) {
+    return ctx.logPlan(
+      `deploy ${plural(target.entries.length, 'serverless function')}`,
+      () => pushFunctions(target, ctx)
+    )
   },
   update(target, _, onRevert) {
     return this.spawn(target, onRevert)
@@ -67,15 +65,13 @@ export default defineDeployHook(ctx => ({
     const deployDir = getDeployDir(target)
     const { gitRepo } = ctx
 
-    if (ctx.dryRun) {
-      ctx.logPlan(
-        `would destroy ${plural(target.entries.length, 'serverless function')}`
-      )
-    } else {
-      await exec('git push --delete', [gitRepo.name, target.gitBranch], {
-        cwd: deployDir,
-      })
-    }
+    await ctx.logPlan(
+      `destroy ${plural(target.entries.length, 'serverless function')}`,
+      () =>
+        exec('git push --delete', [gitRepo.name, target.gitBranch], {
+          cwd: deployDir,
+        })
+    )
 
     try {
       emptyDir(deployDir)

@@ -68,6 +68,7 @@
     "mrmime": "^1.0.0",
     "rollup": "npm:@aleclarson/rollup@^2.62.1",
     "shared-log": "^1.2.8",
+    "source-map-support": "^0.5.21",
     "strict-event-emitter-types": "^2.0.0",
     "terser": "^5.10.0",
     "tinypool": "^0.1.1",

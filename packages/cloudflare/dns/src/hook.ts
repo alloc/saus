@@ -56,28 +56,29 @@ export default defineDeployHook(async ctx => {
         reusedRecords.add(oldRecord)
         if (diffObjects(pick(oldRecord, DnsRecordConfigKeys), rec)) {
           changedRecords.add(oldRecord)
-          if (ctx.dryRun) {
-            return ctx.logPlan(`would update "${rec.type} ${rec.name}" record`)
-          }
-          return putRecord(zoneId, oldRecord.id, rec)
+          return ctx.logPlan(
+            `update "${rec.type} ${rec.name}" record in zone ${zoneId}`,
+            () => putRecord(zoneId, oldRecord.id, rec)
+          )
         }
       } else {
-        if (ctx.dryRun) {
-          return ctx.logPlan(`would create "${rec.type} ${rec.name}" record`)
-        }
-        return createRecord(zoneId, rec).then(resp => {
-          newRecordIds.set(rec, resp.id)
-        })
+        return ctx.logPlan(
+          `create "${rec.type} ${rec.name}" record in zone ${zoneId}`,
+          () =>
+            createRecord(zoneId, rec).then(resp => {
+              newRecordIds.set(rec, resp.id)
+            })
+        )
       }
     })
 
     // Detect which records were removed.
     const deletions = Object.values(oldRecords).map(oldRec => {
       if (!reusedRecords.has(oldRec)) {
-        if (ctx.dryRun) {
-          return dryLog(`would delete "${oldRec.type} ${oldRec.name}" record`)
-        }
-        return deleteRecord(zoneId, oldRec.id)
+        return ctx.logPlan(
+          `delete "${oldRec.type} ${oldRec.name}" record in zone ${zoneId}`,
+          () => deleteRecord(zoneId, oldRec.id)
+        )
       }
     })
 
@@ -125,9 +126,11 @@ export default defineDeployHook(async ctx => {
     update: putRecords,
     async kill({ zoneId }) {
       const oldRecords = await listRecords(zoneId)
-      await Promise.all(
-        Object.values(oldRecords).map(oldRecord =>
-          deleteRecord(zoneId, oldRecord.id)
+      await ctx.logPlan(`delete all records in zone ${zoneId}`, () =>
+        Promise.all(
+          Object.values(oldRecords).map(oldRecord =>
+            deleteRecord(zoneId, oldRecord.id)
+          )
         )
       )
       return async () => {

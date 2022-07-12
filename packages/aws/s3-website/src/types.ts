@@ -1,3 +1,4 @@
+import type { CommonRequestHeaders } from 'saus/http'
 import { UserDeviceType } from './varyByDevice'
 
 export interface BrotliConfig {
@@ -8,38 +9,76 @@ export interface BrotliConfig {
   threshold?: number
 }
 
-export interface PrefixOrigin {
-  prefix: string
+export interface OriginOverride {
+  path: string
   origin: string
   noCache?: boolean
 }
 
-/**
- * @link https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-cachepolicy-cachepolicyconfig.html
- */
-export interface CachePolicyConfig {
+export interface VaryConfig {
+  /**
+   * Cache different responses based on specific cookies
+   * that might exist in the request headers.
+   */
+  cookies?: readonly string[]
+  /**
+   * Cache different responses based on the client's device type,
+   * which is inferred from CloudFront-defined headers like
+   * `CloudFront-Is-Mobile-Viewer`.
+   */
+  device?: readonly UserDeviceType[]
+  /**
+   * Add additional headers that will vary the response.
+   *
+   * **Accept, Accept-Language, etc**
+   *
+   * The "Accept" family of headers is excluded by default. Their space
+   * of variations (due to q-factor weighting) easily leads to unwanted
+   * duplication in CloudFront's cache, which can be expensive.
+   *
+   * This option exists in case you don't mind paying for such duplication.
+   * But you should first consider the other approach, which involves
+   * different pathnames for each language, encoding, content type, or
+   * charset.
+   */
+  headers?: readonly VaryHeader[]
+}
+
+// These headers can be used to vary the response.
+export type VaryHeader =
+  | keyof CommonRequestHeaders
+  | 'cloudfront-viewer-country'
+
+export interface TTLConfig {
   /**
    * Cached resources without `Cache-Control` or `Expires` header
    * will be cached for this long (in seconds).
    * @default 86400 (1 day)
    * @link https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-cachepolicy-cachepolicyconfig.html#cfn-cloudfront-cachepolicy-cachepolicyconfig-defaultttl
    */
-  defaultTTL?: number
+  default?: number
   /**
    * Enforce a minimum cache time.
    * @default 0
    * @link https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-cachepolicy-cachepolicyconfig.html#cfn-cloudfront-cachepolicy-cachepolicyconfig-minttl
    */
-  minTTL?: number
+  min?: number
   /**
    * Enforce a maximum cache time.
    * @default 31536000 (1 year)
    * @link https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-cachepolicy-cachepolicyconfig.html#cfn-cloudfront-cachepolicy-cachepolicyconfig-maxttl
    */
-  maxTTL?: number
+  max?: number
+}
+
+/**
+ * Control what CloudFront forwards to your origin servers.
+ */
+export interface OriginRequestConfig {
   /**
-   * Cache different responses based on the device type
-   * of the requester.
+   * Which HTTP cookies should be forwarded to the origin server? \
+   * Note that cookies added to `vary.cookies` are forwarded automatically.
+   * @default []
    */
-  varyByDevice?: UserDeviceType[]
+  cookies?: readonly string[]
 }

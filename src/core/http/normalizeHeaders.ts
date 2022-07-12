@@ -5,6 +5,10 @@ const kNormalized = Symbol.for('saus:normalized')
 const upperCaseRE = /(^|-)[A-Z]/
 const isUpperCase = (name: string) => upperCaseRE.test(name)
 
+export function normalizeHeaderKeys(names: readonly string[]) {
+  return names.map(name => name.toLowerCase())
+}
+
 /**
  * Ensure all header names are lowercase.
  */

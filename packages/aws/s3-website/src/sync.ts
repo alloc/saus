@@ -43,27 +43,25 @@ export async function syncStaticFiles(
           )
         }
       },
-      async finalize() {
-        if (assetNames.length) {
-          const log = ctx.dryRun ? ctx.logPlan : ctx.logActivity
-          const verb = ctx.dryRun ? 'would upload' : 'uploading'
-          log(`${verb} ${plural(assetNames.length, 'client asset')}`)
-        }
-        if (!ctx.dryRun) {
-          await Promise.all(uploading)
-          const missingAssets = oldAssetNames.filter(
-            name => !assetNames.includes(name)
-          )
-          if (missingAssets.length)
-            await S3.moveObjects(config.region)({
-              keys: missingAssets,
-              bucket: buckets.assets,
-              newBucket: buckets.oldAssets,
-              creds: secrets,
-            })
+      finalize() {
+        return ctx.logPlan(
+          `upload ${plural(assetNames.length, 'client asset')}`,
+          async () => {
+            await Promise.all(uploading)
+            const missingAssets = oldAssetNames.filter(
+              name => !assetNames.includes(name)
+            )
+            if (missingAssets.length)
+              await S3.moveObjects(config.region)({
+                keys: missingAssets,
+                bucket: buckets.assets,
+                newBucket: buckets.oldAssets,
+                creds: secrets,
+              })
 
-          memory.setData(assetNames.sort())
-        }
+            memory.setData(assetNames.sort())
+          }
+        )
       },
     }
   }
@@ -99,26 +97,27 @@ export async function syncStaticFiles(
       /** Move old public files into the "oldAssets" bucket. */
       async finalize() {
         const fileCount = Object.keys(hashes).length
-        if (fileCount) {
-          const log = ctx.dryRun ? ctx.logPlan : ctx.logActivity
-          const verb = ctx.dryRun ? 'would upload' : 'uploading'
-          log(`${verb} ${plural(fileCount, 'public file')}`)
+        if (fileCount == 0) {
+          return
         }
-        if (!ctx.dryRun) {
-          await Promise.all(uploading)
-          const missingFiles = Object.keys(oldHashes).filter(
-            name => !hashes[name]
-          )
-          if (missingFiles.length)
-            await S3.moveObjects(config.region)({
-              keys: missingFiles,
-              bucket: buckets.publicDir,
-              newBucket: buckets.oldAssets,
-              creds: secrets,
-            })
+        return ctx.logPlan(
+          `upload ${plural(fileCount, 'public file')}`,
+          async () => {
+            await Promise.all(uploading)
+            const missingFiles = Object.keys(oldHashes).filter(
+              name => !hashes[name]
+            )
+            if (missingFiles.length)
+              await S3.moveObjects(config.region)({
+                keys: missingFiles,
+                bucket: buckets.publicDir,
+                newBucket: buckets.oldAssets,
+                creds: secrets,
+              })
 
-          memory.setData(hashes)
-        }
+            memory.setData(hashes)
+          }
+        )
       },
     }
   }

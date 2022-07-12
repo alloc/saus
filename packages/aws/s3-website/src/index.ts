@@ -1,6 +1,8 @@
 import { CloudFront, ResourceRef, S3, useCloudFormation } from '@saus/cloudform'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
+import { normalizeHeaderKeys } from 'saus/http'
+import { inspect } from 'util'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 import { syncStaticFiles } from './sync'
@@ -103,9 +105,11 @@ export async function useS3Website(
           },
         })
 
-      const httpsOnly = {
-        HTTPSPort: 443,
-        OriginProtocolPolicy: 'https-only',
+      // When an S3 bucket is configured in website mode,
+      // it must be connected through HTTP only.
+      const httpOnly = {
+        HTTPPort: 80,
+        OriginProtocolPolicy: 'http-only',
       }
 
       type OriginConfig = CloudFront.Distribution.Origin
@@ -113,14 +117,25 @@ export async function useS3Website(
       const BucketOrigin = (
         bucket: ResourceRef,
         extra?: Partial<OriginConfig>
-      ): OriginConfig => ({
-        Id: bucket.id,
-        DomainName: websiteBuckets.has(bucket)
-          ? aws.Fn.Select(1, aws.Fn.Split('://', bucket.get('WebsiteURL')))
-          : bucket.get('RegionalDomainName'),
-        CustomOriginConfig: httpsOnly,
-        ...extra,
-      })
+      ): OriginConfig => {
+        if (websiteBuckets.has(bucket)) {
+          return {
+            Id: bucket.id,
+            DomainName: aws.Fn.Select(
+              1,
+              aws.Fn.Split('://', bucket.get('WebsiteURL'))
+            ),
+            CustomOriginConfig: httpOnly,
+            ...extra,
+          }
+        }
+        return {
+          Id: bucket.id,
+          DomainName: bucket.get('RegionalDomainName'),
+          S3OriginConfig: {},
+          ...extra,
+        }
+      }
 
       const OriginGroup = (
         primaryOriginId: string,
@@ -141,6 +156,11 @@ export async function useS3Website(
               i > 0 && OriginGroup(originIds[i - 1], originId)
           )
         )
+
+      const httpsOnly = {
+        HTTPSPort: 443,
+        OriginProtocolPolicy: 'https-only',
+      }
 
       const pageServerId = 'PageServer'
       const pageServer: OriginConfig = {
@@ -168,24 +188,26 @@ export async function useS3Website(
         ),
       ])
 
+      const varyHeaders = normalizeHeaderKeys([
+        ...(config.vary?.headers || []),
+        ...varyByDevice(config.vary?.device),
+      ])
+
+      const CookiesConfig = (cookies: readonly string[] | undefined) => ({
+        CookieBehavior: cookies ? 'whitelist' : 'none',
+        Cookies: cookies as string[],
+      })
+
       const defaultCachePolicy = ref(
         'DefaultCachePolicy',
         new aws.CloudFront.CachePolicy({
           CachePolicyConfig: {
             Name: 'DefaultCachePolicy',
             ParametersInCacheKeyAndForwardedToOrigin: {
-              CookiesConfig: {
-                CookieBehavior: config.cookies?.length ? 'whitelist' : 'none',
-                Cookies: config.cookies,
-              },
+              CookiesConfig: CookiesConfig(config.vary?.cookies),
               HeadersConfig: {
-                HeaderBehavior: 'whitelist',
-                Headers: [
-                  'If-Modified-Since',
-                  'If-None-Match',
-                  'Origin',
-                  ...varyByDevice(config.caching?.varyByDevice),
-                ],
+                HeaderBehavior: varyHeaders.length ? 'whitelist' : 'none',
+                Headers: varyHeaders.length ? varyHeaders : undefined,
               },
               QueryStringsConfig: {
                 QueryStringBehavior: 'all',
@@ -193,9 +215,37 @@ export async function useS3Website(
               EnableAcceptEncodingGzip: false,
               EnableAcceptEncodingBrotli: false,
             },
-            MinTTL: config.caching?.minTTL ?? 0,
-            DefaultTTL: config.caching?.defaultTTL ?? 86400,
-            MaxTTL: config.caching?.maxTTL ?? 31536000,
+            MinTTL: config.ttl?.min ?? 0,
+            DefaultTTL: config.ttl?.default ?? 86400,
+            MaxTTL: config.ttl?.max ?? 31536000,
+          },
+        })
+      )
+
+      console.log(
+        inspect(
+          {
+            defaultCachePolicy: defaultCachePolicy.properties,
+          },
+          { depth: null, colors: true }
+        )
+      )
+
+      const s3OriginRequestPolicy = ref(
+        'S3OriginRequestPolicy',
+        new aws.CloudFront.OriginRequestPolicy({
+          OriginRequestPolicyConfig: {
+            Name: 'S3OriginRequestPolicy',
+            CookiesConfig: CookiesConfig(config.forward?.cookies),
+            HeadersConfig: {
+              HeaderBehavior: 'whitelist',
+              // Note that any headers included in the CachePolicy
+              // are included in this array automatically.
+              Headers: ['referer'],
+            },
+            QueryStringsConfig: {
+              QueryStringBehavior: 'all',
+            },
           },
         })
       )
@@ -212,7 +262,10 @@ export async function useS3Website(
           typeof target !== 'string' && websiteBuckets.has(target)
             ? 'allow-all'
             : 'redirect-to-https',
-        OriginRequestPolicyId: managedRequestPolicies.AllViewer,
+        OriginRequestPolicyId:
+          typeof target !== 'string' && websiteBuckets.has(target)
+            ? s3OriginRequestPolicy.id
+            : managedRequestPolicies.AllViewer,
         ResponseHeadersPolicyId: config.injectSecurityHeaders
           ? managedResponseHeaderPolicies.SecurityHeaders
           : undefined,
@@ -231,7 +284,7 @@ export async function useS3Website(
           }),
       ])
 
-      config.prefixOrigins?.forEach(origin => {
+      config.overrides?.forEach(origin => {
         const [, DomainName, OriginPath] = /^([^/]+)(\/.+)?$/.exec(
           origin.origin
         )!
@@ -243,7 +296,7 @@ export async function useS3Website(
         })
         cacheBehaviors.push(
           CacheBehavior(origin.origin, {
-            PathPattern: origin.prefix + '/*',
+            PathPattern: origin.path + '/*',
             CachePolicyId: origin.noCache
               ? managedCachePolicies.CachingDisabled
               : defaultCachePolicy,

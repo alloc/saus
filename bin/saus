@@ -2,6 +2,7 @@
 
 if (/(^| )saus:\*( |$)/.test(process.env.DEBUG || '')) {
   process.env.DEBUG += ' saus'
+  require('source-map-support').install()
 }
 
 require('../dist/cli').default.parse()

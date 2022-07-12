@@ -1,4 +1,10 @@
-import { BrotliConfig, CachePolicyConfig, PrefixOrigin } from './types'
+import {
+  BrotliConfig,
+  OriginOverride,
+  OriginRequestConfig,
+  TTLConfig,
+  VaryConfig,
+} from './types'
 
 export interface WebsiteConfig {
   /** The GUID of the CloudFormation stack. */
@@ -11,12 +17,17 @@ export interface WebsiteConfig {
    * How to cache responses from S3 or your origin server.
    * Static client modules are unaffected.
    */
-  caching?: CachePolicyConfig
+  ttl?: TTLConfig
   /**
-   * Which HTTP cookies should be forwarded to the origin server?
-   * @default []
+   * Control which requests are capable of producing different
+   * responses based on the request headers. \
+   * These varying responses are cached by CloudFront separately.
    */
-  cookies?: string[]
+  vary?: VaryConfig
+  /**
+   * Control what's forwarded to your origin servers.
+   */
+  forward?: OriginRequestConfig
   /**
    * CloudFront can inject a set of common security-focused headers
    * (eg: for XSS protection) into every response.
@@ -34,7 +45,7 @@ export interface WebsiteConfig {
    * It would forward `/api/*` requests to your Vercel functions
    * at `123.vercel.app/api/*` and rewrite to HTTPS.
    */
-  prefixOrigins?: PrefixOrigin[]
+  overrides?: OriginOverride[]
   /**
    * By default, static assets are compressed with Brotli.
    *

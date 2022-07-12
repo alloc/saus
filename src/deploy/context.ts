@@ -9,6 +9,7 @@ import path from 'path'
 import { PackageJson } from 'type-fest'
 import { BundleContext, loadBundleContext } from '../bundle/context'
 import { createCommit } from '../core'
+import { Promisable } from '../core/utils/types'
 import { SecretHub } from '../secrets/hub'
 import { secretsPlugin } from '../secrets/plugin'
 import { GitFiles } from './files'
@@ -42,8 +43,12 @@ export interface DeployContext extends BundleContext {
   logActivity: (...args: any[]) => void
   /** Plugins should use this for successful deployment logs. */
   logSuccess: (...args: any[]) => void
-  /** Plugins should use this for dry run logs. */
-  logPlan: (...args: any[]) => void
+  /**
+   * Plugins use this to describe an action and track its completion.
+   *
+   * The `msg` string should start with a present-tense verb.
+   */
+  logPlan: <T>(msg: string, action?: () => Promisable<T>) => Promise<T>
   //
   // Internals
   //

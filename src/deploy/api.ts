@@ -421,6 +421,7 @@ export async function deploy(
   }
 
   removeExitCallback(onCrash)
+  newTargetCache = await refreshTargetCache()
 
   if (options.dryRun) {
     const debugFile = path.resolve(context.root, 'targets.debug.yaml')
@@ -438,7 +439,6 @@ export async function deploy(
         '\n'
     )
   } else {
-    newTargetCache = await refreshTargetCache()
     await saveTargetCache()
 
     gitStatus = await exec('git status --porcelain', { cwd: context.root })

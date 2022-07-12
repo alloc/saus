@@ -13,12 +13,20 @@ export default defineDeployHook(ctx => {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
-      if (config.commit !== false && (await git('status --porcelain'))) {
-        const message = config.commit?.message || ctx.lastCommitHeader
-        await git('add -A')
-        await git('commit -m', [message], {
-          noThrow: true,
-        })
+      const { commit } = config
+      if (commit === false) {
+        ctx.logPlan(`skip commit in ${relativeToCwd(cwd)}/`)
+      } else if (await git('status --porcelain')) {
+        await ctx.logPlan(
+          `commit changes in ${relativeToCwd(cwd)}/`,
+          async () => {
+            const message = commit?.message || ctx.lastCommitHeader
+            await git('add -A')
+            await git('commit -m', [message], {
+              noThrow: true,
+            })
+          }
+        )
       }
 
       return {
