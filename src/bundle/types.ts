@@ -9,7 +9,7 @@ export type ClientChunk = {
   isEntry: boolean
 } & (
   | { isDebug: true; modules?: undefined }
-  | { isDebug?: false; modules: Record<string, any> }
+  | { isDebug?: false; modules: Record<string, unknown> }
 )
 
 export type ClientAsset = {

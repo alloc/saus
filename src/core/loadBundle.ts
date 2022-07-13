@@ -1,3 +1,5 @@
+import { isObject } from '@saus/deploy-utils'
+import * as base64ArrayBuffer from 'base64-arraybuffer'
 import { execSync } from 'child_process'
 import fs from 'fs'
 import { green } from 'kleur/colors'
@@ -9,6 +11,7 @@ import {
   InlineBundleConfig,
   loadBundleContext,
 } from '../bundle/context'
+import { ClientAsset, ClientChunk } from '../bundle/types'
 import { DeployContext, getDeployContext } from '../deploy'
 import { SourceMap } from './node/sourceMap'
 import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
@@ -89,8 +92,12 @@ export async function loadBundle({
       if (mtime > lastCommitDate) {
         const code = fs.readFileSync(bundlePath, 'utf8')
         const meta = readJson(metaPath, (_, val) =>
-          val && typeof val == 'object' && '@buffer' in val
-            ? Buffer.from(val['@buffer'], 'base64')
+          isObject(val)
+            ? '@b' in val
+              ? Buffer.from((val as any)['@b'], 'base64')
+              : '@u8[]' in val
+              ? new Uint8Array(base64ArrayBuffer.decode((val as any)['@u8[]']))
+              : val
             : val
         )
         bundleResult = { ...meta, code }
@@ -125,13 +132,26 @@ export async function loadBundle({
 
   let { code, map, ...meta } = bundleResult
   if (!cached) {
-    context.compileCache.set(bundleFile, code)
-    context.compileCache.set(
-      metaFile,
-      JSON.stringify(meta, (_, value) =>
-        Buffer.isBuffer(value) ? { '@buffer': value.toString('base64') } : value
+    // Temporarily replace Buffer#toJSON
+    const bufferToJson = Buffer.prototype.toJSON
+    Buffer.prototype.toJSON = undefined
+    try {
+      const metaJson = JSON.stringify(meta, (_, value) =>
+        Buffer.isBuffer(value)
+          ? { '@b': value.toString('base64') }
+          : value instanceof Uint8Array
+          ? { '@u8[]': base64ArrayBuffer.encode(value.buffer) }
+          : isObject(value) && 'fileName' in value
+          ? 'isEntry' in value
+            ? serializeRollupChunk(value as ClientChunk)
+            : serializeRollupAsset(value as ClientAsset)
+          : value
       )
-    )
+      context.compileCache.set(metaFile, metaJson)
+      context.compileCache.set(bundleFile, code)
+    } finally {
+      Buffer.prototype.toJSON = bufferToJson
+    }
   }
 
   const mapFile = bundleFile + '.map'
@@ -179,4 +199,26 @@ function getBundleHash(
     bundle: bundleOptions,
   }
   return md5Hex(JSON.stringify(values)).slice(0, 8)
+}
+
+function serializeRollupChunk(chunk: ClientChunk) {
+  const json = pick(chunk, [
+    'fileName',
+    'isEntry',
+    'isDebug',
+    'code',
+  ]) as ClientChunk
+
+  // The `modules` map is only for knowing which modules are
+  // included in each chunk, so we can discard the metadata.
+  if (!chunk.isDebug)
+    json.modules = Object.fromEntries(
+      Object.keys(chunk.modules).map(id => [id, 1])
+    )
+
+  return json
+}
+
+function serializeRollupAsset(asset: ClientAsset) {
+  return pick(asset, ['fileName', 'source'])
 }
