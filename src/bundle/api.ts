@@ -8,7 +8,6 @@ import { resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { bundleDir, clientDir, httpDir } from '@/paths'
 import { debugForbiddenImports } from '@/plugins/debug'
 import { rewriteHttpImports } from '@/plugins/httpImport'
-import { createModuleProvider } from '@/plugins/moduleProvider'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import { copyPublicDir } from '@/plugins/publicDir'
 import { routesPlugin } from '@/plugins/routes'
@@ -145,8 +144,7 @@ async function generateSsrBundle(
   isolatedModules: IsolatedModuleMap,
   inlinePlugins: vite.PluginOption[]
 ) {
-  const bundleConfig = context.bundle
-  const modules = createModuleProvider()
+  const { bundle: bundleConfig, injectedModules } = context
 
   const clientEntries: ClientEntries = {}
   for (const client of Object.values(
@@ -165,7 +163,7 @@ async function generateSsrBundle(
     clientEntries[layoutModuleId][route.moduleId!] = clientEntry.fileName
   }
 
-  modules.addModule({
+  injectedModules.addServerModule({
     id: path.join(bundleDir, 'bundle/clientEntries.ts'),
     code: dataToEsm(clientEntries),
   })
@@ -180,7 +178,7 @@ async function generateSsrBundle(
       ] as const
     })
 
-    modules.addModule({
+    injectedModules.addServerModule({
       id: path.join(bundleDir, 'bundle/clientModules.ts'),
       code: dataToEsm(
         clientChunks.reduce((clientModules, chunk) => {
@@ -199,37 +197,26 @@ async function generateSsrBundle(
       ),
     })
 
-    modules.addModule({
+    injectedModules.addServerModule({
       id: path.join(bundleDir, 'bundle/clientAssets.ts'),
       code: dataToEsm(Object.fromEntries(assetEntries)),
     })
   }
 
   if (!bundleConfig.debugBase)
-    modules.addModule({
+    injectedModules.addServerModule({
       id: path.join(bundleDir, 'bundle/debugBase.ts'),
       code: `export function injectDebugBase() {}`,
     })
 
-  modules.addModule({
+  injectedModules.addServerModule({
     id: path.join(bundleDir, 'bundle/config.ts'),
     code: dataToEsm(runtimeConfig),
   })
 
-  const pluginImports = new Set<string>()
-  for (const plugin of context.plugins) {
-    if (plugin.fetchBundleImports) {
-      const imports = (await plugin.fetchBundleImports(modules)) as
-        | string[]
-        | null
-
-      imports?.forEach(source => pluginImports.add(source))
-    }
-  }
-
-  modules.addModule({
+  injectedModules.addServerModule({
     id: context.bundleModuleId,
-    code: renderBundleModule(context.routesPath, pluginImports),
+    code: renderBundleModule(context.routesPath, context.injectedImports),
     moduleSideEffects: 'no-treeshake',
   })
 
@@ -258,7 +245,7 @@ async function generateSsrBundle(
   debug('Resolving "build" config for SSR bundle')
   const config = await context.resolveConfig({
     plugins: [
-      modules,
+      injectedModules,
       context.bundlePlugins,
       options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,

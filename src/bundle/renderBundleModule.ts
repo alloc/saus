@@ -1,16 +1,18 @@
 import { endent, serializeImports } from '@/core'
+import { InjectedImports } from '@/injectModules'
 import { bundleDir } from '@/paths'
 import path from 'path'
 
 export function renderBundleModule(
   routesPath: string,
-  pluginImports: Set<string>
+  imports: InjectedImports
 ) {
   const runtimeId = path.join(bundleDir, 'bundle/api.ts')
   const runtimeConfigId = path.join(bundleDir, 'bundle/config.ts')
   return endent`
-    ${serializeImports(Array.from(pluginImports))}
+    ${serializeImports(imports.prepend).join('\n')}
     import "${routesPath}"
+    ${serializeImports(imports.append).join('\n')}
 
     export * from "${runtimeId}"
     export { default } from "${runtimeId}"

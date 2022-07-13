@@ -6,6 +6,7 @@ import type { RenderPageResult } from './app/types'
 import { getSausPlugins } from './getSausPlugins'
 import { HtmlContext } from './html'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
+import { InjectedImports } from './injectModules'
 import { CompileCache } from './node/compileCache'
 import { toSausPath } from './paths'
 import { ModuleProvider } from './plugins/moduleProvider'
@@ -56,14 +57,16 @@ export interface BaseContext
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
   importMeta: Record<string, any>
-  /** These are injected via `saus.injectModules` hook */
-  injectedImports: {
-    prepend: string[]
-    append: string[]
-  }
+  /**
+   * Module paths that are auto-imported from the routes module
+   * in a server context.
+   *
+   * These are injected via `saus.injectModules` hook.
+   */
+  injectedImports: InjectedImports
   logger: vite.Logger
   /** This provider is reset whenever the routes module is changed. */
-  modules: ModuleProvider
+  injectedModules: ModuleProvider
   pluginContainer: PluginContainer
   plugins: readonly SausPlugin[]
   publicDir: PublicDirOptions | null
@@ -147,6 +150,11 @@ async function createContext(props: {
     forCachedPages,
     getCachedPage: withCache(pageCache),
     importMeta: config.env,
+    injectedImports: {
+      prepend: [],
+      append: [],
+    },
+    injectedModules: null!,
     layoutEntries: new Set(),
     linkedModules: {},
     logger: config.logger,
@@ -168,6 +176,7 @@ async function createContext(props: {
 
 /**
  * The following context properties must be initialized manually:
+ *   - `injectedModules`
  *   - `pluginContainer`
  *   - `renderers`
  *   - `require`

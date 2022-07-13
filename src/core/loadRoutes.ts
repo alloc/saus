@@ -1,4 +1,3 @@
-import { serializeImports } from '@/utils/imports'
 import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
@@ -11,6 +10,7 @@ import { servedPathForFile } from './node/servedPathForFile'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
 import { callPlugins } from './utils/callPlugins'
+import { serializeImports } from './utils/imports'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
@@ -18,7 +18,10 @@ import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
 import { RequireAsync } from './vm/types'
 
-export async function loadRoutes(context: SausContext) {
+export async function loadRoutes(
+  context: SausContext,
+  transformClient?: (code: string) => string
+) {
   const time = Date.now()
 
   const routesModule =
@@ -66,7 +69,7 @@ export async function loadRoutes(context: SausContext) {
 
     Object.assign(context, routesConfig)
     context.renderers = await getRouteRenderers(context)
-    context.routeClients = renderRouteClients(context)
+    context.routeClients = renderRouteClients(context, transformClient)
     injectClientRoutes(context)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
@@ -84,7 +87,13 @@ async function compileRoutesModule(
   context: SausContext,
   requireAsync: RequireAsync
 ) {
-  const { injectedImports, modules, resolveId, routesPath, root } = context
+  const {
+    injectedImports,
+    injectedModules: modules,
+    resolveId,
+    routesPath,
+    root,
+  } = context
 
   injectedImports.prepend.length = 0
   injectedImports.append.length = 0
@@ -97,6 +106,9 @@ async function compileRoutesModule(
 
   if (injectedImports.prepend.length) {
     editor.prepend(serializeImports(injectedImports.prepend).join('\n') + '\n')
+  }
+  if (injectedImports.append.length) {
+    editor.append(serializeImports(injectedImports.append).join('\n') + '\n')
   }
 
   // Import specifiers for route modules need to be rewritten

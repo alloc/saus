@@ -45,7 +45,7 @@ export interface ModuleInjection {
 }
 
 export function injectServerModules(context: SausContext) {
-  const { config, injectedImports, modules, plugins } = context
+  const { config, injectedImports, injectedModules: modules, plugins } = context
   return callPlugins(plugins, 'injectModules', {
     command: config.command,
     mode: config.mode,
@@ -107,7 +107,10 @@ export function injectClientModules(
 }
 
 export async function createClientInjection(context: SausContext) {
-  const modules = createModuleProvider()
+  const modules = createModuleProvider({
+    clientModules: new Map(context.injectedModules.clientModules),
+    watcher: context.watcher,
+  })
   const injectedImports: InjectedImports = {
     prepend: [],
     append: [],

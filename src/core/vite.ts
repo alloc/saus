@@ -5,7 +5,6 @@ import { App } from './app/types'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import { ModuleInjection } from './injectModules'
-import type { ModuleProvider } from './plugins/moduleProvider'
 import type { PublicDirOptions, PublicFile } from './publicDir'
 import type { RuntimeConfig } from './runtime/config'
 import type { TestPlugin } from './testPlugin'
@@ -112,7 +111,7 @@ export interface SausConfig {
    *
    * @default "src/node/routes.ts"
    */
-  routes?: string
+  routes: string
   /**
    * Path to the module that provides the default layout.
    * @default "/src/layouts/default"
@@ -270,14 +269,6 @@ export interface SausPlugin {
    * @experimental
    */
   injectModules?: (api: ModuleInjection) => void
-  /**
-   * Define virtual modules and/or return an array of side-effectful module
-   * identifiers to be imported by the SSR bundle.
-   * @experimental
-   */
-  fetchBundleImports?: (
-    modules: ModuleProvider
-  ) => Promisable<string[] | null | void>
   /**
    * Inspect or mutate the `RuntimeConfig` object, which is serialized to
    * JSON and used by the SSR bundle. The runtime config is also used

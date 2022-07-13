@@ -1,5 +1,5 @@
 import { SourceMap } from '../node/sourceMap'
-import { vite } from '../vite'
+import { Plugin, vite } from '../vite'
 
 export interface VirtualModule {
   id: string
@@ -8,7 +8,7 @@ export interface VirtualModule {
   map?: SourceMap
 }
 
-export interface ModuleProvider {
+export interface ModuleProvider extends Plugin {
   clientModules: ReadonlyMap<string, VirtualModule>
   serverModules: ReadonlyMap<string, VirtualModule>
   addModule(module: VirtualModule): VirtualModule
@@ -17,9 +17,15 @@ export interface ModuleProvider {
   clear(): void
 }
 
-export function createModuleProvider(): ModuleProvider & vite.Plugin {
-  const clientModules = new Map<string, VirtualModule>()
-  const serverModules = new Map<string, VirtualModule>()
+export function createModuleProvider({
+  clientModules = new Map(),
+  serverModules = new Map(),
+  watcher,
+}: {
+  clientModules?: Map<string, VirtualModule>
+  serverModules?: Map<string, VirtualModule>
+  watcher?: vite.FSWatcher
+} = {}): ModuleProvider {
   return {
     name: 'saus:moduleProvider',
     enforce: 'pre',
@@ -40,15 +46,18 @@ export function createModuleProvider(): ModuleProvider & vite.Plugin {
       return new Map(serverModules)
     },
     addModule(module) {
+      wrapModuleCode(module, watcher)
       clientModules.set(module.id, module)
       serverModules.set(module.id, module)
       return module
     },
     addClientModule(module) {
+      wrapModuleCode(module, watcher)
       clientModules.set(module.id, module)
       return module
     },
     addServerModule(module) {
+      wrapModuleCode(module, watcher)
       serverModules.set(module.id, module)
       return module
     },
@@ -57,4 +66,20 @@ export function createModuleProvider(): ModuleProvider & vite.Plugin {
       serverModules.clear()
     },
   }
+}
+
+/**
+ * Emit a watcher `change` event when `module.code` is updated.
+ */
+function wrapModuleCode(module: VirtualModule, watcher?: vite.FSWatcher) {
+  let { code } = module
+  Object.defineProperty(module, 'code', {
+    get: () => code,
+    set(value) {
+      code = value
+      watcher?.emit('change', module.id)
+    },
+    enumerable: true,
+    configurable: true,
+  })
 }

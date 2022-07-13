@@ -1,5 +1,8 @@
 import { BaseContext, loadContext, SausContext } from '@/context'
+import { getRequireFunctions } from '@/getRequireFunctions'
+import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
+import { createModuleProvider } from '@/plugins/moduleProvider'
 import {
   moduleRedirection,
   overrideBareImport,
@@ -17,8 +20,6 @@ import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
-import { getRequireFunctions } from '../core/getRequireFunctions'
-import { getSausPlugins } from '../core/getSausPlugins'
 import { internalRedirects, ssrRedirects } from './moduleRedirects'
 import { preBundleSsrRuntime } from './runtimeBundle'
 
@@ -58,6 +59,7 @@ export async function loadBundleContext<
   T extends BundleContext = BundleContext
 >(options: InlineBundleConfig, inlineConfig: vite.UserConfig = {}): Promise<T> {
   const context = await loadContext<BundleContext>('build', inlineConfig)
+  context.injectedModules = createModuleProvider()
   context.plugins = await getSausPlugins(context as SausContext)
 
   const buildConfig = context.userConfig.build || {}

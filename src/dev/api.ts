@@ -33,6 +33,7 @@ import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
 import { debounce } from 'ts-debounce'
 import { inspect } from 'util'
+import { createModuleProvider } from '../core/plugins/moduleProvider'
 import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
 import { DevEventEmitter } from './events'
@@ -150,13 +151,13 @@ async function startServer(
 ): Promise<vite.ViteDevServer> {
   const { config, logger } = context
 
-  const server = await vite.createServer(config)
-  context.server = server
-  context.watcher = server.watcher!
+  const server = (context.server = await vite.createServer(config))
+  const watcher = (context.watcher = server.watcher!)
   context.pluginContainer = server.pluginContainer as any
   Object.assign(context, getViteFunctions(server.pluginContainer))
   Object.assign(context, getRequireFunctions(context))
   context.events = events
+  context.injectedModules = createModuleProvider({ watcher })
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
   setupClientInjections(context)
@@ -208,11 +209,11 @@ async function startServer(
 
   // Ensure the Vite config is watched.
   if (context.configPath) {
-    context.watcher.add(context.configPath)
+    watcher.add(context.configPath)
   }
 
   await prepareDevApp(context)
-  context.watcher.prependListener('change', context.hotReload)
+  watcher.prependListener('change', context.hotReload)
 
   // Use process.nextTick to ensure whoever is awaiting the `createServer`
   // call can handle this event.
