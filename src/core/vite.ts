@@ -4,6 +4,7 @@ import type { BundleOptions, OutputBundle, PageBundle } from '../bundle'
 import { App } from './app/types'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
+import { ModuleInjection } from './injectModules'
 import type { ModuleProvider } from './plugins/moduleProvider'
 import type { PublicDirOptions, PublicFile } from './publicDir'
 import type { RuntimeConfig } from './runtime/config'
@@ -103,9 +104,15 @@ export interface UserBundleConfig {
 
 export interface SausConfig {
   /**
-   * Path to the module containing `route` calls.
+   * This module is imported automatically by the Saus runtime,
+   * in both development and production builds.
+   *
+   * It only runs on the server, and its job is to provide routes,
+   * state modules, and a place for dependency injection.
+   *
+   * @default "src/node/routes.ts"
    */
-  routes: string
+  routes?: string
   /**
    * Path to the module that provides the default layout.
    * @default "/src/layouts/default"
@@ -259,8 +266,14 @@ export interface SausPlugin {
    */
   transformPublicFile?: (file: PublicFile) => Promisable<void>
   /**
+   * Generate runtime code for development/production and client/server.
+   * @experimental
+   */
+  injectModules?: (api: ModuleInjection) => void
+  /**
    * Define virtual modules and/or return an array of side-effectful module
    * identifiers to be imported by the SSR bundle.
+   * @experimental
    */
   fetchBundleImports?: (
     modules: ModuleProvider

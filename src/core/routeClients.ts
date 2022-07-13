@@ -28,7 +28,10 @@ export interface RouteClient {
 
 export const clientPreloadsMarker = '__CLIENT_PRELOADS__'
 
-export function renderRouteClients(context: SausContext): RouteClients {
+export function renderRouteClients(
+  context: SausContext,
+  transform?: (code: string) => string
+): RouteClients {
   const clientsById: Record<string, RouteClient> = {}
   const clientsByUrl: Record<string, RouteClient> = {}
   const clientsByRoute = new Map<Route, RouteClient>()
@@ -51,12 +54,16 @@ export function renderRouteClients(context: SausContext): RouteClients {
     if (layoutModuleId == defaultLayout.id) {
       defaultLayout.hydrated = true
     }
-    return renderRouteClient({
+    let code = renderRouteClient({
       hydratorId,
       routeModuleId,
       layoutModuleId,
       preExport: config.command == 'build' ? clientPreloadsMarker + '\n' : '',
     })
+    if (transform) {
+      code = transform(code)
+    }
+    return code
   }
 
   const addRoute = (route: Route) => {

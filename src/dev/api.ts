@@ -4,6 +4,7 @@ import { Endpoint } from '@/core'
 import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
+import { createClientInjection } from '@/injectModules'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir, runtimeDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
@@ -175,7 +176,13 @@ async function startServer(
       context.ssrForceReload = createFullReload()
       try {
         context.plugins = await getSausPlugins(context)
-        await loadRoutes(context)
+        const { modules, injectImports } = await createClientInjection(context)
+
+        // @ts-ignore: This is fine since ModuleProvider has no config/configResolved hook.
+        server.config.plugins.push(modules)
+
+        await loadRoutes(context, injectImports)
+
         // TODO: ignore dependencies of defineStateModule loaders
         config.optimizeDeps.entries = toArray(
           config.optimizeDeps.entries

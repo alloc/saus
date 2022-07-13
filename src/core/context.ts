@@ -8,6 +8,7 @@ import { HtmlContext } from './html'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
 import { CompileCache } from './node/compileCache'
 import { toSausPath } from './paths'
+import { ModuleProvider } from './plugins/moduleProvider'
 import { PublicDirOptions } from './publicDir'
 import { RouteClients } from './routeClients'
 import { RouteRenderer } from './routeRenderer'
@@ -55,7 +56,14 @@ export interface BaseContext
   /** Load a page if not cached */
   getCachedPage: typeof getCachedState
   importMeta: Record<string, any>
+  /** These are injected via `saus.injectModules` hook */
+  injectedImports: {
+    prepend: string[]
+    append: string[]
+  }
   logger: vite.Logger
+  /** This provider is reset whenever the routes module is changed. */
+  modules: ModuleProvider
   pluginContainer: PluginContainer
   plugins: readonly SausPlugin[]
   publicDir: PublicDirOptions | null

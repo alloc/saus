@@ -1,3 +1,4 @@
+import { serializeImports } from '@/utils/imports'
 import * as esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import MagicString from 'magic-string'
@@ -5,6 +6,7 @@ import path from 'path'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
+import { injectServerModules } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
@@ -82,12 +84,23 @@ async function compileRoutesModule(
   context: SausContext,
   requireAsync: RequireAsync
 ) {
-  const { resolveId, routesPath, root } = context
+  const { injectedImports, modules, resolveId, routesPath, root } = context
+
+  injectedImports.prepend.length = 0
+  injectedImports.append.length = 0
+  modules.clear()
+
+  await injectServerModules(context)
+
+  const code = fs.readFileSync(routesPath, 'utf8')
+  const editor = new MagicString(code)
+
+  if (injectedImports.prepend.length) {
+    editor.prepend(serializeImports(injectedImports.prepend).join('\n') + '\n')
+  }
 
   // Import specifiers for route modules need to be rewritten
   // as dev URLs for them to be imported properly by the browser.
-  const code = fs.readFileSync(routesPath, 'utf8')
-  const editor = new MagicString(code)
   for (const imp of esModuleLexer.parse(code)[0]) {
     if (imp.d >= 0 && imp.n) {
       let resolved = await resolveId(imp.n, routesPath)

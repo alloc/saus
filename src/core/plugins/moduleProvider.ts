@@ -9,31 +9,52 @@ export interface VirtualModule {
 }
 
 export interface ModuleProvider {
-  modules: ReadonlyMap<string, VirtualModule>
+  clientModules: ReadonlyMap<string, VirtualModule>
+  serverModules: ReadonlyMap<string, VirtualModule>
   addModule(module: VirtualModule): VirtualModule
+  addClientModule(module: VirtualModule): VirtualModule
+  addServerModule(module: VirtualModule): VirtualModule
+  clear(): void
 }
 
 export function createModuleProvider(): ModuleProvider & vite.Plugin {
-  const modules = new Map<string, VirtualModule>()
+  const clientModules = new Map<string, VirtualModule>()
+  const serverModules = new Map<string, VirtualModule>()
   return {
     name: 'saus:moduleProvider',
     enforce: 'pre',
-    resolveId: id => {
-      const exists = modules.has(id)
+    resolveId: (id, _importer, opts) => {
+      const exists = (opts?.ssr ? serverModules : clientModules).has(id)
       return exists ? id : null
     },
-    async load(id) {
-      const module = modules.get(id)
+    async load(id, ssr) {
+      const module = (ssr ? serverModules : clientModules).get(id)
       if (module) {
         return { ...module, code: await module.code }
       }
     },
-    get modules() {
-      return new Map(modules)
+    get clientModules() {
+      return new Map(clientModules)
+    },
+    get serverModules() {
+      return new Map(serverModules)
     },
     addModule(module) {
-      modules.set(module.id, module)
+      clientModules.set(module.id, module)
+      serverModules.set(module.id, module)
       return module
+    },
+    addClientModule(module) {
+      clientModules.set(module.id, module)
+      return module
+    },
+    addServerModule(module) {
+      serverModules.set(module.id, module)
+      return module
+    },
+    clear() {
+      clientModules.clear()
+      serverModules.clear()
     },
   }
 }

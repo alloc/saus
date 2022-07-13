@@ -7,17 +7,15 @@ import { clientLayoutPlugin } from '@/plugins/clientLayout'
 import { clientStatePlugin } from '@/plugins/clientState'
 import { debugForbiddenImports } from '@/plugins/debug'
 import { rewriteHttpImports } from '@/plugins/httpImport'
-import { createModuleProvider } from '@/plugins/moduleProvider'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { routesPlugin } from '@/plugins/routes'
-import { clientPreloadsMarker } from '@/routeClients'
 import { RuntimeConfig } from '@/runtime/config'
 import { prependBase } from '@/utils/base'
-import { dataToEsm } from '@/utils/dataToEsm'
 import { vite } from '@/vite'
-import endent from 'endent'
 import path from 'path'
 import posixPath from 'path/posix'
+import { createClientInjection } from '../core/injectModules'
+import { injectClientPreloads } from './clientPreloads'
 import { clientRedirects } from './moduleRedirects'
 import { ClientAsset, ClientChunk } from './types'
 
@@ -36,14 +34,17 @@ export async function compileClients(
   } = context
 
   const { clientsById, routesByClientId } = context.routeClients
+  const { modules, injectImports } = await createClientInjection(
+    context as SausContext
+  )
 
-  const modules = createModuleProvider()
   const entryPaths: string[] = []
   await Promise.all(
     Object.entries(clientsById).map(async ([id, client]) => {
       let code: string | null
       if (client && (code = await client.promise)) {
-        modules.addModule({ id, code })
+        code = injectImports(code)
+        modules.addClientModule({ id, code })
         entryPaths.push(id)
       }
     })
@@ -245,20 +246,18 @@ export async function compileClients(
   for (const entryChunk of entryChunks) {
     if (Object.keys(entryChunk.modules).some(id => id in routesByClientId)) {
       const preloads = createPreloadList(entryChunk)
-      const preloadImport = `import {preloadModules} from "${helpersModuleUrl}"`
-      const preloadCall = `preloadModules(${dataToEsm(preloads, '')})`
-      entryChunk.code = entryChunk.code.replace(
-        clientPreloadsMarker,
-        `${preloadImport};${preloadCall}`
+      entryChunk.code = injectClientPreloads(
+        entryChunk.code,
+        preloads,
+        helpersModuleUrl
       )
+
       const name = entryChunk.fileName
       if (name in debugChunks) {
-        debugChunks[name] = debugChunks[name].replace(
-          clientPreloadsMarker,
-          endent`
-            ${preloadImport}
-            ${preloadCall}
-          `
+        debugChunks[name] = injectClientPreloads(
+          debugChunks[name],
+          preloads,
+          helpersModuleUrl
         )
       }
     }
