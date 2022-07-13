@@ -1,4 +1,4 @@
-import { onResponse, route, setup } from 'saus'
+import { onResponse, setup } from 'saus'
 import {
   AssetStore,
   assignDefaults,
@@ -16,6 +16,7 @@ import {
   ResponseHeaders,
   unwrapBody,
 } from 'saus/http'
+import { addPurgeRoute } from './purge/route'
 
 export type PageRuleContext = ParsedUrl & {
   headers: Readonly<RequestHeaders>
@@ -116,24 +117,7 @@ export function setupPageStore(config: PageStoreConfig) {
     })
 
     if (config.routes?.purge) {
-      type PurgePayload = { paths: string[] }
-      route(config.routes.purge).post(async req => {
-        const { paths } = await req.json<PurgePayload>()
-        if (!Array.isArray(paths)) {
-          return req.respondWith(400, {
-            json: { error: 'Missing "paths" array parameter' },
-          })
-        }
-        const deleting: Promise<void>[] = []
-        for (const path of paths) {
-          const file = getPageFilename(path)
-          for (const suffix of ['', '.js']) {
-            deleting.push(config.store.delete(file + suffix))
-          }
-        }
-        await Promise.all(deleting)
-        req.respondWith(200)
-      })
+      addPurgeRoute(config.routes.purge, config.store)
     }
   })
 }

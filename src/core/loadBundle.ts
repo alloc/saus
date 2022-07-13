@@ -5,7 +5,6 @@ import path from 'path'
 import { BundleOptions, OutputBundle } from '../bundle'
 import {
   BuildContext,
-  BundleConfig,
   BundleContext,
   InlineBundleConfig,
   loadBundleContext,
@@ -17,7 +16,8 @@ import { callPlugins } from './utils/callPlugins'
 import { md5Hex } from './utils/md5-hex'
 import { pick } from './utils/pick'
 import { readJson } from './utils/readJson'
-import { vite } from './vite'
+import { BundleConfig, vite } from './vite'
+import { writeBundle } from './writeBundle'
 
 type RuntimeConfigFn = (context: BundleContext) => Partial<RuntimeConfig>
 
@@ -106,7 +106,18 @@ export async function loadBundle({
       }
     }
   }
-  if (!bundleResult) {
+
+  if (bundleResult) {
+    if (context.bundle.write !== false) {
+      const outDir = path.resolve(context.root, context.config.build.outDir)
+      writeBundle(bundleResult, outDir, {
+        writeIndexTypes: !context.bundle.entry,
+        writeAssets:
+          bundleOptions.forceWriteAssets ||
+          context.bundle.clientStore == 'local',
+      })
+    }
+  } else {
     const { bundle } =
       require('../bundle/api') as typeof import('../bundle/api')
     bundleResult = await bundle(context, bundleOptions)

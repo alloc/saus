@@ -10,6 +10,10 @@ The `usePageStore` function is called from your routes module. It intercepts eac
   - …and their `.html.js` modules (for client props injection)
 - State modules loaded by the server (see `defineStateModule`)
 
+### Skipping authorized responses
+
+If you're using public storage, you'll want to avoid uploading assets with sensitive data. This can be easily achieved with the `skipAuthorized` option. When set to true, any request with an `Authorization` header will never have its response uploaded.
+
 ### Purging old assets
 
 By defining the `routes.purge` string option, you can expose an endpoint that accepts a JSON payload shaped like `{ paths: string[] }` for deleting assets from the page store as you see fit. You'll want to keep this endpoint private, so it doesn't get abused by a malicious actor.

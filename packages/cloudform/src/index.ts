@@ -35,6 +35,12 @@ export function useCloudFormation<Outputs extends object | void>(
   >
 }
 
+const kRef = Symbol.for('cloudform.ref')
+
+export function isResourceRef(obj: any): obj is ResourceRef {
+  return !!obj && obj[kRef]
+}
+
 async function defineStack({ name, region, template }: StackOptions) {
   const resources: Record<string, ResourceBase> = {}
   const makeRef: ResourceRef.Factory = (id, resource) => {
@@ -42,13 +48,19 @@ async function defineStack({ name, region, template }: StackOptions) {
 
     const ref: ResourceRef = CloudForm.Fn.Ref(id) as any
     ref.get = attr => CloudForm.Fn.GetAtt(id, attr) as AttributeRef
+
+    const dependencies: any[] = []
     ref.dependsOn = (...deps) => {
-      deps.forEach(dep => resource.dependsOn(dep.id))
+      deps.forEach(dep => {
+        dependencies.push(dep.id)
+      })
+      resource.dependsOn(dependencies)
       return ref
     }
 
     // Ignore these properties when diffing.
     return Object.defineProperties(ref, {
+      [kRef]: { value: true },
       id: { value: id },
       get: { value: ref.get },
       dependsOn: { value: ref.dependsOn },

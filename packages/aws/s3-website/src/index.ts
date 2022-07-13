@@ -1,8 +1,14 @@
-import { CloudFront, ResourceRef, S3, useCloudFormation } from '@saus/cloudform'
+import {
+  CloudFront,
+  isResourceRef,
+  ResourceRef,
+  S3,
+  useCloudFormation,
+  Value,
+} from '@saus/cloudform'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
 import { normalizeHeaderKeys } from 'saus/http'
-import { inspect } from 'util'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 import { syncStaticFiles } from './sync'
@@ -24,12 +30,13 @@ export async function useS3Website(
     name: config.name,
     region: config.region,
     template(ref, aws) {
+      const buckets = new Set<ResourceRef>()
       const createBucket = (
         id: string,
         props?: ConstructorParameters<typeof S3.Bucket>[0]
       ): ResourceRef => {
         const bucket = ref(id, new aws.S3.Bucket(props))
-        ref(
+        const bucketPolicy = ref(
           id + 'BucketPolicy',
           new aws.S3.BucketPolicy({
             Bucket: bucket,
@@ -47,6 +54,8 @@ export async function useS3Website(
             },
           })
         )
+        buckets.add(bucket)
+        bucketPolicy.dependsOn(bucket)
         return bucket
       }
 
@@ -132,30 +141,37 @@ export async function useS3Website(
         return {
           Id: bucket.id,
           DomainName: bucket.get('RegionalDomainName'),
-          S3OriginConfig: {},
+          S3OriginConfig: { OriginAccessIdentity: '' },
           ...extra,
         }
       }
 
-      const OriginGroup = (
+      const originGroups: CloudFront.Distribution.OriginGroup[] = []
+      const defineOriginGroup = (
         primaryOriginId: string,
-        secondOriginId: string
-      ): CloudFront.Distribution.OriginGroup => ({
-        Id: primaryOriginId + '-404',
-        FailoverCriteria: { StatusCodes: items([404]) },
-        Members: items([
-          { OriginId: primaryOriginId },
-          { OriginId: secondOriginId },
-        ]),
-      })
+        secondOriginId: Value<string>
+      ): CloudFront.Distribution.OriginGroup => {
+        const originGroup = {
+          Id: primaryOriginId + 'Failover',
+          FailoverCriteria: { StatusCodes: items([404]) },
+          Members: items([
+            { OriginId: primaryOriginId },
+            { OriginId: secondOriginId },
+          ]),
+        }
+        originGroups.push(originGroup)
+        return originGroup
+      }
 
-      const OriginGroupChain = (...originIds: (string | Falsy)[]) =>
-        defalsify(
-          defalsify(originIds).map(
-            (originId, i, originIds) =>
-              i > 0 && OriginGroup(originIds[i - 1], originId)
-          )
-        )
+      const defineOriginChain = (...originIds: (string | Falsy)[]) =>
+        defalsify(originIds)
+          .reverse()
+          .reduce((failoverId, originId) => {
+            if (failoverId) {
+              defineOriginGroup(originId, failoverId)
+            }
+            return originId
+          }, undefined as Value<string> | undefined)
 
       const httpsOnly = {
         HTTPSPort: 443,
@@ -178,15 +194,13 @@ export async function useS3Website(
         pageServer,
       ])
 
-      const originGroups = defalsify([
-        OriginGroup(assets.id, oldAssets.id),
-        ...OriginGroupChain(
-          publicDir.id,
-          popularPages && popularPages.id,
-          onDemandPages && onDemandPages.id,
-          pageServerId
-        ),
-      ])
+      defineOriginGroup(assets.id, oldAssets.id)
+      const defaultOrigin = defineOriginChain(
+        publicDir.id,
+        popularPages && popularPages.id,
+        onDemandPages && onDemandPages.id,
+        pageServerId
+      )!
 
       const varyHeaders = normalizeHeaderKeys([
         ...(config.vary?.headers || []),
@@ -222,15 +236,6 @@ export async function useS3Website(
         })
       )
 
-      console.log(
-        inspect(
-          {
-            defaultCachePolicy: defaultCachePolicy.properties,
-          },
-          { depth: null, colors: true }
-        )
-      )
-
       const s3OriginRequestPolicy = ref(
         'S3OriginRequestPolicy',
         new aws.CloudFront.OriginRequestPolicy({
@@ -253,18 +258,20 @@ export async function useS3Website(
       type CacheBehavior = CloudFront.Distribution.CacheBehavior
 
       const CacheBehavior = (
-        target: string | ResourceRef,
+        target: Value<string> | ResourceRef,
         props: Omit<CacheBehavior, 'ViewerProtocolPolicy' | 'TargetOriginId'>
       ): CacheBehavior => ({
-        TargetOriginId: typeof target !== 'string' ? target.id : target,
+        TargetOriginId: isResourceRef(target) ? target.id : target,
         CachePolicyId: defaultCachePolicy,
         ViewerProtocolPolicy:
-          typeof target !== 'string' && websiteBuckets.has(target)
+          // S3 buckets in website mode are always HTTP only.
+          isResourceRef(target) && websiteBuckets.has(target)
             ? 'allow-all'
             : 'redirect-to-https',
         OriginRequestPolicyId:
-          typeof target !== 'string' && websiteBuckets.has(target)
-            ? s3OriginRequestPolicy.id
+          // S3 buckets must never receive a Host header.
+          isResourceRef(target) && buckets.has(target)
+            ? s3OriginRequestPolicy
             : managedRequestPolicies.AllViewer,
         ResponseHeadersPolicyId: config.injectSecurityHeaders
           ? managedResponseHeaderPolicies.SecurityHeaders
@@ -280,7 +287,7 @@ export async function useS3Website(
         debugBase &&
           CacheBehavior(assets, {
             PathPattern: debugBase.slice(1) + assetsDir + '/*',
-            CachePolicyId: managedCachePolicies.CachingOptimized,
+            CachePolicyId: managedCachePolicies.CachingDisabled,
           }),
       ])
 
@@ -312,14 +319,24 @@ export async function useS3Website(
             Origins: origins,
             OriginGroups: items(originGroups),
             CacheBehaviors: cacheBehaviors,
-            DefaultCacheBehavior: CacheBehavior(publicDir, {
+            DefaultCacheBehavior: CacheBehavior(defaultOrigin, {
               PathPattern: undefined!,
+              // Since `defaultOrigin` is a Value object,
+              // we need to be explicit about the request policy.
+              OriginRequestPolicyId: s3OriginRequestPolicy,
             }),
           },
         })
       )
 
-      edgeCache.dependsOn(publicDir, assets, oldAssets)
+      edgeCache.dependsOn(
+        publicDir,
+        assets,
+        oldAssets,
+        defaultCachePolicy,
+        s3OriginRequestPolicy
+      )
+
       popularPages && edgeCache.dependsOn(popularPages)
       onDemandPages && edgeCache.dependsOn(onDemandPages)
 

@@ -1,5 +1,5 @@
 import { cyan, gray, green, red, yellow } from 'kleur/colors'
-import { MistyTask, startTask } from 'misty/task'
+import { startTask } from 'misty/task'
 import { DeployContext } from './context'
 
 export function setLogFunctions(
@@ -22,13 +22,12 @@ export function setLogFunctions(
       const prefix = gray(plugin.name) + ' '
       const suffix = ' ' + rest.join(' ')
 
-      let task: MistyTask | undefined
       if (ctx.dryRun) {
-        console.log(prefix + cyan(' ◯') + ('would ' + verb) + suffix)
+        console.log(prefix + cyan('⦿ ') + ('would ' + verb) + suffix)
       } else if (action) {
-        task = startTask(
+        const task = startTask(
           prefix +
-            yellow(' ⦿') +
+            yellow('⦿ ') +
             ((verbLastChar == 't'
               ? verb + 't'
               : verbLastChar == 'e'
@@ -41,15 +40,22 @@ export function setLogFunctions(
         let result: any
         try {
           result = await action()
-          task?.finish(
+          task.finish()
+          ctx.logger.info(
             prefix +
-              green(' ✔︎') +
-              (verbLastChar == 'y' ? verb.slice(0, -1) + 'i' : verb) +
-              'ed' +
+              green('✔︎ ') +
+              (verbLastChar == 'e'
+                ? verb + 'd'
+                : (verbLastChar == 't'
+                    ? verb + 't'
+                    : /[^aeiou]y$/.test(verb)
+                    ? verb.slice(0, -1) + 'i'
+                    : verb) + 'ed') +
               suffix
           )
         } catch (e: any) {
-          task?.finish(prefix + red(' ✗') + 'failed to ' + verb + suffix)
+          task.finish()
+          ctx.logger.info(prefix + red('✗ ') + 'failed to ' + verb + suffix)
           throw e
         }
         return result

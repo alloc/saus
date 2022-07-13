@@ -32,15 +32,19 @@ export function gitInit(config: InitConfig) {
       if (!ctx.dryRun) {
         if (existsSync(path.join(cwd, '.git'))) {
           if (await git('status --porcelain')) {
-            ctx.logActivity(`stashing changes in ${relativeToCwd(cwd)}/`)
-            await git('stash --include-untracked')
-            stashedRoots.add(cwd)
-            onRevert(async () => {
-              if (stashedRoots.has(cwd)) {
-                await git('stash pop')
-                stashedRoots.delete(cwd)
+            await ctx.logPlan(
+              `stash changes in ${relativeToCwd(cwd)}/`,
+              async () => {
+                await git('stash --include-untracked')
+                stashedRoots.add(cwd)
+                onRevert(async () => {
+                  if (stashedRoots.has(cwd)) {
+                    await git('stash pop')
+                    stashedRoots.delete(cwd)
+                  }
+                })
               }
-            })
+            )
           }
           await git('remote set-url origin', [origin.url])
         } else {

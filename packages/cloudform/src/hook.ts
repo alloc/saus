@@ -85,11 +85,10 @@ export default defineDeployHook(ctx => ({
       throw Error('Expected stack.id to exist')
     }
     return ctx.logPlan(
-      `would destroy ${
+      `would destroy all ${
         Object.keys(stack.template.resources).length
-      } AWS resources`,
+      } AWS resources for "${stack.name}" stack`,
       async () => {
-        ctx.logActivity(`Deleting the "${stack.name}" stack...`)
         const deleteStack = signedRequest.action('DeleteStack', {
           creds: secrets,
           region: stack.region,

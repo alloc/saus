@@ -1,7 +1,9 @@
 export function diffObjects(
   oldValues: any,
   values: any,
-  changed: Record<string, any> = {}
+  changed: Record<string, any> = {},
+  dotPaths = new Set<string>(),
+  parentPath: string[] = []
 ) {
   let differs = false
   const diff = (key: string, oldValue: any, value: any) => {
@@ -12,15 +14,30 @@ export function diffObjects(
       if (canCoerceToJson(value)) {
         value = value.toJSON()
       }
-      if (diffObjects(oldValue, value, (changed[key] = {}))) {
+      const cmp = diffObjects(
+        oldValue,
+        value,
+        (changed[key] = {}),
+        dotPaths,
+        parentPath.concat(key)
+      )
+      if (cmp) {
         differs = true
       }
     } else if (Array.isArray(oldValue) && Array.isArray(value)) {
-      if (!equalArrays(oldValue, value)) {
+      const cmp = equalArrays(
+        oldValue,
+        value,
+        changed,
+        dotPaths,
+        parentPath.concat(key)
+      )
+      if (!cmp) {
         changed[key] = differs = true
       }
     } else if (oldValue !== value) {
       changed[key] = differs = true
+      dotPaths.add(parentPath.concat(key).join('.'))
     }
   }
   for (const key in values) {
@@ -34,7 +51,13 @@ export function diffObjects(
   return differs
 }
 
-function equalArrays(oldValues: any[], values: any[]) {
+function equalArrays(
+  oldValues: any[],
+  values: any[],
+  changed: Record<string, any> = {},
+  dotPaths = new Set<string>(),
+  parentPath: string[] = []
+) {
   if (oldValues.length !== values.length) {
     return false
   }
@@ -48,14 +71,29 @@ function equalArrays(oldValues: any[], values: any[]) {
       if (canCoerceToJson(value)) {
         value = value.toJSON()
       }
-      if (diffObjects(oldValue, value, {})) {
+      const cmp = diffObjects(
+        oldValue,
+        value,
+        (changed[i] = {}),
+        dotPaths,
+        parentPath.concat(i + '')
+      )
+      if (cmp) {
         return false
       }
     } else if (Array.isArray(oldValue) && Array.isArray(value)) {
-      if (!equalArrays(oldValue, value)) {
+      const cmp = equalArrays(
+        oldValue,
+        value,
+        changed,
+        dotPaths,
+        parentPath.concat(i + '')
+      )
+      if (!cmp) {
         return false
       }
     } else if (oldValue !== value) {
+      dotPaths.add(parentPath.concat(i + '').join('.'))
       return false
     }
   }

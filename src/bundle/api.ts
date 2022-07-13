@@ -120,7 +120,7 @@ export async function bundle(
 
   await callPlugins(context.plugins, 'receiveBundle', bundle, options)
 
-  if (bundle.path) {
+  if (bundle.path && context.bundle.write !== false) {
     context.logger.info(
       kleur.bold('[saus]') +
         ` Saving bundle as ${kleur.green(relativeToCwd(bundle.path))}`

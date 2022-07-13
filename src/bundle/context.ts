@@ -39,7 +39,7 @@ export interface BuildContext extends BundleContext {
 /** When `loadBundleContext` is used, this is the context type. */
 export interface BundleContext extends BaseContext {
   loadRoutes: () => Promise<void>
-  bundle: BundleConfig
+  bundle: BundleConfig & { write: boolean | undefined }
   /** The virtual module ID of the SSR bundle. */
   bundleModuleId: string
   /**
@@ -116,6 +116,7 @@ export async function loadBundleContext<
     clientStore,
     outFile,
     debugBase,
+    write,
   }
 
   let { config } = context

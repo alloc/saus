@@ -9,7 +9,7 @@ import { omitKeys } from '@saus/deploy-utils'
 import assert from 'assert'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import fs from 'fs'
-import { bold, gray, green, red, yellow } from 'kleur/colors'
+import { bold, cyan, gray, green, red, yellow } from 'kleur/colors'
 import { success } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -168,14 +168,33 @@ export async function deploy(
       defineTargetId(target, await plugin.identify(target))
 
       let changed: Record<string, any> | undefined
+      const changedPaths = process.env.DEBUG ? new Set<string>() : undefined!
 
       const savedTarget = await savedTargets.match(target, plugin)
       if (savedTarget) {
-        changed = {}
-        if (!diffObjects(savedTarget, omitEphemeral(target, plugin), changed)) {
+        const cmp = diffObjects(
+          savedTarget,
+          omitEphemeral(target, plugin),
+          (changed = {}),
+          changedPaths
+        )
+        if (!cmp) {
           markTargetReused(savedTarget)
           break deploy // Nothing changed.
         }
+      }
+
+      if (changedPaths) {
+        logger.info(
+          `\n` +
+            yellow(bold(`Target was changed!\n`)) +
+            `Properties of ${cyan(plugin.name)}${gray(
+              '/' + target._id.hash
+            )} were changed:\n  ${Array.from(changedPaths)
+              .map(m => '.' + m)
+              .join('\n  ')}` +
+            `\n`
+        )
       }
 
       if (savedTarget) {

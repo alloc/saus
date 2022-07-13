@@ -1,3 +1,4 @@
+// Adapted from https://github.com/aws/aws-sdk-js/blob/76fe0f61949f7bf26436f00312c6f8cf20cbe33a/clients/s3.d.ts
 export interface Blob {}
 
 export interface StreamingEventStream<Events> extends NodeJS.ReadableStream {

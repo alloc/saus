@@ -235,7 +235,7 @@ async function buildPages(
     await worker.destroy()
   }
 
-  if (buildOptions.write !== false && !abortSignal?.aborted) {
+  if (context.bundle.write !== false && !abortSignal?.aborted) {
     await callPlugins(context.plugins, 'onWritePages', pages)
     const { writePages } = runBundle(workerData)
     const files = await writePages(pages, outDir)

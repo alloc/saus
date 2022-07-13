@@ -40,17 +40,18 @@ export default defineDeployHook(ctx => {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
-      ctx.logActivity(`pushing ${relativeToCwd(cwd)}/`)
-      await git('push')
+      return ctx.logPlan(`push ${relativeToCwd(cwd)}/`, async () => {
+        await git('push')
 
-      if (stashedRoots.has(cwd)) {
-        await git('stash pop')
-        stashedRoots.delete(cwd)
-      }
+        if (stashedRoots.has(cwd)) {
+          await git('stash pop')
+          stashedRoots.delete(cwd)
+        }
 
-      return async () => {
-        await git('reset --hard HEAD^')
-      }
+        return async () => {
+          await git('reset --hard HEAD^')
+        }
+      })
     },
     update(config, _, onRevert) {
       return this.spawn(config, onRevert)

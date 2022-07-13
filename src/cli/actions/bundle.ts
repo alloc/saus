@@ -17,6 +17,7 @@ command(bundle, '[outFile]')
   .option('--entry [file]', `[string|boolean] set the bundle entry`)
   .option('--minify', `[boolean] minify the client modules`)
   .option('--sourcemap', `[boolean] enable/disable source maps`)
+  .option('--stdout', `[boolean] write bundle to stdout`)
 
 export type BundleFlags = InlineBundleConfig & {
   assetsDir?: string
@@ -24,6 +25,7 @@ export type BundleFlags = InlineBundleConfig & {
   minify?: boolean
   mode?: string
   sourcemap?: boolean | 'inline' | 'hidden'
+  stdout?: boolean
 }
 
 export async function bundle(outFile: string, options: BundleFlags) {
@@ -58,13 +60,18 @@ export async function bundle(outFile: string, options: BundleFlags) {
           : ' Bundle saved to: ' + relativeToCwd(bundlePath))
     )
   } else {
-    const noWrite = !process.stdout.isTTY && !process.env.CI
-    if (noWrite) {
-      options.write = false
-    }
-
     options.outFile = outFile
-    viteOptions.logLevel = noWrite ? 'silent' : undefined
+
+    // In TTY and CI contexts, --stdout defaults to false.
+    // Specifying an outFile also defaults --stdout to false.
+    const preferStdout = !outFile && !process.stdout.isTTY && !process.env.CI
+    const writeToStdout = options.stdout ?? preferStdout
+    if (writeToStdout) {
+      // Disable write to disk.
+      options.write = !preferStdout
+      // Disable feedback logs.
+      viteOptions.logLevel = 'silent'
+    }
 
     const { bundle } = await import('../../bundle/api')
     const { loadBundleContext } = await import('../../bundle/context')
@@ -72,7 +79,7 @@ export async function bundle(outFile: string, options: BundleFlags) {
     const context = await loadBundleContext(options, viteOptions)
     let { code, map } = await bundle(context, bundleOptions)
 
-    if (noWrite) {
+    if (writeToStdout) {
       if (map) {
         const { toInlineSourceMap } = await import('../../core')
         code += toInlineSourceMap(map)
