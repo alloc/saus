@@ -5,3 +5,4 @@ node_modules
 starters
 vendor
 dist
+.vscode/pinned-files.json

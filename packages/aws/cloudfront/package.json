@@ -1,0 +1,28 @@
+{
+  "name": "@saus/aws-cloudfront",
+  "version": "0.1.0",
+  "description": "Manage your Amazon CloudFront distributions",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*"
+  },
+  "dependencies": {
+    "@saus/aws-utils": "workspace:^0.1.0",
+    "mrmime": "^1.0.0"
+  }
+}
