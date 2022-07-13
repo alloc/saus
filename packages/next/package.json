@@ -1,0 +1,48 @@
+{
+  "name": "@saus/next",
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./types/plugin.d.ts",
+      "import": "./dist/plugin.mjs",
+      "default": "./dist/plugin.js"
+    },
+    "./hydrator": "./client/hydrate.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*",
+    "saus": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.25",
+    "@types/react-dom": "^17.0.9",
+    "react": "*",
+    "react-dom": "*",
+    "saus": "*"
+  },
+  "dependencies": {
+    "filespy": "^1.2.4",
+    "recrawl": "^2.2.1",
+    "uid": "^2.0.0"
+  }
+}

@@ -1,5 +1,10 @@
 {
   "repos": {
+    "examples/next-hackernews": {
+      "url": "https://github.com/alloc/saus.git",
+      "branch": "poc/next-hackernews",
+      "optional": true
+    },
     "packages/imagetools": {
       "url": "https://github.com/alloc/saus-imagetools.git",
       "optional": true
