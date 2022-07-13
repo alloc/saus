@@ -1,0 +1,22 @@
+{
+  "name": "next-hackernews",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "saus dev",
+    "build": "saus bundle",
+    "preview": "saus preview",
+    "deploy": "saus deploy"
+  },
+  "dependencies": {
+    "react": "18.0.0",
+    "react-dom": "18.0.0",
+    "saus": "0.4.x"
+  },
+  "devDependencies": {
+    "@types/node": "17.0.24",
+    "@types/react": "18.0.5",
+    "@types/react-dom": "18.0.1",
+    "typescript": "4.6.3"
+  }
+}
