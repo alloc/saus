@@ -1,5 +1,5 @@
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
-import { DeployContext } from './context'
+import { DeployContext, getDeployContext } from './context'
 import { setLogFunctions } from './logger'
 import type { DeployHookRef, DeployPlugin } from './types'
 
@@ -13,9 +13,9 @@ export async function loadDeployFile(context: DeployContext) {
 }
 
 export async function loadDeployPlugin(
-  hookRef: DeployHookRef | string,
-  { ...context }: DeployContext
+  hookRef: DeployHookRef | string
 ): Promise<DeployPlugin> {
+  const { ...context } = getDeployContext()
   const hookModule = await (typeof hookRef == 'string'
     ? context.require(hookRef)
     : hookRef.load())
@@ -32,6 +32,5 @@ export async function loadDeployPlugin(
     hookRef.hook = hook
     hookRef.plugin = plugin
   }
-  context.deployPlugins[plugin.name] = plugin
   return plugin
 }

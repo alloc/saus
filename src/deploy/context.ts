@@ -13,12 +13,15 @@ import { Promisable } from '../core/utils/types'
 import { SecretHub } from '../secrets/hub'
 import { secretsPlugin } from '../secrets/plugin'
 import { GitFiles } from './files'
+import { loadDeployPlugin } from './loader'
 import { DeployOptions } from './options'
+import { createPluginCache, PluginCache } from './pluginCache'
 import {
   DeployAction,
   DeployHookRef,
   DeployPlugin,
   DeployTargetArgs,
+  RevertFn,
 } from './types'
 
 export interface DeployContext extends BundleContext {
@@ -52,8 +55,10 @@ export interface DeployContext extends BundleContext {
   //
   // Internals
   //
+  targets: DeployTargetArgs[]
+  revertFns: RevertFn[]
   deployHooks: DeployHookRef[]
-  deployPlugins: Record<string, DeployPlugin>
+  deployPlugins: PluginCache<string | DeployHookRef, DeployPlugin>
   addDeployTarget: (...args: DeployTargetArgs) => void
   addDeployAction: <T>(action: DeployAction<T>) => Promise<T>
   syncDeployCache: () => Promise<void>
@@ -109,11 +114,16 @@ export async function loadDeployContext(
   context.secrets = new SecretHub()
   context.dryRun = !!options.dryRun
   context.noCache = !!options.noCache
+  context.targets = []
+  context.revertFns = []
   context.deployHooks = []
-  context.deployPlugins = {}
+  context.deployPlugins = createPluginCache(loadDeployPlugin)
+
   context.logActivity = noop
   context.logSuccess = noop
-  context.logPlan = noop
+  context.logPlan = () => {
+    throw 'logPlan cannot be called yet'
+  }
 
   // By default, a deployment action will never resolve.
   // This affects `saus secrets add` for example, so unnecessary

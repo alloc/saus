@@ -17,7 +17,6 @@ export function setLogFunctions(
     }
     ctx.logPlan = async (msg, action) => {
       let [verb, ...rest] = msg.split(' ')
-      let verbLastChar = verb[verb.length - 1]
 
       const prefix = gray(plugin.name) + ' '
       const suffix = ' ' + rest.join(' ')
@@ -26,33 +25,14 @@ export function setLogFunctions(
         console.log(prefix + cyan('⦿ ') + ('would ' + verb) + suffix)
       } else if (action) {
         const task = startTask(
-          prefix +
-            yellow('⦿ ') +
-            ((verbLastChar == 't'
-              ? verb + 't'
-              : verbLastChar == 'e'
-              ? verb.slice(0, -1)
-              : verb) +
-              'ing') +
-            suffix,
+          prefix + yellow('⦿ ') + toPresentTense(verb) + suffix,
           { footer: true }
         )
         let result: any
         try {
           result = await action()
           task.finish()
-          ctx.logger.info(
-            prefix +
-              green('✔︎ ') +
-              (verbLastChar == 'e'
-                ? verb + 'd'
-                : (verbLastChar == 't'
-                    ? verb + 't'
-                    : /[^aeiou]y$/.test(verb)
-                    ? verb.slice(0, -1) + 'i'
-                    : verb) + 'ed') +
-              suffix
-          )
+          ctx.logger.info(prefix + green('✔︎ ') + toPastTense(verb) + suffix)
         } catch (e: any) {
           task.finish()
           ctx.logger.info(prefix + red('✗ ') + 'failed to ' + verb + suffix)
@@ -62,4 +42,32 @@ export function setLogFunctions(
       }
     }
   }
+}
+
+// These functions are intended to serve common use cases,
+// and so they're not bullet proof.
+function toPastTense(verb: string) {
+  const lastChar = verb[verb.length - 1]
+  return lastChar == 'e'
+    ? verb + 'd'
+    : (/[^aeiou]y$/.test(verb)
+        ? verb.slice(0, -1) + 'i'
+        : needLastCharDoubled(verb)
+        ? verb + lastChar
+        : verb) + 'ed'
+}
+
+function toPresentTense(verb: string) {
+  const lastChar = verb[verb.length - 1]
+  return (
+    (lastChar == 'e'
+      ? verb.slice(0, -1)
+      : needLastCharDoubled(verb)
+      ? verb + lastChar
+      : verb) + 'ing'
+  )
+}
+
+function needLastCharDoubled(verb: string) {
+  return /[aeiou][bdlmnprt]$/.test(verb) && !/(ea|ee|oo)[bdlmnprt]$/.test(verb)
 }
