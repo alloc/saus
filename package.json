@@ -94,6 +94,7 @@
     "@types/source-map-support": "^0.5.4",
     "@types/strip-comments": "^2.0.1",
     "arrify": "^3.0.0",
+    "base64-arraybuffer": "^1.0.2",
     "builtin-modules": "^3.2.0",
     "callsites": "^3.0.0",
     "catch-exit": "^1.2.2",

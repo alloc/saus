@@ -52,8 +52,6 @@ export interface WebsiteConfig {
    * Set `false` to disable this compression.
    */
   brotli?: false | BrotliConfig
-  /** Configure the various buckets */
-  buckets?: WebsiteBucketConfig
 }
 
 export interface WebsiteBucketConfig {

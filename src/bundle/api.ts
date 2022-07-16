@@ -108,13 +108,26 @@ export async function bundle(
     [await isolatedRoutesPlugin]
   )
 
+  // TODO: what about routes with no hydrator?
+  const routeEntries = Object.fromEntries(
+    Object.entries(clientRouteMap)
+      .map(([clientId, entryUrl]) =>
+        context.routeClients.routesByClientId[clientId].map(
+          (route): [string, string] => [route.path, entryUrl]
+        )
+      )
+      .flat()
+  )
+
   const bundle: OutputBundle = {
     path: bundleConfig.outFile,
     code,
     map: map as SourceMap | undefined,
     files: {},
+    appVersion: options.appVersion,
     clientChunks,
     clientAssets,
+    routeEntries,
   }
 
   await callPlugins(context.plugins, 'receiveBundle', bundle, options)

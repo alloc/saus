@@ -4,7 +4,6 @@ import type { DeployContext } from '../deploy'
 import type { DevContext, DevMethods, DevState } from '../dev/context'
 import type { RenderPageResult } from './app/types'
 import { getSausPlugins } from './getSausPlugins'
-import { HtmlContext } from './html'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
 import { InjectedImports } from './injectModules'
 import { CompileCache } from './node/compileCache'
@@ -17,6 +16,7 @@ import { RoutesModule } from './routes'
 import { clearCachedState } from './runtime/clearCachedState'
 import { getCachedState } from './runtime/getCachedState'
 import { Cache, withCache } from './runtime/withCache'
+import type { Falsy } from './utils/types'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
@@ -24,7 +24,7 @@ import { PluginContainer } from './vite/pluginContainer'
 import { RequireAsyncState } from './vm/asyncRequire'
 import { RequireAsync } from './vm/types'
 
-export type SausCommand = SausContext['command']
+export type SausCommand = 'build' | 'serve' | 'deploy' | 'secrets'
 export type SausContext = BuildContext | DeployContext | DevContext
 
 /**
@@ -32,7 +32,6 @@ export type SausContext = BuildContext | DeployContext | DevContext
  */
 export interface BaseContext
   extends RoutesModule,
-    HtmlContext,
     ViteFunctions,
     Required<RequireAsyncState>,
     Partial<DevState>,
@@ -186,27 +185,38 @@ async function createContext(props: {
 export async function loadContext<T extends Context>(
   command: SausCommand,
   defaultConfig: vite.InlineConfig = {},
-  defaultPlugins?: InlinePlugin[]
+  defaultPlugins?: (InlinePlugin | vite.Plugin | Falsy)[]
 ): Promise<T> {
   // The plugins created from the `inlinePlugins` argument
   // are shared between `resolveConfig` calls.
   let sharedPlugins: vite.Plugin[]
 
   const getUserConfig = async (inlineConfig?: vite.InlineConfig) => {
-    let userConfig = await loadUserConfig(command, inlineConfig)
+    let userConfig = await loadUserConfig(
+      command,
+      inlineConfig,
+      // When loading the user config for the first time, we also want
+      // to log how many config files were loaded from node_modules.
+      inlineConfig == defaultConfig
+        ? vite.createLogger(defaultConfig.logLevel)
+        : undefined
+    )
 
     // The `inlinePlugins` array is initialized once and its plugin
     // objects are reused by future `resolveConfig` calls.
     if (defaultPlugins && !sharedPlugins) {
       const configEnv = getConfigEnv(command, inlineConfig?.mode)
-      userConfig = vite.mergeConfig(
-        {
-          plugins: (sharedPlugins = defaultPlugins
-            .map(p => p(userConfig.saus, configEnv))
-            .flat()),
-        },
-        userConfig
-      ) as typeof userConfig
+      sharedPlugins = (
+        defaultPlugins.filter(Boolean) as (InlinePlugin | vite.Plugin)[]
+      )
+        .map(p => (typeof p == 'function' ? p(userConfig.saus, configEnv) : p))
+        .flat()
+
+      if (sharedPlugins.length)
+        userConfig = vite.mergeConfig(
+          { plugins: sharedPlugins },
+          userConfig
+        ) as typeof userConfig
     }
 
     return userConfig

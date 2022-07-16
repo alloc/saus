@@ -18,7 +18,7 @@ import { getPageStateFactory } from './createApp/renderPageState'
 import { getStateModuleFactory } from './createApp/renderStateModule'
 import { emptyArray } from './global'
 import { createNegotiator } from './negotiator'
-import { App, AppContext, RenderedPage, RouteResolver } from './types'
+import { App, RenderedPage, RouteResolver } from './types'
 
 /**
  * Create a Saus application that can run anywhere. It can render pages
@@ -26,7 +26,7 @@ import { App, AppContext, RenderedPage, RouteResolver } from './types'
  *
  * Note: This function does not use Vite for anything.
  */
-export function createApp(ctx: AppContext, plugins: App.Plugin[] = []): App {
+export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
   const { config } = ctx
 
   const resolveEndpoints = (
@@ -168,7 +168,7 @@ export function createApp(ctx: AppContext, plugins: App.Plugin[] = []): App {
   return app
 }
 
-function prepareApp(app: App, ctx: AppContext, plugins: App.Plugin[]) {
+function prepareApp(app: App, ctx: App.Context, plugins: App.Plugin[]) {
   callRuntimeHooks(ctx.runtimeHooks, plugins, ctx.config, ctx.onError)
   defineBuiltinRoutes(app, ctx)
   plugins.forEach(plugin => {
@@ -186,7 +186,7 @@ function prepareApp(app: App, ctx: AppContext, plugins: App.Plugin[]) {
 
 type ContentNegotiater = (provided: string[]) => string[]
 
-function cloneRouteContext(ctx: AppContext): AppContext {
+function cloneRouteContext(ctx: App.Context): App.Context {
   return {
     ...ctx,
     ...klona(pick(ctx, ['htmlProcessors', 'requestHooks', 'responseHooks'])),

@@ -62,13 +62,13 @@ export interface App {
 
 export namespace App {
   export type Plugin = (app: App) => Partial<App> | void
-}
 
-export interface AppContext extends RoutesModule {
-  config: RuntimeConfig
-  getCachedPage: SausContext['getCachedPage']
-  onError: (e: any) => void
-  profile?: ProfiledEventHandler
+  export interface Context extends RoutesModule {
+    config: RuntimeConfig
+    getCachedPage: SausContext['getCachedPage']
+    onError: (e: any) => void
+    profile?: ProfiledEventHandler
+  }
 }
 
 export type BufferLike = string | Buffer | globalThis.Buffer

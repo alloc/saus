@@ -1,11 +1,11 @@
 import { stateModuleArguments } from '@/runtime/loadStateModule'
 import { prependBase } from '@/utils/base'
 import { dataToEsm } from '@/utils/dataToEsm'
-import { App, AppContext } from '../types'
+import { App } from '../types'
 
 export const getStateModuleFactory = (
   app: App,
-  ctx: AppContext
+  ctx: App.Context
 ): App['renderStateModule'] =>
   function renderStateModule(cacheKey, [state, ...config], inline) {
     let lines: string[]

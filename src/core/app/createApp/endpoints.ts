@@ -4,10 +4,10 @@ import { HttpRedirect } from '@/http/redirect'
 import { makeRequest } from '@/makeRequest'
 import type { Route } from '@/routes'
 import { pickAllExcept } from '@/utils/pick'
-import { App, AppContext } from '../types'
+import { App } from '../types'
 
 export const wrapEndpoints =
-  (app: App, ctx: AppContext): App['callEndpoints'] =>
+  (app: App, ctx: App.Context): App['callEndpoints'] =>
   async (url, resolved = app.resolveRoute(url)) => {
     const route = resolved[1]
 

@@ -1,5 +1,6 @@
 export * from './copyObject'
 export * from './deleteObjects'
+export * from './emptyBucket'
 export * from './listObjects'
 export * from './moveObjects'
 export * from './putObject'

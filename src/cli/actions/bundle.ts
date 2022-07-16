@@ -18,6 +18,7 @@ command(bundle, '[outFile]')
   .option('--minify', `[boolean] minify the client modules`)
   .option('--sourcemap', `[boolean] enable/disable source maps`)
   .option('--stdout', `[boolean] write bundle to stdout`)
+  .option('--appVersion <string>', `[string] set the app version`)
 
 export type BundleFlags = InlineBundleConfig & {
   assetsDir?: string

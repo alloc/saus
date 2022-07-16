@@ -38,9 +38,9 @@ export const defineDeployHook: DefineDeployHook = (hook: any) => {
 export function addDeployHook<State extends object, PulledState extends object>(
   load: () => Promise<DeployHookModule<State, PulledState>>
 ): DeployHookRef<State, PulledState> {
-  const { deployHooks } = getDeployContext()
+  const ctx = getDeployContext()
   const hookRef: DeployHookRef = { load }
-  deployHooks.push(hookRef)
+  ctx?.deployHooks.push(hookRef)
   return hookRef
 }
 
@@ -62,7 +62,7 @@ export function addDeployTarget<
  * They should return a rollback function in case deployment
  * fails after this action is completed.
  */
-export function onDeploy<T>(action: DeployAction<T>) {
+export function onDeploy<T = any>(action: DeployAction<T>) {
   const ctx = getDeployContext()
   return ctx.addDeployAction(action)
 }

@@ -20,10 +20,12 @@ export function addSecrets(
   fn: Function,
   namesOrDeps: DefinedSecrets | Function[]
 ) {
-  const { secrets } = getDeployContext()
-  if (Array.isArray(namesOrDeps)) {
-    secrets['_adopted'].set(fn, namesOrDeps)
-  } else {
-    secrets['_defined'].set(fn, namesOrDeps)
+  const ctx = getDeployContext()
+  if (ctx) {
+    if (Array.isArray(namesOrDeps)) {
+      ctx.secrets['_adopted'].set(fn, namesOrDeps)
+    } else {
+      ctx.secrets['_defined'].set(fn, namesOrDeps)
+    }
   }
 }

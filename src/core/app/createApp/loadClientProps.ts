@@ -6,10 +6,10 @@ import { CommonClientProps } from '../../types'
 import { headPropsCache, inlinedStateMap, stateModulesMap } from '../global'
 import { handleNestedState } from '../handleNestedState'
 import { createStateModuleMap, loadIncludedState } from '../stateModules'
-import { App, AppContext } from '../types'
+import { App } from '../types'
 
 export function createClientPropsLoader(
-  context: AppContext
+  context: App.Context
 ): App['loadClientProps'] {
   const { config, profile } = context
   const { debugBase } = config

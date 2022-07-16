@@ -4,11 +4,11 @@ import { prependBase } from '@/utils/base'
 import { dataToEsm } from '@/utils/dataToEsm'
 import { ParsedHeadTag } from '@/utils/parseHead'
 import { inlinedStateMap } from '../global'
-import { App, AppContext, CommonServerProps } from '../types'
+import { App, CommonServerProps } from '../types'
 
 export const getPageStateFactory = (
   app: App,
-  ctx: AppContext
+  ctx: App.Context
 ): App['renderPageState'] =>
   function renderPageState(page, preloadUrls) {
     const { path, props, stateModules, head, isDebug } = page

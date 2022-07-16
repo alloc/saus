@@ -94,7 +94,6 @@ export async function syncStaticFiles(
           )
         }
       },
-      /** Move old public files into the "oldAssets" bucket. */
       async finalize() {
         const fileCount = Object.keys(hashes).length
         if (fileCount == 0) {
@@ -104,14 +103,17 @@ export async function syncStaticFiles(
           `upload ${plural(fileCount, 'public file')}`,
           async () => {
             await Promise.all(uploading)
-            const missingFiles = Object.keys(oldHashes).filter(
+            const oldFiles = Object.keys(oldHashes).filter(
               name => !hashes[name]
             )
-            if (missingFiles.length)
-              await S3.moveObjects(config.region)({
-                keys: missingFiles,
+
+            // Files removed from the public directory are deleted from S3.
+            if (oldFiles.length)
+              await S3.deleteObjects(config.region)({
+                delete: {
+                  objects: oldFiles.map(key => ({ key })),
+                },
                 bucket: buckets.publicDir,
-                newBucket: buckets.oldAssets,
                 creds: secrets,
               })
 

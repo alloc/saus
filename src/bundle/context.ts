@@ -7,6 +7,7 @@ import {
   moduleRedirection,
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
+import { versionRoute } from '@/plugins/versionRoute'
 import { assignDefaults } from '@/utils/assignDefaults'
 import { plural } from '@/utils/plural'
 import {
@@ -58,7 +59,9 @@ export interface BundleContext extends BaseContext {
 export async function loadBundleContext<
   T extends BundleContext = BundleContext
 >(options: InlineBundleConfig, inlineConfig: vite.UserConfig = {}): Promise<T> {
-  const context = await loadContext<BundleContext>('build', inlineConfig)
+  const context = await loadContext<BundleContext>('build', inlineConfig, [
+    options.appVersion !== undefined && versionRoute(options.appVersion),
+  ])
   context.injectedModules = createModuleProvider()
   context.plugins = await getSausPlugins(context as SausContext)
 
@@ -126,7 +129,10 @@ export async function loadBundleContext<
     ...config,
     // Disable @rollup/plugin-commonjs (except for Vite builds
     // which don't use this config).
-    plugins: config.plugins.filter(p => p.name !== 'commonjs'),
+    plugins: [
+      context.injectedModules,
+      ...config.plugins.filter(p => p.name !== 'commonjs'),
+    ],
   }
 
   context.pluginContainer = await createPluginContainer(config)

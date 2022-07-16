@@ -1,3 +1,4 @@
+import { Promisable } from 'type-fest'
 import { ResponseHeaders } from './http'
 
 /**
@@ -12,9 +13,9 @@ export interface AssetStore {
     name: string,
     data: string | Buffer,
     headers?: ResponseHeaders
-  ): Promise<void>
+  ): Promisable<void>
   /**
    * Remove an asset by its name.
    */
-  delete(name: string): Promise<void>
+  delete(name: string): Promisable<void>
 }

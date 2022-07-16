@@ -15,6 +15,7 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
 import { createCommit, vite } from '../core'
+import { noop } from '../core/utils/noop'
 import { DeployContext, loadDeployContext } from './context'
 import { loadDeployFile, loadDeployPlugin } from './loader'
 import { setLogFunctions } from './logger'
@@ -220,7 +221,9 @@ export async function deploy(
       if (++targetIndex < targets.length) {
         queueMicrotask(() => {
           const [hook, target, resolve] = targets[targetIndex]
-          resolve(deployTarget(hook, target))
+          const promise = deployTarget(hook, target)
+          promise.catch(noop)
+          resolve(promise)
         })
       } else {
         deploying?.resolve()
@@ -318,42 +321,53 @@ export async function deploy(
   }
 
   let loading: Promise<any> | undefined
+  const loadSecretsAndPlugins = () => {
+    if (!loading) {
+      loading = (async () => {
+        const missing = await context.secrets.load()
+        if (missing) {
+          throw Error(
+            '[saus] Secrets are missing:\n' +
+              Array.from(missing, name => `  - ` + name).join('\n')
+          )
+        }
+        await Promise.all(
+          context.deployHooks.map(hookRef => {
+            return loadDeployPlugin(hookRef, context)
+          })
+        )
+      })()
+
+      // Avoid unhandled rejection crash.
+      loading.catch(noop)
+    }
+    return loading
+  }
 
   context.addDeployTarget = async (...args) => {
-    await (loading ||= (async () => {
-      const missing = await context.secrets.load()
-      if (missing) {
-        throw Error(
-          '[saus] Secrets are missing:\n' +
-            Array.from(missing, name => `  - ` + name).join('\n')
-        )
-      }
-      await Promise.all(
-        context.deployHooks.map(hookRef => {
-          return loadDeployPlugin(hookRef, context)
-        })
-      )
-    })())
-
+    await loadSecretsAndPlugins()
     const index = targets.push(args) - 1
     if (index == targetIndex) {
       const [hook, target, resolve] = args
-      resolve(deployTarget(hook, target))
+      const promise = deployTarget(hook, target)
+      promise.catch(noop)
+      resolve(promise)
     }
   }
 
   let actions: Promise<any>[] = []
   context.addDeployAction = action => {
-    const promise = new Promise<any>(resolve => {
-      if (context.command == 'deploy') {
-        let actionContext: any = context
-        if (typeof action !== 'function') {
-          actionContext = { ...context }
-          setLogFunctions(actionContext, action)
-          action = action.run
-        }
-        resolve(action(actionContext, addRevertFn))
+    if (context.command !== 'deploy') {
+      return Promise.resolve() as Promise<any>
+    }
+    const promise = loadSecretsAndPlugins().then(() => {
+      let actionContext: any = context
+      if (typeof action !== 'function') {
+        actionContext = { ...context }
+        setLogFunctions(actionContext, action)
+        action = action.run
       }
+      return action(actionContext, addRevertFn)
     })
     actions.push(promise)
     return promise

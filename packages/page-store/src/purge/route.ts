@@ -11,7 +11,7 @@ export function addPurgeRoute(routePath: string, store: AssetStore) {
         json: { error: 'Missing "paths" array parameter' },
       })
     }
-    const deleting: Promise<void>[] = []
+    const deleting: any[] = []
     for (const path of paths) {
       if (/\.(html|js)$/.test(path)) {
         deleting.push(store.delete(path))

@@ -1,8 +1,11 @@
-import { resolve } from 'path'
+import { green } from 'kleur/colors'
+import { join, resolve } from 'path'
 import type { SausCommand } from '../context'
 import { findConfigFiles } from '../findConfigFiles'
+import { relativeToCwd } from '../node/relativeToCwd'
 import { toSausPath } from '../paths'
 import { toArray } from '../utils/array'
+import { plural } from '../utils/plural'
 import { BundleConfig, SausConfig, UserConfig, vite } from '../vite'
 
 export type LoadedUserConfig = UserConfig & {
@@ -35,7 +38,8 @@ export const loadConfigFile = (
 
 export async function loadUserConfig(
   command: SausCommand,
-  { plugins: inlinePlugins, ...inlineConfig }: vite.InlineConfig = {}
+  { plugins: inlinePlugins, ...inlineConfig }: vite.InlineConfig = {},
+  logger?: vite.Logger
 ): Promise<LoadedUserConfig> {
   const inServeMode = command == 'serve'
   const sausDefaults: vite.InlineConfig = {
@@ -86,6 +90,15 @@ export async function loadUserConfig(
   sausConfig.stateModuleBase ||= '/state/'
   sausConfig.defaultLayoutId ||= '/src/layouts/default'
 
+  const configFiles = findConfigFiles(config.root!)
+  logger?.warnOnce(
+    green('✔︎ ') +
+      `Loaded ${plural(
+        configFiles.length,
+        'vite.config.js file'
+      )} from ${relativeToCwd(join(config.root!, 'node_modules'))}`
+  )
+
   const userPlugins = toArray(config.plugins).flat()
   const userPluginIds = userPlugins
     .map(p => p && p.name)
@@ -95,7 +108,7 @@ export async function loadUserConfig(
     p && !userPluginIds.includes(p.name)
 
   let autoConfig: vite.UserConfig | undefined
-  for (const configFile of findConfigFiles(config.root!)) {
+  for (const configFile of configFiles) {
     const loadResult = await loadConfigFile(command, configFile)
     if (loadResult) {
       const { plugins, ...config } = loadResult.config

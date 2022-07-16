@@ -11,11 +11,11 @@ import { stateModulesById } from '@/runtime/stateModules'
 import { prependBase } from '@/utils/base'
 import { defer } from '@/utils/defer'
 import etag from 'etag'
-import type { App, AppContext, RenderPageResult } from '../types'
+import type { App, RenderPageResult } from '../types'
 
 const indexFileRE = /(^|\/)index$/
 
-export function defineBuiltinRoutes(app: App, context: AppContext) {
+export function defineBuiltinRoutes(app: App, context: App.Context) {
   const { debugBase } = context.config
   const isBundle = context.config.command == 'bundle'
 

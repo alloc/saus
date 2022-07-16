@@ -1,10 +1,10 @@
-import type { AppContext } from '@/app/types'
+import type { App } from '@/app/types'
 import type { MutableRuntimeConfig } from '@/runtime/config'
 import { ssrImport } from '@/runtime/ssrModules'
 import { withCache } from '@/runtime/withCache'
 import config from './config'
 
-export const context: AppContext = {
+export const context: App.Context = {
   config,
   defaultState: [],
   layoutEntries: new Set(),

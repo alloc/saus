@@ -1,9 +1,10 @@
+import exec from '@cush/exec'
 import { isObject } from '@saus/deploy-utils'
 import * as base64ArrayBuffer from 'base64-arraybuffer'
-import { execSync } from 'child_process'
 import fs from 'fs'
 import { green } from 'kleur/colors'
 import path from 'path'
+import { Promisable } from 'type-fest'
 import { BundleOptions, OutputBundle } from '../bundle'
 import {
   BuildContext,
@@ -13,13 +14,13 @@ import {
 } from '../bundle/context'
 import { ClientAsset, ClientChunk } from '../bundle/types'
 import { DeployContext, getDeployContext } from '../deploy'
+import { getBundleHash } from './getBundleHash'
 import { SourceMap } from './node/sourceMap'
 import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
 import { callPlugins } from './utils/callPlugins'
-import { md5Hex } from './utils/md5-hex'
 import { pick } from './utils/pick'
 import { readJson } from './utils/readJson'
-import { BundleConfig, vite } from './vite'
+import { vite } from './vite'
 import { writeBundle } from './writeBundle'
 
 type RuntimeConfigFn = (context: BundleContext) => Partial<RuntimeConfig>
@@ -43,6 +44,8 @@ export interface LoadBundleConfig extends InlineBundleConfig {
   config?: vite.UserConfig
   /** Saus runtime config overrides */
   runtimeConfig?: Partial<RuntimeConfig> | RuntimeConfigFn
+  /** Called when bundling is about to begin */
+  onBundleStart?: (options: BundleOptions) => Promisable<void>
 }
 
 export type LoadedBundle = { code: string; map?: SourceMap; cached?: true }
@@ -86,12 +89,18 @@ export async function loadBundle({
     metaPath = bundlePath.replace(bundleFile, metaFile)
     try {
       const lastCommitDate = new Date(
-        execSync('git log -1 --format=%cd', { cwd: context.root }).toString()
+        exec.sync(
+          'git log -1 --format=%cd',
+          context.bundle.sources
+            ? ['--', context.bundle.sources, lockFiles]
+            : [],
+          { cwd: context.root }
+        )
       )
       const { mtime } = fs.statSync(bundlePath)
       if (mtime > lastCommitDate) {
         const code = fs.readFileSync(bundlePath, 'utf8')
-        const meta = readJson(metaPath, (_, val) =>
+        const meta: OutputBundle = readJson(metaPath, (_, val) =>
           isObject(val)
             ? '@b' in val
               ? Buffer.from((val as any)['@b'], 'base64')
@@ -127,6 +136,8 @@ export async function loadBundle({
   } else {
     const { bundle } =
       require('../bundle/api') as typeof import('../bundle/api')
+
+    await options.onBundleStart?.(bundleOptions)
     bundleResult = await bundle(context, bundleOptions)
   }
 
@@ -184,22 +195,8 @@ export async function loadBundle({
   }
 }
 
-function getBundleHash(
-  mode: string,
-  config: BundleConfig,
-  bundleOptions: BundleOptions
-) {
-  const values = {
-    mode,
-    type: config.type,
-    entry: config.entry || null,
-    target: config.target,
-    format: config.format,
-    clientStore: config.clientStore!,
-    bundle: bundleOptions,
-  }
-  return md5Hex(JSON.stringify(values)).slice(0, 8)
-}
+/** Common lockfile names */
+const lockFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml']
 
 function serializeRollupChunk(chunk: ClientChunk) {
   const json = pick(chunk, [

@@ -1,9 +1,10 @@
-import { RouteLayout } from '@/runtime/layouts'
+import type { App } from './app'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
-import { RouteRenderer } from './routeRenderer'
+import type { RouteRenderer } from './routeRenderer'
 import type { RuntimeHook } from './runtime/config'
+import type { RouteLayout } from './runtime/layouts'
 import type { StateModule } from './runtime/stateModules'
 import type { OneOrMany } from './utils/types'
 import type { RequireAsync } from './vm/types'
@@ -203,6 +204,7 @@ export interface RoutesModule extends HtmlContext {
   layoutEntries: Set<string>
   /** Import a module by its SSR path */
   ssrRequire: RequireAsync
+  contextHooks?: App.ContextHook[]
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
 }

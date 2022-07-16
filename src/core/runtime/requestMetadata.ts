@@ -2,7 +2,7 @@ import type { RenderedPage } from '../app/types'
 import type { Endpoint } from '../endpoint'
 
 /**
- * Internal metadata about an `Endpoint.Request` object
+ * Custom metadata about an `Endpoint.Request` object
  */
 export interface RequestMetadata {
   page?: RenderedPage

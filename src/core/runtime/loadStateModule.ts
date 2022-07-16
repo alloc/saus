@@ -64,6 +64,7 @@ export function loadStateModule<T, Args extends any[]>(
         }
         if (CachePlugin.put) {
           const expiresAt = Date.now() + cacheControl.maxAge * 1e3
+          // TODO: delay the response so page rendering doesn't have to wait for upload unnecessarily
           await CachePlugin.put(cacheKey, result, expiresAt)
         }
       }

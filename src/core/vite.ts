@@ -99,6 +99,15 @@ export interface UserBundleConfig {
    * Define which modules should never be bundled.
    */
   external?: string[]
+  /**
+   * Define which source files should trigger a rebundle when changes to
+   * them are committed to Git history. The paths can be directories and
+   * they're assumed relative to the project root.
+   *
+   * By default, all files in the repository can trigger a rebundle.
+   * If this option is defined, lockfiles are included automatically.
+   */
+  sources?: string[]
 }
 
 export interface SausConfig {

@@ -60,13 +60,12 @@ export async function createServer(
       clientContextPlugin,
       clientLayoutPlugin,
       clientStatePlugin,
-      () =>
-        moduleRedirection([
-          redirectModule(
-            path.join(runtimeDir, 'loadStateModule.ts'),
-            path.join(clientDir, 'loadStateModule.ts')
-          ),
-        ]),
+      moduleRedirection([
+        redirectModule(
+          path.join(runtimeDir, 'loadStateModule.ts'),
+          path.join(clientDir, 'loadStateModule.ts')
+        ),
+      ]),
     ])
 
   let context = await createContext()

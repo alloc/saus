@@ -34,6 +34,10 @@ export interface OutputBundle {
    */
   files: Record<string, BufferLike>
   /**
+   * The `appVersion` string when the bundle was generated.
+   */
+  appVersion?: string
+  /**
    * The client runtime and any user code; split into "chunks"
    * so that routes only load what they use.
    */
@@ -42,4 +46,8 @@ export interface OutputBundle {
    * Assets loaded by the client.
    */
   clientAssets: ClientAsset[]
+  /**
+   * The entry module for each route.
+   */
+  routeEntries: Record<string, string>
 }

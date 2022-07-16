@@ -1,6 +1,7 @@
+import { ReadonlyDeep } from 'type-fest'
 import { http } from '../http'
 import { getRawGitHubUrl } from '../node/git'
-import { JSONObject } from '../utils'
+import { JSONObject } from '../utils/types'
 import type { RuntimeConfig } from './config'
 
 export interface DeployedEnv {

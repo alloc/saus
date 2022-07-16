@@ -15,7 +15,6 @@ import { headPropsCache, stateModulesMap } from '../global'
 import { renderHtml } from '../renderHtml'
 import {
   App,
-  AppContext,
   RenderedPage,
   RenderPageFn,
   RenderPageOptions,
@@ -24,7 +23,7 @@ import {
 
 const debug = createDebug('saus:pages')
 
-export function getPageFactory(app: App, ctx: AppContext): RenderPageFn {
+export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
   const { config } = app
   const { onError, profile } = ctx
 

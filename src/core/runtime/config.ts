@@ -2,6 +2,7 @@ import type { App, ProfiledEventHandler } from '../app/types'
 import { Falsy, OneOrMany } from '../utils/types'
 
 export interface RuntimeConfig {
+  appVersion?: string
   assetsDir: string
   base: string
   bundleType?: 'script' | 'worker'

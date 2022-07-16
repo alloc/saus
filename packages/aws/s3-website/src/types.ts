@@ -13,6 +13,7 @@ export interface OriginOverride {
   path: string
   origin: string
   noCache?: boolean
+  forceHttps?: boolean
 }
 
 export interface VaryConfig {

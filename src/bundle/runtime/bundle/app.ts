@@ -1,5 +1,5 @@
 import { createApp as create } from '@/app/createApp'
-import type { App, AppContext, RenderedPage } from '@/app/types'
+import type { App, RenderedPage } from '@/app/types'
 import { defineEndpoint } from '@/endpoint'
 import { loadDeployedEnv } from '@/runtime/deployedEnv'
 import { setRequestMetadata } from '@/runtime/requestMetadata'
@@ -30,7 +30,7 @@ export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
   ])
 }
 
-function isolatePages(context: AppContext): App.Plugin {
+function isolatePages(context: App.Context): App.Plugin {
   const { config } = context
   const debugBase = config.debugBase || ''
 
