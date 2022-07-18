@@ -1,5 +1,5 @@
-import { Headers, normalizeHeaders } from '@/http'
-import { getModuleUrl } from '@/utils/getModuleUrl'
+import { BufferLike, RenderedFile } from '@/app'
+import { Headers, HttpRedirect, normalizeHeaders } from '@/http'
 import QuickLRU, { Options } from 'quick-lru'
 
 type BoundHeadersFn = () => Headers | null | undefined
@@ -9,38 +9,42 @@ type HeadersParam =
   | ((url: string) => Headers | null | undefined)
 
 export interface FileCache extends QuickLRU<string, FileCacheEntry> {
-  addModules(module: Set<ClientModule>, headers?: HeadersParam): void
-  addAssets(assets: Map<string, Buffer>, headers?: HeadersParam): void
+  addFile(id: string, content: BufferLike, headers?: Headers | null): void
+  addFiles(files: RenderedFile[], headers?: HeadersParam): void
 }
 
 export type FileCacheOptions = Options<string, FileCacheEntry>
 
 export type FileCacheEntry = [
-  data: string | Buffer,
+  data: string | Buffer | HttpRedirect,
   headers: BoundHeadersFn | null | undefined
 ]
 
 export function createFileCache(base: string, options?: FileCacheOptions) {
   const cache = new QuickLRU({ maxSize: 200, ...options }) as FileCache
 
-  cache.addModules = (modules, headers) =>
-    modules.forEach(module => {
-      const url = getModuleUrl(module, base)
-      if (!cache.has(url)) {
-        cache.set(url, [
-          module.text,
-          headers && resolveHeaders.bind(null, headers, url),
-        ])
-      }
-    })
+  cache.addFile = (id, content, headers) => {
+    const url = base + id
+    if (!cache.has(url)) {
+      headers = resolveHeaders(headers, url)
+      cache.set(url, [
+        // This type cast is 100% safe, since the BufferLike type is
+        // guaranteed to be a string or Node buffer on the server.
+        content as string | Buffer,
+        () => headers,
+      ])
+    }
+  }
 
-  cache.addAssets = (assets, headers) =>
-    assets.forEach((data, assetId) => {
-      const url = base + assetId
+  cache.addFiles = (files, headers) =>
+    files.forEach(file => {
+      const url = base + file.id
       if (!cache.has(url)) {
         cache.set(url, [
-          data,
-          headers && resolveHeaders.bind(null, headers, url),
+          // This type cast is 100% safe, since the BufferLike type is
+          // guaranteed to be a string or Node buffer on the server.
+          file.data as string | Buffer,
+          resolveHeaders.bind(null, headers, url, file.mime),
         ])
       }
     })
@@ -50,10 +54,15 @@ export function createFileCache(base: string, options?: FileCacheOptions) {
 
 function resolveHeaders(
   headers: HeadersParam | undefined,
-  url: string
+  url: string,
+  mime?: string
 ): Headers | null | undefined {
   if (typeof headers == 'function') {
     headers = headers(url)
   }
-  return normalizeHeaders(headers)
+  headers = normalizeHeaders(headers) || {}
+  if (mime) {
+    headers['content-type'] = mime
+  }
+  return headers
 }

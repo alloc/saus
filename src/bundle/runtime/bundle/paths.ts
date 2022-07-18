@@ -9,7 +9,7 @@ const debugBase =
   config.debugBase && config.base.replace(/\/$/, config.debugBase)
 
 export async function getKnownPaths(options: { noDebug?: boolean } = {}) {
-  await ssrImport(config.ssrRoutesId)
+  await ssrImport(config.ssrEntryId)
   const loaded = {
     routes: context.routes,
     defaultRoute: context.defaultRoute,

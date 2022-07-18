@@ -117,10 +117,6 @@ export function formatAsyncStack(
   }
 
   error.stack = stack.header + '\n\n' + tracedFrames
-
-  // This array of watched files can get large when it exists,
-  // to the point where it's basically spam.
-  delete error.watchFiles
 }
 
 export function traceDynamicImport(error: any, skip = 0) {

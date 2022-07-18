@@ -11,30 +11,58 @@ export interface VirtualModule {
 export interface ModuleProvider extends Plugin {
   clientModules: ReadonlyMap<string, VirtualModule>
   serverModules: ReadonlyMap<string, VirtualModule>
-  addModule(module: VirtualModule): VirtualModule
   addClientModule(module: VirtualModule): VirtualModule
   addServerModule(module: VirtualModule): VirtualModule
   clear(): void
+}
+
+const moduleDefaults: Partial<VirtualModule> = {
+  moduleSideEffects: undefined,
+  map: undefined,
 }
 
 export function createModuleProvider({
   clientModules = new Map(),
   serverModules = new Map(),
   watcher,
+  root,
 }: {
   clientModules?: Map<string, VirtualModule>
   serverModules?: Map<string, VirtualModule>
   watcher?: vite.FSWatcher
+  root?: string
 } = {}): ModuleProvider {
+  const upsertModule = (
+    module: VirtualModule,
+    store: Map<string, VirtualModule>
+  ) => {
+    const existingModule = store.get(module.id)
+    if (existingModule) {
+      Object.assign(existingModule, moduleDefaults, module)
+      return existingModule
+    }
+    store.set(module.id, module)
+    wrapModuleCode(module, watcher)
+    return module
+  }
   return {
     name: 'saus:moduleProvider',
     enforce: 'pre',
     resolveId: (id, _importer, opts) => {
-      const exists = (opts?.ssr ? serverModules : clientModules).has(id)
-      return exists ? id : null
+      const modules = opts?.ssr ? serverModules : clientModules
+      if (modules.has(id)) {
+        return id
+      }
+      // Dev aliases are converted to absolute paths.
+      if (root && id[0] == '/') {
+        if (modules.has(root + id)) {
+          return id
+        }
+      }
+      return null
     },
-    async load(id, ssr) {
-      const module = (ssr ? serverModules : clientModules).get(id)
+    async load(id, opts) {
+      const module = (opts?.ssr ? serverModules : clientModules).get(id)
       if (module) {
         return { ...module, code: await module.code }
       }
@@ -45,21 +73,11 @@ export function createModuleProvider({
     get serverModules() {
       return new Map(serverModules)
     },
-    addModule(module) {
-      wrapModuleCode(module, watcher)
-      clientModules.set(module.id, module)
-      serverModules.set(module.id, module)
-      return module
-    },
     addClientModule(module) {
-      wrapModuleCode(module, watcher)
-      clientModules.set(module.id, module)
-      return module
+      return upsertModule(module, clientModules)
     },
     addServerModule(module) {
-      wrapModuleCode(module, watcher)
-      serverModules.set(module.id, module)
-      return module
+      return upsertModule(module, serverModules)
     },
     clear() {
       clientModules.clear()

@@ -31,7 +31,7 @@ export async function createDevApp(
     minify: false,
     mode: viteConfig.mode,
     publicDir: viteConfig.publicDir,
-    ssrRoutesId: '/@fs' + context.routesPath,
+    ssrEntryId: '/@fs' + context.routesPath,
     stateModuleBase: viteConfig.saus.stateModuleBase!,
   }
 

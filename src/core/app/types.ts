@@ -16,9 +16,9 @@ import type { ParsedHead } from '../utils/parseHead'
 import type { Falsy } from '../utils/types'
 
 export interface App {
-  config: RuntimeConfig
-  catchRoute: Route | undefined
-  defaultRoute: Route | undefined
+  readonly config: RuntimeConfig
+  readonly catchRoute: Route | undefined
+  readonly defaultRoute: Route | undefined
   resolveRoute: RouteResolver
   getEndpoints: Endpoint.Generator | null
   callEndpoints(
@@ -27,6 +27,15 @@ export interface App {
   ): Promise<Partial<Endpoint.Response>>
   loadClientProps: ClientPropsLoader
   renderPage: RenderPageFn
+  /**
+   * Available in SSR bundles only.
+   *
+   * Match a route to the given URL and render its page bundle.
+   */
+  resolvePageBundle: (
+    url: string,
+    options?: PageBundleOptions
+  ) => Promise<PageBundle | null>
   /**
    * Available in SSR bundles only.
    *
@@ -140,11 +149,30 @@ export type RenderPageOptions = {
   setup?: (route: Route, url: ParsedUrl) => any
 }
 
-export type ResolvedRoute =
-  | [endpoints: readonly Endpoint[], route: Route]
-  | [endpoints: readonly Endpoint[], route?: undefined]
+export interface ResolvedRoute {
+  /**
+   * A route that matches the request path and also has
+   * at least one function that's able to handle the request.
+   *
+   * If undefined, then no route was matched.
+   */
+  route?: Route
+  /**
+   * Functions related to the matched route which are able
+   * to serve the current request.
+   */
+  functions: readonly Endpoint.Function[]
+  /**
+   * These routes haven't tried matching the request path yet,
+   * so they might have viable functions.
+   */
+  remainingRoutes: readonly Route[]
+}
 
-export type RouteResolver = (url: Endpoint.RequestUrl) => ResolvedRoute
+export type RouteResolver = (
+  url: Endpoint.RequestUrl,
+  routes?: readonly Route[]
+) => ResolvedRoute
 
 export type ClientPropsLoader = (
   url: ParsedUrl,

@@ -39,6 +39,7 @@ export async function bundle(outFile: string, options: BundleFlags) {
   }
 
   const bundleOptions: BundleOptions = {
+    appVersion: options.appVersion,
     forceWriteAssets: !!options.assetsDir,
     minify: options.minify,
   }

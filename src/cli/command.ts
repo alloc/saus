@@ -40,10 +40,15 @@ export function useCommands(cli: CAC, actions: Record<string, any>) {
       try {
         return await action(...args)
       } catch (e: any) {
+        // This array of watched files can get large when it exists,
+        // to the point where it's basically spam.
+        delete e.watchFiles
+
         if (e.message.startsWith('[saus]')) {
           console.error('\n' + red('✗') + e.message.slice(6))
           process.exit(1)
         }
+
         throw e
       }
     })

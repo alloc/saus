@@ -17,10 +17,8 @@ export function injectNodeModule(filename: string, exports: object) {
   let module = moduleCache[filename]
   if (module) {
     if (exports.constructor == Object) {
-      Object.defineProperties(
-        module.exports,
-        Object.getOwnPropertyDescriptors(exports)
-      )
+      const { __esModule, ...props } = Object.getOwnPropertyDescriptors(exports)
+      Object.defineProperties(module.exports, props)
     } else {
       module.exports = exports
     }

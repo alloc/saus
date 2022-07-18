@@ -46,7 +46,7 @@ export async function compileNodeModule(
   let cacheKey = ''
   let cached: string | undefined
 
-  if (compileCache) {
+  if (compileCache && filename[0] !== '\0') {
     cacheKey = compileCache.key(code, 'node/' + path.basename(filename))
     cached = compileCache.get(cacheKey, filename)
   }
@@ -120,7 +120,7 @@ export async function compileNodeModule(
     script.code = `(function() { ${script.code}\nreturn ${topLevelId}\n})()`
 
     // Store the compiled module on disk with an inline source map.
-    if (compileCache) {
+    if (compileCache && filename[0] !== '\0') {
       compileCache.set(cacheKey, script.code + toInlineSourceMap(script.map!))
     }
   }

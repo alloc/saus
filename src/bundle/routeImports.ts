@@ -1,6 +1,5 @@
 import { servedPathForFile } from '@/node/servedPathForFile'
-import esModuleLexer from 'es-module-lexer'
-import fs from 'fs'
+import * as esModuleLexer from 'es-module-lexer'
 import { BundleContext } from './context'
 
 export type RouteImports = Map<
@@ -15,10 +14,16 @@ export async function resolveRouteImports({
   root,
   routesPath,
   resolveId,
+  load,
 }: BundleContext): Promise<RouteImports> {
   const routeImports: RouteImports = new Map()
 
-  const code = fs.readFileSync(routesPath, 'utf8')
+  const loadResult = await load(routesPath)
+  if (!loadResult) {
+    return routeImports
+  }
+
+  const code = loadResult.code
   for (const imp of esModuleLexer.parse(code, routesPath)[0]) {
     if (imp.d >= 0 && imp.n) {
       const resolved = await resolveId(imp.n, routesPath)

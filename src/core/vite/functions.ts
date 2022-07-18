@@ -30,7 +30,8 @@ export interface ViteFunctions {
 export function getViteFunctions(
   pluginContainer: vite.PluginContainer
 ): ViteFunctions {
-  return {
+  let self: ViteFunctions
+  return (self = {
     async resolveId(id, importer) {
       return coerceResolveIdResult(
         await pluginContainer.resolveId(id, importer!, { ssr: true })
@@ -43,9 +44,9 @@ export function getViteFunctions(
       return pluginContainer.transform(code, id, { inMap, ssr: true })
     },
     fetchModule(id) {
-      return compileModule(id, this)
+      return compileModule(id, self)
     },
-  }
+  })
 }
 
 export const coerceResolveIdResult = (resolved: ResolveIdResult) =>

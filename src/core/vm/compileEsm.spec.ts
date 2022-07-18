@@ -4,6 +4,19 @@ import { compileEsm } from './compileEsm'
 import { ForceLazyBindingHook } from './types'
 
 describe('compileEsm', () => {
+  test('import side effects', async () => {
+    let result = await transform`
+      console.log("expression above import")
+      import 'foo'
+    `
+    // Import statements are properly hoisted.
+    expect(result).toMatchInlineSnapshot(`
+      "await __requireAsync(\\"foo\\");
+      console.log(\\"expression above import\\")
+      "
+    `)
+    expect(hotLinks).toMatchInlineSnapshot('Set {}')
+  })
   test('import references', async () => {
     let result = await transform`
       import foo from 'foo'

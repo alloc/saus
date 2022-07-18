@@ -632,7 +632,9 @@ export function generateRequireCalls(
       namespaceAlias = alias
     } else if (spec.isImportDefaultSpecifier()) {
       const isConstBinding =
-        !lazyBindings.includes('default') && !isExported(binding)
+        !isExported(binding) &&
+        (!lazyBindings.includes('default') ||
+          binding.referencePaths.every(isTopLevelReference))
 
       if (isConstBinding) {
         defaultAlias = alias
@@ -651,7 +653,12 @@ export function generateRequireCalls(
       moduleAlias ||= path.scope.generateUid(sourceAlias(source))
 
       let reference = moduleAlias + accessor
-      if (accessor == kDefaultAccessor && !/^\.\.?(\/|$)/.test(source)) {
+      if (
+        accessor == kDefaultAccessor &&
+        // Assume that relative paths never lead to CommonJS modules,
+        // so we can avoid lazy unwrapping for them.
+        !/^\.\.?(\/|$)/.test(source)
+      ) {
         esmHelpers.add(__importDefault)
         reference = `__importDefault(${moduleAlias})`
       }

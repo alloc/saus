@@ -46,7 +46,7 @@ export async function compileModule(
   let cacheKey: string
   let cached: string | undefined
 
-  if (cache) {
+  if (cache && filename[0] !== '\0') {
     cacheKey = cache.key(script.code, 'ssr/' + basename(filename))
 
     cached = cache.get(cacheKey, filename)
@@ -82,6 +82,8 @@ export async function compileModule(
     script = overwriteScript(id, script, transformed)
   }
 
-  cache?.set(cacheKey!, script.code + toInlineSourceMap(script.map!))
+  if (cache && filename[0] !== '\0') {
+    cache.set(cacheKey!, script.code + toInlineSourceMap(script.map!))
+  }
   return script
 }

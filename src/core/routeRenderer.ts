@@ -66,7 +66,7 @@ function getRouteRenderer(
   const layoutModuleId = route.layoutEntry || context.defaultLayout.id
   const hash = md5Hex([layoutModuleId, route.moduleId]).slice(0, 8)
   return {
-    fileName: 'route.' + hash + '.js',
+    fileName: 'renderer.' + hash + '.js',
     routeModuleId: route.moduleId,
     layoutModuleId,
     routes: [route],

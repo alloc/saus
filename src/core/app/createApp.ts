@@ -92,31 +92,35 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
   const debugBase = config.debugBase || ''
   const debugBaseRE = debugBase ? baseToRegex(debugBase) : null
 
-  const resolveRoute: RouteResolver = url => {
+  const resolveRoute: RouteResolver = (url, routes = ctx.routes) => {
     const negotiate = createNegotiator(url.headers.accept)
     const routedPath = debugBaseRE
       ? url.path.replace(debugBaseRE, '/')
       : url.path
 
     let route: Route | undefined
-    for (let i = ctx.routes.length; --i >= 0; ) {
-      const route = ctx.routes[i]
+    for (let i = routes.length; --i >= 0; ) {
+      const route = routes[i]
       const params = matchRoute(routedPath, route)
       if (params) {
-        const endpoints = resolveEndpoints(route, url.method, negotiate)
-        if (endpoints) {
+        const functions = resolveEndpoints(route, url.method, negotiate)
+        if (functions) {
           url.routeParams = params
-          return [endpoints, route]
+          return { route, functions, remainingRoutes: routes.slice(i + 1) }
         }
       }
     }
     if ((route = ctx.defaultRoute)) {
-      const endpoints = resolveEndpoints(route, url.method, negotiate)
-      if (endpoints) {
-        return [endpoints, route]
+      const functions = resolveEndpoints(route, url.method, negotiate)
+      if (functions) {
+        return { route, functions, remainingRoutes: emptyArray }
       }
     }
-    return [emptyArray]
+    return {
+      route: undefined,
+      functions: emptyArray,
+      remainingRoutes: emptyArray,
+    }
   }
 
   const app = {

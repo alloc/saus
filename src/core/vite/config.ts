@@ -1,12 +1,9 @@
-import { green } from 'kleur/colors'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import type { SausCommand } from '../context'
-import { findConfigFiles } from '../findConfigFiles'
-import { relativeToCwd } from '../node/relativeToCwd'
 import { toSausPath } from '../paths'
-import { toArray } from '../utils/array'
-import { plural } from '../utils/plural'
 import { BundleConfig, SausConfig, UserConfig, vite } from '../vite'
+import { loadConfigDeps } from './configDeps'
+import { loadConfigFile } from './configFile'
 
 export type LoadedUserConfig = UserConfig & {
   saus: SausConfig & { bundle: BundleConfig }
@@ -23,18 +20,6 @@ export function getConfigEnv(
     mode: mode || (inServeMode ? 'development' : 'production'),
   }
 }
-
-export const loadConfigFile = (
-  command: SausCommand,
-  configFile?: string,
-  inlineConfig: vite.InlineConfig = {}
-) =>
-  vite.loadConfigFromFile(
-    getConfigEnv(command, inlineConfig.mode),
-    configFile,
-    inlineConfig.root,
-    inlineConfig.logLevel
-  )
 
 export async function loadUserConfig(
   command: SausCommand,
@@ -90,45 +75,16 @@ export async function loadUserConfig(
   sausConfig.stateModuleBase ||= '/state/'
   sausConfig.defaultLayoutId ||= '/src/layouts/default'
 
-  const configFiles = findConfigFiles(config.root!)
-  logger?.warnOnce(
-    green('✔︎ ') +
-      `Loaded ${plural(
-        configFiles.length,
-        'vite.config.js file'
-      )} from ${relativeToCwd(join(config.root!, 'node_modules'))}`
+  const { plugins, ...configDeps } = await loadConfigDeps(
+    command,
+    { root, plugins: config.plugins },
+    logger
   )
-
-  const userPlugins = toArray(config.plugins).flat()
-  const userPluginIds = userPlugins
-    .map(p => p && p.name)
-    .filter(Boolean) as string[]
-
-  const isNewPlugin = (p: vite.PluginOption) =>
-    p && !userPluginIds.includes(p.name)
-
-  let autoConfig: vite.UserConfig | undefined
-  for (const configFile of configFiles) {
-    const loadResult = await loadConfigFile(command, configFile)
-    if (loadResult) {
-      const { plugins, ...config } = loadResult.config
-      autoConfig = autoConfig ? vite.mergeConfig(autoConfig, config) : config
-
-      // Ensure auto-loaded config never injects a plugin that's been
-      // manually configured by the user.
-      for (const plugin of toArray(plugins).flat()) {
-        if (isNewPlugin(plugin)) {
-          userPlugins.push(plugin)
-        }
-      }
-    }
+  if (Object.keys(configDeps).length) {
+    config = vite.mergeConfig(config, configDeps) as any
   }
 
-  config.plugins = userPlugins
-  if (autoConfig) {
-    config = vite.mergeConfig(config, autoConfig) as any
-  }
-
+  config.plugins = plugins
   return config as LoadedUserConfig
 }
 

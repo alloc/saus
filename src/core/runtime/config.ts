@@ -20,7 +20,7 @@ export interface RuntimeConfig {
   mode: string
   publicDir: string
   renderConcurrency?: number
-  ssrRoutesId: string
+  ssrEntryId: string
   stateModuleBase: string
 }
 

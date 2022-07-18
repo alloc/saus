@@ -47,7 +47,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         ? prependBase(pagePath, debugBase)
         : pagePath
     )
-    const [, route] = app.resolveRoute(
+    const { route } = app.resolveRoute(
       makeRequestUrl(pageUrl, {
         headers: { accept: 'text/html' },
       })

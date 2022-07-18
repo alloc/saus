@@ -11,6 +11,7 @@ import { httpMethods } from '@/utils/httpMethods'
 import { parseLazyImport } from '@/utils/parseLazyImport'
 import { parseRoutePath } from '@/utils/parseRoutePath'
 import { getLayoutEntry } from './getLayoutEntry'
+import { RoutePlugin } from './routePlugins'
 import { getCurrentModule } from './ssrModules'
 
 const routeStack: Route[] = []
@@ -55,6 +56,12 @@ export function route(
       : typeof pathOrLoad == 'function'
       ? pathOrLoad
       : undefined
+
+  let postHook: RoutePlugin.PostHook | void
+  if (config?.plugin) {
+    postHook = config.plugin(config)
+    delete config.plugin
+  }
 
   // A route is marked as "generated" when its entry module
   // isn't defined by a wrapped dynamic import call. In this
@@ -129,7 +136,9 @@ export function route(
     }
   }
 
-  return createRouteAPI(self)
+  const api = createRouteAPI(self)
+  postHook?.(api, self)
+  return api
 }
 
 function createRouteAPI(parent: Route) {

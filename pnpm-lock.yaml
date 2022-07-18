@@ -26,6 +26,7 @@ importers:
       '@types/etag': ^1.8.1
       '@types/node': ^17.0.35
       '@types/physical-cpu-count': ^2.0.0
+      '@types/prettier': ^2.6.3
       '@types/source-map-support': ^0.5.4
       '@types/strip-comments': ^2.0.1
       ansi-to-html: ^0.7.2
@@ -113,6 +114,7 @@ importers:
       '@types/etag': 1.8.1
       '@types/node': 17.0.45
       '@types/physical-cpu-count': 2.0.0
+      '@types/prettier': 2.6.3
       '@types/source-map-support': 0.5.4
       '@types/strip-comments': 2.0.1
       arrify: 3.0.0
@@ -127,7 +129,7 @@ importers:
       klona: 2.0.5
       prettier: 2.7.1
       quick-lru: 6.1.1
-      rollup-plugin-dts: 4.2.2_ad8843200a1aa19a04ed104b76803a7d
+      rollup-plugin-dts: 4.2.2_typescript@4.8.0-beta
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 2.0.0
@@ -969,6 +971,10 @@ packages:
     resolution: {integrity: sha512-HDaSHIAv9kwpMN7zlmwfTv6gax0PiporJOipcrGsVNF3Ba+kryOZc0Pio5pn6NhisgWr7TaajlPEKTbTAypIBQ==}
     dependencies:
       '@types/node': 18.0.4
+    dev: true
+
+  /@types/prettier/2.6.3:
+    resolution: {integrity: sha512-ymZk3LEC/fsut+/Q5qejp6R9O1rMxz3XaRHDV6kX8MrGAhOSPqVARbDi+EZvInBpw+BnCX3TD240byVkOfQsHg==}
     dev: true
 
   /@types/prompts/2.0.14:
@@ -3361,7 +3367,7 @@ packages:
       glob: 7.2.3
     dev: false
 
-  /rollup-plugin-dts/4.2.2_ad8843200a1aa19a04ed104b76803a7d:
+  /rollup-plugin-dts/4.2.2_typescript@4.8.0-beta:
     resolution: {integrity: sha512-A3g6Rogyko/PXeKoUlkjxkP++8UDVpgA7C+Tdl77Xj4fgEaIjPSnxRmR53EzvoYy97VMVwLAOcWJudaVAuxneQ==}
     engines: {node: '>=v12.22.11'}
     peerDependencies:
@@ -3369,7 +3375,6 @@ packages:
       typescript: ^4.1
     dependencies:
       magic-string: 0.26.2
-      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.8.0-beta
     optionalDependencies:
       '@babel/code-frame': 7.18.6

@@ -16,7 +16,7 @@ injectSausClient()
 
 // Avoid loading the routes module more than once.
 const routeSetup = new LazyPromise(resolve => {
-  resolve(ssrImport(config.ssrRoutesId))
+  resolve(ssrImport(config.ssrEntryId))
 })
 
 export async function createApp(plugins: App.Plugin[] = []): Promise<App> {

@@ -12,13 +12,13 @@ declare module 'vite' {
       this: vite.RollupPluginContext,
       id: string,
       importer: string | undefined
-    ): Promisable<string | null | undefined>
+    ): Promisable<string | PartialResolvedId | null | undefined>
     /** Resolve a bare import to an absolute module path. */
     resolveBareImport?(
       this: vite.RollupPluginContext,
       id: string,
       importer: string | undefined
-    ): Promisable<string | null | undefined>
+    ): Promisable<string | PartialResolvedId | null | undefined>
   }
 }
 
@@ -68,13 +68,12 @@ export function moduleRedirection(
       }
       for (const plugin of plugins) {
         if (plugin.redirectModule) {
-          const replacementId = await plugin.redirectModule.call(
-            this,
-            id,
-            importer
-          )
-          if (replacementId != null) {
-            return { id: replacementId, meta: resolved?.meta }
+          let replaced = await plugin.redirectModule.call(this, id, importer)
+          if (replaced != null) {
+            if (typeof replaced == 'string') {
+              replaced = { id: replaced }
+            }
+            return { meta: resolved?.meta, ...replaced }
           }
         }
       }

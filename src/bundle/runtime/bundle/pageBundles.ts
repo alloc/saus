@@ -1,4 +1,6 @@
 import { App } from '@/app/types'
+import { makeRequestUrl } from '@/makeRequest'
+import { parseUrl } from '@/node/url'
 import { globalCache } from '@/runtime/cache'
 import { getLayoutEntry } from '@/runtime/getLayoutEntry'
 import { renderPageScript } from '@/runtime/renderPageScript'
@@ -13,15 +15,28 @@ import { applyHtmlProcessors } from '../core/api'
 import clientEntries from './clientEntries'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
-import { PageBundle } from './types'
+import { PageBundle, ResolvedRoute } from './types'
 
 export const providePageBundles: App.Plugin = app => {
-  const { config, renderPageState, renderStateModule } = app
+  const { config } = app
 
   // Enable "debug view" when this begins the URL pathname.
   const debugBase = config.debugBase || ''
 
   return {
+    async resolvePageBundle(url, options) {
+      const req = makeRequestUrl(parseUrl(url))
+      let resolved: ResolvedRoute | undefined
+      while ((resolved = app.resolveRoute(req, resolved?.remainingRoutes))) {
+        if (resolved.route) {
+          const page = await app.renderPageBundle(req, resolved.route, options)
+          if (page) {
+            return page
+          }
+        }
+      }
+      return null
+    },
     async renderPageBundle(url, route, options = {}) {
       const { renderStart, renderFinish } = options
 
@@ -91,7 +106,7 @@ export const providePageBundles: App.Plugin = app => {
       // State modules are not renamed for debug view.
       for (const stateId of [...page.stateModules].reverse()) {
         const stateModuleId = stateModuleBase + stateId + '.js'
-        const stateModuleText = renderStateModule(
+        const stateModuleText = app.renderStateModule(
           stateId,
           globalCache.loaded[stateId]
         )
@@ -178,7 +193,7 @@ export const providePageBundles: App.Plugin = app => {
         if (pageStateId) {
           files.push({
             id: pageStateId,
-            data: Buffer.from(renderPageState(page)),
+            data: Buffer.from(app.renderPageState(page)),
             mime: 'application/javascript',
           })
         }

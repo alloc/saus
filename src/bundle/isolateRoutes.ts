@@ -1,5 +1,5 @@
 import { babel } from '@/babel'
-import { vite } from '@/core'
+import { createPluginContainer, vite } from '@/core'
 import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
@@ -7,7 +7,7 @@ import { createModuleProvider } from '@/plugins/moduleProvider'
 import { renderRouteEntry } from '@/routeEntries'
 import { bareImportRE, relativePathRE } from '@/utils/importRegex'
 import { plural } from '@/utils/plural'
-import { getViteTransform } from '@/vite/transform'
+import { getViteFunctions } from '@/vite/functions'
 import { compileEsm, exportsId, requireAsyncId } from '@/vm/compileEsm'
 import { ForceLazyBindingHook } from '@/vm/types'
 import { codeFrameColumns } from '@babel/code-frame'
@@ -18,7 +18,7 @@ import fs from 'fs'
 import { bold, yellow } from 'kleur/colors'
 import MagicString from 'magic-string'
 import { startTask } from 'misty/task'
-import { dirname, isAbsolute, relative, resolve } from 'path'
+import { dirname, relative, resolve } from 'path'
 import * as rollup from 'rollup'
 import { BundleContext } from './context'
 import { findLiveBindings, LiveBinding, matchLiveBinding } from './liveBindings'
@@ -41,10 +41,14 @@ export type IsolatedModule = {
  */
 export async function isolateRoutes(
   context: BundleContext,
+  ssrEntryId: string,
   routeImports: RouteImports,
   isolatedModules: IsolatedModuleMap
 ): Promise<vite.Plugin> {
-  const modules = createModuleProvider()
+  const modules = createModuleProvider({
+    serverModules: new Map(context.injectedModules.serverModules),
+  })
+
   const config = await context.resolveConfig({
     resolve: {
       conditions: ['ssr'],
@@ -61,7 +65,7 @@ export async function isolateRoutes(
     },
   })
 
-  const { transform, pluginContainer } = await getViteTransform({
+  const pluginContainer = await createPluginContainer({
     ...config,
     plugins: config.plugins.filter(p => {
       // CommonJS modules are externalized, so this plugin is just overhead.
@@ -81,6 +85,8 @@ export async function isolateRoutes(
   // Vite and Rollup plugins may initialize internal state
   // within the buildStart hook.
   await pluginContainer.buildStart({})
+
+  const vite = getViteFunctions(pluginContainer)
 
   const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
@@ -184,23 +190,11 @@ export async function isolateRoutes(
             : undefined
 
         // TODO: handle "relative" and "absolute" external values
-        let external =
+        const external =
           !forceIsolate &&
           (!!resolved.external ||
             !id.startsWith(config.root + '/') ||
             nodeModulesRE.test(id.slice(config.root.length)))
-
-        if (isAbsolute(id)) {
-          if (fs.existsSync(id)) {
-            if (external) {
-              // Prepend /@fs/ for fast resolution post-isolation.
-              id = '/@fs/' + id
-            }
-          } else if (!forceIsolate) {
-            // Probably an asset from publicDir.
-            external = true
-          }
-        }
 
         return {
           id,
@@ -214,9 +208,7 @@ export async function isolateRoutes(
     },
     async load(id) {
       try {
-        var transformed = await transform(
-          servedPathForFile(id, config.root, true)
-        )
+        var transformed = await vite.fetchModule(id)
       } catch (e: any) {
         // Acorn parsing error
         const loc = /\((\d+):(\d+)\)$/.exec(e.message)
@@ -242,7 +234,7 @@ export async function isolateRoutes(
         throw e
       }
       if (transformed) {
-        let { code, map } = transformed as IsolatedModule
+        let { code, map } = transformed
         if (map) {
           map.sources = map.sources.map(source => {
             return source ? relative(dirname(id), source) : null!
@@ -277,18 +269,20 @@ export async function isolateRoutes(
   for (const renderer of context.renderers) {
     const rendererId = '\0' + renderer.fileName
     rendererIds.push(rendererId)
-    modules.addModule({
+    modules.addServerModule({
       id: rendererId,
       code: renderRouteEntry(renderer),
     })
   }
 
-  const task = startTask(`Bundling routes...`)
+  const task = config.logger.isLogged('info')
+    ? startTask(`Bundling routes...`)
+    : null
 
-  const bundleInputs = [context.routesPath, ...rendererIds]
-  const importCycles: string[][] = []
+  const bundleInputs = [ssrEntryId, ...rendererIds]
 
   const isDebug = !!process.env.DEBUG
+  const importCycles: string[][] = []
   let hasWarnedCircularImport = false
 
   const bundle = await rollup.rollup({
@@ -328,7 +322,7 @@ export async function isolateRoutes(
 
   await pluginContainer.close()
 
-  task.finish(
+  task?.finish(
     `${plural(
       context.renderers.reduce((count, { routes }) => count + routes.length, 0),
       'route'
@@ -346,9 +340,12 @@ export async function isolateRoutes(
     const rolledPath = resolve(config.root, chunk.fileName)
     const liveBindings = liveBindingsByChunk.get(chunk)
 
-    const ssrId = bundleInputs.includes(modulePath)
-      ? servedPathForFile(modulePath, config.root, true)
-      : toSsrPath(modulePath, config.root)
+    const ssrId =
+      modulePath[0] == '\0'
+        ? modulePath
+        : bundleInputs.includes(modulePath)
+        ? servedPathForFile(modulePath, config.root, true)
+        : toSsrPath(modulePath, config.root)
 
     const map = chunk.map!
     resolveMapSources(map, dirname(modulePath))
@@ -431,6 +428,13 @@ export async function isolateRoutes(
   const isolateSsrModule = async (code: string, id: string, ssrId: string) => {
     const hoistedImports = new Set<string>()
     const esmHelpers = new Set<Function>()
+
+    // If a file only contains import statements and has no trailing
+    // line break, the `__d` call insertion leads to a syntax error.
+    // By inserting a line break here, we can avoid the error.
+    if (!code.endsWith('\n')) {
+      code += '\n'
+    }
 
     const editor = await compileEsm({
       code,
@@ -574,6 +578,12 @@ export async function isolateRoutes(
   return {
     name: 'saus:isolatedModules',
     enforce: 'pre',
+    // This lets us take precedence over module injection.
+    resolveId(id) {
+      return rolledModulePaths[id]
+    },
+    // This lets us redirect isolated modules after their
+    // absolute paths have been resolved.
     async redirectModule(id, importer) {
       const rolledPath = rolledModulePaths[id]
       if (rolledPath) {

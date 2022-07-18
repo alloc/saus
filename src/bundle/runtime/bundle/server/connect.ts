@@ -54,9 +54,9 @@ export namespace connect {
   export type Response = http.ServerResponse
   export type NextFunction = (error?: any) => void
 
-  export type ErrorListener = (
+  export type ErrorListener<RequestProps extends object = {}> = (
     e: any,
-    req: Request,
+    req: Request<RequestProps>,
     res: Response,
     next: NextFunction
   ) => void
@@ -75,6 +75,6 @@ export namespace connect {
     ): Promise<void>
 
     use(handler: connect.Middleware<RequestProps>): this
-    on(name: 'error', listener: connect.ErrorListener): this
+    on(name: 'error', listener: connect.ErrorListener<RequestProps>): this
   }
 }

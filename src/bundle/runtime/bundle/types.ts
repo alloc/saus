@@ -1,6 +1,8 @@
 import type { RenderedPage, RenderPageOptions } from '@/app/types'
 import type { ParsedUrl } from '@/node/url'
 
+export * from '@/app/types'
+
 export interface PageBundleOptions
   extends Pick<RenderPageOptions, 'timeout' | 'onError'> {
   renderStart?: (url: ParsedUrl) => void

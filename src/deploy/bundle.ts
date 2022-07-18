@@ -8,7 +8,9 @@ import { onDeploy } from './hooks'
  * This function calls `onDeploy` so you don't have to. It also calls
  * the `bumpAppVersion` function, but only if the bundle isn't cached.
  */
-export function prepareBundle(config?: LoadBundleConfig) {
+export function prepareBundle(
+  config?: LoadBundleConfig
+): ReturnType<typeof loadBundle> {
   return onDeploy(() =>
     loadBundle({
       ...config,

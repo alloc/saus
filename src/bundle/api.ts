@@ -14,6 +14,7 @@ import { routesPlugin } from '@/plugins/routes'
 import { Profiling } from '@/profiling'
 import { RouteClient } from '@/routeClients'
 import { callPlugins } from '@/utils/callPlugins'
+import { serializeImports } from '@/utils/imports'
 import { BundleConfig, vite } from '@/vite'
 import { writeBundle } from '@/writeBundle'
 import arrify from 'arrify'
@@ -24,12 +25,15 @@ import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
 import { BundleContext } from '../bundle'
+import { noop } from '../core/utils/noop'
 import { compileClients } from './clients'
 import { IsolatedModuleMap, isolateRoutes } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { preferExternal } from './preferExternal'
 import { renderBundleModule } from './renderBundleModule'
 import { resolveRouteImports } from './routeImports'
+import { injectAppVersionRoute } from './routes/appVersion'
+import { injectClientStoreRoute } from './routes/clientStore'
 import type { ClientEntries } from './runtime/bundle/clientEntries'
 import type { ClientAsset, ClientChunk, OutputBundle } from './types'
 
@@ -37,6 +41,13 @@ export async function bundle(
   context: BundleContext,
   options: BundleOptions = {}
 ): Promise<OutputBundle> {
+  if (options.appVersion !== undefined) {
+    injectAppVersionRoute(options.appVersion, context)
+  }
+  if (context.bundle.clientStore !== 'external') {
+    injectClientStoreRoute(context)
+  }
+
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
 
@@ -54,6 +65,16 @@ export async function bundle(
   const { bundle: bundleConfig, config, userConfig } = context
   const outDir = path.resolve(config.root, config.build.outDir)
 
+  const ssrEntryId = '\0ssr-entry.js'
+  context.injectedModules.addServerModule({
+    id: ssrEntryId,
+    code: serializeImports([
+      ...context.injectedImports.prepend,
+      context.routesPath,
+      ...context.injectedImports.append,
+    ]).join('\n'),
+  })
+
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
     base: config.base,
@@ -69,7 +90,7 @@ export async function bundle(
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
-    ssrRoutesId: servedPathForFile(context.routesPath, config.root, true),
+    ssrEntryId,
     stateModuleBase: config.saus.stateModuleBase!,
     // These are set by the `compileClients` function.
     clientCacheId: '',
@@ -83,9 +104,12 @@ export async function bundle(
   const isolatedModules: IsolatedModuleMap = {}
   const isolatedRoutesPlugin = isolateRoutes(
     context,
+    ssrEntryId,
     routeImports,
     isolatedModules
   )
+  // Prevent unhandled rejection crash.
+  isolatedRoutesPlugin.catch(noop)
 
   const { pluginContainer } = context
   await pluginContainer.buildStart({})
@@ -98,6 +122,7 @@ export async function bundle(
 
   Profiling.mark('generate ssr bundle')
   const { code, map } = await generateSsrBundle(
+    ssrEntryId,
     context,
     options,
     runtimeConfig,
@@ -148,6 +173,7 @@ export async function bundle(
 }
 
 async function generateSsrBundle(
+  ssrEntryId: string,
   context: BundleContext,
   options: BundleOptions,
   runtimeConfig: RuntimeConfig,
@@ -192,6 +218,11 @@ async function generateSsrBundle(
     })
 
     injectedModules.addServerModule({
+      id: path.join(bundleDir, 'bundle/clientStore/index.ts'),
+      code: `export * from "./${bundleConfig.clientStore}"`,
+    })
+
+    injectedModules.addServerModule({
       id: path.join(bundleDir, 'bundle/clientModules.ts'),
       code: dataToEsm(
         clientChunks.reduce((clientModules, chunk) => {
@@ -229,7 +260,7 @@ async function generateSsrBundle(
 
   injectedModules.addServerModule({
     id: context.bundleModuleId,
-    code: renderBundleModule(context.routesPath, context.injectedImports),
+    code: renderBundleModule(ssrEntryId),
     moduleSideEffects: 'no-treeshake',
   })
 
@@ -258,10 +289,10 @@ async function generateSsrBundle(
   debug('Resolving "build" config for SSR bundle')
   const config = await context.resolveConfig({
     plugins: [
-      injectedModules,
       context.bundlePlugins,
-      options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...inlinePlugins,
+      injectedModules,
+      options.absoluteSources && mapSourcesPlugin(bundleOutDir),
       ...workerPlugins,
       copyPublicDir(),
       routesPlugin(clientRouteMap)(),

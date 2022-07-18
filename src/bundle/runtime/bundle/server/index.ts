@@ -1,6 +1,5 @@
-export * from './cachePageAssets'
 export * from './connect'
-// export * from './fileCache'
+export * from './fileCache'
 export * from './serveCachedFiles'
 export * from './servePages'
 export * from './servePublicDir'

@@ -81,19 +81,17 @@ export function copyPublicDir() {
           onRuntimeConfig(config) {
             config.publicDir = publicDir.prefix
           },
-          async fetchBundleImports(modules) {
+          async injectModules({ prependModule }) {
             if (resolveId) {
-              // Rewrite HTML references of public files.
-              const renamer = modules.addModule({
+              prependModule({
                 id: '@saus/copyPublicDir/renamer.js',
+                // Rewrite HTML references of public files.
                 code: endent`
                   import {resolveHtmlImports} from "@saus/html"
                   ${dataToEsm(publicDir.renamedFiles, 'const renamedFiles')}
                   resolveHtmlImports(id => renamedFiles[id])
                 `,
               })
-
-              return [renamer.id]
             }
           },
           // Only write if a bundle path is present or when the `onPublicFile`

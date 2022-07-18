@@ -24,9 +24,7 @@ export const serveCachedFiles =
       res.writeHead(200, {
         ...(headers && headers()),
         'content-type': mime.lookup(req.url)!,
-        etag: etag(typeof file !== 'string' ? Buffer.from(file) : file, {
-          weak: true,
-        }),
+        etag: etag(file, { weak: true }),
       })
       res.write(file)
     }

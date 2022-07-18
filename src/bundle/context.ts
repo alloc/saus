@@ -7,7 +7,6 @@ import {
   moduleRedirection,
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
-import { versionRoute } from '@/plugins/versionRoute'
 import { assignDefaults } from '@/utils/assignDefaults'
 import { plural } from '@/utils/plural'
 import {
@@ -58,11 +57,12 @@ export interface BundleContext extends BaseContext {
 
 export async function loadBundleContext<
   T extends BundleContext = BundleContext
->(options: InlineBundleConfig, inlineConfig: vite.UserConfig = {}): Promise<T> {
-  const context = await loadContext<BundleContext>('build', inlineConfig, [
-    options.appVersion !== undefined && versionRoute(options.appVersion),
-  ])
-  context.injectedModules = createModuleProvider()
+>(
+  options: InlineBundleConfig & { config?: vite.UserConfig } = {},
+  inlineConfig: vite.UserConfig = options.config || {}
+): Promise<T> {
+  const context = await loadContext<BundleContext>('build', inlineConfig)
+  context.injectedModules = createModuleProvider({ root: context.root })
   context.plugins = await getSausPlugins(context as SausContext)
 
   const buildConfig = context.userConfig.build || {}
@@ -79,7 +79,7 @@ export async function loadBundleContext<
     clientStore = bundleConfig.clientStore,
     target = bundleConfig.target,
     write = buildConfig.write,
-  } = options || {}
+  } = options
 
   if (outFile) {
     outFile = path.resolve(outFile)
@@ -141,7 +141,10 @@ export async function loadBundleContext<
 
   context.loadRoutes = () => {
     const loading = (async () => {
-      const loading = startTask('Loading routes...')
+      const task = config.logger.isLogged('info')
+        ? startTask('Loading routes...')
+        : null
+
       await loadRoutes(context as BuildContext)
 
       const routeCount =
@@ -149,7 +152,7 @@ export async function loadBundleContext<
         (context.defaultRoute ? 1 : 0) +
         (context.catchRoute ? 1 : 0)
 
-      loading.finish(`${plural(routeCount, 'route')} loaded.`)
+      task?.finish(`${plural(routeCount, 'route')} loaded.`)
     })()
 
     context.loadRoutes = () => loading

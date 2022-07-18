@@ -1,5 +1,5 @@
 import * as esModuleLexer from 'es-module-lexer'
-import fs from 'fs'
+import { klona } from 'klona'
 import MagicString from 'magic-string'
 import path from 'path'
 import { SausContext } from './context'
@@ -7,6 +7,7 @@ import { debug } from './debug'
 import { setRoutesModule } from './global'
 import { injectServerModules } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
+import { createModuleProvider } from './plugins/moduleProvider'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
 import { callPlugins } from './utils/callPlugins'
@@ -87,21 +88,25 @@ async function compileRoutesModule(
   context: SausContext,
   requireAsync: RequireAsync
 ) {
-  const {
-    injectedImports,
-    injectedModules: modules,
-    resolveId,
-    routesPath,
-    root,
-  } = context
+  const { resolveId, routesPath, root } = context
 
-  injectedImports.prepend.length = 0
-  injectedImports.append.length = 0
-  modules.clear()
+  // Injections made with the `injectModules` plugin API are
+  // reloaded whenever the routes module is, while injections
+  // made through the `context` object are reused.
+  const injectedImports = klona(context.injectedImports)
+  const injectedModules = createModuleProvider({
+    serverModules: new Map(context.injectedModules.serverModules),
+    watcher: context.watcher,
+  })
 
-  await injectServerModules(context)
+  await injectServerModules(context, injectedModules, injectedImports)
 
-  const code = fs.readFileSync(routesPath, 'utf8')
+  const loadResult = await context.load(context.routesPath)
+  if (!loadResult) {
+    throw Error(`Cannot find routes module "${routesPath}"`)
+  }
+
+  const code = loadResult.code
   const editor = new MagicString(code)
 
   if (injectedImports.prepend.length) {

@@ -1,10 +1,10 @@
-import type { App } from './app'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
 import type { RouteRenderer } from './routeRenderer'
 import type { RuntimeHook } from './runtime/config'
 import type { RouteLayout } from './runtime/layouts'
+import type { RoutePlugin } from './runtime/routePlugins'
 import type { StateModule } from './runtime/stateModules'
 import type { OneOrMany } from './utils/types'
 import type { RequireAsync } from './vm/types'
@@ -73,6 +73,15 @@ export interface RouteConfig<
    * `headProps` options, define a `config` function to avoid work duplication.
    */
   config?: PageSpecificOption<RouteStateConfig<Module, Params>, Module, Params>
+  /**
+   * The route plugin is a runtime module that modifies the route as
+   * it sees fit, such as by adding endpoint functions or mutating
+   * the route configuration. It can even load the route module
+   * ahead-of-time.
+   *
+   * This is its module ID (relative to the caller).
+   */
+  plugin?: RoutePlugin
 }
 
 export type PageSpecificOption<
@@ -100,8 +109,8 @@ export type RouteIncludeOption<
 > = RouteIncludedState | PageSpecificOption<RouteIncludedState, Module, Params>
 
 interface RouteStateConfig<
-  Module extends object = RouteModule,
-  Params extends object = RouteParams
+  Module extends object = any,
+  Params extends object = any
 > {
   /**
    * Load the page props for this route. These props exist during hydration
@@ -160,10 +169,12 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
 
 export type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint[]>
 
-export interface Route extends BareRoute, RouteConfig {}
+export interface Route<Module extends object = any, Params extends object = any>
+  extends BareRoute<Module>,
+    RouteConfig<Module, Params> {}
 
 export namespace Route {
-  export interface API<Params extends {} = {}>
+  export interface API<Params extends object = any>
     extends Endpoint.Declarators<API<Params>, Params> {
     /**
      * In the given callback, you can add routes that have this
@@ -204,7 +215,6 @@ export interface RoutesModule extends HtmlContext {
   layoutEntries: Set<string>
   /** Import a module by its SSR path */
   ssrRequire: RequireAsync
-  contextHooks?: App.ContextHook[]
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
 }

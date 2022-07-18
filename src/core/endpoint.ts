@@ -40,7 +40,7 @@ export namespace Endpoint {
   export type ContentType = `${string}/${string}`
   export type ContentTypes = [ContentType, ...ContentType[]]
 
-  export type Declarators<Self, Params extends {} = {}> = {
+  export type Declarators<Self, Params extends object = any> = {
     [T in typeof httpMethods[number]]: {
       /** Declare an endpoint that responds to any `Accept` header */
       (fn: Function<Params>): Self
