@@ -1,54 +1,54 @@
-import hasFlag from 'has-flag'
 import http from 'http'
-import { gray } from 'kleur/colors'
 import { success } from 'misty'
 import { MistyTask, startTask } from 'misty/task'
-import renderPage, {
+import createApp, {
   config,
-  getKnownPaths,
-  RenderPageOptions,
-} from 'saus/bundle'
-import {
+  connect,
   createFileCache,
+  getKnownPaths,
+  PageBundleOptions,
   serveCachedFiles,
   servePages,
   servePublicDir,
-} from 'saus/core'
-import { connect } from './connect'
+} from 'saus/bundle'
 
-const debug = !!process.env.DEBUG || hasFlag('debug') ? console.log : () => {}
+const files = createFileCache(config.base)
+const init = createApp()
 
-const moduleCache = createFileCache(config.base)
-const servePage = servePages(renderPage, moduleCache)
-const serveModule = serveCachedFiles(moduleCache)
-
-const app = connect()
-  .use((req, res, next) => {
-    if (!req.url.startsWith(config.base)) {
-      throw 404
-    }
-    serveModule(req, res, next)
-  })
-  .use(servePage)
-  .use(servePublicDir(config, './', /\.(m?js|map)$/))
-  .use(servePublicDir(config))
+const handler = connect(async () => {
+  return {
+    app: await init,
+  }
+})
+  .use(serveCachedFiles(files))
+  .use(servePages)
+  .use(
+    servePublicDir({
+      root: './',
+      include: /\.(m?js|map)$/,
+    })
+  )
+  .use(servePublicDir())
   .on('error', (e, req, res, next) => {
     const close = (e: any) => {
-      console.error(e)
-      res.writeHead(500)
-      res.end()
+      if (e) {
+        console.error(e)
+        res.writeHead(500)
+        res.end()
+      } else {
+        next()
+      }
     }
     if (e == 404) {
-      debug(gray('unknown'), req.url)
       req.url = config.base + e
-      servePage(req, res, next).catch(close)
+      servePages(req, res, close)
     } else {
       close(e)
     }
   })
 
 const port = Number(process.env.PORT || 8081)
-http.createServer(app).listen(port, () => {
+http.createServer(handler).listen(port, () => {
   console.log(`Listening at http://localhost:${port}`)
 })
 
@@ -57,32 +57,31 @@ preCacheKnownPages()
 async function preCacheKnownPages() {
   let pageCount = 0
   let tasks = new Map<string, MistyTask>()
-  const options: RenderPageOptions = {
+  const options: PageBundleOptions = {
     renderStart(url) {
-      tasks.set(url, startTask(`Rendering "${url}"`))
+      tasks.set(url.path, startTask(`Rendering "${url}"`))
     },
     renderFinish(url, error, page) {
-      tasks.get(url)!.finish()
-      tasks.delete(url)
+      tasks.get(url.path)!.finish()
+      tasks.delete(url.path)
       if (error) {
         console.error(error.stack)
       } else if (!page) {
         console.warn(`[!] Page for "${url}" was null`)
       } else {
         pageCount++
-        page.modules.forEach(moduleCache.add)
-        page.assets.forEach(moduleCache.add)
-        moduleCache.add({
-          id: page.id,
-          text: page.html,
+        files.addFiles(page.files)
+        files.addFile(page.id, page.html, {
+          'content-type': 'text/html',
         })
       }
     },
   }
   const knownPaths = await getKnownPaths()
+  const app = await init
   await Promise.all(
     knownPaths.map(knownPath => {
-      return renderPage(knownPath, options)
+      return app.resolvePageBundle(knownPath, options)
     })
   )
   success(`${pageCount} pages were pre-cached.`)

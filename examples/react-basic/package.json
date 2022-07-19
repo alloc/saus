@@ -12,8 +12,6 @@
     "@saus/test": "*",
     "@saus/webp": "*",
     "@types/node": "^16.10.2",
-    "has-flag": "^5.0.1",
-    "kleur": "^4.1.4",
     "misty": "^1.6.0",
     "navaid": "^1.2.0",
     "react": "^17.0.2",

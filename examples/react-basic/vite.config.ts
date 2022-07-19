@@ -1,4 +1,3 @@
-import sausTest from '@saus/test'
 import { convertToWebp } from '@saus/webp'
 import { defineConfig } from 'saus'
 
@@ -19,9 +18,4 @@ export default defineConfig({
     // minify: false,
   },
   plugins: [convertToWebp()],
-  // Once you put "types": ["@saus/react"] in your tsconfig.json,
-  // you can customize Babel like this:
-  babel: {},
-  // Run "saus test" to blow your mind.
-  testFramework: sausTest(),
 })
