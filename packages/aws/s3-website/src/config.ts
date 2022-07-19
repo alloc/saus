@@ -52,27 +52,6 @@ export interface WebsiteConfig {
    * Set `false` to disable this compression.
    */
   brotli?: false | BrotliConfig
-}
-
-export interface WebsiteBucketConfig {
-  /**
-   * Enable a bucket for hosting pre-rendered pages. \
-   * This bucket must be populated manually.
-   */
-  popularPages?: boolean
-  /**
-   * Enable a bucket that acts as an indefinite cache for
-   * pages generated just-in-time. This is perfect for reducing
-   * load on the origin server.
-   *
-   * This bucket must be populated manually.
-   */
-  onDemandPages?:
-    | boolean
-    | {
-        /** @default 1 */
-        expirationInDays?: number
-      }
   /**
    * This option affects the `PublicDir` S3 bucket.
    *
@@ -84,5 +63,7 @@ export interface WebsiteBucketConfig {
    *
    * @default "s-maxage=315360000, immutable"
    */
-  publicDir?: { cacheControl?: string }
+  publicDir?: {
+    cacheControl?: string
+  }
 }

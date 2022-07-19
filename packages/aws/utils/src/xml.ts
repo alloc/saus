@@ -1,3 +1,4 @@
+import { isObject } from '@saus/deploy-utils'
 import { escape } from 'saus/core'
 import { parseXML } from './xml/parse'
 
@@ -12,8 +13,20 @@ export interface XmlDocument {
       open: (tag: string, attrs?: Record<string, any>) => XmlDocument
     ) => void
   ): XmlDocument
-  /** Use an object to define child nodes with text content. */
-  props(contentByTag: Record<string, any>): XmlDocument
+  /** Insert content into the current tag. */
+  insert(
+    content: any,
+    replacer?: (key: string, value: any, context: Record<string, any>) => any
+  ): XmlDocument
+  /**
+   * Use an object to define child nodes with text content.
+   *
+   * Nested objects and arrays are supported.
+   */
+  props(
+    contentByTag: Record<string, any>,
+    replacer?: (key: string, value: any, context: Record<string, any>) => any
+  ): XmlDocument
   /** Close the last opened tag. */
   close(): XmlDocument
   /** Get the formatted XML string. */
@@ -60,10 +73,23 @@ export function xml(encoding = 'UTF-8'): XmlDocument {
       }
       return this
     },
-    props(props) {
-      for (const [key, value] of Object.entries(props)) {
-        this.open(key)
+    insert(value, replacer) {
+      if (isObject(value)) {
+        this.props(value, replacer)
+      } else if (Array.isArray(value)) {
+        value.forEach(elem => this.insert(elem, replacer))
+      } else {
         text += value
+      }
+      return this
+    },
+    props(props, replacer) {
+      for (let [key, value] of Object.entries(props)) {
+        this.open(key)
+        if (replacer) {
+          value = replacer(key, value, props)
+        }
+        this.insert(value, replacer)
         this.close()
       }
       return this

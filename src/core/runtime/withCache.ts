@@ -22,6 +22,7 @@ export type CacheControl = {
    * Number of seconds until this entry is reloaded on next request.
    * Once expired, the loaded value remains in the cache until another
    * value is loaded.
+   * @default 3600
    */
   maxAge: number
   /**
@@ -94,7 +95,7 @@ export function withCache(
       entryConfig = {
         key: cacheKey,
         oldValue: entry?.[0],
-        maxAge: Infinity,
+        maxAge: 3600,
         setTimeout: secs => {
           const ctrl = new AbortController()
           setTimeout(() => {

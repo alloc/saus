@@ -1,3 +1,4 @@
+import { xml } from '@saus/aws-utils'
 import { joinUrl } from 'saus/core'
 import { signedRequest } from './api/request'
 
@@ -12,9 +13,17 @@ export function createInvalidation(region: string) {
         'invalidation'
       ),
       query: null,
+      body: xml()
+        .open('InvalidationBatch', {
+          xmlns: `http://cloudfront.amazonaws.com/doc/${params.Version}/`,
+        })
+        .props(params.InvalidationBatch, (key, value) => {
+          return key == 'Items'
+            ? (value as string[]).map(glob => ({ Path: glob }))
+            : value
+        })
+        .close()
+        .toString(),
     }),
-    // coerceResponse(resp) {
-    //   return parseXmlResponse(resp)
-    // },
   })
 }

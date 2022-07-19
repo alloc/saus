@@ -87,8 +87,10 @@ interface AmzRequestConfig<Actions extends ActionMap> {
   region?: string
   service: string
   apiVersion: string
+  /** Use the `Accept: application/json` request header by default */
   acceptJson?: boolean
-  listTags?: string[]
+  /** Omit the `region` from the subdomain */
+  globalSubdomain?: boolean
 }
 
 export interface AmzSendOptions<
@@ -136,7 +138,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
     const trace = new Error() as AmzError
 
     const subdomains = [config.service]
-    if (region) {
+    if (region && !config.globalSubdomain) {
       subdomains.push(region)
     }
 
@@ -160,6 +162,9 @@ export function createAmzRequestFn<Actions extends ActionMap>(
       }
       if (derived.path) {
         path = derived.path
+        if (path[0] == '/') {
+          path = path.slice(1)
+        }
       }
       if (derived.query !== undefined) {
         query = derived.query

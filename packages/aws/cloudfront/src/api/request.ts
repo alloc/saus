@@ -11,4 +11,5 @@ export const signedRequest = (region: string) =>
     region,
     service: 'cloudfront',
     apiVersion: '2020-05-31',
+    globalSubdomain: true,
   })

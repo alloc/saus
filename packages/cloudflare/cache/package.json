@@ -21,5 +21,7 @@
   "devDependencies": {
     "saus": "*"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@saus/cloudflare-request": "^0.1.0"
+  }
 }

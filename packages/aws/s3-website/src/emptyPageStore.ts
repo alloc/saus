@@ -11,6 +11,11 @@ import secrets from './secrets'
 export async function emptyPageStore(props: {
   region: string
   /**
+   * Pass the app version to avoid duplicate cache invalidations
+   * for the same deployment (in case of deployment errors).
+   */
+  appVersion?: string
+  /**
    * CloudFront distribution ID
    *
    * When defined, the CloudFront cache is invalidated.
@@ -24,14 +29,16 @@ export async function emptyPageStore(props: {
   bucket?: string
 }) {
   if (props.bucket) {
-    await emptyBucket(props.region)(props.bucket)
+    await emptyBucket(props.region)(props.bucket, {
+      creds: secrets,
+    })
   }
   if (props.cacheId) {
     await createInvalidation(props.region)({
       creds: secrets,
       distributionId: props.cacheId,
       invalidationBatch: {
-        callerReference: 'emptyPageStore-' + Date.now(),
+        callerReference: 'emptyPageStore-' + (props.appVersion || Date.now()),
         paths: {
           quantity: 1,
           items: ['/*'],

@@ -3,7 +3,7 @@ import { http, HttpMethod, HttpRequestOptions } from 'saus/http'
 
 export function createRequestFn(config: {
   apiToken: string
-  logger: vite.Logger
+  logger: Pick<vite.Logger, 'info'>
 }) {
   return async <T = any>(
     method: HttpMethod,
@@ -13,6 +13,7 @@ export function createRequestFn(config: {
     const url = joinUrl('https://api.cloudflare.com/client/v4', uri)
     const resp = await http(method, url, {
       ...opts,
+      allowBadStatus: true,
       headers: {
         ...opts?.headers,
         authorization: `Bearer ${config.apiToken}`,

@@ -129,7 +129,7 @@ importers:
       klona: 2.0.5
       prettier: 2.7.1
       quick-lru: 6.1.1
-      rollup-plugin-dts: 4.2.2_typescript@4.8.0-beta
+      rollup-plugin-dts: 4.2.2_ad8843200a1aa19a04ed104b76803a7d
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 2.0.0
@@ -163,8 +163,6 @@ importers:
       '@saus/test': '*'
       '@saus/webp': '*'
       '@types/node': ^16.10.2
-      has-flag: ^5.0.1
-      kleur: ^4.1.4
       misty: ^1.6.0
       navaid: ^1.2.0
       react: ^17.0.2
@@ -176,8 +174,6 @@ importers:
       '@saus/test': link:../../packages/test
       '@saus/webp': link:../../packages/webp
       '@types/node': 16.11.44
-      has-flag: 5.0.1
-      kleur: 4.1.5
       misty: 1.6.10
       navaid: 1.2.0
       react: 17.0.2
@@ -232,24 +228,21 @@ importers:
       '@types/aws4': 1.11.2
       saus: link:../../..
 
-  packages/bump:
-    specifiers:
-      '@saus/deploy-utils': workspace:^0.1.0
-      saus: '*'
-    dependencies:
-      '@saus/deploy-utils': link:../deploy-utils
-    devDependencies:
-      saus: link:../..
-
   packages/cloudflare/cache:
     specifiers:
+      '@saus/cloudflare-request': ^0.1.0
       saus: '*'
+    dependencies:
+      '@saus/cloudflare-request': link:../request
     devDependencies:
       saus: link:../../..
 
   packages/cloudflare/dns:
     specifiers:
+      '@saus/cloudflare-request': ^0.1.0
       saus: '*'
+    dependencies:
+      '@saus/cloudflare-request': link:../request
     devDependencies:
       saus: link:../../..
 
@@ -2397,11 +2390,6 @@ packages:
     resolution: {integrity: sha512-sKJf1+ceQBr4SMkvQnBDNDtf4TXpVhVGateu0t918bl30FnbE2m4vNLX+VWe/dpjlb+HugGYzW7uQXH98HPEYw==}
     engines: {node: '>=4'}
 
-  /has-flag/5.0.1:
-    resolution: {integrity: sha512-CsNUt5x9LUdx6hnk/E2SZLsDyvfqANZSUq4+D3D8RzDJ2M+HDTIkF60ibS1vHaK55vzgiZw1bEPFG9yH7l33wA==}
-    engines: {node: '>=12'}
-    dev: false
-
   /has-symbol-support-x/1.4.2:
     resolution: {integrity: sha512-3ToOva++HaW+eCpgqZrCfN51IPB+7bJNVT6CUATzueB5Heb8o6Nam0V3HG5dlDvZU1Gn5QLcbahiKw/XVk5JJw==}
     dev: false
@@ -3367,7 +3355,7 @@ packages:
       glob: 7.2.3
     dev: false
 
-  /rollup-plugin-dts/4.2.2_typescript@4.8.0-beta:
+  /rollup-plugin-dts/4.2.2_ad8843200a1aa19a04ed104b76803a7d:
     resolution: {integrity: sha512-A3g6Rogyko/PXeKoUlkjxkP++8UDVpgA7C+Tdl77Xj4fgEaIjPSnxRmR53EzvoYy97VMVwLAOcWJudaVAuxneQ==}
     engines: {node: '>=v12.22.11'}
     peerDependencies:
@@ -3375,6 +3363,7 @@ packages:
       typescript: ^4.1
     dependencies:
       magic-string: 0.26.2
+      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.8.0-beta
     optionalDependencies:
       '@babel/code-frame': 7.18.6
