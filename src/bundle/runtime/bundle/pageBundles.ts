@@ -9,6 +9,7 @@ import { getPageFilename } from '@/utils/getPageFilename'
 import { isCSSRequest } from '@/utils/isCSSRequest'
 import { isExternalUrl } from '@/utils/isExternalUrl'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
+import { Promisable } from 'type-fest'
 import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
 import { applyHtmlProcessors } from '../core/api'
@@ -24,13 +25,29 @@ export const providePageBundles: App.Plugin = app => {
   const debugBase = config.debugBase || ''
 
   return {
-    async resolvePageBundle(url, options) {
-      const req = makeRequestUrl(parseUrl(url))
+    async resolvePageBundle(url, options = {}) {
+      const req = makeRequestUrl(parseUrl(url), {
+        headers: { accept: 'text/html' },
+      })
       let resolved: ResolvedRoute | undefined
       while ((resolved = app.resolveRoute(req, resolved?.remainingRoutes))) {
-        if (resolved.route) {
-          const page = await app.renderPageBundle(req, resolved.route, options)
-          if (page) {
+        if (resolved.route?.moduleId) {
+          let page: Promisable<PageBundle | null> | undefined
+          await app.renderPageBundle(req, resolved.route, {
+            ...options,
+            renderFinish(_, error, result) {
+              if (error) {
+                if (!app.catchRoute) {
+                  throw error
+                }
+                page = app.renderPageBundle(req, app.catchRoute, options)
+              } else if (page) {
+                page = result
+                options.renderFinish?.(req, null, page)
+              }
+            },
+          })
+          if ((page = await page)) {
             return page
           }
         }
@@ -112,13 +129,13 @@ export const providePageBundles: App.Plugin = app => {
         )
         page.files.push({
           id: stateModuleId,
-          data: Buffer.from(stateModuleText),
+          data: stateModuleText,
           mime: 'application/javascript',
         })
       }
 
       if (route !== page.route) {
-        debugger
+        debugger // Might be able to remove this.
         route = page.route
       }
 
@@ -193,7 +210,7 @@ export const providePageBundles: App.Plugin = app => {
         if (pageStateId) {
           files.push({
             id: pageStateId,
-            data: Buffer.from(app.renderPageState(page)),
+            data: app.renderPageState(page),
             mime: 'application/javascript',
           })
         }

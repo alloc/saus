@@ -20,6 +20,7 @@ const routeSetup = new LazyPromise(resolve => {
 })
 
 export async function createApp(plugins: App.Plugin[] = []): Promise<App> {
+  // TODO: only load this if necessary
   await loadDeployedEnv(config)
   await routeSetup
   return create(context, [

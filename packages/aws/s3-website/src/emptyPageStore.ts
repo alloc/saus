@@ -1,5 +1,6 @@
 import { createInvalidation } from '@saus/aws-cloudfront'
 import { emptyBucket } from '@saus/aws-s3'
+import secrets from './secrets'
 
 /**
  * Delete all assets from the "PageStore" bucket.
@@ -27,6 +28,7 @@ export async function emptyPageStore(props: {
   }
   if (props.cacheId) {
     await createInvalidation(props.region)({
+      creds: secrets,
       distributionId: props.cacheId,
       invalidationBatch: {
         callerReference: 'emptyPageStore-' + Date.now(),

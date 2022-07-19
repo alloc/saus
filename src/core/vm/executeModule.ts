@@ -9,7 +9,7 @@ export function executeModule(module: CompiledModule): Promise<any> {
   if (map) {
     code += toInlineSourceMap(map)
   }
-  const init = vm.runInThisContext(code, {
+  const init = vm.runInThisContext('"use strict";' + code, {
     filename: id[0] !== '\0' ? cleanUrl(id) : undefined,
   })
   return (module.exports = init(...Object.values(env)).then(() => {

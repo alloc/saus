@@ -44,7 +44,7 @@ export default defineDeployHook(ctx => {
         await git('push')
 
         if (stashedRoots.has(cwd)) {
-          await git('stash pop')
+          await git('stash pop', { noThrow: true })
           stashedRoots.delete(cwd)
         }
 

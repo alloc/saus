@@ -28,7 +28,6 @@ import {
   DeployHookRef,
   DeployPlugin,
   DeployTarget,
-  DeployTargetArgs,
   RevertFn,
 } from './types'
 import { defineTargetId, omitEphemeral } from './utils'
@@ -130,7 +129,6 @@ export async function deploy(
   let deploying: Deferred<void> | undefined
   let activePlugin: DeployPlugin = null!
 
-  const targets: DeployTargetArgs[] = []
   const savedTargets = getSavedTargets()
   const updatedTargets = new Set<DeployTarget>()
   const spawnedTargets = new Set<DeployTarget>()
@@ -205,9 +203,9 @@ export async function deploy(
     }
 
     if (index == targetIndex) {
-      if (++targetIndex < targets.length) {
+      if (++targetIndex < ctx.targets.length) {
         queueMicrotask(() => {
-          const [hook, target, resolve] = targets[targetIndex]
+          const [hook, target, resolve] = ctx.targets[targetIndex]
           const promise = deployTarget(hook, target)
           promise.catch(noop)
           resolve(promise)
@@ -260,7 +258,7 @@ export async function deploy(
 
   ctx.addDeployTarget = async (...args) => {
     await preDeploySetup()
-    const index = targets.push(args) - 1
+    const index = ctx.targets.push(args) - 1
     if (index == targetIndex) {
       const [hook, target, resolve] = args
       const promise = deployTarget(hook, target)
@@ -294,7 +292,7 @@ export async function deploy(
 
     deploying = defer()
     queueMicrotask(() => {
-      if (targetIndex == targets.length) {
+      if (targetIndex == ctx.targets.length) {
         deploying!.resolve()
       }
     })

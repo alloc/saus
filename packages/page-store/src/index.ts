@@ -42,7 +42,7 @@ export interface PageStoreConfig {
 
 export function setupPageStore(config: PageStoreConfig) {
   setup(env => app => {
-    if (env.command !== 'bundle') {
+    if (env.command !== 'bundle' || process.env['NODE_ENV'] !== 'production') {
       return // Disabled in development.
     }
 

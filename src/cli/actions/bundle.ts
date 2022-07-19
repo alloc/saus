@@ -6,6 +6,7 @@ import { command } from '../command'
 
 command(bundle, '[outFile]')
   .option('--load', `[boolean] check local cache before bundling`)
+  .option('--reload', `[boolean] clear local cache before bundling`)
   .option(
     '--mode <mode>',
     `[string] override the client mode (eg: development)`
@@ -25,6 +26,7 @@ export type BundleFlags = InlineBundleConfig & {
   load?: boolean
   minify?: boolean
   mode?: string
+  reload?: boolean
   sourcemap?: boolean | 'inline' | 'hidden'
   stdout?: boolean
 }
@@ -44,7 +46,7 @@ export async function bundle(outFile: string, options: BundleFlags) {
     minify: options.minify,
   }
 
-  if (options.load) {
+  if (options.load || options.reload) {
     const { loadBundle } = await import('../../core')
     const {
       cached,
@@ -53,7 +55,7 @@ export async function bundle(outFile: string, options: BundleFlags) {
     } = await loadBundle({
       config: viteOptions,
       bundle: bundleOptions,
-      write: false,
+      force: options.reload,
     })
     logger.info(
       green('✔︎') +

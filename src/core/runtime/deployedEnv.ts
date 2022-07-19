@@ -30,6 +30,7 @@ export const deployedEnv: ReadonlyDeep<DeployedEnv> & JSONObject = {}
  * `process.env.PASSWORD` exists.
  */
 export async function loadDeployedEnv(config: RuntimeConfig) {
+  const env: any = deployedEnv
   if (config.githubRepo && config.githubToken) {
     const resp = await http(
       'get',
@@ -41,10 +42,10 @@ export async function loadDeployedEnv(config: RuntimeConfig) {
       })
     )
 
-    Object.assign(deployedEnv, resp.toJSON())
-    deployedEnv.githubToken = config.githubToken
+    Object.assign(env, resp.toJSON())
+    env.githubToken = config.githubToken
   }
   if (process.env.PASSWORD) {
-    deployedEnv.password = process.env.PASSWORD
+    env.password = process.env.PASSWORD
   }
 }

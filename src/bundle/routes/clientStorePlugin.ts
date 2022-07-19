@@ -1,33 +1,35 @@
 import { defineRoutePlugin } from '@/runtime/routePlugins'
 import etag from 'etag'
 import * as mime from 'mrmime'
+import { Endpoint } from '../../core/endpoint'
 import { loadAsset, loadModule } from '../runtime/bundle/clientStore'
 
 type Params = { wild: string }
 
 export default defineRoutePlugin<never, Params>(config => router => {
   router.get(async req => {
+    if (req.headers.accept?.includes('text/html')) {
+      return
+    }
+    const id = req.wild
     try {
-      const id = req.wild
+      let body: Endpoint.AnyBody
       if (id.endsWith('.js')) {
-        const text = await loadModule(id)
-        req.respondWith(200, {
-          text,
-          headers: {
-            'content-type': 'text/javascript',
-            etag: etag(text, { weak: true }),
-          },
-        })
+        body = {
+          text: await loadModule(id),
+        }
       } else {
-        const buffer = await loadAsset(req.path.slice(1))
-        req.respondWith(200, {
-          buffer,
-          headers: {
-            'content-type': mime.lookup(id)!,
-            etag: etag(buffer, { weak: true }),
-          },
-        })
+        body = {
+          buffer: await loadAsset(id),
+        }
       }
+      req.respondWith(200, {
+        ...body,
+        headers: {
+          'content-type': mime.lookup(id)!,
+          etag: etag((body.buffer as any) || body.text!, { weak: true }),
+        },
+      })
     } catch {}
   })
 })

@@ -69,5 +69,7 @@ function toPresentTense(verb: string) {
 }
 
 function needLastCharDoubled(verb: string) {
-  return /[aeiou][bdlmnprt]$/.test(verb) && !/(ea|ee|oo)[bdlmnprt]$/.test(verb)
+  return (
+    /[aeiou][bdlmnprt]$/.test(verb) && !/(ea|ee|oo|oa)[bdlmnprt]$/.test(verb)
+  )
 }

@@ -88,7 +88,7 @@ export async function isolateRoutes(
 
   const vite = getViteFunctions(pluginContainer)
 
-  const sausExternalRE = /\bsaus(?!.*\/(packages|examples))\b/
+  const sausExternalRE = /(^|\/)saus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
 
   const isVirtual = (id: string) => id[0] === '\0'

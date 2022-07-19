@@ -57,6 +57,10 @@ export function route(
       ? pathOrLoad
       : undefined
 
+  if (load == null && maybeLoad) {
+    config = maybeLoad as RouteConfig
+  }
+
   let postHook: RoutePlugin.PostHook | void
   if (config?.plugin) {
     postHook = config.plugin(config)
@@ -69,11 +73,10 @@ export function route(
   let generated = false
   let moduleId: string | null = null
 
-  if (load == null && maybeLoad) {
-    config = maybeLoad as RouteConfig
+  if (config?.entry) {
     if (typeof config.entry == 'function') {
       load = config.entry
-    } else if (typeof config.entry == 'string') {
+    } else {
       generated = true
       moduleId = config.entry
     }

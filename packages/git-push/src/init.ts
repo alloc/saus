@@ -39,7 +39,7 @@ export function gitInit(config: InitConfig) {
                 stashedRoots.add(cwd)
                 onRevert(async () => {
                   if (stashedRoots.has(cwd)) {
-                    await git('stash pop')
+                    await git('stash pop', { noThrow: true })
                     stashedRoots.delete(cwd)
                   }
                 })

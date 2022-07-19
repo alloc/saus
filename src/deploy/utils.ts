@@ -16,6 +16,7 @@ export function defineTargetId(
   target: DeployTarget,
   values: Record<string, any>
 ): asserts target is { _id: DeployTargetId } {
+  if (target._id) return
   Object.defineProperty(target, '_id', {
     value: { hash: toObjectHash(values), values },
   })

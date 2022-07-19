@@ -5,7 +5,19 @@ import path from 'path'
 import * as yaml from 'yaml'
 import { ResolvedConfig } from './vite'
 
-export async function inferGitHubRepo(context: {
+export async function resolveGitHubCreds(context: {
+  root: string
+  config: ResolvedConfig
+}) {
+  const githubRepo = await resolveGitHubRepo(context)
+  if (githubRepo) {
+    const githubToken = await resolveGitHubToken(context)
+    return { githubRepo, githubToken }
+  }
+  return {}
+}
+
+export async function resolveGitHubRepo(context: {
   root: string
   config: ResolvedConfig
 }) {
@@ -13,9 +25,17 @@ export async function inferGitHubRepo(context: {
   if (deployConfig?.githubRepo) {
     return deployConfig.githubRepo
   }
-  const { url } = await getGitRepoByName('origin', context)
-  const match = /github\.com[/:]([^/]+\/[^/]+?)(\/|\.git|$)/.exec(url)
-  return match?.[1]
+  if (await hasDeployedBranch(context, 'origin')) {
+    const { url } = await getGitRepoByName('origin', context)
+    const match = /github\.com[/:]([^/]+\/[^/]+?)(\/|\.git|$)/.exec(url)
+    return match?.[1]
+  }
+}
+
+async function hasDeployedBranch(context: { root: string }, remote: string) {
+  return (await exec('git branch -a', { cwd: context.root }))
+    .split(/\n */g)
+    .some(branch => branch == `remotes/${remote}/deployed`)
 }
 
 export async function resolveGitHubToken(context: {
@@ -30,6 +50,7 @@ export async function resolveGitHubToken(context: {
     return deployConfig.githubToken
   }
   try {
+    // TODO: change this to opt-in (via plugin?)
     const hostsFile = path.join(os.homedir(), '.config/gh/hosts.yml')
     const hosts = yaml.parse(readFileSync(hostsFile, 'utf8'))
     return hosts['github.com'].oauth_token as string | undefined

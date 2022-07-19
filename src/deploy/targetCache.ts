@@ -174,9 +174,11 @@ export async function refreshTargetCache(
  * and you must `await` its result. Never call this when there are pending
  * deployment steps.
  *
+ * You must pass `true` if there are still targets left to deploy.
+ *
  * This does nothing when `--dry-run` is used.
  */
-export async function saveTargetCache() {
+export async function saveTargetCache(includeUnused?: boolean) {
   const ctx = getDeployContext()
   if (ctx.dryRun) {
     return
@@ -185,7 +187,7 @@ export async function saveTargetCache() {
   // This condition is only true when the deploy file
   // calls this function directly.
   if (!targetCache.data || targetCache.pushed) {
-    await refreshTargetCache()
+    await refreshTargetCache(includeUnused)
     assert(targetCache.data)
   }
 

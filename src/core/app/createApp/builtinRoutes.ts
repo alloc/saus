@@ -21,8 +21,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 
   const renderPage = async (
     url: ParsedUrl,
-    route: Route,
-    app: App
+    route: Route
   ): Promise<RenderPageResult> => {
     if (isBundle) {
       const { resolve, promise } = defer<RenderPageResult>()
@@ -40,7 +39,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   }
 
   // Page-based entry modules
-  route(`/*.html.js`).get(async (req, _, app) => {
+  route(`/*.html.js`).get(async req => {
     const pagePath = '/' + req.wild.replace(indexFileRE, '')
     const pageUrl = parseUrl(
       debugBase && req.startsWith(debugBase)
@@ -53,7 +52,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
       })
     )
     if (route) {
-      const [page, error] = await renderPage(pageUrl, route, app)
+      const [page, error] = await renderPage(pageUrl, route)
 
       if (error) {
         const props = { message: error.message, stack: error.stack }

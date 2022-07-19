@@ -1,7 +1,7 @@
 import { MagicString } from '@/babel'
 import { dataToEsm, RuntimeConfig } from '@/core'
 import { debug } from '@/debug'
-import { inferGitHubRepo, resolveGitHubToken } from '@/git'
+import { resolveGitHubCreds } from '@/git'
 import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { resolveMapSources, SourceMap } from '@/node/sourceMap'
@@ -51,9 +51,8 @@ export async function bundle(
   await context.loadRoutes()
   await callPlugins(context.plugins, 'receiveBundleOptions', options)
 
-  const [githubRepo, githubToken, routeImports] = await Promise.all([
-    inferGitHubRepo(context),
-    resolveGitHubToken(context),
+  const [{ githubRepo, githubToken }, routeImports] = await Promise.all([
+    resolveGitHubCreds(context),
     resolveRouteImports(context),
   ])
 
@@ -65,15 +64,20 @@ export async function bundle(
   const { bundle: bundleConfig, config, userConfig } = context
   const outDir = path.resolve(config.root, config.build.outDir)
 
-  const ssrEntryId = '\0ssr-entry.js'
-  context.injectedModules.addServerModule({
-    id: ssrEntryId,
-    code: serializeImports([
-      ...context.injectedImports.prepend,
-      context.routesPath,
-      ...context.injectedImports.append,
-    ]).join('\n'),
-  })
+  const ssrEntries = [
+    ...context.injectedImports.prepend,
+    context.routesPath,
+    ...context.injectedImports.append,
+  ]
+
+  let ssrEntryId: string | undefined
+  if (ssrEntries.length > 1) {
+    ssrEntryId = '\0ssr-entry.js'
+    context.injectedModules.addServerModule({
+      id: ssrEntryId,
+      code: serializeImports(ssrEntries).join('\n'),
+    })
+  }
 
   const runtimeConfig: RuntimeConfig = {
     assetsDir: config.build.assetsDir,
@@ -90,7 +94,8 @@ export async function bundle(
     mode: config.mode,
     publicDir: path.relative(outDir, config.publicDir),
     renderConcurrency: config.saus.renderConcurrency,
-    ssrEntryId,
+    ssrEntryId:
+      ssrEntryId || servedPathForFile(context.routesPath, context.root),
     stateModuleBase: config.saus.stateModuleBase!,
     // These are set by the `compileClients` function.
     clientCacheId: '',
@@ -104,7 +109,7 @@ export async function bundle(
   const isolatedModules: IsolatedModuleMap = {}
   const isolatedRoutesPlugin = isolateRoutes(
     context,
-    ssrEntryId,
+    ssrEntryId || context.routesPath,
     routeImports,
     isolatedModules
   )
@@ -122,7 +127,7 @@ export async function bundle(
 
   Profiling.mark('generate ssr bundle')
   const { code, map } = await generateSsrBundle(
-    ssrEntryId,
+    ssrEntryId || context.routesPath,
     context,
     options,
     runtimeConfig,
