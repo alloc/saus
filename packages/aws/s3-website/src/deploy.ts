@@ -175,11 +175,16 @@ export async function deployWebsiteToS3(
         })
       )
 
-      const s3OriginRequestPolicy = ref(
-        'S3OriginRequestPolicy',
+      /**
+       * Requests to Amazon web services need to omit the "Host" header
+       * to avoid S3's virtual hosting and CloudFront's alternate domain
+       * name enforcement.
+       */
+      const awsOriginRequestPolicy = ref(
+        'AWSOriginRequestPolicy',
         new aws.CloudFront.OriginRequestPolicy({
           OriginRequestPolicyConfig: {
-            Name: 'S3OriginRequestPolicy',
+            Name: 'AWSOriginRequestPolicy',
             CookiesConfig: CookiesConfig(config.forward?.cookies),
             HeadersConfig: {
               HeaderBehavior: 'whitelist',
@@ -208,7 +213,7 @@ export async function deployWebsiteToS3(
         // S3 buckets must never receive a Host header.
         OriginRequestPolicyId:
           isResourceRef(target) && buckets.has(target)
-            ? s3OriginRequestPolicy
+            ? awsOriginRequestPolicy
             : managedRequestPolicies.AllViewer,
         ResponseHeadersPolicyId: config.injectSecurityHeaders
           ? managedResponseHeaderPolicies.SecurityHeaders
@@ -239,18 +244,22 @@ export async function deployWebsiteToS3(
         },
       }
 
+      const httpVersion = 'http' + (config.httpVersion || 1.1)
+
       const pageStore = createWebsiteBucket('PageStore')
       const pageStoreFailover = OriginFailover(pageStore.id, pageServerId)
       const pageStoreCache = ref(
         'PageStoreCache',
         new aws.CloudFront.Distribution({
           DistributionConfig: {
+            Comment: 'Pages and data served by the PageServer',
             Enabled: true,
             Origins: [BucketOrigin(pageStore), pageServer],
             OriginGroups: items([pageStoreFailover]),
             DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id, {
-              OriginRequestPolicyId: s3OriginRequestPolicy,
+              OriginRequestPolicyId: awsOriginRequestPolicy,
             }),
+            HttpVersion: httpVersion,
           },
         })
       )
@@ -261,10 +270,11 @@ export async function deployWebsiteToS3(
         'PublicDirCache',
         new aws.CloudFront.Distribution({
           DistributionConfig: {
+            Comment: `Files from the ./${ctx.config.publicDir}/ folder`,
             Enabled: true,
             Origins: [BucketOrigin(publicDir)],
             DefaultCacheBehavior: DefaultCacheBehavior(publicDir.id, {
-              OriginRequestPolicyId: s3OriginRequestPolicy,
+              OriginRequestPolicyId: awsOriginRequestPolicy,
             }),
           },
         })
@@ -329,13 +339,21 @@ export async function deployWebsiteToS3(
         'EdgeStatic',
         new aws.CloudFront.Distribution({
           DistributionConfig: {
+            Comment: 'Point your domain to this distribution',
             Enabled: true,
             Origins: origins,
             OriginGroups: items(originGroups),
             CacheBehaviors: cacheBehaviors,
             DefaultCacheBehavior: DefaultCacheBehavior(defaultOrigin.Id, {
               CachePolicyId: managedCachePolicies.CachingDisabled,
+              OriginRequestPolicyId: awsOriginRequestPolicy,
             }),
+            HttpVersion: httpVersion,
+            CNAMEs: config.domain && config.acm ? [config.domain] : undefined,
+            ViewerCertificate: config.acm && {
+              AcmCertificateArn: config.acm.certificateArn,
+              SslSupportMethod: 'sni-only',
+            },
           },
         })
       )
@@ -346,12 +364,12 @@ export async function deployWebsiteToS3(
         publicDirCache.dependsOn(
           publicDir,
           defaultCachePolicy,
-          s3OriginRequestPolicy
+          awsOriginRequestPolicy
         ),
         pageStoreCache.dependsOn(
           pageStore,
           defaultCachePolicy,
-          s3OriginRequestPolicy
+          awsOriginRequestPolicy
         )
       )
 

@@ -1,6 +1,5 @@
-import { createRequestFn } from '@saus/cloudflare-request'
+import { createRequestFn, secrets } from '@saus/cloudflare-request'
 import { addSecrets, getDeployContext } from 'saus/deploy'
-import secrets from './secrets'
 
 addSecrets(purgeAllFiles, secrets)
 

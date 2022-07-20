@@ -114,10 +114,15 @@ export class File {
   }
 
   delete() {
+    if (!this.exists) return
     if (this._files.dryRun) {
       this._data = undefined
     } else {
-      fs.unlinkSync(this.path)
+      try {
+        fs.unlinkSync(this.path)
+      } catch {
+        // Something else deleted this file.
+      }
     }
     this._tracker.onDelete(this, this._known)
   }

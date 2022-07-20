@@ -2,6 +2,10 @@
 
 TODO
 
+## Custom Domain
+
+In order for CloudFront to allow requests through your TLD (defined with the `domain` option), you need to manually request a SSL certificate with [AWS Certificate Manager](https://us-east-1.console.aws.amazon.com/acm/home?region=us-east-1#/certificates/request), validate it with DNS or email, and set the `acm.certificateArn` option to its ARN.
+
 ## Caching Tips
 
 - **Avoid Breaking The Cache**

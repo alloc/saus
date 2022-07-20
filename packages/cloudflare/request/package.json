@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "Make requests to Cloudflare v4 API",
   "license": "MIT",
-  "main": "dist/request.js",
-  "module": "dist/request.mjs",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "index.d.ts",
   "files": [
     "dist",

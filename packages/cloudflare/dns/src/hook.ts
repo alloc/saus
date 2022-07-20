@@ -1,7 +1,6 @@
-import { createRequestFn } from '@saus/cloudflare-request'
+import { createRequestFn, secrets } from '@saus/cloudflare-request'
 import { diffObjects, pick } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
-import secrets from './secrets'
 import { DnsRecord, DnsRecordList } from './types'
 import { toTable } from './utils'
 

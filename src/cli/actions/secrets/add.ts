@@ -1,5 +1,5 @@
-import { bold, gray, green, yellow } from 'kleur/colors'
-import type { SecretMap } from '../../../secrets/types'
+import { gray, green, yellow } from 'kleur/colors'
+import { askForSecrets } from '../../../secrets/prompt'
 import { command } from '../../command'
 
 command(addSecrets) //
@@ -38,31 +38,14 @@ async function addSecrets() {
       (missing.size > 3 ? gray(`\n  +${missing.size - 3} more`) : '')
   )
 
-  const { prompt } = await import('@saus/deploy-utils')
+  const secrets = await askForSecrets(missing)
+  if (secrets) {
+    console.log('')
 
-  const secrets: SecretMap = {}
-  for (const name of missing) {
-    console.log(`\nWhat should ${bold(name)} be?`)
-    const { secret } = await prompt({
-      name: 'secret',
-      type: 'password',
-      message: '',
-    })
-    if (!secret) {
-      break
+    const source = await selectSource(sources)
+    if (source) {
+      await source.set(secrets)
+      context.logger.info(green('✔︎ Secrets were saved!'))
     }
-    secrets[name] = secret
-  }
-
-  if (!Object.keys(secrets).length) {
-    return
-  }
-
-  console.log('')
-
-  const source = await selectSource(sources)
-  if (source) {
-    await source.set(secrets)
-    context.logger.info(green('✔︎ Secrets were saved!'))
   }
 }

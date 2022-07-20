@@ -1,5 +1,5 @@
 import { defineSecrets } from 'saus/deploy'
 
-export default defineSecrets({
+export const secrets = defineSecrets({
   apiToken: 'CLOUDFLARE_API_TOKEN',
 })

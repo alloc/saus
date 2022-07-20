@@ -1,5 +1,5 @@
+import { secrets } from '@saus/cloudflare-request'
 import { addDeployHook, addDeployTarget, addSecrets } from 'saus/deploy'
-import secrets from './secrets'
 import { DnsRecordList } from './types'
 
 const hook = addDeployHook(() => import('./hook'))

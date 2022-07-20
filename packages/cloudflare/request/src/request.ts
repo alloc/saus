@@ -20,10 +20,11 @@ export function createRequestFn(config: {
       },
     })
     const { success, errors, messages, result } = resp.toJSON()
+    messages?.forEach((m: string) => config.logger.info(m))
     if (success) {
       return result as T
     }
-    messages.forEach((m: string) => config.logger.info(m))
-    throw Error(errors[0])
+    const { message, ...error } = errors[0]
+    throw Object.assign(Error(message), error)
   }
 }

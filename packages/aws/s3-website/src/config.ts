@@ -9,10 +9,29 @@ import {
 export interface WebsiteConfig {
   /** The GUID of the CloudFormation stack. */
   name: string
+  /**
+   * The public domain used to access your website.
+   * @example "foo.com"
+   */
+  domain?: string
   /** The region to deploy the CloudFormation stack. */
   region: string
-  /** The domain to forward uncached requests to. */
+  /** The internal domain where your Saus app is hosted. */
   origin: string
+  /**
+   * The maximum HTTP version
+   * @default 1.1
+   */
+  httpVersion?: 1.1 | 2.0
+  /**
+   * Configuration related to the viewer certificate provided
+   * by Amazon's Certificate Manager.
+   * @link https://us-east-1.console.aws.amazon.com/acm/home?region=us-east-1#/certificates/request
+   */
+  acm?: {
+    /** The ARN of the certificate. */
+    certificateArn: string
+  }
   /**
    * How to cache responses from S3 or your origin server.
    * Static client modules are unaffected.
