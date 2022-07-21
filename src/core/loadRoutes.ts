@@ -1,17 +1,16 @@
+import { upsertPlugin } from '@/vite/upsertPlugin'
 import * as esModuleLexer from 'es-module-lexer'
-import { klona } from 'klona'
 import MagicString from 'magic-string'
 import path from 'path'
 import { SausContext } from './context'
 import { debug } from './debug'
 import { setRoutesModule } from './global'
-import { injectServerModules } from './injectModules'
+import { getClientInjection, getServerInjection } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
-import { createModuleProvider } from './plugins/moduleProvider'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
 import { callPlugins } from './utils/callPlugins'
-import { serializeImports } from './utils/imports'
+import { Plugin } from './vite'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
@@ -19,18 +18,23 @@ import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
 import { RequireAsync } from './vm/types'
 
-export async function loadRoutes(
-  context: SausContext,
-  transformClient?: (code: string) => string
-) {
+export async function loadRoutes(context: SausContext, plugins: Plugin[]) {
   const time = Date.now()
 
-  const routesModule =
-    context.moduleMap[context.routesPath] ||
-    (await compileRoutesModule(context, (id, importer, isDynamic) =>
+  // Maybe not the best place for these, but the loadRoutes function
+  // is used by both the dev and bundle commands, so it works well.
+  const clientModules = await getClientInjection(context)
+  const serverModules = await getServerInjection(context)
+  upsertPlugin(plugins, clientModules.provider)
+  upsertPlugin(plugins, serverModules.provider)
+
+  const routesModule = await compileRoutesModule(
+    context,
+    serverModules.transform,
+    (id, importer, isDynamic) =>
       // Dynamic imports are assumed to *not* be Node.js modules
       context[isDynamic ? 'ssrRequire' : 'require'](id, importer, isDynamic)
-    ))
+  )
 
   const routesConfig = setRoutesModule({
     catchRoute: undefined,
@@ -70,7 +74,7 @@ export async function loadRoutes(
 
     Object.assign(context, routesConfig)
     context.renderers = await getRouteRenderers(context)
-    context.routeClients = renderRouteClients(context, transformClient)
+    context.routeClients = renderRouteClients(context, clientModules.transform)
     injectClientRoutes(context)
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
@@ -86,35 +90,18 @@ export async function loadRoutes(
 
 async function compileRoutesModule(
   context: SausContext,
+  transform: (code: string) => string,
   requireAsync: RequireAsync
 ) {
   const { resolveId, routesPath, root } = context
-
-  // Injections made with the `injectModules` plugin API are
-  // reloaded whenever the routes module is, while injections
-  // made through the `context` object are reused.
-  const injectedImports = klona(context.injectedImports)
-  const injectedModules = createModuleProvider({
-    serverModules: new Map(context.injectedModules.serverModules),
-    watcher: context.watcher,
-  })
-
-  await injectServerModules(context, injectedModules, injectedImports)
 
   const loadResult = await context.load(context.routesPath)
   if (!loadResult) {
     throw Error(`Cannot find routes module "${routesPath}"`)
   }
 
-  const code = loadResult.code
+  const code = transform(loadResult.code)
   const editor = new MagicString(code)
-
-  if (injectedImports.prepend.length) {
-    editor.prepend(serializeImports(injectedImports.prepend).join('\n') + '\n')
-  }
-  if (injectedImports.append.length) {
-    editor.append(serializeImports(injectedImports.append).join('\n') + '\n')
-  }
 
   // Import specifiers for route modules need to be rewritten
   // as dev URLs for them to be imported properly by the browser.

@@ -5,7 +5,7 @@ import type { DevContext, DevMethods, DevState } from '../dev/context'
 import type { RenderPageResult } from './app/types'
 import { getSausPlugins } from './getSausPlugins'
 import { loadResponseCache, setResponseCache } from './http/responseCache'
-import { InjectedImports } from './injectModules'
+import { VirtualImports } from './injectModules'
 import { CompileCache } from './node/compileCache'
 import { toSausPath } from './paths'
 import { ModuleProvider } from './plugins/moduleProvider'
@@ -20,7 +20,6 @@ import type { Falsy } from './utils/types'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
-import { PluginContainer } from './vite/pluginContainer'
 import { RequireAsyncState } from './vm/asyncRequire'
 import { RequireAsync } from './vm/types'
 
@@ -57,16 +56,16 @@ export interface BaseContext
   getCachedPage: typeof getCachedState
   importMeta: Record<string, any>
   /**
-   * Module paths that are auto-imported from the routes module
-   * in a server context.
-   *
-   * These are injected via `saus.injectModules` hook.
+   * Used for injecting SSR imports.
+   * @internal
    */
-  injectedImports: InjectedImports
-  logger: vite.Logger
-  /** This provider is reset whenever the routes module is changed. */
+  injectedImports: VirtualImports
+  /**
+   * Used for injecting virtual SSR modules.
+   * @internal
+   */
   injectedModules: ModuleProvider
-  pluginContainer: PluginContainer
+  logger: vite.Logger
   plugins: readonly SausPlugin[]
   publicDir: PublicDirOptions | null
   /**

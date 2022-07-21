@@ -186,11 +186,14 @@ export async function loadBundle({
   )
 
   return {
+    ...bundleResult,
+    /** Equals true if loaded from local cache. */
     cached,
-    bundle: bundleResult,
-    bundleFile,
-    bundlePath: path.join(context.compileCache.path, bundleFile),
+    /** Where the bundle is cached locally. */
+    cachePath: path.join(context.compileCache.path, bundleFile),
+    /** The runtime config embedded in the bundle. */
     runtimeConfig,
+    /** The context used to generate the bundle. */
     context,
   }
 }

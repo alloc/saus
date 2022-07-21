@@ -1,6 +1,7 @@
 import { callPlugins } from '@/utils/callPlugins'
 import { generateId } from '@/utils/generateId'
 import { serializeImports } from '@/utils/imports'
+import { klona } from 'klona'
 import { SausContext } from './context'
 import {
   createModuleProvider,
@@ -9,7 +10,7 @@ import {
 } from './plugins/moduleProvider'
 import { renderVirtualRoutes, VirtualRoute } from './virtualRoutes'
 
-export interface InjectedImports {
+export interface VirtualImports {
   prepend: string[]
   append: string[]
 }
@@ -63,7 +64,7 @@ export interface ModuleInjection {
 export function injectServerModules(
   { config, plugins }: SausContext,
   modules: ModuleProvider,
-  injectedImports: InjectedImports
+  injectedImports: VirtualImports
 ): Promise<void> {
   const prependImport = (source: string) => {
     injectedImports.prepend.push(source)
@@ -106,7 +107,7 @@ export function injectServerModules(
 export function injectClientModules(
   context: SausContext,
   modules: ModuleProvider,
-  injectedImports: InjectedImports
+  injectedImports: VirtualImports
 ): Promise<void> {
   const { config, plugins } = context
   return callPlugins(plugins, 'injectModules', {
@@ -142,32 +143,51 @@ export function injectClientModules(
   })
 }
 
-export async function createClientInjection(context: SausContext) {
-  const modules = createModuleProvider({
-    clientModules: new Map(context.injectedModules.clientModules),
+export async function getServerInjection(context: SausContext) {
+  const imports = klona(context.injectedImports)
+  const provider = createModuleProvider({
+    serverModules: new Map(context.injectedModules.serverModules),
     watcher: context.watcher,
   })
-  const injectedImports: InjectedImports = {
-    prepend: [],
-    append: [],
-  }
-  await injectClientModules(context, modules, injectedImports)
+  provider.name = 'saus:serverInjection'
+  await injectServerModules(context, provider, imports)
   return {
-    modules,
-    injectImports(code: string) {
-      return injectImports(code, injectedImports)
+    add: provider.addServerModule,
+    provider,
+    transform(code: string) {
+      if (imports.prepend.length) {
+        code = serializeImports(imports.prepend).join('; ') + '; ' + code
+      }
+      if (imports.append.length) {
+        code += serializeImports(imports.append).join('\n') + '\n'
+      }
+      return code
     },
   }
 }
 
-export function injectImports(code: string, imports: InjectedImports) {
-  if (imports.prepend.length) {
-    code = serializeImports(imports.prepend).join('\n') + '\n' + code
+export async function getClientInjection(context: SausContext) {
+  const imports: VirtualImports = { prepend: [], append: [] }
+  const provider = createModuleProvider({
+    clientModules: new Map(context.injectedModules.clientModules),
+    watcher: context.watcher,
+  })
+  provider.name = 'saus:clientInjection'
+  await injectClientModules(context, provider, imports)
+  return {
+    add: provider.addClientModule,
+    provider,
+    /** Append and prepend any virtual imports */
+    transform(code: string) {
+      if (imports.prepend.length) {
+        code = serializeImports(imports.prepend).join('; ') + '; ' + code
+      }
+      if (imports.append.length) {
+        code +=
+          `\n` +
+          imports.append.map(source => `await import("${source}")`).join(`\n`)
+      }
+      return code
+    },
   }
-  if (imports.append.length) {
-    code +=
-      `\n` +
-      imports.append.map(source => `await import("${source}")`).join(`\n`)
-  }
-  return code
 }

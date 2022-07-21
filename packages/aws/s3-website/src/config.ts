@@ -10,10 +10,10 @@ export interface WebsiteConfig {
   /** The GUID of the CloudFormation stack. */
   name: string
   /**
-   * The public domain used to access your website.
+   * The canonical TLD used to access your website.
    * @example "foo.com"
    */
-  domain?: string
+  alias?: string
   /** The region to deploy the CloudFormation stack. */
   region: string
   /** The internal domain where your Saus app is hosted. */

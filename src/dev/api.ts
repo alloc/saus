@@ -4,7 +4,6 @@ import { Endpoint } from '@/core'
 import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
-import { createClientInjection } from '@/injectModules'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir, runtimeDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
@@ -28,6 +27,7 @@ import { injectNodeModule } from '@/vm/nodeModules'
 import { ModuleMap } from '@/vm/types'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
+import { readFile } from 'fs/promises'
 import http from 'http'
 import { bold, gray, red } from 'kleur/colors'
 import path from 'path'
@@ -152,9 +152,11 @@ async function startServer(
 
   const server = (context.server = await vite.createServer(config))
   const watcher = (context.watcher = server.watcher!)
-  context.pluginContainer = server.pluginContainer as any
-  Object.assign(context, getViteFunctions(server.pluginContainer))
-  Object.assign(context, getRequireFunctions(context))
+  Object.assign(
+    context,
+    getViteFunctions(server.pluginContainer, id => readFile(id, 'utf8')),
+    getRequireFunctions(context)
+  )
   context.events = events
   context.injectedModules = createModuleProvider({ watcher })
   context.liveModulePaths = new Set()
@@ -176,12 +178,7 @@ async function startServer(
       context.ssrForceReload = createFullReload()
       try {
         context.plugins = await getSausPlugins(context)
-        const { modules, injectImports } = await createClientInjection(context)
-
-        // @ts-ignore: This is fine since ModuleProvider has no config/configResolved hook.
-        server.config.plugins.push(modules)
-
-        await loadRoutes(context, injectImports)
+        await loadRoutes(context, plugins)
 
         // TODO: ignore dependencies of defineStateModule loaders
         config.optimizeDeps.entries = toArray(

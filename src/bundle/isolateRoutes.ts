@@ -1,5 +1,5 @@
 import { babel } from '@/babel'
-import { createPluginContainer, vite } from '@/core'
+import { vite } from '@/core'
 import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
@@ -65,7 +65,7 @@ export async function isolateRoutes(
     },
   })
 
-  const pluginContainer = await createPluginContainer({
+  const pluginContainer = await vite.createPluginContainer({
     ...config,
     plugins: config.plugins.filter(p => {
       // CommonJS modules are externalized, so this plugin is just overhead.
@@ -86,7 +86,7 @@ export async function isolateRoutes(
   // within the buildStart hook.
   await pluginContainer.buildStart({})
 
-  const vite = getViteFunctions(pluginContainer)
+  const { fetchModule, resolveId } = getViteFunctions(pluginContainer)
 
   const sausExternalRE = /(^|\/)saus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
@@ -150,9 +150,7 @@ export async function isolateRoutes(
           return { id, external: true }
         }
       }
-      const resolved = await pluginContainer.resolveId(id, importer, {
-        ssr: true,
-      })
+      const resolved = await resolveId(id, importer)
       if (resolved) {
         if (resolved.id == '__vite-browser-external') {
           return { id, external: true }
@@ -208,7 +206,7 @@ export async function isolateRoutes(
     },
     async load(id) {
       try {
-        var transformed = await vite.fetchModule(id)
+        var transformed = await fetchModule(id)
       } catch (e: any) {
         // Acorn parsing error
         const loc = /\((\d+):(\d+)\)$/.exec(e.message)

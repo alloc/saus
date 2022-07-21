@@ -5,6 +5,7 @@ import {
   SourceDescription,
   TransformResult,
 } from 'rollup'
+import { Promisable } from 'type-fest'
 import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
 import { Script } from '../vm/types'
@@ -28,7 +29,10 @@ export interface ViteFunctions {
 }
 
 export function getViteFunctions(
-  pluginContainer: vite.PluginContainer
+  pluginContainer: vite.PluginContainer,
+  loadFallback?: (
+    id: string
+  ) => Promisable<SourceDescription | string | null | undefined>
 ): ViteFunctions {
   let self: ViteFunctions
   return (self = {
@@ -38,7 +42,13 @@ export function getViteFunctions(
       )
     },
     async load(id) {
-      return coerceLoadResult(await pluginContainer.load(id, { ssr: true }))
+      let loadResult = await pluginContainer.load(id, { ssr: true })
+      if (!loadResult && loadFallback) {
+        try {
+          loadResult = await loadFallback(id)
+        } catch {}
+      }
+      return coerceLoadResult(loadResult)
     },
     transform(code, id, inMap) {
       return pluginContainer.transform(code, id, { inMap, ssr: true })

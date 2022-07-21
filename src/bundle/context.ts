@@ -16,7 +16,6 @@ import {
   vite,
 } from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
-import { createPluginContainer } from '@/vite/pluginContainer'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
@@ -129,15 +128,14 @@ export async function loadBundleContext<
     ...config,
     // Disable @rollup/plugin-commonjs (except for Vite builds
     // which don't use this config).
-    plugins: [
-      context.injectedModules,
-      ...config.plugins.filter(p => p.name !== 'commonjs'),
-    ],
+    plugins: config.plugins.filter(p => p.name !== 'commonjs'),
   }
 
-  context.pluginContainer = await createPluginContainer(config)
-  Object.assign(context, getViteFunctions(context.pluginContainer))
-  Object.assign(context, getRequireFunctions(context as BuildContext))
+  const plugins = config.plugins as vite.Plugin[]
+  const pluginContainer = await vite.createPluginContainer(config)
+
+  Object.assign(context, getViteFunctions(pluginContainer))
+  Object.assign(context, getRequireFunctions(context as SausContext))
 
   context.loadRoutes = () => {
     const loading = (async () => {
@@ -145,7 +143,7 @@ export async function loadBundleContext<
         ? startTask('Loading routes...')
         : null
 
-      await loadRoutes(context as BuildContext)
+      await loadRoutes(context as SausContext, plugins)
 
       const routeCount =
         context.routes.length +

@@ -83,8 +83,8 @@ export async function loadDeployContext(
 
   context.deployPath = path.resolve(context.root, deployConfig.entry)
 
-  // @ts-ignore
-  context.pluginContainer.plugins.unshift(secretsPlugin(context.deployPath))
+  const plugins = context.config.plugins as vite.Plugin[]
+  plugins.unshift(secretsPlugin(context.deployPath))
 
   context.rootPackage = JSON.parse(
     fs.readFileSync(path.join(context.root, 'package.json'), 'utf8')

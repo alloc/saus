@@ -64,7 +64,7 @@ async function buildPages(
     }
   }
 
-  const { bundle, bundlePath, runtimeConfig, context } = await loadBundle({
+  const bundle = await loadBundle({
     write: false,
     entry: null,
     format: 'cjs',
@@ -88,6 +88,7 @@ async function buildPages(
     },
   })
 
+  const { context } = bundle
   const buildOptions = context.config.build
   const outDir = path.resolve(context.root, buildOptions.outDir)
 
@@ -98,9 +99,9 @@ async function buildPages(
   const workerData: BundleDescriptor = {
     root: context.root,
     code: bundle.code,
-    filename: bundlePath,
+    filename: bundle.cachePath,
     eventPort: undefined!,
-    runtimeConfig,
+    runtimeConfig: bundle.runtimeConfig,
     isProfiling: true,
   }
 

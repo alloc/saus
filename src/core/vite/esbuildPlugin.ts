@@ -3,9 +3,9 @@ import * as esbuild from 'esbuild'
 import path from 'path'
 import type { BundleContext } from '../../bundle'
 import { toInlineSourceMap } from '../node/sourceMap'
+import { vite } from '../vite'
 import { compileModule } from './compileModule'
 import { getViteFunctions } from './functions'
-import { createPluginContainer } from './pluginContainer'
 
 /**
  * If you want to bundle some modules with Esbuild (instead of Rollup)
@@ -23,7 +23,7 @@ export async function esbuildViteBridge(
     debug: 'export default () => () => {}',
   }
 
-  const pluginContainer = await createPluginContainer(config)
+  const pluginContainer = await vite.createPluginContainer(config)
   const { resolveId, ...compiler } = getViteFunctions(pluginContainer)
 
   return {

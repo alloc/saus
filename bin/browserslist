@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+baseDir=`dirname $0`
+binDir=`echo $PWD/node_modules/saus/node_modules/.pnpm/browserslist*`
+
+eval "$binDir/node_modules/browserslist/cli.js" --update-db

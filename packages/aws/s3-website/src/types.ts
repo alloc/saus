@@ -14,6 +14,14 @@ export interface OriginOverride {
   origin: string
   noCache?: boolean
   forceHttps?: boolean
+  /**
+   * By default, all requests to this origin will inherit the
+   * same controls as the main origin.
+   *
+   * Set this to `allViewer` to forward the unaltered request instead.
+   * @default "inherit"
+   */
+  requestPolicy?: 'allViewer' | 'inherit'
 }
 
 export interface VaryConfig {

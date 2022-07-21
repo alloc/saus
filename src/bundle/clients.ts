@@ -14,7 +14,7 @@ import { prependBase } from '@/utils/base'
 import { vite } from '@/vite'
 import path from 'path'
 import posixPath from 'path/posix'
-import { createClientInjection } from '../core/injectModules'
+import { getClientInjection } from '../core/injectModules'
 import { injectClientPreloads } from './clientPreloads'
 import { clientRedirects } from './moduleRedirects'
 import { ClientAsset, ClientChunk } from './types'
@@ -34,17 +34,15 @@ export async function compileClients(
   } = context
 
   const { clientsById, routesByClientId } = context.routeClients
-  const { modules, injectImports } = await createClientInjection(
-    context as SausContext
-  )
+  const clientModules = await getClientInjection(context as SausContext)
 
   const entryPaths: string[] = []
   await Promise.all(
     Object.entries(clientsById).map(async ([id, client]) => {
       let code: string | null
       if (client && (code = await client.promise)) {
-        code = injectImports(code)
-        modules.addClientModule({ id, code })
+        code = clientModules.transform(code)
+        clientModules.add({ id, code })
         entryPaths.push(id)
       }
     })
@@ -91,7 +89,7 @@ export async function compileClients(
         './src/core/index.ts',
         './src/core/context.ts',
       ]),
-      modules,
+      clientModules.provider,
       moduleRedirection(clientRedirects),
       routesPlugin(clientRouteMap)(),
       rewriteHttpImports(context.logger, true),

@@ -48,20 +48,16 @@ export async function bundle(outFile: string, options: BundleFlags) {
 
   if (options.load || options.reload) {
     const { loadBundle } = await import('../../core')
-    const {
-      cached,
-      bundlePath,
-      context: { logger },
-    } = await loadBundle({
+    const bundle = await loadBundle({
       config: viteOptions,
       bundle: bundleOptions,
       force: options.reload,
     })
-    logger.info(
+    bundle.context.logger.info(
       green('✔︎') +
-        (cached
+        (bundle.cached
           ? ' Bundle is already up-to-date.'
-          : ' Bundle saved to: ' + relativeToCwd(bundlePath))
+          : ' Bundle saved to: ' + relativeToCwd(bundle.cachePath))
     )
   } else {
     options.outFile = outFile

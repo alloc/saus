@@ -13,6 +13,18 @@
     {
       "type": "pwa-node",
       "request": "launch",
+      "name": "Develop react-basic",
+      "cwd": "${workspaceFolder}/examples/react-basic",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/bin/saus",
+      "args": ["dev"],
+      "env": { "DEBUG": "saus" },
+      "resolveSourceMapLocations": [],
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "pwa-node",
+      "request": "launch",
       "name": "Build react-basic",
       "cwd": "${workspaceFolder}/examples/react-basic",
       "skipFiles": ["<node_internals>/**"],

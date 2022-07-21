@@ -27,27 +27,28 @@ export function routeClientsPlugin(): Plugin {
       server = s
     },
     saus(c) {
+      const plugin = this
       context = c as DevContext
       return {
         receiveRoutes() {
           routeClients = c.routeClients
+          plugin.resolveId = id => {
+            const routeClient = routeClients.clientsByUrl[id]
+            return routeClient?.id
+          }
+          plugin.load = async (id, opts) => {
+            const client = routeClients.clientsById[id]
+            if (client) {
+              if (opts?.ssr) {
+                return renderRouteEntry(client.renderer)
+              }
+              return client.promise
+            }
+          }
         },
         onRuntimeConfig(c) {
           config = c
         },
-      }
-    },
-    resolveId(id) {
-      const routeClient = routeClients?.clientsByUrl[id]
-      return routeClient?.id
-    },
-    async load(id, opts) {
-      const client = routeClients.clientsById[id]
-      if (client) {
-        if (opts?.ssr) {
-          return renderRouteEntry(client.renderer)
-        }
-        return client.promise
       }
     },
     transformIndexHtml: {

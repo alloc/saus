@@ -38,6 +38,7 @@ async function setSecrets(opts: { all?: boolean } = {}) {
           message: 'Select which secrets to replace',
           choices: Object.keys(context.secrets['_secrets']).map(name => ({
             title: name,
+            value: name,
           })),
         })
       ).names || []

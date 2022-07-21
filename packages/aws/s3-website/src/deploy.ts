@@ -6,6 +6,7 @@ import {
   useCloudFormation,
   Value,
 } from '@saus/cloudform'
+import { relative } from 'path'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
 import { normalizeHeaderKeys } from 'saus/http'
@@ -210,11 +211,7 @@ export async function deployWebsiteToS3(
         // Avoid using HTTPS since it costs more.
         // @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/ChargesForHTTPSConnections.html
         ViewerProtocolPolicy: 'allow-all',
-        // S3 buckets must never receive a Host header.
-        OriginRequestPolicyId:
-          isResourceRef(target) && buckets.has(target)
-            ? awsOriginRequestPolicy
-            : managedRequestPolicies.AllViewer,
+        OriginRequestPolicyId: awsOriginRequestPolicy,
         ResponseHeadersPolicyId: config.injectSecurityHeaders
           ? managedResponseHeaderPolicies.SecurityHeaders
           : undefined,
@@ -223,7 +220,7 @@ export async function deployWebsiteToS3(
 
       const DefaultCacheBehavior = (
         target: Value<string> | ResourceRef,
-        props: Omit<
+        props?: Omit<
           CacheBehavior,
           'PathPattern' | 'ViewerProtocolPolicy' | 'TargetOriginId'
         >
@@ -256,9 +253,7 @@ export async function deployWebsiteToS3(
             Enabled: true,
             Origins: [BucketOrigin(pageStore), pageServer],
             OriginGroups: items([pageStoreFailover]),
-            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id, {
-              OriginRequestPolicyId: awsOriginRequestPolicy,
-            }),
+            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id),
             HttpVersion: httpVersion,
           },
         })
@@ -270,12 +265,13 @@ export async function deployWebsiteToS3(
         'PublicDirCache',
         new aws.CloudFront.Distribution({
           DistributionConfig: {
-            Comment: `Files from the ./${ctx.config.publicDir}/ folder`,
+            Comment: `Files from the ./${relative(
+              ctx.root,
+              ctx.config.publicDir
+            )}/ folder`,
             Enabled: true,
             Origins: [BucketOrigin(publicDir)],
-            DefaultCacheBehavior: DefaultCacheBehavior(publicDir.id, {
-              OriginRequestPolicyId: awsOriginRequestPolicy,
-            }),
+            DefaultCacheBehavior: DefaultCacheBehavior(publicDir.id),
           },
         })
       )
@@ -331,6 +327,10 @@ export async function deployWebsiteToS3(
             CachePolicyId: origin.noCache
               ? managedCachePolicies.CachingDisabled
               : defaultCachePolicy,
+            OriginRequestPolicyId:
+              origin.requestPolicy == 'allViewer'
+                ? managedRequestPolicies.AllViewer
+                : awsOriginRequestPolicy,
           })
         )
       })
@@ -346,10 +346,12 @@ export async function deployWebsiteToS3(
             CacheBehaviors: cacheBehaviors,
             DefaultCacheBehavior: DefaultCacheBehavior(defaultOrigin.Id, {
               CachePolicyId: managedCachePolicies.CachingDisabled,
-              OriginRequestPolicyId: awsOriginRequestPolicy,
             }),
             HttpVersion: httpVersion,
-            CNAMEs: config.domain && config.acm ? [config.domain] : undefined,
+            Aliases:
+              config.alias && config.acm
+                ? [config.alias, '*.' + config.alias]
+                : undefined,
             ViewerCertificate: config.acm && {
               AcmCertificateArn: config.acm.certificateArn,
               SslSupportMethod: 'sni-only',
@@ -374,15 +376,43 @@ export async function deployWebsiteToS3(
       )
 
       return {
+        /** The `alias` option, or an empty string */
+        alias: config.alias || '',
+        /** The domain name of the front-facing CloudFront distribution */
         domain: assetCache.get<string>('DomainName'),
+        /**
+         * Identifiers for internal CloudFront distributions.
+         *
+         * These are useful for cache invalidation.
+         */
         caches: {
           pageStore: pageStoreCache,
           publicDir: publicDirCache,
         },
+        /** Bucket names for S3 storage */
         buckets: {
+          /**
+           * The generated JS/CSS/etc for the latest client bundle.
+           */
           assets,
+          /**
+           * When your client bundle is updated, this bucket is where the old
+           * assets from the previous bundle are stored. They are automatically
+           * deleted after 48 hours.
+           */
           oldAssets,
+          /**
+           * The assets found in your `publicDir` directory are
+           * stored here to be served by the CloudFront distribution.
+           */
           publicDir,
+          /**
+           * Your origin server will upload pages and state modules to
+           * this bucket if you call the `setupPageStore` function in
+           * your routes module.
+           *
+           * The `@saus/page-store` package has more info.
+           */
           pageStore,
         },
       }
