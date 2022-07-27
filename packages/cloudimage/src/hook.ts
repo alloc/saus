@@ -13,7 +13,7 @@ export default defineDeployHook(ctx => {
   let auth: Auth
   return {
     name: '@saus/cloudimage',
-    async pull(config: Config) {
+    async pull(_config: Config) {
       auth = await login()
       return { token: auth.projectToken }
     },
@@ -57,6 +57,7 @@ const adminBase = 'https://admin.cloudimage.io/api'
 
 async function login() {
   const resp = await http.post('/login', {
+    allowBadStatus: true,
     base: adminBase,
     body: {
       json: {
@@ -66,10 +67,10 @@ async function login() {
     },
   })
 
-  const { status, session_uuid } = resp.toJSON() as LoginResponse
+  const { status, session_uuid, msg } = resp.toJSON() as LoginResponse
 
   if (status !== 'success') {
-    throw Error('Login failed')
+    throw Error('Login failed: ' + msg)
   }
 
   return getSession(session_uuid)
