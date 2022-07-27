@@ -18,6 +18,8 @@ export interface WebsiteConfig {
   region: string
   /** The internal domain where your Saus app is hosted. */
   origin: string
+  /** Force HTTPS when forwarding request to `origin` */
+  httpsOnly?: boolean
   /**
    * The maximum HTTP version
    * @default 1.1

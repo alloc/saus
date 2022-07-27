@@ -234,11 +234,13 @@ export async function deployWebsiteToS3(
       const pageServer: OriginConfig = {
         Id: pageServerId,
         DomainName: config.origin,
-        CustomOriginConfig: {
-          HTTPPort: 80,
-          HTTPSPort: 443,
-          OriginProtocolPolicy: 'match-viewer',
-        },
+        CustomOriginConfig: config.httpsOnly
+          ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
+          : {
+              HTTPPort: 80,
+              HTTPSPort: 443,
+              OriginProtocolPolicy: 'match-viewer',
+            },
       }
 
       const httpVersion = 'http' + (config.httpVersion || 1.1)
