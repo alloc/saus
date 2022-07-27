@@ -45,7 +45,7 @@ export const wrapEndpoints =
         if (returned) {
           if (returned instanceof HttpRedirect) {
             headers.location(returned.location)
-            response = createResponse(route, headers, 301)
+            response = createResponse(route, headers, returned.status)
           } else {
             headers.merge(returned.headers)
             response = createResponse(route, headers, returned.status, {

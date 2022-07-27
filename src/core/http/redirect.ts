@@ -1,5 +1,5 @@
 export class HttpRedirect {
-  constructor(readonly location: string) {}
+  constructor(readonly location: string, readonly status = 301) {}
 }
 
 /**

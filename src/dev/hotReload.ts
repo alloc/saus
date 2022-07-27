@@ -3,7 +3,6 @@ import { loadRoutes } from '@/loadRoutes'
 import { clearCachedState } from '@/runtime/clearCachedState'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
-import { Plugin } from '@/vite'
 import { isLiveModule } from '@/vm/isLiveModule'
 import {
   PurgeHandler,
@@ -112,7 +111,7 @@ export function createHotReload(
     if (routesChanged) {
       try {
         logger.info(yellow('⨠ Reloading routes...'))
-        await loadRoutes(context, server.config.plugins as Plugin[])
+        await loadRoutes(context)
         logger.info(green('✔︎ Routes are ready!'), { clear: true })
 
         // Reload the client-side routes map.
@@ -146,7 +145,6 @@ export function createHotReload(
       await moduleMap.__compileQueue
 
       // State modules import "saus/client" to access the `defineStateModule`
-      import { Plugin } from '@/core'
       // function. Then the routes module imports those state modules.
       // But we want to avoid reloading the routes module when the live exports
       // of the "saus/client" module are changed, since the routes module can't

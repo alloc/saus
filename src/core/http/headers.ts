@@ -117,7 +117,7 @@ const toDashCase = (input: string) =>
     .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
     .toLowerCase()
 
-type WrappedHeaders = ResponseHeaders | null
+type WrappedHeaders = Partial<CommonHeaders> | null
 
 /**
  * This function provides a builder for defining headers in a more
@@ -201,6 +201,8 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
     }
     return false
   }
+  get<P extends keyof Extract<T, object>>(name: P): Extract<T, object>[P]
+  get(name: string): string | string[] | undefined
   get(name: string) {
     return this.headers?.[name]
   }

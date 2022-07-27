@@ -10,7 +10,6 @@ import { servedPathForFile } from './node/servedPathForFile'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
 import { callPlugins } from './utils/callPlugins'
-import { Plugin } from './vite'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
@@ -18,7 +17,8 @@ import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
 import { RequireAsync } from './vm/types'
 
-export async function loadRoutes(context: SausContext, plugins: Plugin[]) {
+export async function loadRoutes(context: SausContext) {
+  const { plugins, filterStack } = context.config
   const time = Date.now()
 
   // Maybe not the best place for these, but the loadRoutes function
@@ -79,7 +79,7 @@ export async function loadRoutes(context: SausContext, plugins: Plugin[]) {
 
     debug(`Loaded the routes module in ${Date.now() - time}ms`)
   } catch (error: any) {
-    formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
+    formatAsyncStack(error, context.moduleMap, [], filterStack)
     throw error
   } finally {
     setRoutesModule(null)

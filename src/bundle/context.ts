@@ -61,12 +61,14 @@ export async function loadBundleContext<
   inlineConfig: vite.UserConfig = options.config || {}
 ): Promise<T> {
   const context = await loadContext<BundleContext>('build', inlineConfig)
+  const { config } = context
+
   context.injectedModules = createModuleProvider({ root: context.root })
   context.plugins = await getSausPlugins(context as SausContext)
 
   const buildConfig = context.userConfig.build || {}
   const bundleConfig = assignDefaults(
-    { ...context.config.saus.bundle },
+    { ...config.saus.bundle },
     BundleConfigDefaults
   )
 
@@ -123,15 +125,8 @@ export async function loadBundleContext<
     write,
   }
 
-  let { config } = context
-  config = {
-    ...config,
-    // Disable @rollup/plugin-commonjs (except for Vite builds
-    // which don't use this config).
-    plugins: config.plugins.filter(p => p.name !== 'commonjs'),
-  }
-
-  const plugins = config.plugins as vite.Plugin[]
+  // Disable @rollup/plugin-commonjs for SSR loading.
+  config.plugins = config.plugins.filter(p => p.name !== 'commonjs')
   const pluginContainer = await vite.createPluginContainer(config)
 
   Object.assign(context, getViteFunctions(pluginContainer))
@@ -139,11 +134,11 @@ export async function loadBundleContext<
 
   context.loadRoutes = () => {
     const loading = (async () => {
-      const task = config.logger.isLogged('info')
+      const task = context.logger.isLogged('info')
         ? startTask('Loading routes...')
         : null
 
-      await loadRoutes(context as SausContext, plugins)
+      await loadRoutes(context as SausContext)
 
       const routeCount =
         context.routes.length +

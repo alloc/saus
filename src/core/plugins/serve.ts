@@ -3,9 +3,9 @@ import { IncomingMessage, ServerResponse } from 'http'
 import os from 'os'
 import { renderErrorFallback } from '../app/errorFallback'
 import { createNegotiator } from '../app/negotiator'
-import { RenderedFile } from '../app/types'
+import { RenderedFile, ResolvedRoute } from '../app/types'
 import { DevContext } from '../context'
-import { Endpoint, Plugin, Route } from '../core'
+import { Endpoint, Plugin } from '../core'
 import { makeRequestUrl } from '../makeRequest'
 import { parseUrl } from '../node/url'
 import { writeResponse } from '../node/writeResponse'
@@ -22,8 +22,7 @@ const requestMetas = new WeakMap<IncomingMessage, RequestMeta>()
 
 type RequestMeta = {
   url: Endpoint.RequestUrl
-  route: Route | undefined
-  functions: readonly Endpoint[]
+  resolved: ResolvedRoute
 }
 
 export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
@@ -91,7 +90,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           return res.end()
         }
         req.url = url
-        const [functions, route] = resolveFunctions(req, context)
+        const { functions, route } = resolveFunctions(req, context)
         if (functions.length && route !== context.defaultRoute) {
           serveApp(req, res, err => {
             req.url = req.originalUrl
@@ -118,13 +117,12 @@ function resolveFunctions(_req: IncomingMessage, context: DevContext) {
     headers: _req.headers,
     read: () => streamToBuffer(_req),
   })
-  const [functions, route] = context.app.resolveRoute(req)
+  const resolved = context.app.resolveRoute(req)
   requestMetas.set(_req, {
     url: req,
-    route,
-    functions,
+    resolved,
   })
-  return [functions, route] as const
+  return resolved
 }
 
 async function processRequest(
@@ -138,16 +136,13 @@ async function processRequest(
     hotReload: { nonce },
   } = context
 
-  const { url, route, functions } = requestMetas.get(req)!
-  const { status, headers, body } = await app.callEndpoints(url, [
-    functions,
-    route,
-  ])
+  const { url, resolved } = requestMetas.get(req)!
+  const { status, headers, body } = await app.callEndpoints(url, resolved)
 
   // Reprocess the request if modules were changed during.
   if (nonce !== context.hotReload.nonce) {
     return waitForReload(context, () => {
-      const [functions] = resolveFunctions(req, context)
+      const { functions } = resolveFunctions(req, context)
       return functions.length
         ? processRequest(context, req, res, next)
         : process.nextTick(next)

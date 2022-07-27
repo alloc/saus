@@ -170,15 +170,14 @@ async function startServer(
   // by Vite internals after `buildStart` hooks have finished.
   // Why? Because adding route/layout modules to `optimizeDeps.entries`
   // as soon as possible lets us avoid unnecessary browser reloads.
-  const plugins = config.plugins as vite.Plugin[]
-  plugins.push({
+  config.plugins.push({
     name: 'saus:loadRoutes',
     async buildStart() {
       // Force all node_modules to be reloaded
       context.ssrForceReload = createFullReload()
       try {
         context.plugins = await getSausPlugins(context)
-        await loadRoutes(context, plugins)
+        await loadRoutes(context)
 
         // TODO: ignore dependencies of defineStateModule loaders
         config.optimizeDeps.entries = toArray(

@@ -42,7 +42,7 @@ export interface BaseContext
   command: SausCommand
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
-  config: ResolvedConfig
+  config: ResolvedConfig & { plugins: vite.Plugin[] }
   configPath: string | undefined
   /** Path to the default layout */
   defaultLayout: { id: string; hydrated?: boolean }

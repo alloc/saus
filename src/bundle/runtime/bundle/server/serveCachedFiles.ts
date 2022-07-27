@@ -17,7 +17,7 @@ export const serveCachedFiles =
 
     const [file, headers] = entry
     if (file instanceof HttpRedirect) {
-      res.writeHead(301, {
+      res.writeHead(file.status, {
         Location: file.location,
       })
     } else {
