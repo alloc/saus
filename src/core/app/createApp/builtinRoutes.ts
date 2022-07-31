@@ -4,7 +4,6 @@ import { makeRequestUrl } from '@/makeRequest'
 import { ParsedUrl, parseUrl } from '@/node/url'
 import type { Route } from '@/routes'
 import { globalCache } from '@/runtime/cache'
-import { CachePlugin } from '@/runtime/cachePlugin'
 import { getCachedState } from '@/runtime/getCachedState'
 import { route } from '@/runtime/routes'
 import { stateModulesById } from '@/runtime/stateModules'
@@ -74,13 +73,6 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
       const stateModule = stateModulesById.get(id)
       if (stateModule) {
         await getCachedState(cacheKey, async cacheControl => {
-          let result: any
-          if (CachePlugin.loader) {
-            result = await CachePlugin.loader(cacheKey, cacheControl)
-          }
-          if (result !== undefined) {
-            return result
-          }
           const loader = globalCache.loaders[cacheKey]
           if (loader) {
             return loader(cacheControl)
