@@ -20,6 +20,8 @@ export interface CommonRequestHeaders {
   'accept-language': string
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization */
   authorization: string
+  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie */
+  cookie: string
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match */
   'if-match': string
   /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since */
