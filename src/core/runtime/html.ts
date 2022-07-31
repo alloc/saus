@@ -40,8 +40,14 @@ class UnsafeHtmlString extends String {
   }
 }
 
-function unsafeHTML(html: string) {
-  return new UnsafeHtmlString(html) as UnsafeHTML
+function unsafeHTML(html: string): UnsafeHTML
+function unsafeHTML(html: any): UnsafeHTML | null
+function unsafeHTML(html: any) {
+  return typeof html == 'string'
+    ? (new UnsafeHtmlString(html) as UnsafeHTML)
+    : html && kUnsafeHtml in html
+    ? html
+    : null
 }
 
 export type UnsafeHTML = string & UnsafeHtmlString
