@@ -1,5 +1,6 @@
 import { Endpoint } from '@/endpoint'
 import { routesModule } from '@/global'
+import { getCurrentModule } from '@/node/currentModule'
 import type {
   InferRouteParams,
   ParsedRoute,
@@ -12,7 +13,6 @@ import { parseLazyImport } from '@/utils/parseLazyImport'
 import { parseRoutePath } from '@/utils/parseRoutePath'
 import { getLayoutEntry } from './getLayoutEntry'
 import { RoutePlugin } from './routePlugins'
-import { getCurrentModule } from './ssrModules'
 
 const routeStack: Route[] = []
 const privateRoute: ParsedRoute = {
