@@ -116,8 +116,8 @@ export async function bundle(
   // Prevent unhandled rejection crash.
   isolatedRoutesPlugin.catch(noop)
 
-  const { pluginContainer } = context
-  await pluginContainer.buildStart({})
+  // Prepare any Vite/Rollup plugins that initialize state before each build.
+  await context.buildStart()
 
   Profiling.mark('generate client modules')
   const { clientRouteMap, clientChunks, clientAssets } = await compileClients(

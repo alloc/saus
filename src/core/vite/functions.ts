@@ -12,6 +12,7 @@ import { Script } from '../vm/types'
 import { compileModule } from './compileModule'
 
 export interface ViteFunctions {
+  buildStart(): Promise<void>
   resolveId: (
     id: string,
     importer?: string | null
@@ -36,6 +37,9 @@ export function getViteFunctions(
 ): ViteFunctions {
   let self: ViteFunctions
   return (self = {
+    buildStart() {
+      return pluginContainer.buildStart({})
+    },
     async resolveId(id, importer) {
       return coerceResolveIdResult(
         await pluginContainer.resolveId(id, importer!, { ssr: true })
