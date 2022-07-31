@@ -58,18 +58,31 @@ export async function loadRoutes(context: SausContext) {
 
     // Resolve route modules of generated routes to ensure they exist.
     for (const route of routesConfig.routes) {
-      if (!route.moduleId || !route.generated) {
-        continue
+      let needsResolve = false
+      let moduleId = route.moduleId!
+      if (moduleId) {
+        if (route.generated) {
+          needsResolve = true
+        } else if (/^\.\.?(\/|$)/.test(moduleId)) {
+          needsResolve = true
+          if (!route.file) {
+            throw Error(
+              `Route "${route.path}" has relative import but no filename`
+            )
+          }
+        }
       }
-      let resolved = await context.resolveId(route.moduleId, route.file)
-      if (!resolved) {
-        const error = Error(`Cannot find module "${route.moduleId}"`)
-        throw Object.assign(error, {
-          code: 'ERR_MODULE_NOT_FOUND',
-          importer: route.file,
-        })
+      if (needsResolve) {
+        const resolved = await context.resolveId(moduleId, route.file)
+        if (!resolved) {
+          const error = Error(`Cannot find module "${route.moduleId}"`)
+          throw Object.assign(error, {
+            code: 'ERR_MODULE_NOT_FOUND',
+            importer: route.file,
+          })
+        }
+        route.moduleId = servedPathForFile(resolved.id, context.root)
       }
-      route.moduleId = servedPathForFile(resolved.id, context.root)
     }
 
     Object.assign(context, routesConfig)
