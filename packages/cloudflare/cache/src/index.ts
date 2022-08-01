@@ -1,4 +1,5 @@
 import { createRequestFn, secrets } from '@saus/cloudflare-request'
+import { PurgePlugin } from 'saus'
 import { addSecrets, getDeployContext } from 'saus/deploy'
 
 addSecrets(purgeAllFiles, secrets)
@@ -18,4 +19,16 @@ export function purgeAllFiles(zoneId: string) {
   return request('post', `/zones/${zoneId}/purge_cache`, {
     body: { json: { purge_everything: true } },
   })
+}
+
+export function purgeCloudflare(zoneId: string): PurgePlugin {
+  return {
+    name: '@saus/cloudflare-cache:purge',
+    purge(request) {
+      if (request.globs.has('/*')) {
+        return purgeAllFiles(zoneId)
+      }
+      // TODO: path-specific purging
+    },
+  }
 }

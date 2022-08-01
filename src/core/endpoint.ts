@@ -109,11 +109,17 @@ export namespace Endpoint {
     (promise: ResponsePromise): void
   }
 
+  export type RequestReader = {
+    (): Promise<Buffer>
+    (encoding: BufferEncoding): Promise<string>
+    (encoding?: BufferEncoding): Promise<string | Buffer>
+  }
+
   export interface RequestUrl<Params extends object = any>
     extends ParsedUrl<Params> {
     readonly method: string
     readonly headers: Readonly<RequestHeaders>
-    readonly read: () => Promise<Buffer>
+    readonly read: RequestReader
     readonly json: <T = any>() => Promise<T>
     /**
      * The platform-specific request object related to this URL. \

@@ -1,7 +1,31 @@
-export function streamToBuffer(s: NodeJS.ReadableStream, maxLength = Infinity) {
+export function streamToBuffer(
+  s: NodeJS.ReadableStream,
+  maxLength?: number
+): Promise<Buffer>
+
+export function streamToBuffer(
+  s: NodeJS.ReadableStream,
+  maxLength: number,
+  encoding: BufferEncoding
+): Promise<string>
+
+export function streamToBuffer(
+  s: NodeJS.ReadableStream,
+  maxLength?: number,
+  encoding?: BufferEncoding
+): Promise<string | Buffer>
+
+export function streamToBuffer(
+  s: NodeJS.ReadableStream,
+  maxLength = 0,
+  encoding?: BufferEncoding
+) {
   const trace = Error()
-  return new Promise<Buffer>((resolve, reject) => {
-    const hasMaxLength = isFinite(maxLength)
+  return new Promise<string | Buffer>((resolve, reject) => {
+    const hasMaxLength = maxLength > 0
+    if (!hasMaxLength) {
+      maxLength = Infinity
+    }
 
     let bytes = 0
     let chunks: Buffer[] = []
@@ -28,7 +52,8 @@ export function streamToBuffer(s: NodeJS.ReadableStream, maxLength = Infinity) {
     })
     s.on('end', () => {
       if (bytes <= maxLength) {
-        resolve(Buffer.concat(chunks))
+        const result = Buffer.concat(chunks)
+        resolve(encoding ? result.toString(encoding) : result)
       }
     })
   })

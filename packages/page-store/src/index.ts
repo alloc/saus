@@ -16,7 +16,6 @@ import {
   ResponseHeaders,
   unwrapBody,
 } from 'saus/http'
-import { addPurgeRoute } from './purge/route'
 
 export type PageRuleContext = ParsedUrl & {
   headers: Readonly<RequestHeaders>
@@ -84,7 +83,7 @@ export function setupPageStore(config: PageStoreConfig) {
       req: Endpoint.Request,
       res: Endpoint.Response
     ): boolean =>
-      !res.ok ||
+      res.status !== 200 ||
       !res.body ||
       !!res.body.stream ||
       !res.route ||

@@ -221,6 +221,12 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
     }
     return this.proxy
   }
+  unset(name: string) {
+    if (this.headers) {
+      delete this.headers[name]
+    }
+    return this.proxy
+  }
   /** Merge headers defined in the given object. */
   merge(values: RequestHeaders | null | undefined) {
     if (values) {

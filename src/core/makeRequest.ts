@@ -6,7 +6,8 @@ import { assignDefaults } from './utils/assignDefaults'
 import { defer } from './utils/defer'
 
 const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)
-const emptyRead = async () => emptyBody
+const emptyRead = async (encoding?: BufferEncoding) =>
+  encoding ? '' : emptyBody
 
 const defaultProps = {
   method: 'GET',
@@ -23,15 +24,15 @@ export const makeRequestUrl = <Params extends {}>(
   props: {
     method?: string
     headers?: Readonly<RequestHeaders>
-    read?: typeof emptyRead
+    read?: Endpoint.RequestReader
     object?: any
   } = {}
 ): Endpoint.RequestUrl<Params> =>
   isRequestUrl(url) ? url : Object.assign(url, defaultProps, props)
 
 async function readJson(this: Endpoint.RequestUrl) {
-  const data = await this.read()
-  return JSON.parse(data.toString())
+  const data = await this.read('utf8')
+  return JSON.parse(data)
 }
 
 function isRequestUrl<T extends {} = any>(

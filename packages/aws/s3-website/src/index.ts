@@ -1,2 +1,2 @@
 export * from './deploy'
-export * from './emptyPageStore'
+export * from './page-store'

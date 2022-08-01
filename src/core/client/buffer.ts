@@ -4,6 +4,10 @@
 export class Buffer {
   protected constructor(readonly buffer: ArrayBuffer) {}
 
+  get length() {
+    return this.buffer.byteLength
+  }
+
   static isBuffer(buf: any): buf is Buffer {
     return buf instanceof Buffer
   }

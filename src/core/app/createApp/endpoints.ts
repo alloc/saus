@@ -96,6 +96,9 @@ function createResponse(
     if (body) {
       headers.merge(body.headers)
       body = pickAllExcept(body, ['headers'])
+      if (!Object.keys(body).length) {
+        body = undefined
+      }
     }
   } else {
     status = arg1.statusCode!

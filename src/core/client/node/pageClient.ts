@@ -4,10 +4,14 @@ import { getPagePath } from '../../utils/getPagePath'
 import type { PageClient } from '../pageClient'
 
 export async function loadPageClient(routePath: string, routeParams?: any) {
-  const { ssrRequire, routes, routeClients }: DevContext = (void 0, require)(
-    '../core/context.cjs'
-  )
-  const route = routes.find(route => route.path == routePath)
+  const { ssrRequire, routes, defaultRoute, routeClients }: DevContext =
+    (void 0, require)('../core/context.cjs')
+
+  const route =
+    routePath == 'default'
+      ? defaultRoute
+      : routes.find(route => route.path == routePath)
+
   const routeClient = route && routeClients.getClientByRoute(route)
   if (routeClient) {
     const pagePath = getPagePath(routePath, routeParams)
@@ -15,5 +19,6 @@ export async function loadPageClient(routePath: string, routeParams?: any) {
     client.props = await getCachedState(pagePath, cache => cache.oldValue)
     return client
   }
+
   throw Error(`Unknown route: "${routePath}"`)
 }

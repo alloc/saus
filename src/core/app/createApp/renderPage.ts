@@ -217,12 +217,12 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         return [page]
       },
       error => {
-        options.renderFinish?.(url, error)
-        if (options.onError) {
-          options.onError(error)
-        } else {
-          onError(error)
-        }
+        // options.renderFinish?.(url, error)
+        // if (options.onError) {
+        //   options.onError(error)
+        // } else {
+        //   onError(error)
+        // }
         return [null, error]
       }
     )

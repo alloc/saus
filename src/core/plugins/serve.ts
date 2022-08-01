@@ -115,7 +115,7 @@ function resolveFunctions(_req: IncomingMessage, context: DevContext) {
     object: _req,
     method: _req.method!,
     headers: _req.headers,
-    read: () => streamToBuffer(_req),
+    read: encoding => streamToBuffer(_req, 0, encoding),
   })
   const resolved = context.app.resolveRoute(req)
   requestMetas.set(_req, {
