@@ -15,6 +15,7 @@ export const context: App.Context = {
   }),
   onError: console.error,
   routes: [],
+  routeStack: [],
   runtimeHooks: [],
   ssrRequire: ssrImport,
 }

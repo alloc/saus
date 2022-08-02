@@ -51,6 +51,6 @@ export async function pollDeployment(opts: PollOptions) {
         return
       }
     }
-    await new Promise(done => setTimeout(done, interval))
+    await new Promise(done => setTimeout(done, interval * 1e3))
   }
 }
