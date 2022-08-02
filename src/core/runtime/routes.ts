@@ -1,5 +1,5 @@
 import { Endpoint } from '@/endpoint'
-import { routesModule } from '@/global'
+import { routesModule, routeStack, withParentRoute } from '@/global'
 import { getCurrentModule } from '@/node/currentModule'
 import type {
   InferRouteParams,
@@ -98,9 +98,8 @@ export function route(
   }
 
   const isPublic = path[0] === '/'
-  if (isPublic && routesModule.routeStack.length) {
-    path =
-      Array.from(routesModule.routeStack, route => route.path).join('') + path
+  if (isPublic && routeStack.length) {
+    path = Array.from(routeStack, route => route.path).join('') + path
   }
 
   const { pattern, keys } = isPublic ? parseRoutePath(path) : privateRoute
@@ -119,7 +118,6 @@ export function route(
     const layoutEntry = getLayoutEntry(self, '')
     if (layoutEntry) {
       self.layoutEntry = layoutEntry
-      routesModule.layoutEntries.add(layoutEntry)
     }
   }
 
@@ -127,7 +125,7 @@ export function route(
     routesModule.routes.push(self)
   } else {
     // TODO: support nesting of catch-all and error routes
-    if (routesModule.routeStack.length)
+    if (routeStack.length)
       throw Error(
         'Cannot set "default" or "error" route within `extend` callback'
       )
@@ -146,25 +144,7 @@ export function route(
 
 function createRouteAPI(parent: Route) {
   const api = {
-    extend(extension) {
-      const { requestHooks, responseHooks } = routesModule
-      routesModule.routeStack.push(parent)
-      routesModule.requestHooks = parent.requestHooks || []
-      routesModule.responseHooks = parent.responseHooks || []
-      try {
-        extension()
-      } finally {
-        routesModule.routeStack.pop()
-        if (routesModule.requestHooks.length) {
-          parent.requestHooks = routesModule.requestHooks
-        }
-        if (routesModule.requestHooks.length) {
-          parent.responseHooks = routesModule.responseHooks
-        }
-        routesModule.requestHooks = requestHooks
-        routesModule.responseHooks = responseHooks
-      }
-    },
+    extend: withParentRoute.bind(null, parent),
   } as Route.API
 
   for (const method of httpMethods) {

@@ -207,14 +207,10 @@ export interface RoutesModule extends HtmlContext {
   runtimeHooks: RuntimeHook[]
   /** Routes defined with the `route` function */
   routes: Route[]
-  /** The stack of `route(...).extend` calls */
-  routeStack: Route[]
   /** The route used when no route is matched */
   defaultRoute?: Route
   /** The route used when an error is thrown while rendering */
   catchRoute?: Route
-  /** Non-default route layouts */
-  layoutEntries: Set<string>
   /** Import a module by its SSR path */
   ssrRequire: RequireAsync
   requestHooks?: Endpoint.RequestHook[]

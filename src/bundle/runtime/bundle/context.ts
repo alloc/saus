@@ -7,7 +7,6 @@ import config from './config'
 export const context: App.Context = {
   config,
   defaultState: [],
-  layoutEntries: new Set(),
   getCachedPage: withCache({
     loading: {},
     loaders: {},
@@ -15,7 +14,6 @@ export const context: App.Context = {
   }),
   onError: console.error,
   routes: [],
-  routeStack: [],
   runtimeHooks: [],
   ssrRequire: ssrImport,
 }

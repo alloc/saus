@@ -17,6 +17,7 @@ export type Plugin = vite.Plugin
 
 export type ResolvedConfig = Omit<vite.ResolvedConfig, 'saus'> & {
   readonly saus: Readonly<SausConfig>
+  plugins: vite.Plugin[]
 }
 
 export const BundleConfigDefaults = {

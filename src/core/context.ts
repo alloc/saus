@@ -42,7 +42,7 @@ export interface BaseContext
   command: SausCommand
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
-  config: ResolvedConfig & { plugins: vite.Plugin[] }
+  config: ResolvedConfig
   configPath: string | undefined
   /** Path to the default layout */
   defaultLayout: { id: string; hydrated?: boolean }
@@ -153,11 +153,9 @@ async function createContext(props: {
       append: [],
     },
     injectedModules: null!,
-    layoutEntries: new Set(),
     linkedModules: {},
     logger: config.logger,
     moduleMap: {},
-    pluginContainer: null!,
     plugins: [],
     renderers: null!,
     require: null!,
