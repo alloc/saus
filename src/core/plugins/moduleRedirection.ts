@@ -121,8 +121,8 @@ export function moduleRedirection(
           }
         }
       }
-      if (isDebug && (resolved || existsSync(absoluteId))) {
-        onResolved(resolved ? resolved.id : absoluteId, id, importer)
+      if (isDebug && existsSync(absoluteId)) {
+        onResolved(absoluteId, id, importer)
       }
       return resolved
     },

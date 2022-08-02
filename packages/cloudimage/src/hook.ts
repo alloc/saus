@@ -1,5 +1,6 @@
 import { rewriteKeys } from '@saus/deploy-utils'
 import merge from 'lodash.merge'
+import { md5Hex } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
 import { http } from 'saus/http'
 import { Config, configToPayload } from './config'
@@ -11,20 +12,24 @@ import { SessionResponse } from './types/session'
 
 export default defineDeployHook(ctx => {
   let auth: Auth
+  let data: Partial<Payload.Data>
   return {
     name: '@saus/cloudimage',
-    async pull(_config: Config) {
+    async pull(config: Config) {
       auth = await login()
-      return { token: auth.projectToken }
+      data = rewriteKeys(
+        configToPayload(config),
+        snakeCase
+      ) as Partial<Payload.Data>
+
+      return {
+        token: auth.projectToken,
+        configHash: md5Hex(JSON.stringify(data)),
+      }
     },
     identify: ({ token }) => ({ token }),
     spawn: async config => {
       if (ctx.dryRun) return
-
-      const data = rewriteKeys(
-        configToPayload(config),
-        snakeCase
-      ) as Partial<Payload.Data>
 
       const prevData = await getConfiguration(auth)
       const nextData = {

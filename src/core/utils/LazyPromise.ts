@@ -1,6 +1,9 @@
 import { Promisable } from 'type-fest'
 
-type Start<T> = (resolve: (result: Promisable<T>) => void) => void
+type Start<T> = (
+  resolve: (result: Promisable<T>) => void,
+  reject: (e: any) => void
+) => void
 
 export class LazyPromise<T> implements PromiseLike<T> {
   private _start: Start<T> | undefined
