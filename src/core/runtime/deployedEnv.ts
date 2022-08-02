@@ -5,6 +5,7 @@ import { JSONObject } from '../utils/types'
 import type { RuntimeConfig } from './config'
 
 export interface DeployedEnv {
+  appVersion?: string
   githubToken?: string
   /** Used to encrypt/decrypt your project-specific secrets. */
   password?: string

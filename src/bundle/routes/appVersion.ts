@@ -14,7 +14,9 @@ export function injectAppVersionRoute(
     context.injectedModules.addServerModule({
       id: '\0@saus/routes/appVersion.js',
       code: endent`
-        import { route } from 'saus'
+        import { route, deployedEnv } from 'saus'
+
+        deployedEnv.appVersion = "${appVersion}"
 
         route("${routePath}").get(req => {
           req.respondWith(200, { text: "${appVersion}" })

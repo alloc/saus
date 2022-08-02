@@ -24,7 +24,7 @@ export const makeRequestUrl = <Params extends {}>(
   props: {
     method?: string
     headers?: Readonly<RequestHeaders>
-    read?: Endpoint.RequestReader
+    read?: (encoding?: BufferEncoding) => Promise<string | Buffer>
     object?: any
   } = {}
 ): Endpoint.RequestUrl<Params> =>

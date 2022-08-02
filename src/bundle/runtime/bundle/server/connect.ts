@@ -6,7 +6,7 @@ import http from 'http'
  * A tiny implementation of the `connect` package.
  */
 export function connect<RequestProps extends object = {}>(
-  extendRequest?: (req: http.IncomingMessage) => Promisable<RequestProps>
+  extendRequest?: (req: http.IncomingMessage) => Promisable<RequestProps | void>
 ): connect.App<RequestProps> {
   const stack: connect.Middleware[] = []
   const events = new EventEmitter()
@@ -21,7 +21,8 @@ export function connect<RequestProps extends object = {}>(
     let resolve: () => void
     try {
       if (extendRequest) {
-        Object.assign(req, await extendRequest(req))
+        const props = await extendRequest(req)
+        props && Object.assign(req, props)
       }
       for (const handler of stack) {
         const promise = new Promise<void>(r => (resolve = r))

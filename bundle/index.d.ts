@@ -30,7 +30,7 @@ declare function getKnownPaths(options?: {
 /**
  * A tiny implementation of the `connect` package.
  */
-declare function connect<RequestProps extends object = {}>(extendRequest?: (req: http.IncomingMessage) => Promisable<RequestProps>): connect.App<RequestProps>;
+declare function connect<RequestProps extends object = {}>(extendRequest?: (req: http.IncomingMessage) => Promisable<RequestProps | void>): connect.App<RequestProps>;
 declare namespace connect {
     type Request<Props extends object = {}> = Props & http.IncomingMessage & {
         url: string;

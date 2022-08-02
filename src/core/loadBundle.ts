@@ -15,7 +15,6 @@ import {
 import { ClientAsset, ClientChunk } from '../bundle/types'
 import { DeployContext, getDeployContext } from '../deploy'
 import { getBundleHash } from './getBundleHash'
-import { SourceMap } from './node/sourceMap'
 import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
 import { callPlugins } from './utils/callPlugins'
 import { pick } from './utils/pick'
@@ -48,7 +47,16 @@ export interface LoadBundleConfig extends InlineBundleConfig {
   onBundleStart?: (options: BundleOptions) => Promisable<void>
 }
 
-export type LoadedBundle = { code: string; map?: SourceMap; cached?: true }
+export interface LoadBundleResult extends OutputBundle {
+  /** The context used to generate the bundle. */
+  context: BuildContext | DeployContext
+  /** The runtime config embedded in the bundle. */
+  runtimeConfig: Partial<MutableRuntimeConfig> | undefined
+  /** Where the bundle is cached locally. */
+  cachePath: string
+  /** Equals true if loaded from local cache. */
+  cached: true | undefined
+}
 
 export async function loadBundle({
   name = 'bundle',
@@ -57,7 +65,7 @@ export async function loadBundle({
   config,
   runtimeConfig: runtimeUserConfig,
   ...options
-}: LoadBundleConfig = {}) {
+}: LoadBundleConfig = {}): Promise<LoadBundleResult> {
   const context: BuildContext | DeployContext =
     getDeployContext(true) ||
     (await loadBundleContext(options, {
@@ -187,13 +195,9 @@ export async function loadBundle({
 
   return {
     ...bundleResult,
-    /** Equals true if loaded from local cache. */
     cached,
-    /** Where the bundle is cached locally. */
     cachePath: path.join(context.compileCache.path, bundleFile),
-    /** The runtime config embedded in the bundle. */
     runtimeConfig,
-    /** The context used to generate the bundle. */
     context,
   }
 }
