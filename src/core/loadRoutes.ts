@@ -45,6 +45,7 @@ export async function loadRoutes(context: SausContext) {
     requestHooks: undefined,
     responseHooks: undefined,
     routes: [],
+    routeStack: [],
     runtimeHooks: [],
     ssrRequire: context.ssrRequire,
   })

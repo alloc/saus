@@ -2,8 +2,8 @@ import { AmzCredentials } from '@saus/aws-utils'
 import { deployedEnv } from 'saus'
 import { AssetStore, defer, Deferred } from 'saus/core'
 import { wrapBody } from 'saus/http'
-import { deleteObjects } from '../deleteObjects'
-import { putObject } from '../putObject'
+import { deleteObjects } from './deleteObjects'
+import { putObject } from './putObject'
 
 export function createStore(bucket: string, region: string): AssetStore {
   const deleteQueue: string[] = []

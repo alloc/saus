@@ -1,4 +1,4 @@
-import { defineSecrets } from 'saus/deploy'
+import { defineSecrets } from 'saus'
 
 export default defineSecrets({
   accessKeyId: 'AWS_ACCESS_KEY_ID',

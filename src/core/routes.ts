@@ -161,6 +161,8 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   file?: string
   generated?: boolean
   endpoints?: Endpoint[]
+  requestHooks?: Endpoint.RequestHook[]
+  responseHooks?: Endpoint.ResponseHook[]
   /**
    * This is generated on-demand when the route is matched.
    */
@@ -180,9 +182,7 @@ export namespace Route {
      * In the given callback, you can add routes that have this
      * route's path automatically prepended to theirs.
      */
-    extend: (
-      cb: (route: typeof import('..').route) => Promisable<void>
-    ) => API<Params>
+    extend: (extension: () => void) => API<Params>
   }
 }
 
@@ -207,6 +207,8 @@ export interface RoutesModule extends HtmlContext {
   runtimeHooks: RuntimeHook[]
   /** Routes defined with the `route` function */
   routes: Route[]
+  /** The stack of `route(...).extend` calls */
+  routeStack: Route[]
   /** The route used when no route is matched */
   defaultRoute?: Route
   /** The route used when an error is thrown while rendering */

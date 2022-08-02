@@ -156,7 +156,18 @@ async function compileSsrRuntime(context: BundleContext) {
     const { pluginContainer } = await vite.createTransformContext(
       await vite.resolveConfig(
         {
-          plugins: [moduleRedirection(internalRedirects)],
+          plugins: [
+            moduleRedirection(internalRedirects, [
+              'vite',
+              './babel/index.js',
+              './client/index.js',
+              './deploy/index.js',
+              './src/core/index.ts',
+              './src/core/babel/index.ts',
+              './src/core/client/index.ts',
+              './src/core/context.ts',
+            ]),
+          ],
           configFile: false,
           resolve: {
             extensions: ['.ts'],

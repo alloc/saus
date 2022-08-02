@@ -1,4 +1,3 @@
-export * from '../core/node/git'
 export * from '../secrets/runtime'
 export * from './bump'
 export * from './context'

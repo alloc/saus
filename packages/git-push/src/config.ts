@@ -18,6 +18,11 @@ export interface InitConfig {
    * Can be `"<url>#<branch>"` or an object.
    */
   origin: string | GitOrigin
+  /**
+   * Use `git reset --hard` if uncommitted changes exist. \
+   * When this is false or undefined, `git stash` is used instead.
+   */
+  hardReset?: boolean
 }
 
 export interface PushConfig {

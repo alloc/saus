@@ -6,7 +6,6 @@ import { relativeToCwd } from '@/node/relativeToCwd'
 import { servedPathForFile } from '@/node/servedPathForFile'
 import { resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { bundleDir, clientDir, httpDir } from '@/paths'
-import { debugForbiddenImports } from '@/plugins/debug'
 import { rewriteHttpImports } from '@/plugins/httpImport'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import { copyPublicDir } from '@/plugins/publicDir'
@@ -35,6 +34,7 @@ import { resolveRouteImports } from './routeImports'
 import { injectAppVersionRoute } from './routes/appVersion'
 import { injectClientStoreRoute } from './routes/clientStore'
 import type { ClientEntries } from './runtime/bundle/clientEntries'
+import { preBundleSsrRuntime } from './runtimeBundle'
 import type { ClientAsset, ClientChunk, OutputBundle } from './types'
 
 export async function bundle(
@@ -301,16 +301,6 @@ async function generateSsrBundle(
       ...workerPlugins,
       copyPublicDir(),
       routesPlugin(clientRouteMap)(),
-      debugForbiddenImports([
-        'vite',
-        './babel/index.js',
-        './client/index.js',
-        './deploy/index.js',
-        './src/core/index.ts',
-        './src/core/babel/index.ts',
-        './src/core/client/index.ts',
-        './src/core/context.ts',
-      ]),
       preferExternalPlugin,
       defineNodeConstants(),
       rewriteHttpImports(context.logger, isWorker),

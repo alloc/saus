@@ -1,4 +1,4 @@
-import { createCommit } from '@/node/git'
+import { createCommit } from '@/node/git/createCommit'
 import exec from '@cush/exec'
 import fs from 'fs'
 import path from 'path'

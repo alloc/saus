@@ -1,6 +1,3 @@
-import { PurgePlugin } from 'saus'
-import { emptyPageStore } from './empty'
-
 export interface PurgeProps {
   region: string
   /**
@@ -20,16 +17,4 @@ export interface PurgeProps {
    * When defined, the bucket is emptied.
    */
   bucket?: string
-}
-
-export function purgePageStore(props: PurgeProps): PurgePlugin {
-  return {
-    name: '@aws/s3-website:purgePageStore',
-    purge(request) {
-      if (request.globs.has('/*')) {
-        return emptyPageStore(props)
-      }
-      // TODO: purge specific pages!
-    },
-  }
 }

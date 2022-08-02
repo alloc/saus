@@ -7,7 +7,6 @@
   "module": "dist/index.mjs",
   "exports": {
     "types": "./index.d.ts",
-    "ssr": "./dist/index.ssr.mjs",
     "import": "./dist/index.mjs",
     "default": "./dist/index.js"
   },

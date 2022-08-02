@@ -15,8 +15,12 @@ export const internalRedirects = [
     path.join(bundleDir, 'core/constants.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'node/getCurrentModule.ts'),
+    path.join(coreDir, 'node/currentModule.ts'),
     path.join(runtimeDir, 'ssrModules.ts')
+  ),
+  redirectModule(
+    path.join(coreDir, 'runtime/defineSecrets.ts'),
+    path.join(bundleDir, 'defineSecrets.ts')
   ),
 ]
 
@@ -25,10 +29,6 @@ export const ssrRedirects = [
   overrideBareImport('saus/client', path.join(bundleDir, 'client/api.ts')),
   overrideBareImport('saus/core', path.join(bundleDir, 'core/api.ts')),
   overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
-  redirectModule(
-    path.join(coreDir, 'node/currentModule.ts'),
-    path.join(runtimeDir, 'ssrModules.ts')
-  ),
 ]
 
 export const clientRedirects = [

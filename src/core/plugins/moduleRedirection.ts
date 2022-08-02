@@ -1,3 +1,6 @@
+import createDebug from 'debug'
+import { existsSync } from 'fs'
+import os from 'os'
 import path from 'path'
 import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
@@ -22,13 +25,45 @@ declare module 'vite' {
   }
 }
 
+const debug = createDebug('saus:resolved')
+const isDebug = !!process.env.DEBUG
+
 /**
  * This plugin must be added for `redirectModule` and `overrideBareImport`
  * plugins to work as expected.
  */
 export function moduleRedirection(
-  inlinePlugins: vite.Plugin[] = []
+  inlinePlugins: vite.Plugin[] = [],
+  forbiddenModules: string[] = []
 ): vite.Plugin {
+  if (isDebug && forbiddenModules.length) {
+    const sausRoot = path.resolve(__dirname, '..')
+    forbiddenModules.forEach((id, i) => {
+      if (id[0] == '.') {
+        forbiddenModules[i] = path.resolve(sausRoot, id)
+      }
+    })
+  }
+
+  const resolvedCache = isDebug ? new Set<string>() : null
+  const onResolved = (
+    resolvedId: string,
+    id: string,
+    importer?: string | null
+  ) => {
+    if (isDebug && forbiddenModules.some(m => m == resolvedId || m == id))
+      throw Error(
+        `Forbidden module "${resolvedId}" was imported${
+          id !== resolvedId ? ` as "${id}"` : ``
+        } by "${importer}"`
+      )
+
+    if (resolvedCache && !resolvedCache.has(resolvedId)) {
+      resolvedCache.add(resolvedId)
+      debug(resolvedId.replace(os.homedir(), '~'))
+    }
+  }
+
   let plugins: vite.Plugin[]
   return {
     name: 'moduleRedirection',
@@ -44,38 +79,50 @@ export function moduleRedirection(
       if (bareImportRE.test(id))
         for (const plugin of plugins) {
           if (plugin.resolveBareImport) {
-            const resolvedId = await plugin.resolveBareImport.call(
+            let resolved = await plugin.resolveBareImport.call(
               this,
               id,
               importer
             )
-            if (resolvedId != null) {
-              return resolvedId
+            if (resolved != null) {
+              if (typeof resolved == 'string') {
+                resolved = { id: resolved }
+              }
+              onResolved(resolved.id, id, importer)
+              return resolved
             }
           }
         }
 
+      let absoluteId: string
       let resolved: PartialResolvedId | null = null
-      if (!path.isAbsolute(id)) {
+      if (path.isAbsolute(id) && !id.startsWith('/@')) {
+        absoluteId = id
+      } else {
         resolved = await this.resolve(id, importer, { skipSelf: true })
-        if (!resolved) {
-          return
-        }
-        if (!path.isAbsolute(resolved.id)) {
+        if (!resolved || !path.isAbsolute(resolved.id)) {
           return resolved
         }
-        id = resolved.id
+        absoluteId = resolved.id
       }
       for (const plugin of plugins) {
         if (plugin.redirectModule) {
-          let replaced = await plugin.redirectModule.call(this, id, importer)
+          let replaced = await plugin.redirectModule.call(
+            this,
+            absoluteId,
+            importer
+          )
           if (replaced != null) {
             if (typeof replaced == 'string') {
               replaced = { id: replaced }
             }
+            onResolved(replaced.id, id, importer)
             return { meta: resolved?.meta, ...replaced }
           }
         }
+      }
+      if (isDebug && (resolved || existsSync(absoluteId))) {
+        onResolved(resolved ? resolved.id : absoluteId, id, importer)
       }
       return resolved
     },
@@ -98,15 +145,11 @@ export function redirectModule(
 
 export function overrideBareImport(
   targetId: string,
-  replacementId: string,
-  debug?: true | ((id: string) => boolean)
+  replacementId: string
 ): vite.Plugin {
   return {
     name: 'overrideBareImport:' + targetId,
     resolveBareImport(id) {
-      if (debug && (debug == true || debug(id))) {
-        debugger
-      }
       if (id === targetId) {
         return replacementId
       }

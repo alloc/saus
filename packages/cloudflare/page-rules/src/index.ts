@@ -1,16 +1,9 @@
-import { addDeployHook, addDeployTarget, addSecrets } from 'saus/deploy'
-import secrets from './secrets'
-import { DnsRecordList } from './types'
+// import { addDeployHook, addDeployTarget, addSecrets } from 'saus/deploy'
+// import secrets from './secrets'
 
-const hook = addDeployHook(() => import('./hook'))
-addSecrets(useCloudflareDNS, secrets)
+// const hook = addDeployHook(() => import('./hook'))
+// addSecrets(useCloudflarePageRules, secrets)
 
-export function useCloudflareDNS(zoneId: string, records: DnsRecordList) {
-  for (const rec of records) {
-    rec.ttl ??= 1
-  }
-  return addDeployTarget(hook, {
-    zoneId,
-    records,
-  })
-}
+// export function useCloudflarePageRules() {
+//   return addDeployTarget(hook, {})
+// }

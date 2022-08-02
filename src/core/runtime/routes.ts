@@ -14,7 +14,6 @@ import { parseRoutePath } from '@/utils/parseRoutePath'
 import { getLayoutEntry } from './getLayoutEntry'
 import { RoutePlugin } from './routePlugins'
 
-const routeStack: Route[] = []
 const privateRoute: ParsedRoute = {
   pattern: /^$/,
   keys: [],
@@ -99,8 +98,9 @@ export function route(
   }
 
   const isPublic = path[0] === '/'
-  if (isPublic && routeStack.length) {
-    path = Array.from(routeStack, route => route.path).join('') + path
+  if (isPublic && routesModule.routeStack.length) {
+    path =
+      Array.from(routesModule.routeStack, route => route.path).join('') + path
   }
 
   const { pattern, keys } = isPublic ? parseRoutePath(path) : privateRoute
@@ -127,7 +127,7 @@ export function route(
     routesModule.routes.push(self)
   } else {
     // TODO: support nesting of catch-all and error routes
-    if (routeStack.length)
+    if (routesModule.routeStack.length)
       throw Error(
         'Cannot set "default" or "error" route within `extend` callback'
       )
@@ -146,21 +146,23 @@ export function route(
 
 function createRouteAPI(parent: Route) {
   const api = {
-    extend(cb) {
-      const addRoute = ((...args: Parameters<typeof route>) => {
-        routeStack.push(parent)
-        route(...args)
-        routeStack.pop()
-      }) as typeof route
-
-      routeStack.push(parent)
+    extend(extension) {
+      const { requestHooks, responseHooks } = routesModule
+      routesModule.routeStack.push(parent)
+      routesModule.requestHooks = parent.requestHooks || []
+      routesModule.responseHooks = parent.responseHooks || []
       try {
-        const result = cb(addRoute)
-        if (result instanceof Promise) {
-          result.catch(console.error)
-        }
+        extension()
       } finally {
-        routeStack.pop()
+        routesModule.routeStack.pop()
+        if (routesModule.requestHooks.length) {
+          parent.requestHooks = routesModule.requestHooks
+        }
+        if (routesModule.requestHooks.length) {
+          parent.responseHooks = routesModule.responseHooks
+        }
+        routesModule.requestHooks = requestHooks
+        routesModule.responseHooks = responseHooks
       }
     },
   } as Route.API

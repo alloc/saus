@@ -153,12 +153,23 @@ export async function loadBundleContext<
   }
 
   context.bundleModuleId = '\0saus/bundle.js'
+  const redirects = [
+    ...internalRedirects,
+    ...ssrRedirects,
+    overrideBareImport('saus/bundle', context.bundleModuleId),
+  ]
+
   context.bundlePlugins = [
     preBundleSsrRuntime(context),
-    moduleRedirection([
-      ...internalRedirects,
-      ...ssrRedirects,
-      overrideBareImport('saus/bundle', context.bundleModuleId),
+    moduleRedirection(redirects, [
+      'vite',
+      './babel/index.js',
+      './client/index.js',
+      './deploy/index.js',
+      './src/core/index.ts',
+      './src/core/babel/index.ts',
+      './src/core/client/index.ts',
+      './src/core/context.ts',
     ]),
   ]
 

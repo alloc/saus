@@ -230,11 +230,13 @@ importers:
 
   packages/cloudflare/cache:
     specifiers:
+      '@alloc/fast-rimraf': ^1.0.8
       '@saus/cloudflare-request': ^0.1.0
       saus: '*'
     dependencies:
       '@saus/cloudflare-request': link:../request
     devDependencies:
+      '@alloc/fast-rimraf': 1.0.8
       saus: link:../../..
 
   packages/cloudflare/dns:

@@ -1,2 +1,2 @@
-export * from './deploy'
-export * from './page-store'
+export { deployWebsiteToS3 } from './deploy'
+export { emptyPageStore, purgePageStore } from './runtime'

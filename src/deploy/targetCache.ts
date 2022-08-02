@@ -27,7 +27,11 @@ export function loadTargetCache() {
   if (!targetCache.file) {
     const ctx = getDeployContext()
     targetCache.file = ctx.files.get('targets.yaml')
-    targetCache.prevData = targetCache.file.getData()
+    targetCache.prevData = targetCache.file.getData() || {
+      version: 0,
+      plugins: {},
+      targets: [],
+    }
     reusedTargets = new Set()
     reusedIndex = 0
   }
