@@ -24,6 +24,7 @@ importers:
       '@types/debug': ^4.1.7
       '@types/estree': ^0.0.51
       '@types/etag': ^1.8.1
+      '@types/glob-base': ^0.3.0
       '@types/node': ^17.0.35
       '@types/physical-cpu-count': ^2.0.0
       '@types/prettier': ^2.6.3
@@ -36,7 +37,7 @@ importers:
       cac: ^6.0.0
       callsites: ^3.0.0
       catch-exit: ^1.2.2
-      chokidar: ^3.5.2
+      chokidar: ^3.5.3
       convert-source-map: ^1.8.0
       debug: ^4.3.2
       elaps: ^2.4.0
@@ -45,6 +46,7 @@ importers:
       esbuild: ^0.14.15
       escalade: ^3.1.1
       etag: ^1.8.1
+      glob-base: ^0.3.0
       is-plain-object: ^5.0.0
       kleur: ^4.1.4
       klona: ^2.0.5
@@ -53,6 +55,7 @@ importers:
       mrmime: ^1.0.0
       prettier: ^2.0.5
       quick-lru: ^6.1.1
+      recrawl-sync: ^2.2.1
       rollup: npm:@aleclarson/rollup@^2.62.1
       rollup-plugin-dts: ^4.1.0
       shared-log: ^1.2.8
@@ -90,6 +93,7 @@ importers:
       magic-string: 0.25.9
       misty: 1.6.10
       mrmime: 1.0.1
+      recrawl-sync: 2.2.2
       rollup: /@aleclarson/rollup/2.62.1
       shared-log: 1.2.8
       source-map-support: 0.5.21
@@ -112,6 +116,7 @@ importers:
       '@types/debug': 4.1.7
       '@types/estree': 0.0.51
       '@types/etag': 1.8.1
+      '@types/glob-base': 0.3.0
       '@types/node': 17.0.45
       '@types/physical-cpu-count': 2.0.0
       '@types/prettier': 2.6.3
@@ -125,11 +130,12 @@ importers:
       chokidar: 3.5.3
       elaps: 2.4.0
       escalade: 3.1.1
+      glob-base: 0.3.0
       is-plain-object: 5.0.0
       klona: 2.0.5
       prettier: 2.7.1
       quick-lru: 6.1.1
-      rollup-plugin-dts: 4.2.2_vweegiakdkqzubhncbfxnab2pu
+      rollup-plugin-dts: 4.2.2_typescript@4.8.0-beta
       source-map: 0.6.1
       strip-comments: 2.0.1
       ts-debounce: 2.0.0
@@ -441,6 +447,7 @@ packages:
     hasBin: true
     optionalDependencies:
       fsevents: 2.3.2
+    dev: false
 
   /@alloc/cloudform-types/7.4.3:
     resolution: {integrity: sha512-eKFLDfu1/sIENTvffWwF/aZ77LqkLzaidERzFFEQPlxpztOzaeykT1W5esZKLUItgjPH1qS+haa/YrM4lhIodw==}
@@ -896,6 +903,10 @@ packages:
     resolution: {integrity: sha512-bsKkeSqN7HYyYntFRAmzcwx/dKW4Wa+KVMTInANlI72PWLQmOpZu96j0OqHZGArW4VQwCmJPteQlXaUDeOB0WQ==}
     dependencies:
       '@types/node': 17.0.45
+    dev: true
+
+  /@types/glob-base/0.3.0:
+    resolution: {integrity: sha512-NRCU51ALpNedUvwiwifAkDIWIC25MqF9+0STzAzvhlzR5U+iHTiaUlZ1iOMCwqZAU05X9UlqL63FVrZTZ6tySA==}
     dev: true
 
   /@types/glob/7.2.0:
@@ -2276,6 +2287,20 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
+  /glob-base/0.3.0:
+    resolution: {integrity: sha512-ab1S1g1EbO7YzauaJLkgLp7DZVAqj9M/dvKlTt8DkXA2tiOIcSMrlVI2J1RZyB5iJVccEscjGn+kpOG9788MHA==}
+    engines: {node: '>=0.10.0'}
+    dependencies:
+      glob-parent: 2.0.0
+      is-glob: 2.0.1
+    dev: true
+
+  /glob-parent/2.0.0:
+    resolution: {integrity: sha512-JDYOvfxio/t42HKdxkAYaCiBN7oYiuxykOxKxdaUW5Qn0zaYN3gRQWolrwdnf0shM9/EP0ebuuTmyoXNr1cC5w==}
+    dependencies:
+      is-glob: 2.0.1
+    dev: true
+
   /glob-parent/5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
@@ -2514,6 +2539,11 @@ packages:
       file-type: 10.11.0
     dev: false
 
+  /is-extglob/1.0.0:
+    resolution: {integrity: sha512-7Q+VbVafe6x2T+Tu6NcOf6sRklazEPmBoB3IWk3WdGZM2iGUwU/Oe3Wtq5lSEkDTTlpp8yx+5t4pzO/i9Ty1ww==}
+    engines: {node: '>=0.10.0'}
+    dev: true
+
   /is-extglob/2.1.1:
     resolution: {integrity: sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==}
     engines: {node: '>=0.10.0'}
@@ -2522,6 +2552,13 @@ packages:
     resolution: {integrity: sha512-cdyMtqX/BOqqNBBiKlIVkytNHm49MtMlYyn1zxzvJKWmFMlGzm+ry5BBfYyeY9YmNKbRSo/o7OX9w9ale0wg3w==}
     engines: {node: '>=0.10.0'}
     dev: false
+
+  /is-glob/2.0.1:
+    resolution: {integrity: sha512-a1dBeB19NXsf/E0+FHqkagizel/LQw2DjSQpvQrj3zT+jYPpaUCryPnrQajXKFLCMuf4I6FhRpaGtw4lPrG6Eg==}
+    engines: {node: '>=0.10.0'}
+    dependencies:
+      is-extglob: 1.0.0
+    dev: true
 
   /is-glob/4.0.3:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
@@ -3365,7 +3402,7 @@ packages:
       glob: 7.2.3
     dev: false
 
-  /rollup-plugin-dts/4.2.2_vweegiakdkqzubhncbfxnab2pu:
+  /rollup-plugin-dts/4.2.2_typescript@4.8.0-beta:
     resolution: {integrity: sha512-A3g6Rogyko/PXeKoUlkjxkP++8UDVpgA7C+Tdl77Xj4fgEaIjPSnxRmR53EzvoYy97VMVwLAOcWJudaVAuxneQ==}
     engines: {node: '>=v12.22.11'}
     peerDependencies:
@@ -3373,7 +3410,6 @@ packages:
       typescript: ^4.1
     dependencies:
       magic-string: 0.26.2
-      rollup: /@aleclarson/rollup/2.62.1
       typescript: 4.8.0-beta
     optionalDependencies:
       '@babel/code-frame': 7.18.6
