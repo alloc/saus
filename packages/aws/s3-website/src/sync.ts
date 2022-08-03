@@ -20,7 +20,7 @@ export async function syncStaticFiles(
     const memory = ctx.files.get<AssetList>('s3-website/assets.json')
     const oldAssetNames = memory.getData() || []
     const assetNames: AssetList = []
-    const uploading: Promise<any>[] = []
+    const uploads = createUploader(ctx)
 
     return {
       upload(name: string, data: string | Buffer) {
@@ -30,7 +30,7 @@ export async function syncStaticFiles(
         }
         // Assets are content-hashed, so we can bail on name alone.
         if (!oldAssetNames.includes(name)) {
-          uploading.push(
+          uploads.add(name, () =>
             S3.putObject(config.region)({
               bucket: buckets.assets,
               key: name,
@@ -44,10 +44,10 @@ export async function syncStaticFiles(
       async finalize() {
         memory.setData(assetNames.sort())
 
-        if (uploading.length)
+        if (uploads.length)
           await ctx.logPlan(
-            `upload ${plural(uploading.length, 'client asset')}`,
-            () => Promise.all(uploading)
+            `upload ${plural(uploads.length, 'client asset')}`,
+            () => uploads
           )
 
         // Old client assets are moved to a S3 bucket that deletes
@@ -57,14 +57,26 @@ export async function syncStaticFiles(
         )
         if (missingAssets.length)
           await ctx.logPlan(
-            `expire ${plural(uploading.length, 'old client asset')}`,
-            () =>
-              S3.moveObjects(config.region)({
-                keys: missingAssets,
-                bucket: buckets.assets,
-                newBucket: buckets.oldAssets,
-                creds: secrets,
-              })
+            `expire ${plural(missingAssets.length, 'old client asset')}`,
+            createRetryable({
+              shouldRetry,
+              delay(tries) {
+                const delaySecs = Math.pow(2, tries)
+                ctx.logActivity(
+                  'retrying moveObjects call in %d seconds (attempt %d)',
+                  delaySecs,
+                  tries
+                )
+                return delaySecs
+              },
+              action: () =>
+                S3.moveObjects(config.region)({
+                  keys: missingAssets,
+                  bucket: buckets.assets,
+                  newBucket: buckets.oldAssets,
+                  creds: secrets,
+                }),
+            })
           )
       },
     }
@@ -74,7 +86,7 @@ export async function syncStaticFiles(
     const memory = ctx.files.get<PublicFileHashes>('s3-website/public.json')
     const oldHashes = memory.getData() || {}
     const hashes: PublicFileHashes = {}
-    const uploading: Promise<any>[] = []
+    const uploads = createUploader(ctx)
 
     const cacheControl =
       config.publicDir?.cacheControl || 's-maxage=315360000, immutable'
@@ -87,7 +99,7 @@ export async function syncStaticFiles(
         }
         const oldHash = oldHashes[name]
         if (hash !== oldHash) {
-          uploading.push(
+          uploads.add(name, () =>
             S3.putObject(config.region)({
               bucket: buckets.publicDir,
               key: name,
@@ -101,25 +113,37 @@ export async function syncStaticFiles(
       async finalize() {
         memory.setData(hashes)
 
-        if (uploading.length)
+        if (uploads.length)
           await ctx.logPlan(
-            `upload ${plural(uploading.length, 'public file')}`,
-            () => Promise.all(uploading)
+            `upload ${plural(uploads.length, 'public file')}`,
+            () => uploads
           )
 
         // Files removed from the public directory are deleted from S3.
         const oldFiles = Object.keys(oldHashes).filter(name => !hashes[name])
         if (oldFiles.length)
           await ctx.logPlan(
-            `delete ${plural(uploading.length, 'old public file')}`,
-            () =>
-              S3.deleteObjects(config.region)({
-                delete: {
-                  objects: oldFiles.map(key => ({ key })),
-                },
-                bucket: buckets.publicDir,
-                creds: secrets,
-              })
+            `delete ${plural(oldFiles.length, 'old public file')}`,
+            createRetryable({
+              shouldRetry,
+              delay(tries) {
+                const delaySecs = Math.pow(2, tries)
+                ctx.logActivity(
+                  'retrying deleteObjects call in %d seconds (attempt %d)',
+                  delaySecs,
+                  tries
+                )
+                return delaySecs
+              },
+              action: () =>
+                S3.deleteObjects(config.region)({
+                  delete: {
+                    objects: oldFiles.map(key => ({ key })),
+                  },
+                  bucket: buckets.publicDir,
+                  creds: secrets,
+                }),
+            })
           )
       },
     }
@@ -146,4 +170,78 @@ export async function syncStaticFiles(
     assetStore.finalize(), //
     publicStore.finalize(),
   ])
+}
+
+interface Uploader extends PromiseLike<any[]> {
+  add(name: string, upload: () => Promise<any>): void
+  readonly length: number
+}
+
+function createUploader(ctx: DeployContext): Uploader {
+  const uploads: Promise<any>[] = []
+  const startUpload = createRetryable({
+    action(_name: string, upload: () => Promise<any>) {
+      const uploading = upload()
+      if (this.tries > 1) {
+        uploads.push(uploading)
+      }
+      return uploading
+    },
+    shouldRetry,
+    delay(tries, name) {
+      const delaySecs = Math.pow(2, tries)
+      ctx.logActivity(
+        'retrying upload of "%s" in %d seconds (attempt %d)',
+        name,
+        delaySecs,
+        tries
+      )
+      return delaySecs
+    },
+  })
+
+  return {
+    add: startUpload,
+    get length() {
+      return uploads.length
+    },
+    then: (f, r) => Promise.all(uploads).then(f, r),
+  }
+}
+
+function shouldRetry(e: any) {
+  // Connection closed by Amazon S3.
+  return e.message.includes('EPIPE')
+}
+
+// https://github.com/microsoft/TypeScript/issues/14829#issuecomment-504042546
+type NoInfer<T> = [T][T extends any ? 0 : never]
+
+function createRetryable<Args extends any[]>({
+  action,
+  maxRetries = 3,
+  shouldRetry,
+  delay: getDelay,
+}: {
+  action: (this: { tries: number }, ...args: Args) => Promise<any>
+  maxRetries?: number
+  shouldRetry: (e: any) => boolean
+  delay: (tries: number, ...args: NoInfer<Args>) => number
+}) {
+  return (...args: Args) => {
+    const retry = (tries: number) => {
+      return action.call({ tries }, ...args).catch(e => {
+        if (tries <= maxRetries && shouldRetry(e)) {
+          const delay = getDelay(tries, ...args)
+          return new Promise(resolve => {
+            setTimeout(() => {
+              resolve(retry(tries + 1))
+            }, delay * 1e3)
+          })
+        }
+        throw e
+      })
+    }
+    return retry(1)
+  }
 }
