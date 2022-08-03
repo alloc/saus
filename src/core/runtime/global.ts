@@ -9,14 +9,11 @@ export const routeStack: Route[] = []
 
 type RouteContextKey = keyof Route & keyof RoutesModule
 
-const makeArray = (): any[] => []
-const routeContextDefaults: { [P in RouteContextKey]: () => Route[P] } = {
-  defaultState: makeArray,
-  requestHooks: makeArray,
-  responseHooks: makeArray,
-}
-
-const routeContextKeys = Object.keys(routeContextDefaults) as RouteContextKey[]
+const routeContextKeys: RouteContextKey[] = [
+  'defaultState',
+  'requestHooks',
+  'responseHooks',
+]
 
 /**
  * Ensure the following function calls are applied to a given route,
@@ -31,8 +28,7 @@ export function useParentRoute(parent: Route) {
   const cache: any = {}
   for (const key of routeContextKeys) {
     cache[key] = routesModule[key]
-    const value = parent[key] || routeContextDefaults[key]()
-    routesModule[key] = value as any
+    routesModule[key] = parent[key] as any
   }
   routeStack.push(parent)
   return () => {
@@ -40,7 +36,7 @@ export function useParentRoute(parent: Route) {
     for (const key of routeContextKeys) {
       const value = routesModule[key]
       routesModule[key] = cache[key]
-      if (!Array.isArray(value) || value.length) {
+      if (value !== undefined) {
         parent[key] = value as any
       }
     }

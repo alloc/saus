@@ -107,6 +107,7 @@ export function route(
     ...config,
     path,
     file: getCurrentModule(),
+    parent: routeStack[routeStack.length - 1],
     load,
     generated,
     moduleId,

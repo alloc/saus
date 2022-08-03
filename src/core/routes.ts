@@ -159,6 +159,7 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   renderer?: RouteRenderer
   /** The file this route was declared from. */
   file?: string
+  parent?: Route
   generated?: boolean
   endpoints?: Endpoint[]
   defaultState?: RouteIncludeOption<T>[]

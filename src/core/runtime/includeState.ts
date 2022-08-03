@@ -13,6 +13,7 @@ export function includeState(
   include: RouteIncludeOption,
   patterns?: (string | RegExp)[]
 ) {
+  routesModule.defaultState ||= []
   if (patterns) {
     const only: RegExp[] = []
     const skip: RegExp[] = []

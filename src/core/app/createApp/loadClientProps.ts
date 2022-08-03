@@ -1,6 +1,7 @@
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { StateModule } from '@/runtime/stateModules'
 import { mergeArrays } from '@/utils/array'
+import { ascendBranch } from '@/utils/ascendBranch'
 import { prependBase } from '@/utils/base'
 import { noop } from '@/utils/noop'
 import { CommonClientProps } from '../../types'
@@ -30,6 +31,7 @@ export function createClientPropsLoader(
 
     // Start loading state modules before the route state is awaited.
     const routeInclude = mergeArrays(
+      ...ascendBranch(route, 'parent', route => route.defaultState),
       [routeConfig.include],
       context.defaultState
     )

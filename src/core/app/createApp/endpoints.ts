@@ -3,6 +3,8 @@ import { DeclaredHeaders, ResponseHeaders } from '@/http/headers'
 import { HttpRedirect } from '@/http/redirect'
 import { makeRequest } from '@/makeRequest'
 import type { Route } from '@/routes'
+import { mergeArrays } from '@/utils/array'
+import { ascendBranch } from '@/utils/ascendBranch'
 import { pickAllExcept } from '@/utils/pick'
 import { App } from '../types'
 
@@ -66,16 +68,37 @@ export const wrapEndpoints =
       }
     }
 
-    await callFunctions(
-      ctx.requestHooks
-        ? ctx.requestHooks.concat(resolved.functions)
-        : resolved.functions
+    const functions = mergeArrays(
+      // Global request hooks first.
+      ctx.requestHooks,
+      // Then top-down route-specific hooks.
+      ...ascendBranch(
+        resolved.route!,
+        'parent',
+        route => route.requestHooks
+      ).reverse(),
+      // Then the matched functions.
+      resolved.functions
     )
 
-    if (ctx.responseHooks && response?.status)
-      for (const onResponse of ctx.responseHooks) {
-        await onResponse(request, response, app)
-      }
+    await callFunctions(functions)
+
+    if (response?.status) {
+      const responseHooks = mergeArrays(
+        // First bottom-up route-specific hooks.
+        ...ascendBranch(
+          resolved.route!,
+          'parent',
+          route => route.responseHooks
+        ),
+        // Then global response hooks.
+        ctx.responseHooks
+      )
+      if (responseHooks.length)
+        for (const onResponse of responseHooks) {
+          await onResponse(request, response, app)
+        }
+    }
 
     return response || {}
   }
