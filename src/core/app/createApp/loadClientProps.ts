@@ -1,5 +1,6 @@
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { StateModule } from '@/runtime/stateModules'
+import { mergeArrays } from '@/utils/array'
 import { prependBase } from '@/utils/base'
 import { noop } from '@/utils/noop'
 import { CommonClientProps } from '../../types'
@@ -28,11 +29,12 @@ export function createClientPropsLoader(
     const deps: Promise<any>[] = []
 
     // Start loading state modules before the route state is awaited.
-    const routeInclude = context.defaultState.concat([
-      routeConfig.include || [],
-    ])
+    const routeInclude = mergeArrays(
+      [routeConfig.include],
+      context.defaultState
+    )
     for (const included of routeInclude) {
-      deps.push(stateModules.include(included, request, route))
+      included && deps.push(stateModules.include(included, request, route))
     }
 
     let inlinedState: Set<StateModule>

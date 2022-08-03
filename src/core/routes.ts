@@ -161,6 +161,7 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   file?: string
   generated?: boolean
   endpoints?: Endpoint[]
+  defaultState?: RouteIncludeOption<T>[]
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
   /**
@@ -201,8 +202,6 @@ export function matchRoute(path: string, route: ParsedRoute) {
  * in your Vite config.
  */
 export interface RoutesModule extends HtmlContext {
-  /** State modules that are loaded by default */
-  defaultState: RouteIncludeOption[]
   /** These hooks are called after the routes module is loaded */
   runtimeHooks: RuntimeHook[]
   /** Routes defined with the `route` function */
@@ -211,6 +210,8 @@ export interface RoutesModule extends HtmlContext {
   defaultRoute?: Route
   /** The route used when an error is thrown while rendering */
   catchRoute?: Route
+  /** State modules that are loaded by default */
+  defaultState?: RouteIncludeOption[]
   /** Import a module by its SSR path */
   ssrRequire: RequireAsync
   requestHooks?: Endpoint.RequestHook[]

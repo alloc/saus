@@ -1,5 +1,4 @@
 import { Endpoint } from '@/endpoint'
-import { routesModule, routeStack, withParentRoute } from '@/global'
 import { getCurrentModule } from '@/node/currentModule'
 import type {
   InferRouteParams,
@@ -12,6 +11,7 @@ import { httpMethods } from '@/utils/httpMethods'
 import { parseLazyImport } from '@/utils/parseLazyImport'
 import { parseRoutePath } from '@/utils/parseRoutePath'
 import { getLayoutEntry } from './getLayoutEntry'
+import { routesModule, routeStack, useParentRoute } from './global'
 import { RoutePlugin } from './routePlugins'
 
 const privateRoute: ParsedRoute = {
@@ -144,7 +144,14 @@ export function route(
 
 function createRouteAPI(parent: Route) {
   const api = {
-    extend: withParentRoute.bind(null, parent),
+    extend(extension) {
+      const restoreContext = useParentRoute(parent)
+      try {
+        extension()
+      } finally {
+        restoreContext()
+      }
+    },
   } as Route.API
 
   for (const method of httpMethods) {

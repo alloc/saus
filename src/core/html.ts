@@ -1,6 +1,6 @@
 import type { RenderedPage } from './app/types'
-import { routesModule } from './global'
 import type { RuntimeConfig } from './runtime/config'
+import { routesModule } from './runtime/global'
 import { limitTime } from './utils/limitTime'
 import { reduceSerial } from './utils/reduceSerial'
 

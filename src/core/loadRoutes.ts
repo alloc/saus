@@ -4,11 +4,11 @@ import MagicString from 'magic-string'
 import path from 'path'
 import { SausContext } from './context'
 import { debug } from './debug'
-import { setRoutesModule } from './global'
 import { getClientInjection, getServerInjection } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
+import { setRoutesModule } from './runtime/global'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { executeModule } from './vm/executeModule'
@@ -39,7 +39,7 @@ export async function loadRoutes(context: SausContext) {
   const routesConfig = setRoutesModule({
     catchRoute: undefined,
     defaultRoute: undefined,
-    defaultState: [],
+    defaultState: undefined,
     htmlProcessors: undefined,
     requestHooks: undefined,
     responseHooks: undefined,

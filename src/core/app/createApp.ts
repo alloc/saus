@@ -1,13 +1,13 @@
-import { defineLazy } from '@/utils/defineLazy'
 import { klona } from 'klona'
 import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
-import { setRoutesModule } from '../global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../html'
 import { matchRoute, Route, RouteEndpointMap } from '../routes'
 import { RuntimeConfig, RuntimeHook } from '../runtime/config'
+import { setRoutesModule } from '../runtime/global'
 import { toArray } from '../utils/array'
 import { baseToRegex } from '../utils/base'
+import { defineLazy } from '../utils/defineLazy'
 import { pick } from '../utils/pick'
 import { plural } from '../utils/plural'
 import { defineBuiltinRoutes } from './createApp/builtinRoutes'
@@ -194,7 +194,7 @@ function cloneRouteContext(ctx: App.Context): App.Context {
   return {
     ...ctx,
     ...klona(pick(ctx, ['htmlProcessors', 'requestHooks', 'responseHooks'])),
-    defaultState: [...ctx.defaultState],
+    defaultState: ctx.defaultState && [...ctx.defaultState],
     routes: [...ctx.routes],
   }
 }

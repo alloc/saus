@@ -1,5 +1,5 @@
-import { routesModule } from '@/global'
-import type { RuntimeHook } from '@/runtime/config'
+import type { RuntimeHook } from './config'
+import { routesModule } from './global'
 
 /**
  * Set up the runtime according to the given environment.

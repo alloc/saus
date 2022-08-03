@@ -6,7 +6,6 @@ import config from './config'
 
 export const context: App.Context = {
   config,
-  defaultState: [],
   getCachedPage: withCache({
     loading: {},
     loaders: {},

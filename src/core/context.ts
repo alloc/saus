@@ -143,7 +143,6 @@ async function createContext(props: {
     compileCache: new CompileCache('node_modules/.saus', config.root),
     defaultLayout: { id: config.saus.defaultLayoutId! },
     defaultPath: config.saus.defaultPath!,
-    defaultState: [],
     externalExports: new Map(),
     forCachedPages,
     getCachedPage: withCache(pageCache),
