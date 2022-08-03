@@ -199,7 +199,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     options = {}
   ): Promise<RenderPageResult> {
     options.props ||= await app.loadClientProps(url, route)
-    debug(`Page in progress: %s`, url)
+    debug(`Page in progress: %s (matching "%s" route)`, url, route.path)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)
     }
@@ -210,13 +210,16 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     ).then(
       page => {
         if (!page && options.defaultRoute) {
+          debug(`Falling back to default route: %s`, url)
           const { defaultRoute, ...rest } = options
           return renderPage(url, defaultRoute, rest)
         }
+        debug(`No page was generated: %s`, url)
         options.renderFinish?.(url, null, page)
         return [page]
       },
       error => {
+        debug(`Page failed to render: %s`, url)
         options.renderFinish?.(url, error)
         if (options.onError) {
           options.onError(error)
