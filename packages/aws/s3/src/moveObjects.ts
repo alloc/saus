@@ -16,18 +16,25 @@ export function moveObjects(region: string) {
   }
 
   return async (opts: Options) => {
-    const moving = opts.keys.map(key =>
+    const keys = new Set(opts.keys)
+    const moving = Array.from(keys, key =>
       S3.copyObject({
         key,
         bucket: opts.newBucket,
         copySource: opts.bucket + '/' + key,
         creds: opts.creds,
+      }).catch(e => {
+        if (e.code == 'NoSuchKey') {
+          keys.delete(key)
+        } else {
+          throw e
+        }
       })
     )
     await Promise.all(moving)
     await S3.deleteObjects({
       bucket: opts.bucket,
-      delete: { objects: opts.keys.map(key => ({ key })) },
+      delete: { objects: Array.from(keys, key => ({ key })) },
       creds: opts.creds,
     })
   }
