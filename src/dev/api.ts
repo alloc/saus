@@ -98,6 +98,10 @@ export async function createServer(
     if (error.code == 'EADDRINUSE') return
     const { logger } = context
     if (!logger.hasErrorLogged(error)) {
+      // This array of watched files can get large when it exists,
+      // to the point where it's basically spam.
+      delete error.watchFiles
+
       formatAsyncStack(error, moduleMap, [], context.config.filterStack)
       logger.error(formatError(error, context.app), { error })
     }
