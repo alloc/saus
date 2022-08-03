@@ -1,14 +1,27 @@
 import { md5Hex } from '../utils/md5-hex'
 import { sortObjects } from '../utils/sortObjects'
+import { globalCache } from './cache'
 import { loadStateModule, StateModuleLoader } from './loadStateModule'
+import { createStateListener } from './stateListeners'
 
 export const stateModulesById = new Map<string, StateModule>()
 
 export interface StateModule<T = any, Args extends any[] = any[]> {
   id: string
-  load(...args: Args): Promise<T>
   bind(...args: Args): StateModule<T, []>
   get(...args: Args): T
+  set(args: Args, state: T, expiresAt?: number): void
+  load(...args: Args): Promise<T>
+  onLoad(cb: StateModule.LoadCallback<T, Args>): StateModule.LoadListener
+}
+
+export namespace StateModule {
+  export type LoadListener = { dispose: () => void }
+  export type LoadCallback<T = any, Args extends any[] = any[]> = (
+    args: Args,
+    state: T,
+    expiresAt?: number
+  ) => void
 }
 
 const kStateModule = Symbol.for('saus.StateModule')
@@ -33,22 +46,33 @@ export function defineStateModule<T, Args extends any[]>(
     }
     return cacheKey
   }
-  const stateModule: StateModule = {
+  const stateModule: StateModule<any, Args> = {
     // @ts-ignore
     [kStateModule]: true,
     id: toCacheKey([]),
     get(...args) {
-      return loadStateModule(id, args as Args, false, toCacheKey)
+      return loadStateModule(id, args, false, toCacheKey)
+    },
+    set(args, state, expiresAt) {
+      const cacheKey = toCacheKey(args)
+      globalCache.loaded[cacheKey] = [state, expiresAt]
     },
     load(...args) {
-      return loadStateModule(id, args as Args, loadImpl, toCacheKey)
+      return loadStateModule(id, args, loadImpl, toCacheKey)
+    },
+    onLoad(callback) {
+      return createStateListener(id, callback)
     },
     bind(...args) {
       return {
         [kStateModule]: true,
         id: toCacheKey(args),
         get: (this.get as Function).bind(this, ...args),
+        set: (this.set as Function).bind(this, ...args),
         load: (this.load as Function).bind(this, ...args),
+        onLoad() {
+          throw Error('Cannot call `onLoad` on bound state module')
+        },
         bind() {
           throw Error('Cannot bind arguments twice')
         },

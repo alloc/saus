@@ -53,4 +53,8 @@ export const clientRedirects = [
     path.join(runtimeDir, 'loadStateModule.ts'),
     path.join(clientDir, 'loadStateModule.ts')
   ),
+  redirectModule(
+    path.join(runtimeDir, 'stateListeners.ts'),
+    path.join(clientDir, 'stateListeners.ts')
+  ),
 ]
