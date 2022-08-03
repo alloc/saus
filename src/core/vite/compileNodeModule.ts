@@ -1,10 +1,15 @@
+import { toArray } from '@/utils/array'
+import chokidar from 'chokidar'
 import * as convertSourceMap from 'convert-source-map'
 import * as esbuild from 'esbuild'
+import toGlobBase from 'glob-base'
 import { Module } from 'module'
 import path from 'path'
+import { crawl } from 'recrawl-sync'
 import { CompileCache } from '../node/compileCache'
 import { resolveMapSources, toInlineSourceMap } from '../node/sourceMap'
 import { isPackageRef } from '../utils/isPackageRef'
+import { vite } from '../vite'
 import {
   compileEsm,
   exportsId,
@@ -26,11 +31,13 @@ export async function compileNodeModule(
     importMeta,
     liveModulePaths,
     moduleMap,
+    watcher,
   }: {
     compileCache?: CompileCache | null
     importMeta?: Record<string, any>
     liveModulePaths?: Set<string>
     moduleMap?: ModuleMap
+    watcher?: vite.FSWatcher
   } = {}
 ): Promise<CompiledModule> {
   const env = {
@@ -38,7 +45,11 @@ export async function compileNodeModule(
     __dirname: path.dirname(filename),
     __filename: filename,
     [exportsId]: {},
-    [importMetaId]: { env: { ...importMeta, SSR: true } },
+    [importMetaId]: {
+      env: { ...importMeta, SSR: true },
+      glob: (globs: string | string[]) =>
+        lazyGlobRequire(toArray(globs), filename, requireAsync, watcher),
+    },
     [importAsyncId]: (id: string) => requireAsync(id, filename, true),
     [requireAsyncId]: (id: string) => requireAsync(id, filename, false),
   }
@@ -141,4 +152,60 @@ async function transform(
   const map = JSON.parse(compiled.map)
   resolveMapSources(map, process.cwd())
   return { code: compiled.code, map }
+}
+
+function lazyGlobRequire(
+  globs: string[],
+  importer: string,
+  requireAsync: RequireAsync,
+  watcher?: vite.FSWatcher
+) {
+  const modules: Record<string, any> = {}
+  const roots = new Map<string, string[]>()
+
+  const importerDir = path.dirname(importer)
+  for (const input of globs) {
+    const { base, glob } = toGlobBase(path.resolve(importerDir, input))
+
+    let root = roots.get(base)
+    if (root) {
+      root.push(glob)
+    } else {
+      roots.set(base, [glob])
+    }
+
+    const files = crawl(base, {
+      only: ['/' + glob],
+      absolute: true,
+    })
+
+    for (const file of files) {
+      let name = path.relative(importerDir, file)
+      if (input.startsWith('./')) {
+        name = './' + name
+      }
+      modules[name] = requireAsync.bind(null, '/@fs/' + file, importer, true)
+    }
+  }
+
+  if (watcher) {
+    const globWatchers: chokidar.FSWatcher[] = []
+    const reloadImporter = () => {
+      globWatchers.forEach(w => w.close())
+      watcher.emit('change', importer)
+    }
+    for (const [base, globs] of roots) {
+      globWatchers.push(
+        chokidar
+          .watch(globs, {
+            ignoreInitial: true,
+            cwd: base,
+          })
+          .on('add', reloadImporter)
+          .on('unlink', reloadImporter)
+      )
+    }
+  }
+
+  return modules
 }
