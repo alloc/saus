@@ -1,4 +1,5 @@
 import * as S3 from '@saus/aws-s3'
+import createDebug from 'debug'
 import { OutputBundle } from 'saus'
 import { md5Hex, plural, scanPublicDir } from 'saus/core'
 import { DeployContext } from 'saus/deploy'
@@ -172,6 +173,8 @@ export async function syncStaticFiles(
   ])
 }
 
+const debug = createDebug('saus:s3-website')
+
 interface Uploader extends PromiseLike<any[]> {
   add(name: string, upload: () => Promise<any>): void
   readonly length: number
@@ -180,9 +183,10 @@ interface Uploader extends PromiseLike<any[]> {
 function createUploader(ctx: DeployContext): Uploader {
   const uploads: Promise<any>[] = []
   const startUpload = createRetryable({
-    action(_name: string, upload: () => Promise<any>) {
+    action(name: string, upload: () => Promise<any>) {
       const uploading = upload()
       if (this.tries == 1) {
+        debug('uploading %s', name)
         uploads.push(uploading)
       }
       return uploading
