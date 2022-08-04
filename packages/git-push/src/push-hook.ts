@@ -42,14 +42,12 @@ export default defineDeployHook(ctx => {
       const git = bindExec('git', { cwd })
 
       return ctx.logPlan(`push ${relativeToCwd(cwd)}/`, async () => {
-        const pushing = git('push')
-        pushing.stderr.setEncoding('utf8').on('data', data => {
-          if (data == 'Everything up-to-date\n') {
+        await git('push', stderr => {
+          if (stderr == 'Everything up-to-date\n') {
             config.repo.pushed = true
           }
         })
 
-        await pushing
         if (stashedRoots.has(cwd)) {
           await git('stash pop', { noThrow: true })
           stashedRoots.delete(cwd)
