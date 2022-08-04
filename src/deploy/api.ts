@@ -304,10 +304,10 @@ export async function deploy(
     const numChanged =
       missingTargets.length + updatedTargets.size + spawnedTargets.size
 
-    if (numChanged == 0 && files.numChanged == 0) {
+    if (!ctx.effective && numChanged == 0 && files.numChanged == 0) {
       return logger.info(
         yellow(
-          `\nNo deployment actions were required.` +
+          `\nThis deployment had no side effects.` +
             `\nIf you expected otherwise, you might have a deploy target` +
             ` that's missing necessary metadata to detect changes.`
         )

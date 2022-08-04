@@ -29,6 +29,8 @@ export interface DeployContext extends BundleContext {
   deployPath: string
   files: GitFiles
   secrets: SecretHub
+  /** Set this to true if your deploy action has side effects. */
+  effective: boolean
   /** The `package.json` file found in project root. */
   rootPackage: PackageJson
   /** The HEAD commit of the project repository. */

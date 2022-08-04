@@ -31,6 +31,7 @@ export async function syncStaticFiles(
         }
         // Assets are content-hashed, so we can bail on name alone.
         if (!oldAssetNames.includes(name)) {
+          ctx.effective = true
           uploads.add(name, () =>
             S3.putObject(config.region)({
               bucket: buckets.assets,
@@ -56,7 +57,8 @@ export async function syncStaticFiles(
         const missingAssets = oldAssetNames.filter(
           name => !assetNames.includes(name)
         )
-        if (missingAssets.length)
+        if (missingAssets.length) {
+          ctx.effective = true
           await ctx.logPlan(
             `expire ${plural(missingAssets.length, 'old client asset')}`,
             createRetryable({
@@ -79,6 +81,7 @@ export async function syncStaticFiles(
                 }),
             })
           )
+        }
       },
     }
   }
@@ -100,6 +103,7 @@ export async function syncStaticFiles(
         }
         const oldHash = oldHashes[name]
         if (hash !== oldHash) {
+          ctx.effective = true
           uploads.add(name, () =>
             S3.putObject(config.region)({
               bucket: buckets.publicDir,
@@ -122,7 +126,8 @@ export async function syncStaticFiles(
 
         // Files removed from the public directory are deleted from S3.
         const oldFiles = Object.keys(oldHashes).filter(name => !hashes[name])
-        if (oldFiles.length)
+        if (oldFiles.length) {
+          ctx.effective = true
           await ctx.logPlan(
             `delete ${plural(oldFiles.length, 'old public file')}`,
             createRetryable({
@@ -146,6 +151,7 @@ export async function syncStaticFiles(
                 }),
             })
           )
+        }
       },
     }
   }
