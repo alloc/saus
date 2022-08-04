@@ -182,7 +182,7 @@ function createUploader(ctx: DeployContext): Uploader {
   const startUpload = createRetryable({
     action(_name: string, upload: () => Promise<any>) {
       const uploading = upload()
-      if (this.tries > 1) {
+      if (this.tries == 1) {
         uploads.push(uploading)
       }
       return uploading
