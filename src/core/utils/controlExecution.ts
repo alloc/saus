@@ -1,4 +1,5 @@
 import { defer, Deferred } from './defer'
+import { noop } from './noop'
 
 type Promisable<T> = T | Promise<T>
 
@@ -127,6 +128,7 @@ export function controlExecution<Args extends any[], State, Result>(
 
       function fn(...args: Args): any {
         const call = defer<Awaited<Result>>()
+        call.promise.catch(noop)
         ctx.calls.set(args, call)
         scheduleCall(args, false, call)
         return call.promise.finally(() => {
