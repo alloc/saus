@@ -209,12 +209,14 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       `Page "${url}" rendering took too long`
     ).then(
       page => {
-        if (!page && options.defaultRoute) {
-          debug(`Falling back to default route: %s`, url)
-          const { defaultRoute, ...rest } = options
-          return renderPage(url, defaultRoute, rest)
+        if (!page) {
+          if (options.defaultRoute) {
+            debug(`Falling back to default route: %s`, url)
+            const { defaultRoute, ...rest } = options
+            return renderPage(url, defaultRoute, rest)
+          }
+          debug(`No page was generated: %s`, url)
         }
-        debug(`No page was generated: %s`, url)
         options.renderFinish?.(url, null, page)
         return [page]
       },
