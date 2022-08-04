@@ -41,7 +41,7 @@ export const providePageBundles: App.Plugin = app => {
                   throw error
                 }
                 page = app.renderPageBundle(req, app.catchRoute, options)
-              } else if (page) {
+              } else if (result) {
                 page = result
                 options.renderFinish?.(req, null, page)
               }
