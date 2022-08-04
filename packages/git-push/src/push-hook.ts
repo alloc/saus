@@ -33,6 +33,7 @@ export default defineDeployHook(ctx => {
       config.repo.head = await git('rev-parse HEAD')
       return {
         root: config.repo.root,
+        head: config.repo.head,
       }
     },
     identify: ({ root }) => ({
