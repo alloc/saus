@@ -3,7 +3,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { relativeToCwd } from 'saus/core'
 import { onDeploy } from 'saus/deploy'
-import { InitConfig } from './config'
+import { GitRepository, InitConfig } from './config'
 import { stashedRoots } from './stash'
 
 /**
@@ -14,7 +14,7 @@ import { stashedRoots } from './stash'
 export function gitInit(config: InitConfig) {
   return onDeploy({
     name: '@saus/git-push',
-    async run(ctx, onRevert) {
+    async run(ctx, onRevert): Promise<GitRepository> {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
 
@@ -61,7 +61,12 @@ export function gitInit(config: InitConfig) {
         await git(`reset --hard origin/${origin.branch}`)
       }
 
-      return { ...config, origin }
+      return {
+        ...config,
+        origin,
+        head: '',
+        pushed: false,
+      }
     },
   })
 }

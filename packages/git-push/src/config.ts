@@ -3,6 +3,22 @@ export interface GitOrigin {
   branch: string
 }
 
+export interface GitRepository extends InitConfig {
+  origin: GitOrigin
+  /**
+   * The last pushed HEAD commit.
+   *
+   * This is an empty string until `gitPush` is called.
+   */
+  head: string
+  /**
+   * Equals true if a commit was pushed.
+   *
+   * Always equals false in a dry run.
+   */
+  pushed: boolean
+}
+
 export interface InitConfig {
   /**
    * Directory path where `.git` lives
@@ -27,13 +43,9 @@ export interface InitConfig {
 
 export interface PushConfig {
   /**
-   * Directory path where `.git` lives
-   *
-   * If no `.git` directory is found, then `git init` is used.
-   *
-   * This path is relative to the Vite project root.
+   * The repository object returned by `gitInit`
    */
-  root: string
+  repo: GitRepository
   /**
    * Disable the `git commit` action or override its message.
    */
