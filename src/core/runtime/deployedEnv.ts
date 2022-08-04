@@ -9,6 +9,11 @@ export interface DeployedEnv {
   githubToken?: string
   /** Used to encrypt/decrypt your project-specific secrets. */
   password?: string
+  /**
+   * The standard property for injecting the user-facing domain
+   * into any plugin that wants it.
+   */
+  publicDomain?: string
 }
 
 /**
