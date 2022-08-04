@@ -8,7 +8,7 @@ import { stashedRoots } from './stash'
 export default defineDeployHook(ctx => {
   return {
     name: '@saus/git-push',
-    ephemeral: ['commit'],
+    ephemeral: ['commit', 'pushed'],
     async pull(config: PushConfig) {
       const cwd = path.resolve(ctx.root, config.root)
       const git = bindExec('git', { cwd })
@@ -31,6 +31,12 @@ export default defineDeployHook(ctx => {
 
       return {
         head: await git('rev-parse HEAD'),
+        /**
+         * Equals true if a commit was pushed.
+         *
+         * Always equals false in a dry run.
+         */
+        pushed: false,
       }
     },
     identify: ({ root }) => ({
@@ -41,8 +47,14 @@ export default defineDeployHook(ctx => {
       const git = bindExec('git', { cwd })
 
       return ctx.logPlan(`push ${relativeToCwd(cwd)}/`, async () => {
-        await git('push')
+        const pushing = git('push')
+        pushing.stderr.setEncoding('utf8').on('data', data => {
+          if (data == 'Everything up-to-date\n') {
+            config.pushed = true
+          }
+        })
 
+        await pushing
         if (stashedRoots.has(cwd)) {
           await git('stash pop', { noThrow: true })
           stashedRoots.delete(cwd)
