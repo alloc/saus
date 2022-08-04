@@ -93,7 +93,14 @@ export class File {
       if (this._files.dryRun && this._data) {
         return this._data
       }
-      return fs.readFileSync(this.path, encoding)
+      try {
+        return fs.readFileSync(this.path, encoding)
+      } catch (e: any) {
+        if (e.code !== 'ENOENT') {
+          throw e
+        }
+        this._tracker.onDelete(this, this._known)
+      }
     }
     return encoding !== undefined ? '' : Buffer.alloc(0)
   }
