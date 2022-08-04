@@ -1,6 +1,6 @@
 import { bindExec } from '@saus/deploy-utils'
 import path from 'path'
-import { relativeToCwd } from 'saus/core'
+import { createCommit, relativeToCwd } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
 import { PushConfig } from './config'
 import { stashedRoots } from './stash'
@@ -22,9 +22,10 @@ export default defineDeployHook(ctx => {
           async () => {
             const message = commit?.message || ctx.lastCommitHeader
             await git('add -A')
-            await git('commit -m', [message], {
-              noThrow: true,
-            })
+            const commitResult = createCommit(message, { cwd })
+            if (commitResult.success) {
+              ctx.effective = true
+            }
           }
         )
       }

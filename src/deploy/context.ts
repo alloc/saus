@@ -175,7 +175,7 @@ async function syncDeployCache(
     }
     files.get('.gitignore').setBuffer('deploy.lock', 'utf8')
     await exec('git add .gitignore', { cwd: cacheDir })
-    await createCommit('init', { cwd: cacheDir })
+    createCommit('init', { cwd: cacheDir })
     await exec('git push -u', [gitRepo.name, 'master:' + targetBranch], {
       cwd: cacheDir,
     })

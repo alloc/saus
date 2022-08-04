@@ -385,7 +385,7 @@ export async function deploy(
     if (gitStatus) {
       const { version = '0.0.0' } = ctx.rootPackage
       await exec('git add -A', { cwd: ctx.root })
-      await createCommit(`v${version}-${ctx.lastCommitHash}`, {
+      createCommit(`v${version}-${ctx.lastCommitHash}`, {
         cwd: ctx.root,
       })
     }

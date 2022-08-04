@@ -89,7 +89,7 @@ export function useGitSecrets() {
   async function commitUpdates() {
     if (!files.dryRun) {
       await exec(`git add`, [secretsFile.name], { cwd: files.root })
-      await createCommit('update secrets.aes', {
+      createCommit('update secrets.aes', {
         cwd: files.root,
       })
       await exec(`git push`, { cwd: files.root })

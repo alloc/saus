@@ -42,7 +42,7 @@ export class GitFiles {
   async commit(message: string) {
     if (this._tracker.numChanged > 0) {
       await exec('git add -A', { cwd: this.root })
-      await createCommit(message, { cwd: this.root })
+      createCommit(message, { cwd: this.root })
       this._tracker.reset()
       return true
     }
