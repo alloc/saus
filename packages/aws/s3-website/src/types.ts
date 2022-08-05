@@ -10,7 +10,7 @@ export interface BrotliConfig {
 }
 
 export interface OriginOverride {
-  path: string
+  path: string | string[]
   origin: string
   noCache?: boolean
   /**

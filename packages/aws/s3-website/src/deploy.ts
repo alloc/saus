@@ -314,30 +314,35 @@ export async function deployWebsiteToS3(
       ])
 
       config.overrides?.forEach(origin => {
-        const [, DomainName, OriginPath] = /^([^/]+)(\/.+)?$/.exec(
-          origin.origin
-        )!
+        const parsedOrigin = /^([^/]+)(\/.+)?$/.exec(origin.origin)!
         origins.push({
           Id: origin.origin,
-          DomainName,
-          OriginPath,
+          DomainName: parsedOrigin[1],
+          OriginPath: parsedOrigin[2],
           CustomOriginConfig: origin.forceHttps
             ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
             : httpOnly,
         })
-        cacheBehaviors.push(
-          CacheBehavior(origin.origin, {
-            PathPattern: origin.path + '/*',
-            AllowedMethods: getAllowedMethods(origin.httpMethods || 'all'),
-            CachePolicyId: origin.noCache
-              ? managedCachePolicies.CachingDisabled
-              : defaultCachePolicy,
-            OriginRequestPolicyId:
-              origin.requestPolicy == 'allViewer'
-                ? managedRequestPolicies.AllViewer
-                : awsOriginRequestPolicy,
-          })
-        )
+
+        const paths = Array.isArray(origin.path) ? origin.path : [origin.path]
+        for (let path of paths) {
+          if (!path.includes('*') && path.indexOf('.') <= 0) {
+            path += '/*'
+          }
+          cacheBehaviors.push(
+            CacheBehavior(origin.origin, {
+              PathPattern: path,
+              AllowedMethods: getAllowedMethods(origin.httpMethods || 'all'),
+              CachePolicyId: origin.noCache
+                ? managedCachePolicies.CachingDisabled
+                : defaultCachePolicy,
+              OriginRequestPolicyId:
+                origin.requestPolicy == 'allViewer'
+                  ? managedRequestPolicies.AllViewer
+                  : awsOriginRequestPolicy,
+            })
+          )
+        }
       })
 
       const assetCache = ref(
