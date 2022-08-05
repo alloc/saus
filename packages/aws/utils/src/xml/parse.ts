@@ -63,7 +63,9 @@ export function parseXML(input: string, opts: XmlParserOptions = {}) {
     }
     // Assume an array context if tag names are repeated.
     else if (name in context) {
-      if (Object.keys(context).length == 1) {
+      if (Array.isArray(context[name])) {
+        context[name].push(value)
+      } else if (Object.keys(context).length == 1) {
         context = Object.values(context)
         context.push(value)
       } else {
