@@ -18,7 +18,7 @@ export interface OriginOverride {
    * @default "all"
    */
   httpMethods?: 'readOnly' | 'all'
-  forceHttps?: boolean
+  httpsOnly?: boolean
   /**
    * By default, all requests to this origin will inherit the
    * same controls as the main origin.

@@ -319,7 +319,7 @@ export async function deployWebsiteToS3(
           Id: origin.origin,
           DomainName: parsedOrigin[1],
           OriginPath: parsedOrigin[2],
-          CustomOriginConfig: origin.forceHttps
+          CustomOriginConfig: origin.httpsOnly
             ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
             : httpOnly,
         })
