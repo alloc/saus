@@ -45,7 +45,7 @@ export default defineDeployHook(ctx => {
 
       return ctx.logPlan(`push ${relativeToCwd(cwd)}/`, async () => {
         await git('push', stderr => {
-          if (stderr == 'Everything up-to-date\n') {
+          if (stderr !== 'Everything up-to-date\n') {
             config.repo.pushed = true
           }
         })
