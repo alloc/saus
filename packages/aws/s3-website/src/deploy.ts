@@ -316,14 +316,15 @@ export async function deployWebsiteToS3(
 
       config.overrides?.forEach(origin => {
         const parsedOrigin = /^([^/]+)(\/.+)?$/.exec(origin.origin)!
-        origins.push({
-          Id: origin.origin,
-          DomainName: parsedOrigin[1],
-          OriginPath: parsedOrigin[2],
-          CustomOriginConfig: origin.httpsOnly
-            ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
-            : httpOnly,
-        })
+        if (parsedOrigin[1] !== config.origin)
+          origins.push({
+            Id: origin.origin,
+            DomainName: parsedOrigin[1],
+            OriginPath: parsedOrigin[2],
+            CustomOriginConfig: origin.httpsOnly
+              ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
+              : httpOnly,
+          })
 
         const paths = Array.isArray(origin.path) ? origin.path : [origin.path]
         for (let path of paths) {
