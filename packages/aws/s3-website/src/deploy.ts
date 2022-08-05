@@ -6,6 +6,7 @@ import {
   useCloudFormation,
   Value,
 } from '@saus/cloudform'
+import { mergeArrays } from '@saus/deploy-utils'
 import { relative } from 'path'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
@@ -186,12 +187,12 @@ export async function deployWebsiteToS3(
         new aws.CloudFront.OriginRequestPolicy({
           OriginRequestPolicyConfig: {
             Name: 'AWSOriginRequestPolicy',
-            CookiesConfig: CookiesConfig(config.forward?.cookies),
+            CookiesConfig: CookiesConfig(
+              mergeArrays(config.forward?.cookies, config.vary?.cookies)
+            ),
             HeadersConfig: {
               HeaderBehavior: 'whitelist',
-              // Note that any headers included in the CachePolicy
-              // are included in this array automatically.
-              Headers: ['referer'],
+              Headers: ['referer', ...varyHeaders],
             },
             QueryStringsConfig: {
               QueryStringBehavior: 'all',

@@ -213,12 +213,14 @@ importers:
       '@saus/aws-cloudfront': workspace:^0.1.0
       '@saus/aws-s3': workspace:^0.1.0
       '@saus/cloudform': workspace:^0.1.0
+      '@saus/deploy-utils': workspace:^0.1.0
       '@saus/page-store': workspace:^0.1.0
       saus: '*'
     dependencies:
       '@saus/aws-cloudfront': link:../cloudfront
       '@saus/aws-s3': link:../s3
       '@saus/cloudform': link:../../cloudform
+      '@saus/deploy-utils': link:../../deploy-utils
       '@saus/page-store': link:../../page-store
     devDependencies:
       saus: link:../../..
