@@ -204,7 +204,8 @@ export async function deployWebsiteToS3(
 
       const CacheBehavior = (
         target: Value<string> | ResourceRef,
-        props: Omit<CacheBehavior, 'ViewerProtocolPolicy' | 'TargetOriginId'>
+        props: Omit<CacheBehavior, 'ViewerProtocolPolicy' | 'TargetOriginId'> &
+          Partial<Pick<CacheBehavior, 'ViewerProtocolPolicy'>>
       ): CacheBehavior => ({
         TargetOriginId: isResourceRef(target) ? target.id : target,
         CachePolicyId: defaultCachePolicy,
@@ -340,6 +341,9 @@ export async function deployWebsiteToS3(
                 origin.requestPolicy == 'allViewer'
                   ? managedRequestPolicies.AllViewer
                   : awsOriginRequestPolicy,
+              ViewerProtocolPolicy: origin.httpsOnly
+                ? 'https-only'
+                : 'allow-all',
             })
           )
         }
