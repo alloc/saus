@@ -71,6 +71,7 @@ export interface VaryConfig {
 export type VaryHeader =
   | keyof CommonRequestHeaders
   | 'cloudfront-viewer-country'
+  | `x-${string}`
 
 export interface TTLConfig {
   /**
