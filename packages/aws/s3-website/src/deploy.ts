@@ -233,17 +233,18 @@ export async function deployWebsiteToS3(
           PathPattern: undefined!,
         })
 
+      const httpsOnly = { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
+      const httpMatchViewer = {
+        HTTPPort: 80,
+        HTTPSPort: 443,
+        OriginProtocolPolicy: 'match-viewer',
+      }
+
       const pageServerId = 'PageServer'
       const pageServer: OriginConfig = {
         Id: pageServerId,
         DomainName: config.origin,
-        CustomOriginConfig: config.httpsOnly
-          ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
-          : {
-              HTTPPort: 80,
-              HTTPSPort: 443,
-              OriginProtocolPolicy: 'match-viewer',
-            },
+        CustomOriginConfig: config.httpsOnly ? httpsOnly : httpMatchViewer,
       }
 
       const httpVersion = 'http' + (config.httpVersion || 1.1)
@@ -314,35 +315,40 @@ export async function deployWebsiteToS3(
           }),
       ])
 
-      config.overrides?.forEach(origin => {
-        const parsedOrigin = /^([^/]+)(\/.+)?$/.exec(origin.origin)!
-        if (parsedOrigin[1] !== config.origin)
-          origins.push({
-            Id: origin.origin,
-            DomainName: parsedOrigin[1],
-            OriginPath: parsedOrigin[2],
-            CustomOriginConfig: origin.httpsOnly
-              ? { HTTPSPort: 443, OriginProtocolPolicy: 'https-only' }
-              : httpOnly,
-          })
+      config.overrides?.forEach(override => {
+        if (override.origin == null) {
+          override.origin = config.origin
+          override.httpsOnly ??= config.httpsOnly
+        }
 
-        const paths = Array.isArray(origin.path) ? origin.path : [origin.path]
+        const parsedOrigin = /^([^/]+)(\/.+)?$/.exec(override.origin)!
+        origins.push({
+          Id: override.origin,
+          DomainName: parsedOrigin[1],
+          OriginPath: parsedOrigin[2],
+          CustomOriginConfig: override.httpsOnly ? httpsOnly : httpMatchViewer,
+        })
+
+        const paths = Array.isArray(override.path)
+          ? override.path
+          : [override.path]
+
         for (let path of paths) {
           if (!path.includes('*') && path.indexOf('.') <= 0) {
             path += '/*'
           }
           cacheBehaviors.push(
-            CacheBehavior(origin.origin, {
+            CacheBehavior(override.origin, {
               PathPattern: path,
-              AllowedMethods: getAllowedMethods(origin.httpMethods || 'all'),
-              CachePolicyId: origin.noCache
+              AllowedMethods: getAllowedMethods(override.httpMethods || 'all'),
+              CachePolicyId: override.noCache
                 ? managedCachePolicies.CachingDisabled
                 : defaultCachePolicy,
               OriginRequestPolicyId:
-                origin.requestPolicy == 'allViewer'
+                override.requestPolicy == 'allViewer'
                   ? managedRequestPolicies.AllViewer
                   : awsOriginRequestPolicy,
-              ViewerProtocolPolicy: origin.httpsOnly
+              ViewerProtocolPolicy: override.httpsOnly
                 ? 'https-only'
                 : 'allow-all',
             })

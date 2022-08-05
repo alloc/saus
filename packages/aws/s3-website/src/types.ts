@@ -10,8 +10,17 @@ export interface BrotliConfig {
 }
 
 export interface OriginOverride {
+  /**
+   * That request path(s) to intercept.
+   */
   path: string | string[]
-  origin: string
+  /**
+   * The domain that receives the requests. It can include an optional
+   * pathname (like `/api`) that is prepended to the request path.
+   *
+   * Pass `null` to use the default origin.
+   */
+  origin: string | null
   noCache?: boolean
   /**
    * Which HTTP methods are allowed
