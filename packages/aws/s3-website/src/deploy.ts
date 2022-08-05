@@ -125,7 +125,7 @@ export async function deployWebsiteToS3(
         secondOriginId: Value<string>
       ): CloudFront.Distribution.OriginGroup => ({
         Id: primaryOriginId + 'Failover',
-        FailoverCriteria: { StatusCodes: items([404]) },
+        FailoverCriteria: { StatusCodes: items([404, 403]) },
         Members: items([
           { OriginId: primaryOriginId },
           { OriginId: secondOriginId },
@@ -208,6 +208,7 @@ export async function deployWebsiteToS3(
       ): CacheBehavior => ({
         TargetOriginId: isResourceRef(target) ? target.id : target,
         CachePolicyId: defaultCachePolicy,
+        AllowedMethods: getAllowedMethods('readOnly'),
         // Avoid using HTTPS since it costs more.
         // @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/ChargesForHTTPSConnections.html
         ViewerProtocolPolicy: 'allow-all',
@@ -255,7 +256,9 @@ export async function deployWebsiteToS3(
             Enabled: true,
             Origins: [BucketOrigin(pageStore), pageServer],
             OriginGroups: items([pageStoreFailover]),
-            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id),
+            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id, {
+              AllowedMethods: getAllowedMethods(config.httpMethods || 'all'),
+            }),
             HttpVersion: httpVersion,
           },
         })
@@ -326,6 +329,7 @@ export async function deployWebsiteToS3(
         cacheBehaviors.push(
           CacheBehavior(origin.origin, {
             PathPattern: origin.path + '/*',
+            AllowedMethods: getAllowedMethods(origin.httpMethods || 'all'),
             CachePolicyId: origin.noCache
               ? managedCachePolicies.CachingDisabled
               : defaultCachePolicy,
@@ -348,6 +352,9 @@ export async function deployWebsiteToS3(
             CacheBehaviors: cacheBehaviors,
             DefaultCacheBehavior: DefaultCacheBehavior(defaultOrigin.Id, {
               CachePolicyId: managedCachePolicies.CachingDisabled,
+              AllowedMethods: getAllowedMethods(
+                config.httpMethods || 'readOnly'
+              ),
             }),
             HttpVersion: httpVersion,
             Aliases:
@@ -432,6 +439,12 @@ export async function deployWebsiteToS3(
     awsRegion: config.region,
     origin: config.origin,
   }
+}
+
+function getAllowedMethods(httpMethods: 'readOnly' | 'all') {
+  return httpMethods == 'all'
+    ? ['GET', 'HEAD', 'OPTIONS', 'PUT', 'PATCH', 'POST', 'DELETE']
+    : ['GET', 'HEAD']
 }
 
 const managedCachePolicies = {

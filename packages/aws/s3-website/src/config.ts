@@ -18,6 +18,11 @@ export interface WebsiteConfig {
   region: string
   /** The internal domain where your Saus app is hosted. */
   origin: string
+  /**
+   * Which HTTP methods are allowed
+   * @default "readOnly"
+   */
+  httpMethods?: 'readOnly' | 'all'
   /** Force HTTPS when forwarding request to `origin` */
   httpsOnly?: boolean
   /**

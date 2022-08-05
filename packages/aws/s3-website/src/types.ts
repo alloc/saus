@@ -13,6 +13,11 @@ export interface OriginOverride {
   path: string
   origin: string
   noCache?: boolean
+  /**
+   * Which HTTP methods are allowed
+   * @default "all"
+   */
+  httpMethods?: 'readOnly' | 'all'
   forceHttps?: boolean
   /**
    * By default, all requests to this origin will inherit the
