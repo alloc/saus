@@ -32,5 +32,6 @@ export function addPurgeRoute(routePath: string, config: PurgeRouteConfig) {
         await plugin.purge(request)
       }
     }
+    req.respondWith(200)
   })
 }
