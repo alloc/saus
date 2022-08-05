@@ -208,6 +208,7 @@ export async function deployWebsiteToS3(
       ): CacheBehavior => ({
         TargetOriginId: isResourceRef(target) ? target.id : target,
         CachePolicyId: defaultCachePolicy,
+        CachedMethods: getAllowedMethods('readOnly'),
         AllowedMethods: getAllowedMethods('readOnly'),
         // Avoid using HTTPS since it costs more.
         // @see https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/ChargesForHTTPSConnections.html
@@ -256,9 +257,7 @@ export async function deployWebsiteToS3(
             Enabled: true,
             Origins: [BucketOrigin(pageStore), pageServer],
             OriginGroups: items([pageStoreFailover]),
-            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id, {
-              AllowedMethods: getAllowedMethods(config.httpMethods || 'all'),
-            }),
+            DefaultCacheBehavior: DefaultCacheBehavior(pageStoreFailover.Id),
             HttpVersion: httpVersion,
           },
         })
@@ -352,9 +351,6 @@ export async function deployWebsiteToS3(
             CacheBehaviors: cacheBehaviors,
             DefaultCacheBehavior: DefaultCacheBehavior(defaultOrigin.Id, {
               CachePolicyId: managedCachePolicies.CachingDisabled,
-              AllowedMethods: getAllowedMethods(
-                config.httpMethods || 'readOnly'
-              ),
             }),
             HttpVersion: httpVersion,
             Aliases:
@@ -444,7 +440,7 @@ export async function deployWebsiteToS3(
 function getAllowedMethods(httpMethods: 'readOnly' | 'all') {
   return httpMethods == 'all'
     ? ['GET', 'HEAD', 'OPTIONS', 'PUT', 'PATCH', 'POST', 'DELETE']
-    : ['GET', 'HEAD']
+    : ['GET', 'HEAD', 'OPTIONS']
 }
 
 const managedCachePolicies = {
