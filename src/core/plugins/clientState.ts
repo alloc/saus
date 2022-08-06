@@ -16,9 +16,6 @@ export function clientStatePlugin(): Plugin {
       stateModulesByFile = context.stateModulesByFile
     },
     async transform(code, id, opts) {
-      if (opts?.ssr) {
-        return // SSR needs the loader function
-      }
       if (!includeRE.test(id)) {
         return // Unsupported file type
       }
@@ -28,45 +25,55 @@ export function clientStatePlugin(): Plugin {
       if (/\bdefineStateModule\b/.test(code)) {
         const parsed = await babel.parseAsync(code, getBabelConfig(id))
 
-        const stateModuleIds: string[] = (stateModulesByFile[id] = [])
-        const exports = new Set<NodePath<t.Statement>>()
-
-        babel.traverse(parsed, {
-          ExportDeclaration(path) {
-            exports.add(path)
-          },
-          CallExpression(path) {
-            const callee = path.get('callee')
-            if (callee.isIdentifier({ name: 'defineStateModule' })) {
-              const args = path.get('arguments')
-              stateModuleIds.push((args[0].node as t.StringLiteral).value)
-
-              // Remove all arguments except the first.
-              for (let i = 1; i < args.length; i++) {
-                args[i].remove()
+        // For SSR, just extract the state module IDs for hot reload purposes.
+        if (opts?.ssr) {
+          const stateModuleIds: string[] = (stateModulesByFile[id] = [])
+          babel.traverse(parsed, {
+            CallExpression(path) {
+              const callee = path.get('callee')
+              if (callee.isIdentifier({ name: 'defineStateModule' })) {
+                const args = path.get('arguments')
+                stateModuleIds.push((args[0].node as t.StringLiteral).value)
               }
-            }
-          },
-        })
+            },
+          })
+        } else {
+          const exports = new Set<NodePath<t.Statement>>()
+          babel.traverse(parsed, {
+            ExportDeclaration(path) {
+              exports.add(path)
+            },
+            CallExpression(path) {
+              const callee = path.get('callee')
+              if (callee.isIdentifier({ name: 'defineStateModule' })) {
+                const args = path.get('arguments')
+                for (let i = 1; i < args.length; i++) {
+                  // Remove all arguments except the first.
+                  args[i].remove()
+                }
+              }
+            },
+          })
 
-        const transformer: babel.Visitor = {
-          Program(path) {
-            const exportStmts = Array.from(exports)
-            const stmts = new Set(
-              exportStmts
-                .concat(resolveReferences(exportStmts))
-                .sort((a, b) => a.node.start! - b.node.start!)
-            )
+          const transformer: babel.Visitor = {
+            Program(path) {
+              const exportStmts = Array.from(exports)
+              const stmts = new Set(
+                exportStmts
+                  .concat(resolveReferences(exportStmts))
+                  .sort((a, b) => a.node.start! - b.node.start!)
+              )
 
-            for (const stmt of stmts) {
-              path.node.body.push(stmt.node)
-            }
-          },
+              for (const stmt of stmts) {
+                path.node.body.push(stmt.node)
+              }
+            },
+          }
+
+          return babel.transformSync('', {
+            plugins: [{ visitor: transformer }],
+          }) as { code: string }
         }
-
-        return babel.transformSync('', {
-          plugins: [{ visitor: transformer }],
-        }) as { code: string }
       }
     },
   }
