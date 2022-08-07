@@ -28,13 +28,6 @@ export interface PageRule {
 
 export interface PageStoreConfig {
   store: AssetStore
-  routes?: {
-    /**
-     * Leave this undefined if you don't plan to purge files
-     * by sending a POST request to this route.
-     */
-    purge?: string
-  }
   skipAuthorized?: boolean
   pageRules?: PageRule[]
 }
@@ -114,9 +107,5 @@ export function setupPageStore(config: PageStoreConfig) {
         config.store.put(file + '.js', app.renderPageState(page), headers)
       }
     })
-
-    if (config.routes?.purge) {
-      addPurgeRoute(config.routes.purge, config.store)
-    }
   })
 }
