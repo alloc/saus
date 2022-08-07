@@ -1,9 +1,7 @@
-import { globalCache } from '@/runtime/cache'
 import { INDENT, RETURN, SPACE } from '@/tokens'
 import { prependBase } from '@/utils/base'
 import { dataToEsm } from '@/utils/dataToEsm'
 import { ParsedHeadTag } from '@/utils/parseHead'
-import { inlinedStateMap } from '../global'
 import { App, CommonServerProps } from '../types'
 
 export const getPageStateFactory = (
@@ -11,14 +9,17 @@ export const getPageStateFactory = (
   ctx: App.Context
 ): App['renderPageState'] =>
   function renderPageState(page, preloadUrls) {
-    const { path, props, stateModules, head, isDebug } = page
+    const { path, props, head, isDebug } = page
 
     const { base, stateModuleBase } = ctx.config
     const toStateUrl = (id: string) =>
       prependBase(stateModuleBase + id + '.js', base)
 
-    const clientProps = (props as CommonServerProps)._client
-    const stateModuleUrls = new Set(stateModules.map(toStateUrl))
+    const clientProps = (props as CommonServerProps)._clientProps
+    const stateModuleUrls = new Set(
+      props._included.map(loaded => toStateUrl(loaded.module.id))
+    )
+
     const nestedStateUrls: string[] = []
     const nestedStateIdents: string[] = []
 
@@ -39,15 +40,16 @@ export const getPageStateFactory = (
 
     const imports = new Map<string, string[]>()
 
-    const inlinedState = inlinedStateMap.get(props!)
-    if (inlinedState) {
-      const inlined = Array.from(inlinedState, state => {
-        return app.renderStateModule(
-          state.id,
-          globalCache.loaded[state.id],
-          true
-        )
-      })
+    if (props._inlined.length) {
+      const inlined = props._inlined
+        .map(loaded => {
+          return app.renderStateModule(
+            loaded.module.id,
+            loaded.state,
+            loaded.expiresAt,
+            true
+          )
+        })
         .join(RETURN)
         .replace(/\n/g, '\n  ')
 

@@ -1,3 +1,5 @@
+import { Promisable } from 'type-fest'
+import { CommonServerProps } from './app/types'
 import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
@@ -50,8 +52,6 @@ type HasOneKey<T> = [string & keyof T] extends infer Keys
 type StaticPageParams<Params extends object> = 1 extends HasOneKey<Params>
   ? string | number
   : readonly (string | number)[]
-
-type Promisable<T> = T | PromiseLike<T>
 
 export interface RouteConfig<
   Module extends object = RouteModule,
@@ -138,7 +138,7 @@ interface RouteStateConfig<
     | Record<string, any>
     | ((
         request: Endpoint.Request<Params>,
-        state: any
+        state: CommonServerProps
       ) => Promisable<Record<string, any>>)
 }
 

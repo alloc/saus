@@ -1,7 +1,7 @@
 import { App } from '@/app/types'
 import { makeRequestUrl } from '@/makeRequest'
 import { parseUrl } from '@/node/url'
-import { globalCache } from '@/runtime/cache'
+import { RuntimeConfig } from '@/runtime/config'
 import { getLayoutEntry } from '@/runtime/getLayoutEntry'
 import { renderPageScript } from '@/runtime/renderPageScript'
 import { prependBase } from '@/utils/base'
@@ -68,7 +68,7 @@ export const providePageBundles: App.Plugin = app => {
       // Page caching includes the query string.
       const pageRelativeUrl = url.toString()
 
-      if (renderStart && context.getCachedPage(pageRelativeUrl)) {
+      if (renderStart && context.pageCache.has(pageRelativeUrl)) {
         renderStart(url)
       }
 
@@ -121,11 +121,12 @@ export const providePageBundles: App.Plugin = app => {
       const stateModuleBase = config.stateModuleBase.slice(1)
 
       // State modules are not renamed for debug view.
-      for (const stateId of [...page.stateModules].reverse()) {
-        const stateModuleId = stateModuleBase + stateId + '.js'
+      for (const loaded of [...page.props._included].reverse()) {
+        const stateModuleId = stateModuleBase + loaded.module.id + '.js'
         const stateModuleText = app.renderStateModule(
-          stateId,
-          globalCache.loaded[stateId]
+          loaded.module.id,
+          loaded.state,
+          loaded.expiresAt
         )
         page.files.push({
           id: stateModuleId,
@@ -182,7 +183,7 @@ export const providePageBundles: App.Plugin = app => {
         { page, config, assets },
         config.htmlTimeout
       ).then(async html => {
-        const [styleUrls, assetUrls] = generateAssetUrls(assets)
+        const [styleUrls, assetUrls] = generateAssetUrls(assets, config)
 
         const existingLinks = new Set(
           page.head.stylesheet
@@ -245,7 +246,7 @@ export const providePageBundles: App.Plugin = app => {
   }
 }
 
-function generateAssetUrls(assetIds: Iterable<string>) {
+function generateAssetUrls(assetIds: Iterable<string>, config: RuntimeConfig) {
   const styleUrls: string[] = []
   const assetUrls: string[] = []
   for (const assetId of assetIds) {

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { dirname, resolve } from 'path'
 import { unwrapBuffer } from '../node/buffer'
-import type { CacheEntry } from '../runtime/withCache'
+import { Cache } from '../runtime/cache'
 import { md5Hex } from '../utils/md5-hex'
 import { readJson } from '../utils/readJson'
 import { Response } from './response'
@@ -16,7 +16,7 @@ export const setResponseCache = (cache: ResponseCache | null) =>
 export function loadResponseCache(root: string) {
   const cacheDir = resolve(root, 'node_modules/.saus/http-cache')
   const metadataFile = resolve(cacheDir, 'metadata.json')
-  let metadata: Record<string, CacheEntry<string>>
+  let metadata: Record<string, Cache.Entry<string>>
   try {
     metadata = readJson(metadataFile)
   } catch {

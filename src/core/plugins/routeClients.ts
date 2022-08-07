@@ -5,7 +5,7 @@ import { collectCss } from '@/vite/collectCss'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { CommonServerProps } from '../app/types'
 import { DevContext } from '../context'
-import { Plugin, RenderedPage, RuntimeConfig, vite } from '../core'
+import { Plugin, RuntimeConfig, vite } from '../core'
 import { debug } from '../debug'
 import { RouteClients } from '../routeClients'
 import { renderRouteEntry } from '../routeEntries'
@@ -60,10 +60,7 @@ export function routeClientsPlugin(): Plugin {
           filename = getPageFilename(pagePath.replace(/\?.*$/, ''))
         }
 
-        type CachedPage = [RenderedPage, any]
-
-        const [page, error] =
-          (await context.getCachedPage<CachedPage>(pagePath)) || []
+        const [page, error] = (await context.pageCache.get(pagePath)) || []
 
         if (error) return
         if (!page) {
@@ -79,8 +76,8 @@ export function routeClientsPlugin(): Plugin {
         const modulesToPreload = [
           pageStateId,
           sausClientId,
-          ...page.stateModules.map(id =>
-            prependBase(config.stateModuleBase + id + '.js', base)
+          ...[...page.props._inlined, ...page.props._included].map(loaded =>
+            prependBase(config.stateModuleBase + loaded.module.id + '.js', base)
           ),
         ]
 

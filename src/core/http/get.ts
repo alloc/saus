@@ -1,6 +1,5 @@
 // HTTP helpers suitable for Node environments.
-import { getCachedState } from '../runtime/getCachedState'
-import type { CacheControl } from '../runtime/withCache'
+import { CacheControl, globalCache } from '@/runtime/cache'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
 import { http, HttpRequestOptions } from './http'
@@ -21,7 +20,7 @@ export function get(url: string | URL, opts?: GetOptions) {
     opts?.headers
   )
 
-  return getCachedState(cacheKey, cacheControl => {
+  return globalCache.load(cacheKey, cacheControl => {
     const cachedResponse = responseCache?.read(cacheKey)
     if (cachedResponse && !cachedResponse.expired) {
       debug('Using cached GET request: %O', url)

@@ -1,7 +1,6 @@
 // These modules are suitable for both client-side and server-side use.
 
-export * from '../runtime/clearCachedState'
-export * from '../runtime/getCachedState'
+export * from '../runtime/cache'
 export * from '../runtime/mapStateModule'
 export * from '../runtime/stateModules'
 export * from '../utils/getPagePath'

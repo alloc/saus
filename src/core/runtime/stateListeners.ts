@@ -1,6 +1,6 @@
 import type { StateModule } from './stateModules'
 
-export function createStateListener<Args extends any[]>(
+export function createStateListener<Args extends readonly any[]>(
   key: string,
   callback: StateModule.LoadCallback<any, Args>
 ): StateModule.LoadListener {

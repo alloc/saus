@@ -5,15 +5,10 @@ import { noop } from '@/utils/noop'
 import { parseHead } from '@/utils/parseHead'
 import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
-import type {
-  CommonClientProps,
-  RenderRequest,
-  Route,
-  RouteModule,
-} from '../../core'
-import { headPropsCache, stateModulesMap } from '../global'
+import type { RenderRequest, Route, RouteModule } from '../../core'
 import { renderHtml } from '../renderHtml'
 import {
+  AnyServerProps,
   App,
   RenderedPage,
   RenderPageFn,
@@ -30,7 +25,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
   // The main logic for HTML document generation.
   const renderRouteLayout = async (
     url: ParsedUrl,
-    props: CommonClientProps,
+    props: AnyServerProps,
     route: Route,
     routeModule: RouteModule,
     routeLayout: RouteLayout
@@ -46,7 +41,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
 
     let timestamp = Date.now()
 
-    let html = await renderHtml(routeLayout, request, headPropsCache.get(props))
+    let html = await renderHtml(routeLayout, request, props._headProps)
     if (html == null) {
       return null
     }
@@ -59,12 +54,11 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
 
     const page: RenderedPage = {
       path,
+      route,
+      props,
       html: '',
       head: null!,
       files: [],
-      props,
-      route,
-      stateModules: stateModulesMap.get(props) || [],
     }
 
     if (app.preProcessHtml) {
@@ -107,10 +101,10 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     // @ts-ignore
     url.routeParams.error = error
 
-    const promisedProps = app.loadClientProps(url, route)
+    const promisedProps = app.loadPageProps(url, route)
     promisedProps.catch(noop)
 
-    let props!: CommonClientProps
+    let props!: AnyServerProps
     let routeModule!: RouteModule
     let routeLayout!: RouteLayout
 
@@ -167,10 +161,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     }))
 
     if (!error) {
-      const props = options.props || {
-        routePath: route.path,
-        routeParams: url.routeParams,
-      }
+      const props = options.props || (await app.loadPageProps(url, route))
       try {
         return await renderRouteLayout(
           url,
@@ -198,7 +189,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     route,
     options = {}
   ): Promise<RenderPageResult> {
-    options.props ||= await app.loadClientProps(url, route)
+    options.props ||= await app.loadPageProps(url, route)
     debug(`Page in progress: %s (matching "%s" route)`, url, route.path)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)

@@ -14,7 +14,7 @@ type Options<RenderPageKey extends keyof ExtractProps<App, RenderFn>> = {
   key?: RenderPageKey
   /**
    * Override the default behavior of this plugin, which is to
-   * call the `app.loadClientProps` method and assign its result
+   * call the `app.loadPageProps` method and assign its result
    * to the `props` option.
    */
   preload?: (app: App, ...args: Parameters<App[RenderPageKey]>) => Promise<void>
@@ -29,7 +29,7 @@ type Options<RenderPageKey extends keyof ExtractProps<App, RenderFn>> = {
 }
 
 async function defaultPreload(app: App, url: any, route: any, options: any) {
-  options.props = await app.loadClientProps(url, route)
+  options.props = await app.loadPageProps(url, route)
 }
 
 /**

@@ -15,7 +15,7 @@ export function createStateListener(
 
 export function notifyStateListeners(
   id: string,
-  args: any[],
+  args: readonly any[],
   state: any,
   expiresAt: number | undefined
 ): void {

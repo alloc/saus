@@ -1,16 +1,12 @@
 import type { App } from '@/app/types'
+import { createCache } from '@/runtime/cache/create'
 import type { MutableRuntimeConfig } from '@/runtime/config'
 import { ssrImport } from '@/runtime/ssrModules'
-import { withCache } from '@/runtime/withCache'
 import config from './config'
 
 export const context: App.Context = {
   config,
-  getCachedPage: withCache({
-    loading: {},
-    loaders: {},
-    loaded: {},
-  }),
+  pageCache: createCache(),
   onError: console.error,
   routes: [],
   runtimeHooks: [],

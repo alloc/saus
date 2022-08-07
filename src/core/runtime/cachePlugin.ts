@@ -1,5 +1,5 @@
-import { Promisable } from 'type-fest'
-import type { CacheControl, CacheEntry } from './withCache'
+import type { Promisable } from 'type-fest'
+import type { Cache, CacheControl } from './cache'
 
 /**
  * The `CachePlugin` is a normalized data storage layer.
@@ -13,7 +13,7 @@ export interface CachePlugin {
    * You should leave this undefined if you don't care about reloading
    * a possibly cached state module when used by an uncached page.
    */
-  get?: (name: string) => Promisable<CacheEntry | undefined>
+  get?: (name: string) => Promisable<Cache.Entry | undefined>
   /**
    * Upsert a cache entry with freshly loaded state.
    */

@@ -12,7 +12,7 @@ export interface ClientConstants {
   devRoot: string
   /**
    * The `saus.stateModuleBase` option set in Vite config.
-   * @default "/state/"
+   * @default "/.saus/state/"
    */
   stateModuleBase: string
 }

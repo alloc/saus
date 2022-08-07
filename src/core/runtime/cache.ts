@@ -1,7 +1,7 @@
-import type { Cache } from './withCache'
+import { createCache } from './cache/create'
 
-export const globalCache: Cache = {
-  loading: {},
-  loaders: {},
-  loaded: {},
-}
+export const globalCache = createCache()
+
+export type { CacheControl } from './cache/cacheControl'
+export type { Cache } from './cache/types'
+export { createCache }

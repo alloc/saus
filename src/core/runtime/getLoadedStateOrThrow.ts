@@ -1,10 +1,9 @@
-import { globalCache } from './cache'
-import type { CacheEntry } from './withCache'
+import { Cache, globalCache } from './cache'
 
 export function getLoadedStateOrThrow(
   cacheKey: string,
-  args: any[]
-): CacheEntry {
+  args: readonly any[]
+): Cache.Entry {
   const cached = globalCache.loaded[cacheKey]
   if (!cached) {
     const error = Error(

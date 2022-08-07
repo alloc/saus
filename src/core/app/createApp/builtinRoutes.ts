@@ -4,7 +4,6 @@ import { makeRequestUrl } from '@/makeRequest'
 import { ParsedUrl, parseUrl } from '@/node/url'
 import type { Route } from '@/routes'
 import { globalCache } from '@/runtime/cache'
-import { getCachedState } from '@/runtime/getCachedState'
 import { route } from '@/runtime/routes'
 import { stateModulesById } from '@/runtime/stateModules'
 import { prependBase } from '@/utils/base'
@@ -65,14 +64,14 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   })
 
   // State modules
-  route(`${context.config.stateModuleBase}*.js`)
-    .get(async req => {
+  const stateModuleRoute = route(`${context.config.stateModuleBase}*.js`).get(
+    async req => {
       const cacheKey = req.wild
       const id = cacheKey.replace(/\.[^.]+$/, '')
 
       const stateModule = stateModulesById.get(id)
       if (stateModule) {
-        await getCachedState(cacheKey, async cacheControl => {
+        await globalCache.access(cacheKey, async cacheControl => {
           const loader = globalCache.loaders[cacheKey]
           if (loader) {
             return loader(cacheControl)
@@ -82,13 +81,17 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 
         const stateEntry = globalCache.loaded[cacheKey]
         if (stateEntry) {
-          const module = app.renderStateModule(cacheKey, stateEntry)
+          const module = app.renderStateModule(cacheKey, ...stateEntry)
           sendModule(req, module)
         }
       }
-    })
+    }
+  )
+
+  // TODO: inject this during development
+  if (context.config.command == 'dev') {
     // Ensure a state module is generated.
-    .post(async req => {
+    stateModuleRoute.post(async req => {
       const input = (await req.read()).toString('utf8')
       const [id, args] = JSON.parse(input) as [string, any[]]
 
@@ -98,6 +101,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         req.respondWith(200)
       }
     })
+  }
 }
 
 const sendModule = (req: Endpoint.Request, text: string) =>

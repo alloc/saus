@@ -1,11 +1,10 @@
+import { createCache } from '@/runtime/cache/create'
 import createDebug from 'debug'
 import { noop } from '../utils/noop'
-import { clearCachedState } from './clearCachedState'
-import { getCachedState } from './getCachedState'
 
 const debug = createDebug('saus:ssr')
 
-const ssrPrefix = 'saus-ssr:'
+const ssrModules = createCache()
 const ssrLoaderMap: Record<string, ModuleLoader<any>> = {}
 const ssrPendingExports = new Map<string, ModuleExports>()
 
@@ -15,7 +14,7 @@ export async function ssrClearCache() {
     await mainModule
   }
   debug('Clearing the module cache')
-  clearCachedState(key => key.startsWith(ssrPrefix))
+  ssrModules.clear()
 }
 
 let mainModule: Promise<void> | null = null
@@ -32,7 +31,7 @@ function importModule<T = ModuleExports>(
   if (!loader) {
     throw Error(`Module not found: "${id}"`)
   }
-  return getCachedState(ssrPrefix + id, async function ssrLoadModule() {
+  return ssrModules.load(id, async function ssrLoadModule() {
     // To avoid stepping on the toes of other top-level imports,
     // we need to avoid loading them in parallel.
     while (isMain && mainModule) {

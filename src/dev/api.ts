@@ -324,7 +324,7 @@ async function prepareDevApp(context: DevContext) {
         async finish() {
           let pendingPages: Promise<void> | undefined
           if (routesChanged) {
-            pendingPages = context.forCachedPages((pagePath, [page]) => {
+            pendingPages = context.pageCache.forEach((pagePath, [[page]]) => {
               // Emit change events for page state modules.
               if (routesChanged) {
                 const filename = getPageFilename(pagePath, context.basePath)
@@ -335,7 +335,7 @@ async function prepareDevApp(context: DevContext) {
               //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
               // }
             })
-            context.clearCachedPages()
+            context.pageCache.clear()
             await resetDevApp()
           }
 

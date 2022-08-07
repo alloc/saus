@@ -10,13 +10,13 @@ import { baseToRegex } from '../utils/base'
 import { defineLazy } from '../utils/defineLazy'
 import { pick } from '../utils/pick'
 import { plural } from '../utils/plural'
+import { emptyArray } from './constants'
 import { defineBuiltinRoutes } from './createApp/builtinRoutes'
 import { wrapEndpoints } from './createApp/endpoints'
-import { createClientPropsLoader } from './createApp/loadClientProps'
+import { createPagePropsLoader } from './createApp/loadPageProps'
 import { getPageFactory } from './createApp/renderPage'
 import { getPageStateFactory } from './createApp/renderPageState'
 import { getStateModuleFactory } from './createApp/renderStateModule'
-import { emptyArray } from './global'
 import { createNegotiator } from './negotiator'
 import { App, RenderedPage, RouteResolver } from './types'
 
@@ -136,7 +136,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
     renderPage: () => getPageFactory(app, ctx),
     renderPageState: () => getPageStateFactory(app, ctx),
     renderStateModule: () => getStateModuleFactory(app, ctx),
-    loadClientProps: () => createClientPropsLoader(ctx),
+    loadPageProps: () => createPagePropsLoader(ctx),
     preProcessHtml: () =>
       ctx.htmlProcessors &&
       mergeHtmlProcessors(ctx.htmlProcessors, page => ({ page, config }), [

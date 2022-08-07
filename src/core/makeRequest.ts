@@ -1,4 +1,4 @@
-import { emptyHeaders } from './app/global'
+import { emptyHeaders } from './app/constants'
 import type { Endpoint } from './endpoint'
 import type { RequestHeaders } from './http'
 import { ParsedUrl } from './node/url'

@@ -1,30 +1,34 @@
-// Overrides "src/core/loadStateModule.ts" module in client builds
+// Overrides "src/core/runtime/loadStateModule.ts" module in client builds
 import { globalCache } from '@/runtime/cache'
-import { getCachedState } from '@/runtime/getCachedState'
 import { getLoadedStateOrThrow } from '@/runtime/getLoadedStateOrThrow'
+import type { StateModule } from '@/runtime/stateModules'
+import { getStateModuleKey } from '../runtime/getStateModuleKey'
 import { prependBase } from './prependBase'
 import { notifyStateListeners } from './stateListeners'
 
+/**
+ * Deep-copying is skipped in the client implementation.
+ *
+ * See the server-side implementation for more info.
+ */
 export function loadStateModule(
-  id: string,
-  args: any[],
-  loadImpl: false | undefined,
-  toCacheKey: (args: any[]) => string
+  module: StateModule,
+  args: readonly any[],
+  sync?: true
 ) {
-  const cacheKey = toCacheKey(args)
+  const cacheKey = getStateModuleKey(module, args)
 
-  // Only the `get` method passes a false loadImpl.
-  if (loadImpl === false) {
-    return getLoadedStateOrThrow(cacheKey, args)[0]
+  if (sync) {
+    return getLoadedStateOrThrow(cacheKey, args)
   }
 
-  return getCachedState(cacheKey, async cacheControl => {
+  return globalCache.access(cacheKey, async cacheControl => {
     const stateUrl = prependBase(saus.stateModuleBase + cacheKey + '.js')
     if (import.meta.env.DEV) {
       // Ensure this module is ready to serve.
       await fetch(stateUrl, {
         method: 'POST',
-        body: JSON.stringify([id, args]),
+        body: JSON.stringify([module.id, args]),
       })
     }
     await import(/* @vite-ignore */ stateUrl)

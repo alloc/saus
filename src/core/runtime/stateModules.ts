@@ -1,13 +1,18 @@
-import { md5Hex } from '../utils/md5-hex'
-import { sortObjects } from '../utils/sortObjects'
-import { globalCache } from './cache'
-import { loadStateModule, StateModuleLoader } from './loadStateModule'
+import { CacheControl, globalCache } from './cache'
+import { getStateModuleKey } from './getStateModuleKey'
+import { loadStateModule } from './loadStateModule'
 import { createStateListener } from './stateListeners'
 
 export const stateModulesById = new Map<string, StateModule>()
 
-export interface StateModule<T = any, Args extends any[] = any[]> {
+export interface StateModule<T = any, Args extends readonly any[] = any> {
   id: string
+  /** Avoid using this directly. It doesn't exist in a client context. */
+  loader: StateModule.Loader<T, Args>
+  /** The arguments bound to this module. */
+  args?: readonly any[]
+  /** The module used when binding arguments. */
+  parent?: StateModule<T>
   bind(...args: Args): StateModule<T, []>
   get(...args: Args): T
   set(args: Args, state: T, expiresAt?: number): void
@@ -16,8 +21,13 @@ export interface StateModule<T = any, Args extends any[] = any[]> {
 }
 
 export namespace StateModule {
+  export type Loader<T = any, Args extends readonly any[] = any> = (
+    this: CacheControl<T>,
+    ...args: Args
+  ) => T
+
   export type LoadListener = { dispose: () => void }
-  export type LoadCallback<T = any, Args extends any[] = any[]> = (
+  export type LoadCallback<T = any, Args extends readonly any[] = any[]> = (
     args: Args,
     state: T,
     expiresAt?: number
@@ -26,7 +36,7 @@ export namespace StateModule {
 
 const kStateModule = Symbol.for('saus.StateModule')
 
-export const isStateModule = (arg: any): arg is StateModule =>
+export const isStateModule = (arg: any): arg is StateModule<any, any[]> =>
   !!(arg && arg[kStateModule])
 
 /**
@@ -34,31 +44,25 @@ export const isStateModule = (arg: any): arg is StateModule =>
  * functions must be JSON-compatible. Once loaded, these modules are injected into
  * pages whose route includes them.
  */
-export function defineStateModule<T, Args extends any[]>(
+export function defineStateModule<T, Args extends readonly any[]>(
   id: string,
-  loadImpl: StateModuleLoader<T, Args>
+  loader: StateModule.Loader<T, Args>
 ): StateModule<ResolvedState<T>, Args> {
-  function toCacheKey(args: any[]) {
-    let cacheKey = id
-    if (args.length) {
-      const hash = md5Hex(JSON.stringify(args, sortObjects))
-      cacheKey += '.' + hash.slice(0, 8)
-    }
-    return cacheKey
-  }
   const stateModule: StateModule<any, Args> = {
     // @ts-ignore
     [kStateModule]: true,
-    id: toCacheKey([]),
+    id,
+    loader,
     get(...args) {
-      return loadStateModule(id, args, false, toCacheKey)
+      return loadStateModule(this, args, true)[0]
     },
     set(args, state, expiresAt) {
-      const cacheKey = toCacheKey(args)
+      const cacheKey = getStateModuleKey(this, args)
       globalCache.loaded[cacheKey] = [state, expiresAt]
     },
-    load(...args) {
-      return loadStateModule(id, args, loadImpl, toCacheKey)
+    async load(...args) {
+      const [state] = await loadStateModule(this, args)
+      return state
     },
     onLoad(callback) {
       return createStateListener(id, callback)
@@ -66,12 +70,15 @@ export function defineStateModule<T, Args extends any[]>(
     bind(...args) {
       return {
         [kStateModule]: true,
-        id: toCacheKey(args),
+        id: getStateModuleKey(this, args),
+        loader,
+        args,
+        parent: this as any,
         get: (this.get as Function).bind(this, ...args),
-        set: (this.set as Function).bind(this, ...args),
+        set: (this.set as Function).bind(this, args),
         load: (this.load as Function).bind(this, ...args),
         onLoad() {
-          throw Error('Cannot call `onLoad` on bound state module')
+          throw Error('Cannot call `onLoad` after binding arguments')
         },
         bind() {
           throw Error('Cannot bind arguments twice')

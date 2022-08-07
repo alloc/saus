@@ -1,19 +1,18 @@
-import type { PageBundle, PageBundleOptions } from '../../bundle/types'
-import type { Buffer } from '../client/buffer'
+import type { Buffer } from '@/client/buffer'
 import type {
-  AnyClientProps,
   CommonClientProps,
   MergedHtmlProcessor,
   Route,
   RoutesModule,
   RuntimeConfig,
-  SausContext,
-} from '../core'
-import type { Endpoint } from '../endpoint'
-import type { ParsedUrl } from '../node/url'
-import { CacheEntry } from '../runtime/withCache'
-import type { ParsedHead } from '../utils/parseHead'
-import type { Falsy } from '../utils/types'
+} from '@/core'
+import type { Endpoint } from '@/endpoint'
+import type { ParsedUrl } from '@/node/url'
+import type { Cache } from '@/runtime/cache/types'
+import type { StateModule } from '@/runtime/stateModules'
+import type { ParsedHead } from '@/utils/parseHead'
+import type { Falsy } from '@/utils/types'
+import type { PageBundle, PageBundleOptions } from '../../bundle/types'
 
 export interface App {
   readonly config: RuntimeConfig
@@ -25,7 +24,7 @@ export interface App {
     url: Endpoint.RequestUrl,
     resolved?: ResolvedRoute
   ): Promise<Partial<Endpoint.Response>>
-  loadClientProps: ClientPropsLoader
+  loadPageProps: PagePropsLoader
   renderPage: RenderPageFn
   /**
    * Available in SSR bundles only.
@@ -62,7 +61,8 @@ export interface App {
    */
   renderStateModule(
     cacheKey: string,
-    cachedState: CacheEntry<any>,
+    state: any,
+    expiresAt?: number,
     inline?: boolean
   ): string
   preProcessHtml?: MergedHtmlProcessor
@@ -74,7 +74,7 @@ export namespace App {
 
   export interface Context extends RoutesModule {
     config: RuntimeConfig
-    getCachedPage: SausContext['getCachedPage']
+    pageCache: Cache<RenderPageResult>
     onError: (e: any) => void
     profile?: ProfiledEventHandler
   }
@@ -93,10 +93,18 @@ export type RenderedPage = {
   html: string
   head: ParsedHead
   files: RenderedFile[]
-  props: AnyClientProps
+  props: AnyServerProps
   route: Route
-  stateModules: string[]
   isDebug?: boolean
+}
+
+export type LoadedStateModule = {
+  module: StateModule
+  state: any
+  /** Expiration date in milliseconds since 1/1/1970 */
+  expiresAt?: number
+  /** When true, this module was inlined with page-specific state */
+  inlined?: boolean
 }
 
 export type ProfiledEvent = {
@@ -128,7 +136,7 @@ export type RenderPageFn = (
 export type RenderPageResult = [page: RenderedPage | null, error?: any]
 
 export type RenderPageOptions = {
-  props?: AnyClientProps
+  props?: AnyServerProps
   request?: Endpoint.Request
   resolved?: ResolvedRoute
   timeout?: number
@@ -174,12 +182,18 @@ export type RouteResolver = (
   routes?: readonly Route[]
 ) => ResolvedRoute
 
-export type ClientPropsLoader = (
+export type PagePropsLoader = (
   url: ParsedUrl,
   route: Route
-) => Promise<AnyClientProps>
+) => Promise<AnyServerProps>
+
+export type AnyServerProps = CommonServerProps & Record<string, any>
 
 export interface CommonServerProps extends CommonClientProps {
-  _client: CommonClientProps
-  _ts?: number
+  _inlined: LoadedStateModule[]
+  _included: LoadedStateModule[]
+  _headProps: Record<string, any> | undefined
+  _clientProps: CommonClientProps
+  /** Only exists in development mode */
+  _ts: number | undefined
 }

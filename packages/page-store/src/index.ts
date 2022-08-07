@@ -73,7 +73,7 @@ export function setupPageStore(config: PageStoreConfig) {
 
         return config.store.put(
           req.path.slice(1),
-          app.renderStateModule(name, [state, expiresAt]),
+          app.renderStateModule(name, state, expiresAt),
           resolveHeaders(req)
         )
       },

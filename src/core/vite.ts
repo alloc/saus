@@ -155,7 +155,7 @@ export interface SausConfig {
   renderConcurrency?: number
   /**
    * Where are state modules served from?
-   * @default "/state/"
+   * @default "/.saus/state/"
    */
   stateModuleBase?: string
   /**

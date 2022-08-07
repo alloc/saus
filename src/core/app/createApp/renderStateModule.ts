@@ -7,13 +7,16 @@ export const getStateModuleFactory = (
   app: App,
   ctx: App.Context
 ): App['renderStateModule'] =>
-  function renderStateModule(cacheKey, [state, ...config], inline) {
+  function renderStateModule(cacheKey, state, expiresAt, inline) {
     let lines: string[]
     if (inline) {
-      const cacheEntry = dataToEsm([state, ...config], '')
+      const cacheEntry = dataToEsm(
+        expiresAt == null ? [state] : [state, expiresAt],
+        ''
+      )
       lines = [`"${cacheKey}": ${cacheEntry},`]
     } else {
-      const cacheEntry = 'state' + commaDelimited(config)
+      const cacheEntry = 'state' + (expiresAt == null ? '' : `, ${expiresAt}`)
       const stateCacheUrl = prependBase(
         ctx.config.clientCacheId,
         ctx.config.base
@@ -29,7 +32,3 @@ export const getStateModuleFactory = (
     const argsComment = args ? `/* ${JSON.stringify(args)} */\n` : ``
     return argsComment + lines.join('\n')
   }
-
-function commaDelimited(arr: any[]) {
-  return arr.map(value => ', ' + dataToEsm(value, '')).join('')
-}

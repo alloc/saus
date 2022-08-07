@@ -72,7 +72,7 @@ export async function loadUserConfig(
   assertSausConfig(sausConfig, 'routes')
   sausConfig.routes = resolve(root, sausConfig.routes)
   sausConfig.defaultPath ||= '/404'
-  sausConfig.stateModuleBase ||= '/state/'
+  sausConfig.stateModuleBase ||= '/.saus/state/'
   sausConfig.defaultLayoutId ||= '/src/layouts/default'
 
   const { plugins, ...configDeps } = await loadConfigDeps(

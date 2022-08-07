@@ -13,9 +13,7 @@ import { PublicDirOptions } from './publicDir'
 import { RouteClients } from './routeClients'
 import { RouteRenderer } from './routeRenderer'
 import { RoutesModule } from './routes'
-import { clearCachedState } from './runtime/clearCachedState'
-import { getCachedState } from './runtime/getCachedState'
-import { Cache, withCache } from './runtime/withCache'
+import { Cache, createCache } from './runtime/cache'
 import type { Falsy } from './utils/types'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
@@ -37,8 +35,6 @@ export interface BaseContext
     Partial<DevMethods> {
   /** The URL prefix for all pages */
   basePath: string
-  /** Clear any matching pages (loading or loaded) */
-  clearCachedPages: (filter?: string | ((key: string) => boolean)) => void
   command: SausCommand
   /** The cache for compiled SSR modules */
   compileCache: CompileCache
@@ -48,12 +44,7 @@ export interface BaseContext
   defaultLayout: { id: string; hydrated?: boolean }
   /** The `saus.defaultPath` option from Vite config */
   defaultPath: string
-  /** Visit every cached page. Loading pages are waited for. */
-  forCachedPages: (
-    onPage: (pagePath: string, pageResult: RenderPageResult) => void
-  ) => Promise<void>
-  /** Load a page if not cached */
-  getCachedPage: typeof getCachedState
+  pageCache: Cache<RenderPageResult>
   importMeta: Record<string, any>
   /**
    * Used for injecting SSR imports.
@@ -115,37 +106,15 @@ async function createContext(props: {
   resolveConfig: (inlineConfig?: vite.InlineConfig) => Promise<ResolvedConfig>
 }): Promise<Context> {
   const { config } = props
-  const pageCache: Cache<RenderPageResult> = {
-    loading: {},
-    loaders: {},
-    loaded: {},
-  }
-
-  async function forCachedPages(
-    onPage: (pagePath: string, pageResult: RenderPageResult) => void
-  ): Promise<void> {
-    const loaded = Object.entries(pageCache.loaded)
-    const loading = Object.entries(pageCache.loading)
-    for (const [pagePath, [pageResult]] of loaded) {
-      onPage(pagePath, pageResult)
-    }
-    await Promise.all(
-      loading.map(async ([pagePath, pagePromise]) => {
-        onPage(pagePath, await pagePromise)
-      })
-    )
-  }
 
   return {
     ...props,
     basePath: config.base,
-    clearCachedPages: filter => clearCachedState(filter, pageCache),
     compileCache: new CompileCache('node_modules/.saus', config.root),
     defaultLayout: { id: config.saus.defaultLayoutId! },
     defaultPath: config.saus.defaultPath!,
     externalExports: new Map(),
-    forCachedPages,
-    getCachedPage: withCache(pageCache),
+    pageCache: createCache(),
     importMeta: config.env,
     injectedImports: {
       prepend: [],

@@ -40,7 +40,7 @@ export async function createDevApp(
   const plugins = [
     createPageEndpoint(context, onError),
     isolatePages(context),
-    cachePages(1, context.getCachedPage),
+    cachePages(1, context.pageCache),
     throttleRender({
       onError: error => [null, error],
     }),

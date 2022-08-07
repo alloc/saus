@@ -1,4 +1,4 @@
-import { getCachedState } from '@/runtime/getCachedState'
+import { globalCache } from '@/runtime/cache'
 import { ssrImport } from '@/runtime/ssrModules'
 import { baseToRegex } from '@/utils/base'
 import { getPagePath } from '@/utils/getPagePath'
@@ -23,7 +23,7 @@ export async function loadPageClient(routePath: string, routeParams: any) {
   }
 
   const pagePath = getPagePath(routePath, routeParams)
-  const pageProps = getCachedState(pagePath, cache => cache.oldValue)
+  const pageProps = globalCache.access(pagePath, cache => cache.oldValue)
 
   const client = await ssrImport(clientUrl)
   client.props = await pageProps

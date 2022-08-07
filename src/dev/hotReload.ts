@@ -1,6 +1,6 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
-import { clearCachedState } from '@/runtime/clearCachedState'
+import { globalCache } from '@/runtime/cache'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
 import { isLiveModule } from '@/vm/isLiveModule'
@@ -92,7 +92,7 @@ export function createHotReload(
     const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
       const stateModuleIds = context.stateModulesByFile[id]
-      clearCachedState(key => {
+      globalCache.clear(key => {
         const isMatch = stateModuleIds.some(
           moduleId => key == moduleId || key.startsWith(moduleId + '.')
         )

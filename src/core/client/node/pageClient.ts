@@ -1,5 +1,5 @@
+import { globalCache } from '@/runtime/cache'
 import type { DevContext } from '../../context'
-import { getCachedState } from '../../runtime/getCachedState'
 import { getPagePath } from '../../utils/getPagePath'
 import type { PageClient } from '../pageClient'
 
@@ -16,7 +16,7 @@ export async function loadPageClient(routePath: string, routeParams?: any) {
   if (routeClient) {
     const pagePath = getPagePath(routePath, routeParams)
     const client: PageClient = await ssrRequire(routeClient.url)
-    client.props = await getCachedState(pagePath, cache => cache.oldValue)
+    client.props = await globalCache.load(pagePath, cache => cache.oldValue!)
     return client
   }
 
