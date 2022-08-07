@@ -68,17 +68,17 @@ export function getRequireFunctions(context: SausContext) {
       filterStack,
       isCompiledModule,
       async compileModule(id, require, virtualId) {
-        if (virtualId) {
-          return compileSsrModule(id, context)
+        const isNodeModule =
+          !virtualId && (id.includes('/node_modules/') || !id.startsWith(root))
+        if (isNodeModule) {
+          return compileNodeModule(
+            fs.readFileSync(id, 'utf8'),
+            id,
+            require,
+            context
+          )
         }
-        // Vite plugins are skipped by the Node pipeline,
-        // except for their `resolveId` hooks.
-        return compileNodeModule(
-          fs.readFileSync(id, 'utf8'),
-          id,
-          require,
-          context
-        )
+        return compileSsrModule(id, context)
       },
       get shouldReload() {
         return context.ssrForceReload
