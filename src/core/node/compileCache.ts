@@ -27,13 +27,15 @@ export class CompileCache {
     if (sourcePath) {
       sourcePath = path.relative(this.root, sourcePath)
       const oldKey = this.fileMappings[sourcePath]
-      if (oldKey) {
-        try {
-          fs.unlinkSync(path.join(this.path, oldKey))
-        } catch {}
+      if (!oldKey || oldKey !== key) {
+        if (oldKey) {
+          try {
+            fs.unlinkSync(path.join(this.path, oldKey))
+          } catch {}
+        }
+        this.fileMappings[sourcePath] = key
+        saveFileMappings(this.fileMappings)
       }
-      this.fileMappings[sourcePath] = key
-      saveFileMappings(this.fileMappings)
     }
     try {
       return fs.readFileSync(path.join(this.path, key), 'utf8')
