@@ -38,6 +38,7 @@ export function renderErrorFallback(
   )
 
   return endent`
+    <!DOCTYPE html>
     <link rel="stylesheet" href="/@id/saus/src/app/errorFallback.css?direct">
     <script type="module" src="/@id/saus/src/app/errorFallbackClient.js"></script>
     <body ${ssr ? '' : 'style="display: none"'}>
