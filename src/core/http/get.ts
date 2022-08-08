@@ -14,7 +14,7 @@ export interface GetOptions extends Omit<HttpRequestOptions, 'body'> {}
  *
  * Send a GET request, receive a `Promise<Buffer>` object.
  */
-export function get(url: string | URL, opts?: GetOptions) {
+export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
   const cacheKey = getCacheKey(
     typeof url == 'string' ? url : url.href,
     opts?.headers
