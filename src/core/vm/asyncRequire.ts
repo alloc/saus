@@ -1,4 +1,5 @@
 import builtinModules from 'builtin-modules'
+import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import { Module } from 'module'
@@ -466,7 +467,11 @@ function isNodeRequirable(file: string) {
   }
   try {
     const code = fs.readFileSync(file, 'utf8')
-    return !/^(im|ex)port /m.test(code)
+    if (/\b(import|export)\b/.test(code)) {
+      const [imports, exports] = esModuleLexer.parse(code, file)
+      return !imports.length && !exports.length
+    }
+    return true
   } catch {
     return false
   }
