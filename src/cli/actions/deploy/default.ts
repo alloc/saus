@@ -1,4 +1,4 @@
-import { command } from '../command'
+import { command } from '../../command'
 
 command(deploy)
   .option('-n, --dry-run', `[boolean] enable dry logs and skip deploying`)
@@ -11,8 +11,10 @@ export type DeployFlags = {
   revert?: false
 }
 
-export async function deploy(options: DeployFlags) {
-  const { deploy } = await import('../../deploy/api')
+export { deploy as default }
+
+async function deploy(options: DeployFlags) {
+  const { deploy } = await import('../../../deploy/api')
   await deploy({
     ...options,
     noCache: options.cache === false,

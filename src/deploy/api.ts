@@ -45,7 +45,7 @@ export async function deploy(
 
   let gitStatus = await exec('git status --porcelain', { cwd: ctx.root })
   if (!options.dryRun && gitStatus) {
-    throw Error('[saus] Cannot deploy with unstaged changes')
+    throw Error('[saus] Cannot deploy with uncommitted changes')
   }
 
   const { files, logger } = ctx

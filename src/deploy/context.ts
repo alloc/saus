@@ -8,13 +8,13 @@ import fs from 'fs'
 import path from 'path'
 import { PackageJson, Promisable } from 'type-fest'
 import { BundleContext, loadBundleContext } from '../bundle/context'
-import { createCommit } from '../core'
 import { SecretHub } from '../secrets/hub'
 import { secretsPlugin } from '../secrets/plugin'
 import { GitFiles } from './files'
 import { loadDeployPlugin } from './loader'
 import { DeployOptions } from './options'
 import { createPluginCache, PluginCache } from './pluginCache'
+import { syncDeployCache } from './sync'
 import {
   DeployAction,
   DeployHookRef,
@@ -108,7 +108,12 @@ export async function loadDeployContext(
   // This is a heavy operation, so avoid doing it until necessary.
   let syncPromise: Promise<void> | undefined
   context.syncDeployCache = () =>
-    (syncPromise ||= syncDeployCache(cacheDir, 'deployed', context))
+    (syncPromise ||= syncDeployCache(
+      cacheDir,
+      'deployed',
+      context.gitRepo,
+      context.files
+    ))
 
   context.command = options.command || 'deploy'
   context.files = new GitFiles(cacheDir, options.dryRun)
@@ -146,38 +151,4 @@ export function getDeployContext() {
 export function injectDeployContext(context: DeployContext) {
   contextPath = path.resolve(__dirname, '../core/context.cjs')
   injectNodeModule(contextPath, context)
-}
-
-async function syncDeployCache(
-  cacheDir: string,
-  targetBranch: string,
-  { gitRepo, files }: DeployContext
-) {
-  let init: boolean
-  if ((init = !fs.existsSync(path.join(cacheDir, '.git')))) {
-    await exec('git init', { cwd: cacheDir })
-    await exec('git remote add', [gitRepo.name, gitRepo.url], {
-      cwd: cacheDir,
-    })
-  }
-  try {
-    await exec('git pull --depth 1', [gitRepo.name, targetBranch], {
-      cwd: cacheDir,
-    })
-    if (init) {
-      await exec('git branch -u', [gitRepo.name + '/deployed'], {
-        cwd: cacheDir,
-      })
-    }
-  } catch (e: any) {
-    if (!init || !/Couldn't find remote ref/.test(e.message)) {
-      throw e
-    }
-    files.get('.gitignore').setBuffer('deploy.lock', 'utf8')
-    await exec('git add .gitignore', { cwd: cacheDir })
-    createCommit('init', { cwd: cacheDir })
-    await exec('git push -u', [gitRepo.name, 'master:' + targetBranch], {
-      cwd: cacheDir,
-    })
-  }
 }

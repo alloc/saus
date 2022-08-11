@@ -61,8 +61,20 @@ function getActionEntries(
   if (typeof action[1] == 'function') {
     return [action as any]
   }
-  return Object.entries(action[1]).map(childAction => {
-    childAction[0] = action[0] + ' ' + childAction[0]
-    return getActionEntries(childAction).flat() as [string, Function]
-  })
+  return Object.entries(action[1])
+    .sort((a, b) => {
+      // Ensure default action is last.
+      if (a[0] == 'default') return 1
+      if (b[0] == 'default') return -1
+      // Otherwise don't care about order.
+      return -1
+    })
+    .map(childAction => {
+      childAction[0] =
+        childAction[0] !== 'default'
+          ? action[0] + ' ' + childAction[0]
+          : action[0]
+
+      return getActionEntries(childAction).flat() as [string, Function]
+    })
 }
