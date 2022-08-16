@@ -89,8 +89,8 @@ const createPageEndpoint =
 
             page = { html, files: [] } as any
 
-            // error.req = req
-            // onError(error)
+            error.req = req
+            onError(error)
           }
 
           if (page) {

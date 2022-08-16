@@ -1,7 +1,10 @@
 import { Endpoint } from '@/endpoint'
 import { route } from '@/runtime/routes'
+import createDebug from 'debug'
 import { makePurgeRequest } from './request'
 import { PurgeOptions, PurgePlugin } from './types'
+
+const debug = createDebug('saus:purge')
 
 export interface PurgeRouteConfig {
   plugins: PurgePlugin[]
@@ -24,6 +27,7 @@ export function addPurgeRoute(routePath: string, config: PurgeRouteConfig) {
     const options = await req.json<PurgeOptions>()
     const request = makePurgeRequest('route', options)
     for (const plugin of config.plugins) {
+      debug('Running purge plugin: %s', plugin.name)
       if (plugin.expandGlobs) {
         const expanded = await plugin.expandGlobs(request.globs)
         const files = new Set([...expanded, ...request.files])
@@ -32,6 +36,7 @@ export function addPurgeRoute(routePath: string, config: PurgeRouteConfig) {
         await plugin.purge(request)
       }
     }
+    debug('Purge successful.')
     req.respondWith(200)
   })
 }

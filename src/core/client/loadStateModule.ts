@@ -36,7 +36,7 @@ export function loadStateModule(
     if (expiresAt !== undefined) {
       cacheControl.maxAge = (expiresAt - Date.now()) / 1e3
     }
-    notifyStateListeners(cacheKey, args, state, expiresAt)
+    await notifyStateListeners(cacheKey, args, state, expiresAt)
     return state
   })
 }

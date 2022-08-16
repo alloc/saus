@@ -254,7 +254,7 @@ export function createHotReload(
       dirtyFiles.clear()
 
       debug(`Vite config changed. Restarting server.`)
-      events.emit('restart')
+      return events.emit('restart')
     }
   }
 

@@ -39,8 +39,10 @@ export function renderErrorFallback(
 
   return endent`
     <!DOCTYPE html>
-    <link rel="stylesheet" href="/@id/saus/src/app/errorFallback.css?direct">
-    <script type="module" src="/@id/saus/src/app/errorFallbackClient.js"></script>
+    <head>
+      <link rel="stylesheet" href="/@id/saus/src/core/app/errorFallback.css?direct">
+      <script type="module" src="/@id/saus/src/core/app/errorFallbackClient.js"></script>
+    </head>
     <body ${ssr ? '' : 'style="display: none"'}>
       <h1>${
         ssr

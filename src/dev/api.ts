@@ -24,7 +24,6 @@ import { getViteFunctions } from '@/vite/functions'
 import { formatAsyncStack } from '@/vm/formatAsyncStack'
 import { createFullReload } from '@/vm/fullReload'
 import { injectNodeModule } from '@/vm/nodeModules'
-import { ModuleMap } from '@/vm/types'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
 import { EventEmitter } from 'events'
 import { readFile } from 'fs/promises'
@@ -69,7 +68,6 @@ export async function createServer(
     ])
 
   let context = await createContext()
-  let moduleMap: ModuleMap = {}
 
   events.on('error', onError)
   events.on('restart', restart)
@@ -102,7 +100,7 @@ export async function createServer(
       // to the point where it's basically spam.
       delete error.watchFiles
 
-      formatAsyncStack(error, moduleMap, [], context.config.filterStack)
+      formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
       logger.error(formatError(error, context.app), { error })
     }
   }
@@ -111,7 +109,7 @@ export async function createServer(
 
   const onExit = addExitCallback((signal, exitCode, error) => {
     if (error) {
-      formatAsyncStack(error, moduleMap, [], context.config.filterStack)
+      formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
     }
   })
 

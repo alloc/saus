@@ -1,3 +1,4 @@
+import { Promisable } from 'type-fest'
 import { CacheControl, globalCache } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { loadStateModule } from './loadStateModule'
@@ -27,11 +28,11 @@ export namespace StateModule {
   ) => T
 
   export type LoadListener = { dispose: () => void }
-  export type LoadCallback<T = any, Args extends readonly any[] = any[]> = (
+  export type LoadCallback<T = any, Args extends readonly any[] = any> = (
     args: Args,
     state: T,
     expiresAt?: number
-  ) => void
+  ) => Promisable<void>
 }
 
 const kStateModule = Symbol.for('saus.StateModule')
