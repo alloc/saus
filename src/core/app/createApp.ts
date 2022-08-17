@@ -135,7 +135,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
     callEndpoints: () => wrapEndpoints(app, ctx),
     renderPage: () => getPageFactory(app, ctx),
     renderPageState: () => getPageStateFactory(app, ctx),
-    renderStateModule: () => getStateModuleFactory(app, ctx),
+    renderStateModule: () => getStateModuleFactory(ctx),
     loadPageProps: () => createPagePropsLoader(ctx),
     preProcessHtml: () =>
       ctx.htmlProcessors &&

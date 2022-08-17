@@ -103,5 +103,6 @@ export function loadStateModule<Args extends readonly any[]>(
 
   return globalCache.access(cacheKey, loadStateModule, {
     deepCopy: true,
+    args,
   })
 }

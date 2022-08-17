@@ -5,11 +5,10 @@ import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
-import { clientDir, runtimeDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
 import { clientLayoutPlugin } from '@/plugins/clientLayout'
 import { clientStatePlugin } from '@/plugins/clientState'
-import { moduleRedirection, redirectModule } from '@/plugins/moduleRedirection'
+import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
@@ -37,6 +36,7 @@ import { DevContext } from './context'
 import { createDevApp } from './createDevApp'
 import { DevEventEmitter } from './events'
 import { createHotReload } from './hotReload'
+import { clientRedirects } from './moduleRedirects'
 
 export interface SausDevServer {
   (req: http.IncomingMessage, res: http.ServerResponse, next?: () => void): void
@@ -59,12 +59,7 @@ export async function createServer(
       clientContextPlugin,
       clientLayoutPlugin,
       clientStatePlugin,
-      moduleRedirection([
-        redirectModule(
-          path.join(runtimeDir, 'loadStateModule.ts'),
-          path.join(clientDir, 'loadStateModule.ts')
-        ),
-      ]),
+      moduleRedirection(clientRedirects),
     ])
 
   let context = await createContext()

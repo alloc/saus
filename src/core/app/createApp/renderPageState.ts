@@ -41,25 +41,20 @@ export const getPageStateFactory = (
     const imports = new Map<string, string[]>()
 
     if (props._inlined.length) {
-      const inlined = props._inlined
-        .map(loaded => {
-          return app.renderStateModule(
-            loaded.module.id,
-            loaded.state,
-            loaded.expiresAt,
-            true
-          )
-        })
-        .join(RETURN)
-        .replace(/\n/g, '\n  ')
+      const inlined = props._inlined.map(loaded => {
+        const { module } = loaded
+        return app.renderStateModule(
+          (module.parent || module).id,
+          module.args || [],
+          loaded.state,
+          loaded.expiresAt,
+          true
+        )
+      })
 
       const stateCacheUrl = prependBase(ctx.config.clientCacheId, base)
-      imports.set(stateCacheUrl, ['globalCache'])
-      code =
-        `Object.assign(globalCache.loaded, {` +
-        (RETURN + INDENT + inlined + RETURN) +
-        `})\n` +
-        code
+      imports.set(stateCacheUrl, ['setState'])
+      code = RETURN + inlined.join(RETURN) + RETURN.repeat(2) + code
     }
 
     const helpers: string[] = []

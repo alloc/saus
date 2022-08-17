@@ -24,6 +24,9 @@ export function clientStatePlugin(): Plugin {
       }
       if (/\bdefineStateModule\b/.test(code)) {
         const parsed = await babel.parseAsync(code, getBabelConfig(id))
+        if (!parsed) {
+          return
+        }
 
         // For SSR, just extract the state module IDs for hot reload purposes.
         if (opts?.ssr) {
@@ -38,10 +41,11 @@ export function clientStatePlugin(): Plugin {
             },
           })
         } else {
-          const exports = new Set<NodePath<t.Statement>>()
+          const preserved = new Set<NodePath<t.Statement>>()
+
           babel.traverse(parsed, {
             ExportDeclaration(path) {
-              exports.add(path)
+              preserved.add(path)
             },
             CallExpression(path) {
               const callee = path.get('callee')
@@ -52,15 +56,19 @@ export function clientStatePlugin(): Plugin {
                   args[i].remove()
                 }
               }
+              // FIXME: Be smarter about which onLoad calls we preserve.
+              else if (callee.toString().endsWith('.onLoad')) {
+                preserved.add(path.getStatementParent()!)
+                path.skip()
+              }
             },
           })
 
           const transformer: babel.Visitor = {
             Program(path) {
-              const exportStmts = Array.from(exports)
               const stmts = new Set(
-                exportStmts
-                  .concat(resolveReferences(exportStmts))
+                Array.from(preserved)
+                  .concat(resolveReferences(Array.from(preserved)))
                   .sort((a, b) => a.node.start! - b.node.start!)
               )
 

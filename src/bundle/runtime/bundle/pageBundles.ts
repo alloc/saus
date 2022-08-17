@@ -122,14 +122,16 @@ export const providePageBundles: App.Plugin = app => {
 
       // State modules are not renamed for debug view.
       for (const loaded of [...page.props._included].reverse()) {
-        const stateModuleId = stateModuleBase + loaded.module.id + '.js'
+        const { module } = loaded
+        const stateModuleUrl = stateModuleBase + module.id + '.js'
         const stateModuleText = app.renderStateModule(
-          loaded.module.id,
+          (module.parent || module).id,
+          module.args || [],
           loaded.state,
           loaded.expiresAt
         )
         page.files.push({
-          id: stateModuleId,
+          id: stateModuleUrl,
           data: stateModuleText,
           mime: 'application/javascript',
         })

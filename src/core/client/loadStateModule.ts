@@ -4,7 +4,6 @@ import { getLoadedStateOrThrow } from '@/runtime/getLoadedStateOrThrow'
 import type { StateModule } from '@/runtime/stateModules'
 import { getStateModuleKey } from '../runtime/getStateModuleKey'
 import { prependBase } from './prependBase'
-import { notifyStateListeners } from './stateListeners'
 
 /**
  * Deep-copying is skipped in the client implementation.
@@ -26,17 +25,16 @@ export function loadStateModule(
     const stateUrl = prependBase(saus.stateModuleBase + cacheKey + '.js')
     if (import.meta.env.DEV) {
       // Ensure this module is ready to serve.
-      await fetch(stateUrl, {
+      await fetch(prependBase('/.saus/state'), {
         method: 'POST',
         body: JSON.stringify([module.id, args]),
       })
     }
     await import(/* @vite-ignore */ stateUrl)
     const [state, expiresAt] = globalCache.loaded[cacheKey]
-    if (expiresAt !== undefined) {
+    if (expiresAt != null) {
       cacheControl.maxAge = (expiresAt - Date.now()) / 1e3
     }
-    await notifyStateListeners(cacheKey, args, state, expiresAt)
     return state
   })
 }

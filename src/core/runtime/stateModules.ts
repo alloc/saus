@@ -1,5 +1,4 @@
-import { Promisable } from 'type-fest'
-import { CacheControl, globalCache } from './cache'
+import { CacheControl, setState } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { loadStateModule } from './loadStateModule'
 import { createStateListener } from './stateListeners'
@@ -32,7 +31,7 @@ export namespace StateModule {
     args: Args,
     state: T,
     expiresAt?: number
-  ) => Promisable<void>
+  ) => void
 }
 
 const kStateModule = Symbol.for('saus.StateModule')
@@ -58,8 +57,7 @@ export function defineStateModule<T, Args extends readonly any[]>(
       return loadStateModule(this, args, true)[0]
     },
     set(args, state, expiresAt) {
-      const cacheKey = getStateModuleKey(this, args)
-      globalCache.loaded[cacheKey] = [state, expiresAt]
+      setState(this.id, args, state, expiresAt)
     },
     async load(...args) {
       const [state] = await loadStateModule(this, args)

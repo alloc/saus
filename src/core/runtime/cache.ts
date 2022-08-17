@@ -1,6 +1,20 @@
 import { createCache } from './cache/create'
+import { getStateModuleKey } from './getStateModuleKey'
+import { notifyStateListeners } from './stateListeners'
 
 export const globalCache = createCache()
+
+export function setState<Args extends readonly any[]>(
+  moduleId: string,
+  args: Args,
+  state: any,
+  expiresAt?: number
+): any {
+  const cacheKey = getStateModuleKey(moduleId, args)
+  globalCache.loaded[cacheKey] = [state, expiresAt]
+  notifyStateListeners(moduleId, args, state, expiresAt)
+  return state
+}
 
 export type { CacheControl } from './cache/cacheControl'
 export type { Cache } from './cache/types'

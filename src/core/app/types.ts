@@ -49,10 +49,7 @@ export interface App {
    * The entry module of a specific page, which includes page-specific state,
    * possibly some `<head>` tags, and preloaded state modules.
    */
-  renderPageState(
-    { path, props, stateModules, head }: RenderedPage,
-    preloadUrls?: string[]
-  ): string
+  renderPageState(page: RenderedPage, preloadUrls?: string[]): string
   /**
    * Convert a "state module" (defined with a build-time `defineStateModule` call)
    * into an ES module that is ready for the browser. Once loaded, their state is
@@ -60,9 +57,10 @@ export interface App {
    * the `StateModule#get` method.
    */
   renderStateModule(
-    cacheKey: string,
+    moduleId: string,
+    args: readonly any[],
     state: any,
-    expiresAt?: number,
+    expiresAt?: number | null,
     inline?: boolean
   ): string
   preProcessHtml?: MergedHtmlProcessor

@@ -7,3 +7,12 @@ export function createStateListener<Args extends readonly any[]>(
   // Do nothing in SSR context.
   return { dispose() {} }
 }
+
+export function notifyStateListeners(
+  id: string,
+  args: readonly any[],
+  state: any,
+  expiresAt: number | undefined
+): void {
+  // Do nothing in SSR context.
+}

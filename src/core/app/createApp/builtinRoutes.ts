@@ -64,34 +64,27 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   })
 
   // State modules
-  const stateModuleRoute = route(`${context.config.stateModuleBase}*.js`).get(
-    async req => {
-      const cacheKey = req.wild
-      const id = cacheKey.replace(/\.[^.]+$/, '')
+  route(`${context.config.stateModuleBase}*.js`).get(async req => {
+    const cacheKey = req.wild
+    const id = cacheKey.replace(/\.[^.]+$/, '')
 
-      const stateModule = stateModulesById.get(id)
-      if (stateModule) {
-        await globalCache.access(cacheKey, async cacheControl => {
-          const loader = globalCache.loaders[cacheKey]
-          if (loader) {
-            return loader(cacheControl)
-          }
-          cacheControl.maxAge = 0
-        })
-
-        const stateEntry = globalCache.loaded[cacheKey]
-        if (stateEntry) {
-          const module = app.renderStateModule(cacheKey, ...stateEntry)
-          sendModule(req, module)
-        }
+    const stateModule = stateModulesById.get(id)
+    if (stateModule) {
+      const stateEntry = await globalCache.access(cacheKey)
+      if (stateEntry) {
+        const [state, expiresAt, args] = stateEntry
+        const module = app.renderStateModule(id, args!, state, expiresAt)
+        sendModule(req, module)
+      } else {
+        req.respondWith(404)
       }
     }
-  )
+  })
 
   // TODO: inject this during development
   if (context.config.command == 'dev') {
     // Ensure a state module is generated.
-    stateModuleRoute.post(async req => {
+    route('/.saus/state').post(async req => {
       const input = (await req.read()).toString('utf8')
       const [id, args] = JSON.parse(input) as [string, any[]]
 

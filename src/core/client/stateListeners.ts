@@ -13,14 +13,11 @@ export function createStateListener(
   }
 }
 
-export async function notifyStateListeners(
+export function notifyStateListeners(
   id: string,
   args: readonly any[],
   state: any,
   expiresAt: number | undefined
-): Promise<void> {
-  if (listenerSets[id])
-    await Promise.all(
-      Array.from(listenerSets[id], callback => callback(args, state, expiresAt))
-    )
+): void {
+  listenerSets[id]?.forEach(callback => callback(args, state, expiresAt))
 }

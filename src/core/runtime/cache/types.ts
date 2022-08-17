@@ -17,8 +17,16 @@ export type Cache<State = unknown> = {
 }
 
 export namespace Cache {
-  /** The internal data structure used by `Cache` type */
-  export type Entry<State = unknown> = [state: State, expiresAt?: number]
+  /**
+   * The internal data structure used by `Cache` type.
+   *
+   * The `args` property doesn't exist for URL-based state.
+   */
+  export type Entry<State = unknown> = [
+    state: State,
+    expiresAt?: number | null,
+    args?: readonly any[]
+  ]
 
   export interface EntryPromise<State>
     extends globalThis.Promise<Entry<State>> {
@@ -29,7 +37,7 @@ export namespace Cache {
     (cacheControl: CacheControl<State>): Promisable<State>
   }
 
-  export interface AccessOptions {
+  export interface AccessOptions<State = unknown> {
     /**
      * When this state is accessed in a server context,
      * it will be deep-copied so it can be mutated in preparation
@@ -37,5 +45,13 @@ export namespace Cache {
      * that goes in the client module.
      */
     deepCopy?: boolean
+    /**
+     * An array of arguments that were used to generate the
+     * cache key.
+     *
+     * At the moment, this property is only used when rendering
+     * state modules in a server context.
+     */
+    args?: readonly any[]
   }
 }
