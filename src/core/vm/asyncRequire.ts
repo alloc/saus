@@ -248,6 +248,7 @@ export function createAsyncRequire(
         }
         if (resolved.external) {
           if (isNodeRequirable(resolved.id)) {
+            nodeRequire = createRequire(importer || __filename)
             nodeResolvedId = resolved.id
             break resolveStep
           }
