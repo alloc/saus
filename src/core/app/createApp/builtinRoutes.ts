@@ -4,8 +4,9 @@ import { makeRequestUrl } from '@/makeRequest'
 import { ParsedUrl, parseUrl } from '@/node/url'
 import type { Route } from '@/routes'
 import { globalCache } from '@/runtime/cache'
+import { getStateModuleKey } from '@/runtime/getStateModuleKey'
 import { route } from '@/runtime/routes'
-import { stateModulesById } from '@/runtime/stateModules'
+import { stateModulesById } from '@/runtime/stateModules/global'
 import { prependBase } from '@/utils/base'
 import { defer } from '@/utils/defer'
 import etag from 'etag'
@@ -84,16 +85,25 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   // TODO: inject this during development
   if (context.config.command == 'dev') {
     // Ensure a state module is generated.
-    route('/.saus/state').post(async req => {
-      const input = (await req.read()).toString('utf8')
-      const [id, args] = JSON.parse(input) as [string, any[]]
-
-      const stateModule = stateModulesById.get(id)
-      if (stateModule) {
-        await stateModule.load(...args)
-        req.respondWith(200)
-      }
-    })
+    route('/.saus/state')
+      .post(async req => {
+        const [id, args] = await req.json<[string, any[]]>()
+        const stateModule = stateModulesById.get(id)
+        if (stateModule) {
+          await stateModule.load(...args)
+          req.respondWith(200)
+        }
+      })
+      .delete(async req => {
+        const [id, args] = await req.json<[string, any[]]>()
+        const cacheKey = getStateModuleKey(id, args)
+        if (globalCache.has(cacheKey)) {
+          globalCache.clear(cacheKey)
+          req.respondWith(200, { json: { deleted: true } })
+        } else {
+          req.respondWith(200, { json: { deleted: false } })
+        }
+      })
   }
 }
 

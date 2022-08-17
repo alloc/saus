@@ -1,9 +1,9 @@
 // Overrides "src/core/runtime/loadStateModule.ts" module in client builds
 import { globalCache } from '@/runtime/cache'
 import { getLoadedStateOrThrow } from '@/runtime/getLoadedStateOrThrow'
+import { getStateModuleKey } from '@/runtime/getStateModuleKey'
 import type { StateModule } from '@/runtime/stateModules'
-import { getStateModuleKey } from '../runtime/getStateModuleKey'
-import { prependBase } from './prependBase'
+import { prependBase } from '../prependBase'
 
 /**
  * Deep-copying is skipped in the client implementation.

@@ -1,10 +1,10 @@
-import type { StateModule } from './stateModules'
+import type { StateModule } from '../stateModules'
 
 export function createStateListener<Args extends readonly any[]>(
   key: string,
   callback: StateModule.LoadCallback<any, Args>
 ): StateModule.LoadListener {
-  // Do nothing in SSR context.
+  // Do nothing in server context.
   return { dispose() {} }
 }
 
@@ -14,5 +14,5 @@ export function notifyStateListeners(
   state: any,
   expiresAt: number | undefined
 ): void {
-  // Do nothing in SSR context.
+  // Do nothing in server context.
 }

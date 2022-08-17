@@ -1,11 +1,11 @@
-import { Cache, CacheControl, globalCache } from '@/runtime/cache'
+import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
 import { klona as deepCopy } from 'klona'
-import { unwrapDefault } from '../utils/unwrapDefault'
-import { CachePlugin } from './cachePlugin'
-import { getLoadedStateOrThrow } from './getLoadedStateOrThrow'
-import { getStateModuleKey } from './getStateModuleKey'
-import { StateModule } from './stateModules'
+import { Cache, CacheControl, globalCache } from '../cache'
+import { CachePlugin } from '../cachePlugin'
+import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'
+import { getStateModuleKey } from '../getStateModuleKey'
+import type { StateModule } from '../stateModules'
 
 const debug = createDebug('saus:state')
 

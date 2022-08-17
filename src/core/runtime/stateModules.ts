@@ -1,9 +1,8 @@
 import { CacheControl, setState } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
-import { loadStateModule } from './loadStateModule'
-import { createStateListener } from './stateListeners'
-
-export const stateModulesById = new Map<string, StateModule>()
+import { createStateListener } from './stateModules/events'
+import { trackStateModule } from './stateModules/global'
+import { loadStateModule } from './stateModules/loader'
 
 export interface StateModule<T = any, Args extends readonly any[] = any> {
   id: string
@@ -85,7 +84,7 @@ export function defineStateModule<T, Args extends readonly any[]>(
       }
     },
   }
-  stateModulesById.set(id, stateModule)
+  trackStateModule(stateModule)
   return stateModule
 }
 

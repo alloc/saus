@@ -84,8 +84,6 @@ export interface BaseContext
   routeClients: RouteClients
   /** Path to the routes module */
   routesPath: string
-  /** Track which files are responsible for state modules */
-  stateModulesByFile: Record<string, string[]>
   userConfig: vite.UserConfig
 }
 
@@ -133,7 +131,6 @@ async function createContext(props: {
     routesPath: config.saus.routes,
     runtimeHooks: [],
     ssrRequire: null!,
-    stateModulesByFile: {},
     userConfig: config.inlineConfig,
   }
 }

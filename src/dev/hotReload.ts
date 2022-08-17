@@ -1,8 +1,13 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
 import { globalCache } from '@/runtime/cache'
+import {
+  stateModulesByFile,
+  stateModulesById,
+} from '@/runtime/stateModules/global'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
+import { take } from '@/utils/take'
 import { isLiveModule } from '@/vm/isLiveModule'
 import {
   PurgeHandler,
@@ -91,19 +96,28 @@ export function createHotReload(
 
     const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
-      const stateModuleIds = context.stateModulesByFile[id]
+      const moduleIds = take(stateModulesByFile, id)!.map(module => {
+        stateModulesById.delete(module.id)
+        return module.id
+      })
+
+      // TODO: escape moduleIds for regex syntax
+      const cacheKeyPatterns = new RegExp(
+        '^(' + moduleIds.join('|') + ')(\\.[^.]+)?$'
+      )
+
       globalCache.clear(key => {
-        const isMatch = stateModuleIds.some(
-          moduleId => key == moduleId || key.startsWith(moduleId + '.')
-        )
-        if (isMatch && handler.clientChange) {
+        if (!cacheKeyPatterns.test(key)) {
+          return false
+        }
+        if (handler.clientChange) {
           const url = prependBase(
             stateModuleBase + key + '.js',
             context.basePath
           )
           handler.clientChange(url)
         }
-        return isMatch
+        return true
       })
     }
     dirtyStateModules.clear()
@@ -152,8 +166,8 @@ export function createHotReload(
       const skipRoutesPath =
         !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
 
-      const stateModules = new Set(
-        Object.keys(context.stateModulesByFile).map(file => moduleMap[file]!)
+      const stateModuleFiles = new Set(
+        Array.from(stateModulesByFile.keys(), file => moduleMap[file]!)
       )
 
       const acceptModule = (
@@ -175,17 +189,17 @@ export function createHotReload(
 
       const resetStateModule = (module: CompiledModule) => {
         // Invalidate any cached state when a state module is reset.
-        if (stateModules.has(module)) {
+        if (stateModuleFiles.has(module)) {
           dirtyStateModules.add(module)
-          stateModules.delete(module)
+          stateModuleFiles.delete(module)
         }
 
         // Any state module that dynamically imported this module
         // needs to invalidate any cached state it produced.
-        for (const stateModule of stateModules) {
+        for (const stateModule of stateModuleFiles) {
           if (module.importers.hasDynamic(stateModule)) {
             dirtyStateModules.add(stateModule)
-            stateModules.delete(stateModule)
+            stateModuleFiles.delete(stateModule)
           }
         }
       }

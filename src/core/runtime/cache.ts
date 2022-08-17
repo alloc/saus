@@ -1,6 +1,6 @@
 import { createCache } from './cache/create'
 import { getStateModuleKey } from './getStateModuleKey'
-import { notifyStateListeners } from './stateListeners'
+import { notifyStateListeners } from './stateModules/events'
 
 export const globalCache = createCache()
 

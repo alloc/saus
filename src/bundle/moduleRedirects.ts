@@ -1,3 +1,4 @@
+import * as coreRedirects from '@/moduleRedirects'
 import { bundleDir, clientDir, coreDir, httpDir, runtimeDir } from '@/paths'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import path from 'path'
@@ -49,12 +50,5 @@ export const clientRedirects = [
     path.join(clientDir, 'http/get.ts')
   ),
   redirectModule(path.join(httpDir, 'httpImport.ts'), emptyModule),
-  redirectModule(
-    path.join(runtimeDir, 'loadStateModule.ts'),
-    path.join(clientDir, 'loadStateModule.ts')
-  ),
-  redirectModule(
-    path.join(runtimeDir, 'stateListeners.ts'),
-    path.join(clientDir, 'stateListeners.ts')
-  ),
+  ...coreRedirects.clientRedirects,
 ]
