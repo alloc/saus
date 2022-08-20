@@ -5,6 +5,9 @@ import { exportsId } from './compileEsm'
 import { CompiledModule } from './types'
 
 export function executeModule(module: CompiledModule): Promise<any> {
+  if (!module.code) {
+    return module.exports!
+  }
   let { id, code, map, env } = module
   if (map) {
     code += toInlineSourceMap(map)
