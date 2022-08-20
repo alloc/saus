@@ -1,3 +1,4 @@
+import { limitTime } from '@/utils/limitTime'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
@@ -58,6 +59,7 @@ export interface RequireAsyncState {
 }
 
 export interface RequireAsyncConfig extends RequireAsyncState {
+  timeout?: number
   /**
    * Return `true` to mark an installed module as "live", implying that
    * its exports may be updated dynamically after being loaded.
@@ -219,16 +221,12 @@ export function createAsyncRequire(
           return resolvedId
         }
 
-  return async function requireAsync(id, importer, isDynamic) {
-    if (builtinModules.includes(id)) {
-      return Module.createRequire(importer || __filename)(id)
-    }
-
-    const time = Date.now()
-    const asyncStack = isDynamic
-      ? traceDynamicImport(Error(), 3)
-      : (callStack = [getStackFrame(3), ...callStack])
-
+  const fetchExports = async (
+    id: string,
+    importer: string | null | undefined,
+    isDynamic: boolean | undefined,
+    asyncStack: (StackFrame | undefined)[]
+  ) => {
     let shouldReload = config.shouldReload || neverReload
     let virtualId: string | undefined
     let resolvedId: string | undefined
@@ -460,6 +458,31 @@ export function createAsyncRequire(
 
     return exports
   }
+
+  const requireAsync: RequireAsync = (id, importer, isDynamic) => {
+    if (builtinModules.includes(id)) {
+      const nodeRequire = Module.createRequire(importer || __filename)
+      const exports = nodeRequire(id)
+      return Promise.resolve(exports)
+    }
+
+    const promisedExports = fetchExports(
+      id,
+      importer,
+      isDynamic,
+      isDynamic
+        ? traceDynamicImport(Error(), 3)
+        : (callStack = [getStackFrame(3), ...callStack])
+    )
+
+    return limitTime(
+      promisedExports,
+      config.timeout || 0,
+      `Module failed to load in ${config.timeout} secs`
+    )
+  }
+
+  return requireAsync
 }
 
 function createRequire(importer: string) {
