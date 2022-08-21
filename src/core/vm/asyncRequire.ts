@@ -114,7 +114,6 @@ export interface RequireAsyncConfig extends RequireAsyncState {
 
 const isDebug = !!process.env.DEBUG
 const neverReload = () => false
-const rawRE = /(\?|&)raw(?:&|$)/
 
 export function createAsyncRequire(
   config: RequireAsyncConfig = {}
@@ -352,24 +351,17 @@ export function createAsyncRequire(
 
         module ||= await registerModuleOnceCompiled(
           moduleMap,
-          rawRE.test(id)
-            ? readRawModule(resolvedId, watchFile)
-            : compileModule(resolvedId, requireAsync, virtualId).then(
-                module => {
-                  if (module) {
-                    path.isAbsolute(module.id) &&
-                      fs.existsSync(module.id) &&
-                      watchFile(module.id)
-                    return module
-                  }
-                  throw Object.assign(
-                    Error(`Cannot find module '${resolvedId}'`),
-                    {
-                      code: 'ERR_MODULE_NOT_FOUND',
-                    }
-                  )
-                }
-              )
+          compileModule(resolvedId, requireAsync, virtualId).then(module => {
+            if (module) {
+              path.isAbsolute(module.id) &&
+                fs.existsSync(module.id) &&
+                watchFile(module.id)
+              return module
+            }
+            throw Object.assign(Error(`Cannot find module '${resolvedId}'`), {
+              code: 'ERR_MODULE_NOT_FOUND',
+            })
+          })
         )
 
         exports = await executeModule(module)
@@ -514,6 +506,7 @@ function isVirtual(id: string, resolvedId: string) {
   return (
     resolvedId[0] === '\0' ||
     id.startsWith('virtual:') ||
+    id.includes('?') ||
     (id === resolvedId && !(path.isAbsolute(id) && fs.existsSync(id)))
   )
 }
@@ -549,23 +542,5 @@ function connectModules(imported: CompiledModule, importer: CompiledModule) {
       importer.package = importerPkg
     }
     imported.package = importerPkg
-  }
-}
-
-async function readRawModule(
-  file: string,
-  watchFile: (file: string) => void
-): Promise<CompiledModule> {
-  const content = fs.readFileSync(file, 'utf8')
-  watchFile(file)
-  return {
-    id: file,
-    env: {},
-    code: '',
-    imports: new Set(),
-    importers: new ImporterSet(),
-    exports: Promise.resolve({ default: content }),
-    compileTime: 0,
-    requireTime: 0,
   }
 }

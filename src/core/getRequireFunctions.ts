@@ -52,8 +52,8 @@ export function getRequireFunctions(context: SausContext) {
       timeout,
       filterStack,
       isCompiledModule,
-      compileModule(id) {
-        return compileSsrModule(id, context)
+      compileModule(id, _, virtualId) {
+        return compileSsrModule(id, context, virtualId)
       },
       get shouldReload() {
         return context.ssrForceReload
@@ -81,7 +81,7 @@ export function getRequireFunctions(context: SausContext) {
             context
           )
         }
-        return compileSsrModule(id, context)
+        return compileSsrModule(id, context, virtualId)
       },
       get shouldReload() {
         return context.ssrForceReload

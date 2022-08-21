@@ -14,14 +14,29 @@ import {
 } from '../vm/compileEsm'
 import { ImporterSet } from '../vm/ImporterSet'
 import { CompiledModule } from '../vm/types'
+import { checkPublicFile } from './checkPublicFile'
 
 export async function compileSsrModule(
   id: string,
-  context: SausContext
+  context: SausContext,
+  virtualId?: string
 ): Promise<CompiledModule | null> {
   const { config, liveModulePaths, moduleMap } = context
+  const time = Date.now()
 
-  let module = await compileModule(id, context, {
+  // The `compileModule` function must receive the resolved ID,
+  // as it's expected by plugins with a load hook.
+  const loadedId = id
+  if (id == virtualId) {
+    // But we want to use the absolute file path when dealing
+    // with public files, or else we can't hot reload them.
+    const publicFile = checkPublicFile(id, config)
+    if (publicFile) {
+      id = publicFile
+    }
+  }
+
+  let module = await compileModule(loadedId, context, {
     cache: context.compileCache,
     transform: ssrCompileEsm({
       forceLazyBinding: (_, id) =>
