@@ -23,7 +23,7 @@ export async function loadPageClient(routePath: string, routeParams: any) {
   }
 
   const pagePath = getPagePath(routePath, routeParams)
-  const pageProps = globalCache.access(pagePath, cache => cache.oldValue)
+  const pageProps = globalCache.load(pagePath, cache => cache.oldValue)
 
   const client = await ssrImport(clientUrl)
   client.props = await pageProps
