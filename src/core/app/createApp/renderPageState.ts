@@ -54,7 +54,7 @@ export const getPageStateFactory = (
 
       const stateCacheUrl = prependBase(ctx.config.clientCacheId, base)
       imports.set(stateCacheUrl, ['setState'])
-      code = wrap(inlined.join(RETURN), RETURN) + '\n' + code
+      code = wrap(inlined.join('\n'), RETURN) + '\n' + code
     }
 
     const helpers: string[] = []
