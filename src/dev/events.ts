@@ -1,4 +1,5 @@
-import StrictEventEmitter from 'strict-event-emitter-types'
+import type { SausEvents } from '@/context'
+import { EventEmitter } from 'ee-ts'
 
 export interface DevEvents {
   listening(): void
@@ -7,7 +8,4 @@ export interface DevEvents {
   error(e: any): void
 }
 
-export type DevEventEmitter = StrictEventEmitter<
-  import('events').EventEmitter,
-  DevEvents
->
+export type DevEventEmitter = EventEmitter<DevEvents & SausEvents>

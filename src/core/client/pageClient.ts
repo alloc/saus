@@ -5,6 +5,7 @@ import { RouteEntry } from '../routeEntries'
 import { applyHead } from './head'
 import { loadPageState } from './loadPageState'
 import routes from './routes'
+import { noop } from '../utils/noop'
 
 export interface PageClient<
   Props extends object = any,
@@ -59,5 +60,12 @@ export async function loadPageClient<
       return loadPageClient('error')
     }
     throw error
+  }
+}
+
+export async function preloadRouteClient(routePath: string) {
+  const clientUrl = routes[routePath]
+  if (clientUrl) {
+    return import(/* @vite-ignore */ clientUrl).catch(noop)
   }
 }

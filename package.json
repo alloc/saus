@@ -59,6 +59,7 @@
     "cac": "^6.0.0",
     "convert-source-map": "^1.8.0",
     "debug": "^4.3.2",
+    "ee-ts": "2.0.0-rc.6",
     "endent": "^2.1.0",
     "es-module-lexer": "^0.9.3",
     "esbuild": "^0.14.15",

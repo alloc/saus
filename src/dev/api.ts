@@ -51,16 +51,20 @@ export async function createServer(
 ): Promise<SausDevServer> {
   const events: DevEventEmitter = new EventEmitter()
   const createContext = () =>
-    loadContext<DevContext>('serve', inlineConfig, [
-      servePlugin(e => events.emit('error', e)),
-      routesPlugin(),
-      routeClientsPlugin,
-      ssrLayoutPlugin,
-      clientContextPlugin,
-      clientLayoutPlugin,
-      clientStatePlugin,
-      moduleRedirection(clientRedirects),
-    ])
+    loadContext<DevContext>('serve', {
+      events,
+      config: inlineConfig,
+      plugins: [
+        servePlugin(e => events.emit('error', e)),
+        routesPlugin(),
+        routeClientsPlugin,
+        ssrLayoutPlugin,
+        clientContextPlugin,
+        clientLayoutPlugin,
+        clientStatePlugin,
+        moduleRedirection(clientRedirects),
+      ],
+    })
 
   let context = await createContext()
 
@@ -151,9 +155,9 @@ async function startServer(
   const watcher = (context.watcher = server.watcher!)
   Object.assign(
     context,
-    getViteFunctions(server.pluginContainer, id => readFile(id, 'utf8')),
-    getRequireFunctions(context)
+    getViteFunctions(server.pluginContainer, id => readFile(id, 'utf8'))
   )
+  Object.assign(context, getRequireFunctions(context))
   context.events = events
   context.injectedModules = createModuleProvider({ watcher })
   context.liveModulePaths = new Set()
@@ -173,6 +177,7 @@ async function startServer(
       // Force all node_modules to be reloaded
       context.ssrForceReload = createFullReload()
       try {
+        console.log('loading routes…')
         context.plugins = await getSausPlugins(context)
         await loadRoutes(context)
 

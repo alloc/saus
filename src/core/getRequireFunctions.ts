@@ -1,10 +1,9 @@
 import fs from 'fs'
-import { SausContext } from './context'
+import { SausContext, SausEventEmitter } from './context'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { compileSsrModule } from './vite/compileSsrModule'
-import { createAsyncRequire } from './vm/asyncRequire'
+import { createAsyncRequire, RequireAsyncConfig } from './vm/asyncRequire'
 import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
-import { ResolveIdHook } from './vm/types'
 
 export function getRequireFunctions(context: SausContext) {
   const {
@@ -15,14 +14,8 @@ export function getRequireFunctions(context: SausContext) {
     moduleMap,
     root,
     watcher,
+    resolveId,
   } = context
-
-  const resolveId: ResolveIdHook = async (id, importer) => {
-    const resolved = await context.resolveId(id, importer)
-    if (resolved) {
-      return typeof resolved == 'string' ? { id: resolved } : resolved
-    }
-  }
 
   const nodeResolve =
     config.resolve.dedupe && dedupeNodeResolve(root, config.resolve.dedupe)
@@ -35,6 +28,9 @@ export function getRequireFunctions(context: SausContext) {
 
   const isCompiledModule = (id: string) =>
     !id.includes('/node_modules/') && id.startsWith(root + '/')
+
+  const onModuleLoaded: RequireAsyncConfig['onModuleLoaded'] = (...args) =>
+    (context.events as SausEventEmitter).emit('require', ...args)
 
   const watchFile = watcher?.add.bind(watcher)
   const filterStack = config.filterStack
@@ -51,6 +47,7 @@ export function getRequireFunctions(context: SausContext) {
       watchFile,
       timeout,
       filterStack,
+      onModuleLoaded,
       isCompiledModule,
       compileModule(id, _, virtualId) {
         return compileSsrModule(id, context, virtualId)
@@ -69,6 +66,7 @@ export function getRequireFunctions(context: SausContext) {
       watchFile,
       timeout,
       filterStack,
+      onModuleLoaded,
       isCompiledModule,
       async compileModule(id, require, virtualId) {
         const isNodeModule =

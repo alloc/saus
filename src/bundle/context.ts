@@ -60,11 +60,14 @@ export async function loadBundleContext<
   options: InlineBundleConfig & { config?: vite.UserConfig } = {},
   inlineConfig: vite.UserConfig = options.config || {}
 ): Promise<T> {
-  const context = await loadContext<BundleContext>('build', inlineConfig)
-  const { config } = context
+  const context = await loadContext<BundleContext>('build', {
+    config: inlineConfig,
+  })
 
   context.injectedModules = createModuleProvider({ root: context.root })
   context.plugins = await getSausPlugins(context as SausContext)
+
+  const { config } = context
 
   const buildConfig = context.userConfig.build || {}
   const bundleConfig = assignDefaults(

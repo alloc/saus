@@ -10,13 +10,13 @@ import type { HotReloadFn } from './hotReload'
 
 export interface DevContext extends Merge<BaseContext, DevState & DevMethods> {
   command: 'serve'
+  events: DevEventEmitter
 }
 
 type PageSetupHook = (url: ParsedUrl) => Promisable<void>
 
 export interface DevState {
   app: App
-  events: DevEventEmitter
   server: vite.ViteDevServer
   watcher: vite.FSWatcher
   /** Defines which files in `node_modules` have live exports. */

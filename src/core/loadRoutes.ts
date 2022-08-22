@@ -1,8 +1,11 @@
+import { toDebugPath } from '@/node/toDebugPath'
 import { upsertPlugin } from '@/vite/upsertPlugin'
 import * as esModuleLexer from 'es-module-lexer'
+import kleur from 'kleur'
 import MagicString from 'magic-string'
+import { startTask } from 'misty/task'
 import path from 'path'
-import { SausContext } from './context'
+import { SausContext, SausEventEmitter } from './context'
 import { debug } from './debug'
 import { getClientInjection, getServerInjection } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
@@ -11,11 +14,12 @@ import { getRouteRenderers } from './routeRenderer'
 import { setRoutesModule } from './runtime/global'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
+import { debug as vmDebug } from './vm/debug'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
 import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
-import { RequireAsync } from './vm/types'
+import { isLinkedModule, RequireAsync } from './vm/types'
 
 export async function loadRoutes(context: SausContext) {
   const { plugins, filterStack } = context.config
@@ -35,6 +39,42 @@ export async function loadRoutes(context: SausContext) {
       // Dynamic imports are assumed to *not* be Node.js modules
       context[isDynamic ? 'ssrRequire' : 'require'](id, importer, isDynamic)
   )
+
+  let moduleCount = 0
+  let compileTimeSum = 0
+  let requireTimeSum = 0
+  let task = context.logger.isLogged('info')
+    ? startTask(() => `${moduleCount} modules required.`)
+    : null
+
+  const events = context.events as SausEventEmitter
+  events.on('require', (id, requireTime, module) => {
+    module?.imports.forEach(module => {
+      if (!isLinkedModule(module)) {
+        requireTime -= module.requireTime
+      }
+    })
+    moduleCount++
+    requireTimeSum += requireTime
+    if (module) {
+      compileTimeSum += module.compileTime
+    }
+    task?.update()
+    if (vmDebug.enabled) {
+      if (module && module.compileTime > 500)
+        vmDebug(
+          `Compiled %s in %s`,
+          kleur.cyan(toDebugPath(id)),
+          prettySecs(module.compileTime)
+        )
+      if (requireTime > 500)
+        vmDebug(
+          `Loaded %s in %s`,
+          kleur.cyan(toDebugPath(id)),
+          prettySecs(requireTime)
+        )
+    }
+  })
 
   const routesConfig = setRoutesModule({
     catchRoute: undefined,
@@ -95,9 +135,19 @@ export async function loadRoutes(context: SausContext) {
     throw error
   } finally {
     setRoutesModule(null)
+    task?.finish(
+      `${moduleCount} modules required. ` +
+        `(requireMean = ${prettySecs(
+          requireTimeSum / moduleCount
+        )}, compileMean = ${prettySecs(compileTimeSum / moduleCount)})`
+    )
   }
 
   await callPlugins(context.plugins, 'receiveRoutes', context)
+}
+
+function prettySecs(ms: number) {
+  return (Math.floor(ms / 100) / 10).toFixed(2) + 's'
 }
 
 async function compileRoutesModule(

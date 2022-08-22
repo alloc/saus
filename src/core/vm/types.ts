@@ -21,6 +21,7 @@ export interface LinkedModule {
   exports: any
   imports: Set<LinkedModule>
   importers: Set<CompiledModule | LinkedModule>
+  requireTime?: undefined
   [kLinkedModule]: true
 }
 
@@ -38,6 +39,8 @@ export interface CompiledModule extends Script {
    * by another module) using a relative path.
    */
   package?: Set<CompiledModule>
+  compileTime: number
+  requireTime: number
   [kLinkedModule]?: undefined
 }
 

@@ -71,6 +71,8 @@ export async function compileSsrModule(
     env,
     imports: new Set(),
     importers: new ImporterSet(),
+    compileTime: Date.now() - time,
+    requireTime: 0,
   }
 }
 

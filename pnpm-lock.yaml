@@ -40,6 +40,7 @@ importers:
       chokidar: ^3.5.3
       convert-source-map: ^1.8.0
       debug: ^4.3.2
+      ee-ts: 2.0.0-rc.6
       elaps: ^2.4.0
       endent: ^2.1.0
       es-module-lexer: ^0.9.3
@@ -85,6 +86,7 @@ importers:
       cac: 6.7.12
       convert-source-map: 1.8.0
       debug: 4.3.4
+      ee-ts: 2.0.0-rc.6_typescript@4.8.0-beta
       endent: 2.1.0
       es-module-lexer: 0.9.3
       esbuild: 0.14.49
@@ -1617,6 +1619,15 @@ packages:
 
   /duplexer3/0.1.5:
     resolution: {integrity: sha512-1A8za6ws41LQgv9HrE/66jyC5yuSjQ3L/KOpFtoBilsAK2iA2wuS5rTt1OCzIvtS2V7nVmedsUU+DGRcjBmOYA==}
+    dev: false
+
+  /ee-ts/2.0.0-rc.6_typescript@4.8.0-beta:
+    resolution: {integrity: sha512-n52lYxRqYqJhw5b7iol1NHHaz/hShlwKby2bhMM+/QePMe3rpV8F5lL96j678uOHtYirEHUoYP9GhKKhQVk+hQ==}
+    engines: {node: '>=6'}
+    peerDependencies:
+      typescript: '>=3'
+    dependencies:
+      typescript: 4.8.0-beta
     dev: false
 
   /elaps/2.4.0:
@@ -3923,7 +3934,6 @@ packages:
     resolution: {integrity: sha512-Almk3jQ+i+J2/6Nq68M9hr7pYemLJ29pJJ2actTEGQWHSOpfTRDowfWYRZ1cgAXQqcnvygntgD/6odChhNcKlQ==}
     engines: {node: '>=4.2.0'}
     hasBin: true
-    dev: true
 
   /unbzip2-stream/1.4.3:
     resolution: {integrity: sha512-mlExGW4w71ebDJviH16lQLtZS32VKqsSfk80GCfUlwT/4/hNRFsoscrF/c++9xinkMzECL1uL9DDwXqFWkruPg==}

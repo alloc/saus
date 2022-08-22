@@ -1,4 +1,5 @@
 import arrify from 'arrify'
+import { EventEmitter } from 'ee-ts'
 import type { BuildContext, BundleContext } from '../bundle'
 import type { DeployContext } from '../deploy'
 import type { DevContext, DevMethods, DevState } from '../dev/context'
@@ -19,10 +20,21 @@ import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
 import { RequireAsyncState } from './vm/asyncRequire'
-import { RequireAsync } from './vm/types'
+import { CompiledModule, RequireAsync } from './vm/types'
 
 export type SausCommand = 'build' | 'serve' | 'deploy' | 'secrets'
 export type SausContext = BuildContext | DeployContext | DevContext
+
+export interface SausEvents {
+  /**
+   * A server module was required and is now loaded in-memory.
+   *
+   * The `requireTime` includes time spent loading dependencies.
+   */
+  require(id: string, requireTime: number, module?: CompiledModule): void
+}
+
+export type SausEventEmitter = EventEmitter<SausEvents>
 
 /**
  * This context exists in both serve and build mode.
@@ -44,6 +56,7 @@ export interface BaseContext
   defaultLayout: { id: string; hydrated?: boolean }
   /** The `saus.defaultPath` option from Vite config */
   defaultPath: string
+  events: SausEventEmitter
   pageCache: Cache<RenderPageResult>
   importMeta: Record<string, any>
   /**
@@ -100,6 +113,7 @@ async function createContext(props: {
   config: ResolvedConfig
   configPath: string | undefined
   command: SausCommand
+  events: SausEventEmitter
   publicDir: PublicDirOptions | null
   resolveConfig: (inlineConfig?: vite.InlineConfig) => Promise<ResolvedConfig>
 }): Promise<Context> {
@@ -112,7 +126,6 @@ async function createContext(props: {
     defaultLayout: { id: config.saus.defaultLayoutId! },
     defaultPath: config.saus.defaultPath!,
     externalExports: new Map(),
-    pageCache: createCache(),
     importMeta: config.env,
     injectedImports: {
       prepend: [],
@@ -122,6 +135,7 @@ async function createContext(props: {
     linkedModules: {},
     logger: config.logger,
     moduleMap: {},
+    pageCache: createCache(),
     plugins: [],
     renderers: null!,
     require: null!,
@@ -146,8 +160,15 @@ async function createContext(props: {
  */
 export async function loadContext<T extends Context>(
   command: SausCommand,
-  defaultConfig: vite.InlineConfig = {},
-  defaultPlugins?: (InlinePlugin | vite.Plugin | Falsy)[]
+  {
+    events = new EventEmitter(),
+    config: defaultConfig = {},
+    plugins: defaultPlugins,
+  }: {
+    events?: SausEventEmitter
+    config?: vite.InlineConfig
+    plugins?: (InlinePlugin | vite.Plugin | Falsy)[]
+  }
 ): Promise<T> {
   // The plugins created from the `inlinePlugins` argument
   // are shared between `resolveConfig` calls.
@@ -230,6 +251,7 @@ export async function loadContext<T extends Context>(
     config,
     configPath,
     command,
+    events,
     publicDir,
     async resolveConfig(inlineConfig) {
       inlineConfig = inlineConfig

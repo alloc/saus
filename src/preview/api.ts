@@ -5,9 +5,11 @@ import { vite } from '../core/vite'
 import { PreviewOptions } from './options'
 
 export async function startPreviewServer(preview: PreviewOptions) {
-  const { config, defaultPath } = await loadContext('build', { preview })
-  const bundleConfig = config.saus.bundle!
+  const { config, defaultPath } = await loadContext('build', {
+    config: { preview },
+  })
 
+  const bundleConfig = config.saus.bundle!
   const debugBase =
     bundleConfig.debugBase && prependBase(bundleConfig.debugBase, config.base)
 

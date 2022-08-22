@@ -40,6 +40,7 @@ export async function compileNodeModule(
     watcher?: vite.FSWatcher
   } = {}
 ): Promise<CompiledModule> {
+  const time = Date.now()
   const env = {
     require: Module.createRequire(filename),
     __dirname: path.dirname(filename),
@@ -141,6 +142,8 @@ export async function compileNodeModule(
     env,
     imports: new Set(),
     importers: new ImporterSet(),
+    compileTime: Date.now() - time,
+    requireTime: 0,
   }
 }
 

@@ -32,13 +32,13 @@ interface Options {
  */
 export async function compileModule(
   id: string,
-  context: Pick<ViteFunctions, 'load' | 'transform'>,
+  ctx: Pick<ViteFunctions, 'load' | 'transform'>,
   { transform, cache }: Options = {}
 ): Promise<Script> {
   const filename = cleanUrl(id)
 
   let code: string | undefined
-  let script = ((await context.load(id)) || {
+  let script = ((await ctx.load(id)) || {
     code: (code = readFileSync(filename, 'utf8')),
     map: loadSourceMap(code, filename),
   }) as Script
@@ -62,7 +62,7 @@ export async function compileModule(
     return script
   }
 
-  const transformed = await context.transform(script.code, id, script.map)
+  const transformed = await ctx.transform(script.code, id, script.map)
   if (typeof transformed == 'string') {
     script.code = transformed
   } else if (transformed?.code != null) {

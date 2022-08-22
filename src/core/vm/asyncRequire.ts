@@ -1,3 +1,4 @@
+import { toDebugPath } from '@/node/toDebugPath'
 import { limitTime } from '@/utils/limitTime'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
@@ -7,7 +8,6 @@ import { Module } from 'module'
 import path from 'path'
 import { httpImport } from '../http/httpImport'
 import { jsonImport } from '../http/jsonImport'
-import { relativeToCwd } from '../node/relativeToCwd'
 import { getStackFrame, StackFrame } from '../node/stack'
 import { internalPathRE } from '../utils/importRegex'
 import { isExternalUrl } from '../utils/isExternalUrl'
@@ -18,7 +18,6 @@ import { executeModule } from './executeModule'
 import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
-import { ImporterSet } from './ImporterSet'
 import { registerModuleOnceCompiled } from './moduleMap'
 import { getNodeModule, unloadNodeModule } from './nodeModules'
 import { traceNodeRequire } from './traceNodeRequire'
@@ -60,6 +59,17 @@ export interface RequireAsyncState {
 
 export interface RequireAsyncConfig extends RequireAsyncState {
   timeout?: number
+  /**
+   * Called when a compiled/linked module has been loaded
+   * into memory, either initially or from a hot reload.
+   *
+   * The `requireTime` includes time spent loading dependencies.
+   */
+  onModuleLoaded?: (
+    id: string,
+    requireTime: number,
+    module?: CompiledModule
+  ) => void
   /**
    * Return `true` to mark an installed module as "live", implying that
    * its exports may be updated dynamically after being loaded.
@@ -231,6 +241,8 @@ export function createAsyncRequire(
     let resolvedId: string | undefined
     let nodeResolvedId: string | undefined
     let nodeRequire: NodeRequire
+
+    const time = Date.now()
 
     resolveStep: try {
       const resolved = await resolveId(id, importer, isDynamic)
@@ -438,14 +450,12 @@ export function createAsyncRequire(
       }
     }
 
-    if (!isCached && isDebug) {
-      const loadTime = Date.now() - time
-      if (loadTime > 500)
-        debug(
-          `Loaded %s in %ss`,
-          kleur.cyan(toDebugPath(resolvedId)),
-          (Math.floor(loadTime / 100) / 10).toFixed(2)
-        )
+    if (!isCached) {
+      const requireTime = Date.now() - time
+      config.onModuleLoaded?.(resolvedId, requireTime, module)
+      if (module) {
+        module.requireTime = requireTime
+      }
     }
 
     return exports
@@ -470,7 +480,9 @@ export function createAsyncRequire(
     return limitTime(
       promisedExports,
       config.timeout || 0,
-      `Module failed to load in ${config.timeout} secs`
+      `Module failed to load in ${config.timeout} secs: "${id}"${
+        importer ? ` imported by "${importer}"` : ''
+      }`
     )
   }
 
@@ -509,10 +521,6 @@ function isVirtual(id: string, resolvedId: string) {
     id.includes('?') ||
     (id === resolvedId && !(path.isAbsolute(id) && fs.existsSync(id)))
   )
-}
-
-function toDebugPath(file: string) {
-  return fs.existsSync(file.replace(/[#?].*$/, '')) ? relativeToCwd(file) : file
 }
 
 /**
