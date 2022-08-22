@@ -26,6 +26,11 @@ export async function emptyPageStore(props: PurgeProps) {
           items: ['/*'],
         },
       },
+    }).catch(e => {
+      console.error(
+        `Failed to invalidate CloudFront page cache (${props.cacheId}). ` +
+          e.message
+      )
     })
   }
 }
