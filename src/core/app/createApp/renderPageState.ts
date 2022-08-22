@@ -54,7 +54,7 @@ export const getPageStateFactory = (
 
       const stateCacheUrl = prependBase(ctx.config.clientCacheId, base)
       imports.set(stateCacheUrl, ['setState'])
-      code = RETURN + inlined.join(RETURN) + RETURN.repeat(2) + code
+      code = wrap(inlined.join(RETURN), RETURN) + '\n' + code
     }
 
     const helpers: string[] = []
@@ -68,9 +68,7 @@ export const getPageStateFactory = (
       helpers.push('resolveModules')
       code =
         `const [${idents}] = await resolveModules(` +
-        RETURN +
-        imports.join(RETURN) +
-        RETURN +
+        wrap(imports.join(RETURN), RETURN) +
         `)\n` +
         code
     } else if (stateModuleUrls.size) {
@@ -79,8 +77,7 @@ export const getPageStateFactory = (
         url => INDENT + `import("${url}"),`
       )
       code =
-        `await Promise.all([${RETURN + imports.join(RETURN) + RETURN}])\n` +
-        code
+        `await Promise.all([${wrap(imports.join(RETURN), RETURN)}])\n` + code
     }
 
     if (
@@ -128,9 +125,10 @@ export const getPageStateFactory = (
         Array.from(
           imports,
           ([source, specifiers]) =>
-            `import {${
-              SPACE + specifiers.join(',' + SPACE) + SPACE
-            }} from "${source}"`
+            `import {${wrap(
+              specifiers.join(',' + SPACE),
+              SPACE
+            )}} from "${source}"`
         ).join('\n') +
         '\n' +
         code
@@ -138,3 +136,7 @@ export const getPageStateFactory = (
 
     return code
   }
+
+function wrap(wrapped: string, wrapper: string) {
+  return wrapper + wrapped + wrapper
+}
