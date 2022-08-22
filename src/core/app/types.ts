@@ -100,7 +100,7 @@ export type LoadedStateModule = {
   module: StateModule
   state: any
   /** Expiration date in milliseconds since 1/1/1970 */
-  expiresAt?: number
+  expiresAt?: number | null
   /** When true, this module was inlined with page-specific state */
   inlined?: boolean
 }
