@@ -461,14 +461,19 @@ export function createAsyncRequire(
     return exports
   }
 
-  const requireAsync: RequireAsync = (id, importer, isDynamic) => {
+  const requireAsync: RequireAsync = (
+    id,
+    importer,
+    isDynamic,
+    timeout = config.timeout
+  ) => {
     if (builtinModules.includes(id)) {
       const nodeRequire = Module.createRequire(importer || __filename)
       const exports = nodeRequire(id)
       return Promise.resolve(exports)
     }
 
-    const promisedExports = fetchExports(
+    let promise = fetchExports(
       id,
       importer,
       isDynamic,
@@ -476,14 +481,16 @@ export function createAsyncRequire(
         ? traceDynamicImport(Error(), 3)
         : (callStack = [getStackFrame(3), ...callStack])
     )
-
-    return limitTime(
-      promisedExports,
-      config.timeout || 0,
-      `Module failed to load in ${config.timeout} secs: "${id}"${
-        importer ? ` imported by "${importer}"` : ''
-      }`
-    )
+    if (timeout) {
+      promise = limitTime(
+        promise,
+        timeout,
+        `Module failed to load in ${timeout} secs: "${id}"${
+          importer ? ` imported by "${importer}"` : ''
+        }`
+      )
+    }
+    return promise
   }
 
   return requireAsync

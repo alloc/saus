@@ -93,5 +93,6 @@ export type CompileModuleHook = (
 export type RequireAsync = (
   id: string,
   importer?: string | null,
-  isDynamic?: boolean
+  isDynamic?: boolean,
+  timeout?: number
 ) => Promise<any>
