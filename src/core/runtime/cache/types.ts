@@ -5,7 +5,6 @@ import { clear } from './clear'
 import { forEach } from './forEach'
 
 export type Cache<State = unknown> = {
-  loaders: Record<string, Cache.StateLoader<State>>
   loading: Record<string, Cache.EntryPromise<State>>
   loaded: Record<string, Cache.Entry<State>>
   has: typeof has

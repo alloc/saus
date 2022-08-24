@@ -132,7 +132,7 @@ export async function loadBundleContext<
   config.plugins = config.plugins.filter(p => p.name !== 'commonjs')
   const pluginContainer = await vite.createPluginContainer(config)
 
-  Object.assign(context, getViteFunctions(pluginContainer))
+  Object.assign(context, getViteFunctions(pluginContainer, { ssr: true }))
   Object.assign(context, getRequireFunctions(context as SausContext))
 
   context.loadRoutes = () => {

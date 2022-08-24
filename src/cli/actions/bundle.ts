@@ -37,13 +37,13 @@ export async function bundle(outFile: string, options: BundleFlags) {
     build: {
       assetsDir: options.assetsDir,
       sourcemap: options.sourcemap,
+      minify: options.minify,
     },
   }
 
   const bundleOptions: BundleOptions = {
     appVersion: options.appVersion,
     forceWriteAssets: !!options.assetsDir,
-    minify: options.minify,
   }
 
   if (options.load || options.reload) {

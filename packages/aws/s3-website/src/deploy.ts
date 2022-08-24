@@ -192,7 +192,7 @@ export async function deployWebsiteToS3(
             ),
             HeadersConfig: {
               HeaderBehavior: 'whitelist',
-              Headers: ['referer', ...varyHeaders],
+              Headers: ['referer', 'x-args', ...varyHeaders],
             },
             QueryStringsConfig: {
               QueryStringBehavior: 'all',

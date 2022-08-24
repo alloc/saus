@@ -5,7 +5,6 @@ import { Cache } from './types'
 
 export const createCache = <State = unknown>(): Cache<State> => ({
   loading: {},
-  loaders: {},
   loaded: {},
   has,
   get,

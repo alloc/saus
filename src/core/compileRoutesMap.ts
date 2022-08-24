@@ -1,11 +1,15 @@
 import { prependBase } from '@/utils/base'
+import endent from 'endent'
+import path from 'path'
 import { babel, t } from './babel'
 import { SausContext } from './context'
+
+const clientDir = path.resolve(__dirname, '../client')
 
 export const routeMarker = '__sausRoute'
 
 export async function compileRoutesMap(
-  options: { isBuild?: boolean; isClient?: boolean },
+  options: { ssr?: boolean; isBuild?: boolean; isClient?: boolean },
   context: SausContext
 ) {
   const routes = context.routes.map(
@@ -28,6 +32,13 @@ export async function compileRoutesMap(
           propertyValue = t.callExpression(t.identifier(routeMarker), [
             t.stringLiteral(routeClient.id),
           ])
+          if (!options.ssr) {
+            propertyValue = t.binaryExpression(
+              '+',
+              t.identifier('BASE_URL'),
+              propertyValue
+            )
+          }
         }
         // For the server-side route map, the route is mapped to
         // a SSR module ID that's associated with a module wrapper
@@ -56,7 +67,15 @@ export async function compileRoutesMap(
     ? 'clientEntriesByRoute'
     : 'serverEntriesByRoute'
 
-  const template = `const ${name} = {}\nexport default ${name}`
+  let template = endent`
+    const ${name} = {}
+    export default ${name}
+  `
+
+  if (options.isClient && !options.ssr) {
+    template = `import { BASE_URL } from "${clientDir}"\n` + template
+  }
+
   const result = babel.transformSync(template, {
     plugins: [{ visitor: transformer }],
   }) as { code: string }

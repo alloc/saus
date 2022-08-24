@@ -34,7 +34,6 @@ import { resolveRouteImports } from './routeImports'
 import { injectAppVersionRoute } from './routes/appVersion'
 import { injectClientStoreRoute } from './routes/clientStore'
 import type { ClientEntries } from './runtime/bundle/clientEntries'
-import { preBundleSsrRuntime } from './runtimeBundle'
 import type { ClientAsset, ClientChunk, OutputBundle } from './types'
 
 export async function bundle(

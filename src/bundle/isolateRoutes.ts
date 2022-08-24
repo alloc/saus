@@ -86,7 +86,9 @@ export async function isolateRoutes(
   // within the buildStart hook.
   await pluginContainer.buildStart({})
 
-  const { fetchModule, resolveId } = getViteFunctions(pluginContainer)
+  const { fetchModule, resolveId } = getViteFunctions(pluginContainer, {
+    ssr: true,
+  })
 
   const sausExternalRE = /(^|\/)saus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//

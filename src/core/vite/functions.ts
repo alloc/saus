@@ -31,9 +31,12 @@ export interface ViteFunctions {
 
 export function getViteFunctions(
   pluginContainer: vite.PluginContainer,
-  loadFallback?: (
-    id: string
-  ) => Promisable<SourceDescription | string | null | undefined>
+  options: {
+    ssr?: boolean
+    loadFallback?: (
+      id: string
+    ) => Promisable<SourceDescription | string | null | undefined>
+  } = {}
 ): ViteFunctions {
   let self: ViteFunctions
   return (self = {
@@ -42,20 +45,20 @@ export function getViteFunctions(
     },
     async resolveId(id, importer) {
       return coerceResolveIdResult(
-        await pluginContainer.resolveId(id, importer!, { ssr: true })
+        await pluginContainer.resolveId(id, importer!, options)
       )
     },
     async load(id) {
-      let loadResult = await pluginContainer.load(id, { ssr: true })
-      if (!loadResult && loadFallback) {
+      let loadResult = await pluginContainer.load(id, options)
+      if (!loadResult && options.loadFallback) {
         try {
-          loadResult = await loadFallback(id)
+          loadResult = await options.loadFallback(id)
         } catch {}
       }
       return coerceLoadResult(loadResult)
     },
     transform(code, id, inMap) {
-      return pluginContainer.transform(code, id, { inMap, ssr: true })
+      return pluginContainer.transform(code, id, { ...options, inMap })
     },
     fetchModule(id) {
       return compileModule(id, self)

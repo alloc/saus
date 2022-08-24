@@ -3,12 +3,12 @@ import type { Headers } from '@/http'
 import { makeRequestUrl } from '@/makeRequest'
 import { ParsedUrl, parseUrl } from '@/node/url'
 import type { Route } from '@/routes'
-import { globalCache } from '@/runtime/cache'
-import { getStateModuleKey } from '@/runtime/getStateModuleKey'
+import { Cache, globalCache } from '@/runtime/cache'
 import { route } from '@/runtime/routes'
 import { stateModulesById } from '@/runtime/stateModules/global'
 import { prependBase } from '@/utils/base'
 import { defer } from '@/utils/defer'
+import { md5Hex } from '@/utils/md5-hex'
 import etag from 'etag'
 import type { App, RenderPageResult } from '../types'
 
@@ -67,13 +67,29 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   // State modules
   route(`${context.config.stateModuleBase}*.js`).get(async req => {
     const cacheKey = req.wild
-    const id = cacheKey.replace(/\.[^.]+$/, '')
+    const [id, hash] = parseStateModuleKey(cacheKey)!
+    console.log({ cacheKey, id, hash })
 
     const stateModule = stateModulesById.get(id)
     if (stateModule) {
-      const stateEntry = await globalCache.access(cacheKey)
-      if (stateEntry) {
-        const [state, expiresAt, args] = stateEntry
+      let loader: Cache.StateLoader | undefined
+      if (!globalCache.has(cacheKey)) {
+        let args: any = req.headers['x-args']
+        if (!args) {
+          return req.respondWith(404)
+        }
+        args = Buffer.from(args, 'base64')
+        if (hash !== md5Hex(args).slice(0, 8)) {
+          return req.respondWith(400, {
+            json: { message: 'x-args hash mismatch' },
+          })
+        }
+        args = JSON.parse(args)
+        loader = () => stateModule.load(...args)
+      }
+      const loaded = await globalCache.access(cacheKey, loader)
+      if (loaded) {
+        const [state, expiresAt, args] = loaded
         const module = app.renderStateModule(id, args!, state, expiresAt)
         sendModule(req, module)
       } else {
@@ -82,29 +98,15 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
     }
   })
 
-  // TODO: inject this during development
-  if (context.config.command == 'dev') {
-    // Ensure a state module is generated.
-    route('/.saus/state')
-      .post(async req => {
-        const [id, args] = await req.json<[string, any[]]>()
-        const stateModule = stateModulesById.get(id)
-        if (stateModule) {
-          await stateModule.load(...args)
-          req.respondWith(200)
-        }
-      })
-      .delete(async req => {
-        const [id, args] = await req.json<[string, any[]]>()
-        const cacheKey = getStateModuleKey(id, args)
-        if (globalCache.has(cacheKey)) {
-          globalCache.clear(cacheKey)
-          req.respondWith(200, { json: { deleted: true } })
-        } else {
-          req.respondWith(200, { json: { deleted: false } })
-        }
-      })
-  }
+  // Ensure a state module is generated.
+  route('/.saus/state').post(async req => {
+    const [id, args] = await req.json<[string, any[]]>()
+    const stateModule = stateModulesById.get(id)
+    if (stateModule) {
+      await stateModule.load(...args)
+      req.respondWith(200)
+    }
+  })
 }
 
 const sendModule = (req: Endpoint.Request, text: string) =>
@@ -114,3 +116,8 @@ const makeModuleHeaders = (text: string): Headers => ({
   'content-type': 'application/javascript',
   etag: etag(text, { weak: true }),
 })
+
+const parseStateModuleKey = (key: string) => {
+  const match = /^(.+?)(?:\.([^.]+))?$/.exec(key)!
+  return [match[1], match[2]] as [id: string, hash?: string]
+}

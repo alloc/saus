@@ -126,21 +126,31 @@ export function access<State>(
 
   const cancel = abortCtrl.abort.bind(abortCtrl)
   this.loading[cacheKey] = resolveEntry(promise, undefined, cancel)
-  this.loaders[cacheKey] = loader
 
   Promise.resolve(loadResult).then(
-    state => {
-      entry = toEntry(state, cacheCtrl.expiresAt, options?.args)
+    (state: any) => {
+      const isCurrent = promise == this.loading[cacheKey]
+      const shouldSkip = state == Symbol.for('skip')
+
+      // When the loader returns the skip symbol, just resolve with
+      // the currently cached state. This feature was added for loaders
+      // that mutate the cache manually, like loadStateModule.
+      entry = shouldSkip
+        ? this.loaded[cacheKey]
+        : toEntry(state, cacheCtrl.expiresAt, options?.args)
+
       onLoad(entry)
 
       // Skip caching if the promise is replaced or deleted
       // before it resolves.
-      if (promise == this.loading[cacheKey]) {
+      if (isCurrent) {
         delete this.loading[cacheKey]
-        if (cacheCtrl.maxAge > 0) {
-          this.loaded[cacheKey] = entry
-        } else {
-          debug('State %s expired while loading, skipping cache', cacheKey)
+        if (!shouldSkip) {
+          if (cacheCtrl.maxAge > 0) {
+            this.loaded[cacheKey] = entry
+          } else {
+            debug('State %s expired while loading, skipping cache', cacheKey)
+          }
         }
       }
     },

@@ -7,7 +7,7 @@ export function clear(
   this: Cache<any>,
   filter: string | ((key: string) => boolean) = () => true
 ) {
-  const stores = [this.loaded, this.loading, this.loaders]
+  const stores = [this.loaded, this.loading]
   if (typeof filter == 'function') {
     for (const store of stores) {
       for (const key of Object.keys(store)) {

@@ -33,10 +33,11 @@ const context: Omit<ClientContext, keyof ClientConstants> = {
   set hydrated(newValue) {
     hydrated = newValue
     if (newValue) {
-      window.dispatchEvent(new Event('hydrate'))
+      dispatchEvent(new Event('hydrate'))
     }
   },
 }
 
 // @ts-ignore
 globalThis.saus = context
+export default context as ClientContext

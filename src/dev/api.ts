@@ -155,7 +155,10 @@ async function startServer(
   const watcher = (context.watcher = server.watcher!)
   Object.assign(
     context,
-    getViteFunctions(server.pluginContainer, id => readFile(id, 'utf8'))
+    getViteFunctions(server.pluginContainer, {
+      loadFallback: id => readFile(id, 'utf8'),
+      ssr: true,
+    })
   )
   Object.assign(context, getRequireFunctions(context))
   context.events = events

@@ -223,7 +223,10 @@ declare module 'vite' {
      */
     saus?:
       | SausPlugin
-      | ((context: SausContext) => Promisable<SausPlugin | void>)
+      | ((
+          context: SausContext,
+          config: vite.ResolvedConfig
+        ) => Promisable<SausPlugin | void>)
   }
 }
 

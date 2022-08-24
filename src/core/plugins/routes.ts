@@ -1,7 +1,7 @@
 import path from 'path'
 import { compileRoutesMap, routeMarker } from '../compileRoutesMap'
 import { bundleDir, clientDir } from '../paths'
-import { Plugin } from '../vite'
+import { Plugin, vite } from '../vite'
 
 const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
 const serverRouteMapStubPath = path.join(bundleDir, 'bundle/routes.ts')
@@ -15,13 +15,14 @@ export const routesPlugin =
     return {
       name: 'saus:routes',
       enforce: 'pre',
-      saus(context) {
-        const isBuild = context.config.command == 'build'
+      saus(context, config) {
+        const isBuild = config.command == 'build'
+        const ssr = !!config.build.ssr
 
         this.load = id => {
           const isClient = id == clientRouteMapStubPath
           if (isClient || id == serverRouteMapStubPath) {
-            return compileRoutesMap({ isBuild, isClient }, context)
+            return compileRoutesMap({ ssr, isBuild, isClient }, context)
           }
         }
 
@@ -55,10 +56,14 @@ export const routesPlugin =
                     if (!routeChunk) {
                       throw Error(`Route chunk not found: "${routeClientId}"`)
                     }
-                    routeChunkUrl = context.basePath + routeChunk.fileName
+                    routeChunkUrl = routeChunk.fileName
                     if (clientRouteMap) {
                       clientRouteMap[routeClientId] = routeChunkUrl
                     }
+                  }
+
+                  if (ssr) {
+                    routeChunkUrl = context.basePath + routeChunkUrl
                   }
 
                   return `"${routeChunkUrl}"`

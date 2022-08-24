@@ -11,26 +11,22 @@ export const getPageStateFactory = (
   function renderPageState(page, preloadUrls) {
     const { path, props, head, isDebug } = page
 
-    const { base, stateModuleBase } = ctx.config
-    const toStateUrl = (id: string) =>
-      prependBase(stateModuleBase + id + '.js', base)
-
+    const { base } = ctx.config
     const clientProps = (props as CommonServerProps)._clientProps
-    const stateModuleUrls = new Set(
-      props._included.map(loaded => toStateUrl(loaded.module.id))
+    const stateModuleIds = new Set(
+      props._included.map(loaded => loaded.module.id)
     )
 
-    const nestedStateUrls: string[] = []
+    const nestedStateIds: string[] = []
     const nestedStateIdents: string[] = []
 
     let code = dataToEsm(clientProps, null, (_, value) => {
       const inlinedStateId = value && value['@import']
       if (inlinedStateId) {
-        let stateUrl = toStateUrl(inlinedStateId)
-        let index = nestedStateUrls.indexOf(stateUrl)
+        let index = nestedStateIds.indexOf(inlinedStateId)
         if (index < 0) {
-          index = nestedStateUrls.push(stateUrl) - 1
-          stateModuleUrls.delete(stateUrl)
+          index = nestedStateIds.push(inlinedStateId) - 1
+          stateModuleIds.delete(inlinedStateId)
         }
         const ident = 's' + (index + 1)
         nestedStateIdents[index] = ident
@@ -59,25 +55,24 @@ export const getPageStateFactory = (
 
     const helpers: string[] = []
 
-    if (nestedStateUrls.length) {
+    if (nestedStateIds.length) {
+      helpers.push('importStateModules')
       const idents = nestedStateIdents.join(',' + SPACE)
-      const imports = nestedStateUrls
-        .concat(Array.from(stateModuleUrls))
-        .map(url => INDENT + `import("${url}"),`)
-
-      helpers.push('resolveModules')
       code =
-        `const [${idents}] = await resolveModules(` +
-        wrap(imports.join(RETURN), RETURN) +
-        `)\n` +
-        code
-    } else if (stateModuleUrls.size) {
-      const imports = Array.from(
-        stateModuleUrls,
-        url => INDENT + `import("${url}"),`
-      )
+        `const [${idents}] = await importStateModules(${wrap(
+          nestedStateIds
+            .map(quoteIndent)
+            .concat(Array.from(stateModuleIds, quoteIndent))
+            .join(',' + RETURN),
+          RETURN
+        )})\n` + code
+    } else if (stateModuleIds.size) {
+      helpers.push('importStateModules')
       code =
-        `await Promise.all([${wrap(imports.join(RETURN), RETURN)}])\n` + code
+        `await importStateModules(${wrap(
+          Array.from(stateModuleIds, quoteIndent).join(',' + RETURN),
+          RETURN
+        )})\n` + code
     }
 
     if (
@@ -136,6 +131,10 @@ export const getPageStateFactory = (
 
     return code
   }
+
+function quoteIndent(str: string) {
+  return INDENT + wrap(str, '"')
+}
 
 function wrap(wrapped: string, wrapper: string) {
   return wrapper + wrapped + wrapper

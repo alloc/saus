@@ -1,7 +1,6 @@
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
 import path from 'path'
-import type { BundleContext } from '../../bundle'
 import { toInlineSourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
 import { compileModule } from './compileModule'
@@ -12,19 +11,17 @@ import { getViteFunctions } from './functions'
  * but you also want to use Vite plugins, this function can help.
  */
 export async function esbuildViteBridge(
-  context: BundleContext
+  config: vite.ResolvedConfig
 ): Promise<esbuild.Plugin> {
-  const config = await context.resolveConfig({
-    plugins: context.bundlePlugins,
-  })
-
   const moduleOverrideByPath: Record<string, string> = {}
   const moduleOverrides: Record<string, string> = {
     debug: 'export default () => () => {}',
   }
 
   const pluginContainer = await vite.createPluginContainer(config)
-  const { resolveId, ...compiler } = getViteFunctions(pluginContainer)
+  const { resolveId, ...compiler } = getViteFunctions(pluginContainer, {
+    ssr: !!config.build.ssr,
+  })
 
   return {
     name: 'vite-bridge',

@@ -153,9 +153,9 @@ export const providePageBundles: App.Plugin = app => {
             tag: 'script',
             attrs: { type: 'module' },
             children: renderPageScript({
-              pageStateId: config.base + pageStateId,
-              sausClientId: config.base + config.clientHelpersId,
-              routeClientId: config.base + routeClientId,
+              pageStateId: '/' + pageStateId,
+              sausClientId: base + config.clientHelpersId,
+              routeClientId: base + routeClientId,
             }),
           })
         }
@@ -168,7 +168,6 @@ export const providePageBundles: App.Plugin = app => {
 
       let postHtmlProcessors = context.htmlProcessors?.post || []
       if (isDebug) {
-        debugger // Might be able to remove this code block.
         postHtmlProcessors = [
           ...postHtmlProcessors,
           // SSR modules are unaware of the `isDebug` value, so they never use

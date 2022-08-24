@@ -141,6 +141,10 @@ async function bundleFunctions(
   const outBase = path.join(context.root, props.functionDir)
   const outDir = path.join(getDeployDir(props), 'api')
 
+  const config = await context.resolveConfig({
+    plugins: context.bundlePlugins,
+  })
+
   const { outputFiles } = await esbuild.build({
     absWorkingDir: context.root,
     bundle: true,
@@ -153,7 +157,7 @@ async function bundleFunctions(
     minify: props.minify,
     outbase: outBase,
     outdir: outDir,
-    plugins: [await esbuildViteBridge(context)],
+    plugins: [await esbuildViteBridge(config)],
     sourcemap: 'external',
     splitting: true,
     target: 'es2020',

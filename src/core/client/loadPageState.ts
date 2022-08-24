@@ -15,8 +15,8 @@ export function loadPageState<Props extends object = any>(
   return Promise.resolve(globalCache.access(pagePath))
     .then(cached => {
       if (cached) {
-        const [state, expiresAt = Infinity] = cached
-        if (expiresAt > timestamp) {
+        const [state, expiresAt] = cached
+        if (expiresAt == null || expiresAt > timestamp) {
           return state as any
         }
       }

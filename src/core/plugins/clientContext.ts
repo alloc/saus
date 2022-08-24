@@ -10,42 +10,35 @@ const contextModuleId = path.join(clientDir, 'context.ts')
  * which is injected at build time.
  */
 export function clientContextPlugin(): Plugin {
-  let define: Record<string, string>
-  let isBuild: boolean
-
   return {
     name: 'saus:context:client',
     config(config, env) {
-      define = {}
-      isBuild = env.command == 'build'
-
-      if (isBuild) {
-        define['typeof saus'] = '"object"'
-      }
-
+      const isBuild = env.command == 'build'
       const sausConfig = config.saus!
-      const clientContext: ClientConstants = {
-        defaultPath: sausConfig.defaultPath!,
-        devRoot: path.resolve(config.root || ''),
-        stateModuleBase: sausConfig.stateModuleBase!,
-      }
-      for (const [key, value] of Object.entries(clientContext)) {
-        define['saus.' + key] = JSON.stringify(value)
-      }
 
-      if (isBuild)
-        return {
-          define,
+      this.transform = (code, id) => {
+        if (id == contextModuleId) {
+          const clientContext: ClientConstants = {
+            defaultPath: sausConfig.defaultPath!,
+            devRoot: undefined!,
+            stateModuleBase: sausConfig.stateModuleBase!,
+          }
+          if (!isBuild) {
+            clientContext.devRoot = path.resolve(config.root || '')
+          }
+          return (
+            code +
+            '\n' +
+            Object.entries(clientContext)
+              .filter(entry => entry[1] !== undefined)
+              .map(([key, value]) => {
+                return `context.${key} = ${JSON.stringify(value)}`
+              })
+              .join('\n') +
+            '\n' +
+            'Object.freeze(context)'
+          )
         }
-    },
-    transform(code, id) {
-      if (!isBuild && id == contextModuleId) {
-        return (
-          code +
-          Object.entries(define)
-            .map(([key, value]) => key + ' = ' + value)
-            .join('\n')
-        )
       }
     },
   }

@@ -10,13 +10,13 @@ export function getStateModuleKey<Args extends readonly any[]>(
 ): string
 
 export function getStateModuleKey(
-  moduleId: string,
-  args: readonly any[]
+  moduleId: StateModule | string,
+  args: readonly any[] | string
 ): string
 
 export function getStateModuleKey(
   module: string | StateModule,
-  args: readonly any[] = (module as StateModule).args!
+  args: string | readonly any[] = (module as StateModule).args!
 ): string {
   let cacheKey: string
   if (typeof module == 'string') {
@@ -27,8 +27,11 @@ export function getStateModuleKey(
       return cacheKey
     }
   }
-  if (args.length) {
-    const hash = md5Hex(JSON.stringify(args, sortObjects))
+  if (typeof args !== 'string') {
+    args = JSON.stringify(args, sortObjects)
+  }
+  if (args !== '[]') {
+    const hash = md5Hex(args)
     cacheKey += '.' + hash.slice(0, 8)
   }
   return cacheKey

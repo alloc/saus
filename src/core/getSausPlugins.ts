@@ -19,7 +19,7 @@ export async function getSausPlugins(
     return !p.apply || p.apply == config.command
   })) {
     const sausPlugin =
-      typeof p.saus == 'function' ? await p.saus(context) : p.saus!
+      typeof p.saus == 'function' ? await p.saus(context, config) : p.saus!
 
     if (sausPlugin) {
       sausPlugin.name ||= p.name
