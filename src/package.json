@@ -1,0 +1,8 @@
+{
+  "name": "@saus/core",
+  "private": true,
+  "scripts": {
+    "build": "rimraf ../dist && tsup",
+    "dev": "tsup --watch --sourcemap"
+  }
+}

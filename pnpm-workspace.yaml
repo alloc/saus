@@ -1,4 +1,5 @@
 packages:
+  - 'src'
   - 'packages/*'
   - 'packages/aws/*'
   - 'packages/cloudflare/*'
