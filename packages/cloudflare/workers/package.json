@@ -1,0 +1,28 @@
+{
+  "name": "@saus/cloudflare-workers",
+  "version": "0.1.0",
+  "description": "Deploy HTTP services to Cloudflare",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch --sourcemap",
+    "prepare": "yarn build"
+  },
+  "peerDependencies": {
+    "saus": "*"
+  },
+  "devDependencies": {
+    "saus": "*"
+  },
+  "dependencies": {
+    "@saus/cloudflare-request": "workspace:^0.1.0",
+    "@saus/deploy-utils": "workspace:^0.1.0",
+    "recrawl-sync": "^2.2.1"
+  }
+}
