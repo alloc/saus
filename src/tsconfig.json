@@ -1,14 +1,11 @@
 {
-  "include": ["src"],
-  "exclude": ["src/core/client"],
+  "exclude": ["core/client"],
   "compilerOptions": {
-    "declaration": true,
     "esModuleInterop": true,
     "lib": ["es2019"],
     "module": "commonjs",
     "moduleResolution": "node",
     "noUnusedLocals": true,
-    "outDir": "dist",
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,

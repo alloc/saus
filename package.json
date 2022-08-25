@@ -38,9 +38,9 @@
     "http"
   ],
   "scripts": {
-    "build": "rimraf dist && tsup",
-    "dev": "tsup --watch --sourcemap",
-    "prepare": "yarn build",
+    "build": "pnpm -r --no-bail --filter '@saus/*' build",
+    "dev": "pnpm build && pnpm -r --no-bail --filter '@saus/*' --parallel dev",
+    "prepublishOnly": "yarn build",
     "test": "vitest"
   },
   "engines": {
