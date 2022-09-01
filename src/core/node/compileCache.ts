@@ -1,7 +1,7 @@
+import { murmurHash } from '@/utils/murmur3'
 import fs from 'fs'
 import path from 'path'
 import { loadFileMappings, saveFileMappings } from './compileCache/fileMappings'
-import { md5Hex } from '../utils/md5-hex'
 
 /**
  * For caching compiled files on disk by the hash of their
@@ -19,7 +19,7 @@ export class CompileCache {
   }
 
   key(content: string, name = '') {
-    const hash = content && md5Hex(content).slice(0, name ? 8 : 16)
+    const hash = content && murmurHash(content)
     return name + (content ? (name ? '.' : '') + hash : '') + '.js'
   }
 

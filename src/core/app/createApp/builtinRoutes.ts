@@ -8,7 +8,7 @@ import { route } from '@/runtime/routes'
 import { stateModulesById } from '@/runtime/stateModules/global'
 import { prependBase } from '@/utils/base'
 import { defer } from '@/utils/defer'
-import { md5Hex } from '@/utils/md5-hex'
+import { murmurHash } from '@/utils/murmur3'
 import etag from 'etag'
 import type { App, RenderPageResult } from '../types'
 
@@ -79,7 +79,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
           return req.respondWith(404)
         }
         args = Buffer.from(args, 'base64')
-        if (hash !== md5Hex(args).slice(0, 8)) {
+        if (hash !== murmurHash(args)) {
           return req.respondWith(400, {
             json: { message: 'x-args hash mismatch' },
           })
@@ -119,5 +119,5 @@ const makeModuleHeaders = (text: string): Headers => ({
 
 const parseStateModuleKey = (key: string) => {
   const match = /^(.+?)(?:\.([^.]+))?$/.exec(key)!
-  return [match[1], match[2]] as [id: string, hash?: string]
+  return [match[1], +match[2]] as [id: string, hash: number]
 }

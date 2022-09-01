@@ -1,14 +1,14 @@
 import * as S3 from '@saus/aws-s3'
 import createDebug from 'debug'
 import { OutputBundle } from 'saus'
-import { md5Hex, plural, scanPublicDir } from 'saus/core'
+import { murmurHash, plural, scanPublicDir } from 'saus/core'
 import { DeployContext } from 'saus/deploy'
 import { wrapBody } from 'saus/http'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 
 type AssetList = string[]
-type ContentHash = string
+type ContentHash = number
 type PublicFileHashes = { [name: string]: ContentHash }
 
 export async function syncStaticFiles(
@@ -97,7 +97,7 @@ export async function syncStaticFiles(
 
     return {
       upload(name: string, data: Buffer) {
-        const hash = (hashes[name] = md5Hex(data).slice(0, 8))
+        const hash = (hashes[name] = murmurHash(data))
         if (ctx.dryRun) {
           return
         }

@@ -1,6 +1,6 @@
 import { rewriteKeys } from '@saus/deploy-utils'
 import merge from 'lodash.merge'
-import { md5Hex } from 'saus/core'
+import { murmurHash } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
 import { http } from 'saus/http'
 import { Config, configToPayload } from './config'
@@ -24,7 +24,7 @@ export default defineDeployHook(ctx => {
 
       return {
         token: auth.projectToken,
-        configHash: md5Hex(JSON.stringify(data)),
+        configHash: murmurHash(JSON.stringify(data)),
       }
     },
     identify: ({ token }) => ({ token }),

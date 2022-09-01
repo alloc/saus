@@ -8,7 +8,7 @@ import {
   EnforcementPhase,
   isExternalUrl,
   limitTime,
-  md5Hex,
+  murmurHash,
   unwrapBuffer,
 } from 'saus/core'
 import { get, Response } from 'saus/http'
@@ -112,7 +112,7 @@ function installHtmlHook({
           debug(`loaded asset: %O`, url)
 
           const fileType = path.extname(filePath)
-          const contentHash = md5Hex(content).slice(0, 8)
+          const contentHash = murmurHash(content)
           const fileName = path.posix.join(
             config.assetsDir,
             filePath.slice(1, -fileType.length) + `.${contentHash}${fileType}`

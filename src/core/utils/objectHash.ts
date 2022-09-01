@@ -1,7 +1,7 @@
-import { md5Hex } from './md5-hex'
+import { murmurHash } from './murmur3'
 import { sortObjects } from './sortObjects'
 
-export function toObjectHash(data: object, length = 8) {
+export function toObjectHash(data: object) {
   const json = JSON.stringify(data, sortObjects)
-  return md5Hex(json).slice(0, length)
+  return murmurHash(json)
 }

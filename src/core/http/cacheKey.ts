@@ -1,4 +1,4 @@
-import { md5Hex } from '../utils/md5-hex'
+import { murmurHash } from '@/utils/murmur3'
 import { Headers } from './headers'
 
 /**
@@ -14,8 +14,8 @@ export function getCacheKey(url: string, headers?: Headers) {
         return sorted
       }, {})
     }
-    const hash = md5Hex(JSON.stringify(headers))
-    cacheKey += ' ' + hash.slice(0, 8)
+    const hash = murmurHash(JSON.stringify(headers))
+    cacheKey += ' ' + hash
   }
   return cacheKey
 }

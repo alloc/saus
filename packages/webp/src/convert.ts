@@ -7,7 +7,12 @@ import { success } from 'misty'
 import { MistyTask, startTask } from 'misty/task'
 import path from 'path'
 import { Plugin } from 'saus'
-import { controlExecution, limitConcurrency, md5Hex, plural } from 'saus/core'
+import {
+  controlExecution,
+  limitConcurrency,
+  murmurHash,
+  plural,
+} from 'saus/core'
 
 export interface Options extends WebpOptions {
   /** By default, all `.png` and `.jpg` files are converted. */
@@ -105,7 +110,7 @@ export function convertToWebp(options: Options = {}): Plugin {
 
         const fileName = path.join(
           config.build.assetsDir,
-          id.replace(/\.[^.]+$/, '.' + md5Hex(buffer).slice(0, 8) + '.webp')
+          id.replace(/\.[^.]+$/, '.' + murmurHash(buffer) + '.webp')
         )
 
         if (!config.build.ssr)

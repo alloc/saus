@@ -1,9 +1,9 @@
+import { unwrapBuffer } from '@/node/buffer'
+import { Cache } from '@/runtime/cache'
+import { murmurHash } from '@/utils/murmur3'
+import { readJson } from '@/utils/readJson'
 import fs from 'fs'
 import { dirname, resolve } from 'path'
-import { unwrapBuffer } from '../node/buffer'
-import { Cache } from '../runtime/cache'
-import { md5Hex } from '../utils/md5-hex'
-import { readJson } from '../utils/readJson'
 import { Response } from './response'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}
@@ -36,7 +36,7 @@ export function loadResponseCache(root: string) {
         return null
       }
       return {
-        expired: expiresAt < Date.now(),
+        expired: expiresAt !== null && expiresAt < Date.now(),
         get object() {
           return decodeResponse(data)
         },
@@ -44,7 +44,7 @@ export function loadResponseCache(root: string) {
     },
     write(cacheKey: string, resp: Response, maxAge: number) {
       const entry = metadata[cacheKey]
-      const fileName = entry?.[0] || md5Hex(cacheKey).slice(0, 8)
+      const fileName = entry?.[0] || String(murmurHash(cacheKey))
       const filePath = resolve(cacheDir, fileName)
 
       fs.mkdirSync(dirname(filePath), { recursive: true })

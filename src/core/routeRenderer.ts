@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { SausContext } from './context'
 import { Route } from './routes'
-import { md5Hex } from './utils/md5-hex'
+import { murmurHash } from './utils/murmur3'
 
 export interface RouteRenderer {
   fileName: string
@@ -64,7 +64,7 @@ function getRouteRenderer(
 ): RouteRenderer {
   assert(route.moduleId)
   const layoutModuleId = route.layoutEntry || context.defaultLayout.id
-  const hash = md5Hex([layoutModuleId, route.moduleId]).slice(0, 8)
+  const hash = murmurHash(layoutModuleId + route.moduleId)
   return {
     fileName: 'renderer.' + hash + '.js',
     routeModuleId: route.moduleId,

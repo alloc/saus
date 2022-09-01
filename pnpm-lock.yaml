@@ -54,6 +54,7 @@ importers:
       magic-string: ^0.25.7
       misty: ^1.6.7
       mrmime: ^1.0.0
+      ohash: ^0.1.5
       prettier: ^2.0.5
       quick-lru: ^6.1.1
       recrawl-sync: ^2.2.1
@@ -95,6 +96,7 @@ importers:
       magic-string: 0.25.9
       misty: 1.6.10
       mrmime: 1.0.1
+      ohash: 0.1.5
       recrawl-sync: 2.2.2
       rollup: 2.77.0
       shared-log: 1.2.8
@@ -2951,6 +2953,10 @@ packages:
 
   /objectorarray/1.0.5:
     resolution: {integrity: sha512-eJJDYkhJFFbBBAxeh8xW+weHlkI28n2ZdQV/J/DNfWfSKlGEf2xcfAbZTv3riEXHAhL9SVOTs2pRmXiSTf78xg==}
+    dev: false
+
+  /ohash/0.1.5:
+    resolution: {integrity: sha512-qynly1AFIpGWEAW88p6DhMNqok/Swb52/KsiU+Toi7er058Ptvno3tkfTML6wYcEgFgp2GsUziW4Nqn62ciuyw==}
     dev: false
 
   /once/1.4.0:

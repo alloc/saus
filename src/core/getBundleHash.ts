@@ -1,5 +1,5 @@
 import { BundleOptions } from '../bundle/options'
-import { md5Hex } from './utils/md5-hex'
+import { murmurHash } from './utils/murmur3'
 import { pick, pickAllExcept } from './utils/pick'
 import { BundleConfig } from './vite'
 
@@ -18,5 +18,5 @@ export function getBundleHash(
       'publicDirMode',
     ]),
   }
-  return md5Hex(JSON.stringify(values)).slice(0, 8)
+  return murmurHash(JSON.stringify(values))
 }

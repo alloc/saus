@@ -1,5 +1,5 @@
-import { md5Hex } from '../utils/md5-hex'
-import { sortObjects } from '../utils/sortObjects'
+import { murmurHash } from '@/utils/murmur3'
+import { sortObjects } from '@/utils/sortObjects'
 import { StateModule } from './stateModules'
 
 export function getStateModuleKey(module: StateModule<any, []>): string
@@ -31,8 +31,7 @@ export function getStateModuleKey(
     args = JSON.stringify(args, sortObjects)
   }
   if (args !== '[]') {
-    const hash = md5Hex(args)
-    cacheKey += '.' + hash.slice(0, 8)
+    cacheKey += '.' + murmurHash(args)
   }
   return cacheKey
 }
