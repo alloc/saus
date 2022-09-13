@@ -151,6 +151,19 @@ async function startServer(
 ): Promise<vite.ViteDevServer> {
   const { config, logger } = context
 
+  // HACK: This is not officially supported by Vite.
+  const configureResolver = config.plugins.find(p => p.name == 'vite:resolve')!
+    .options as (opts: {
+    external?: (id: string, importer: string, isResolved: boolean) => boolean
+  }) => void
+
+  const ssrExternal = config.ssr?.external || []
+  configureResolver({
+    external(id, _importer, isResolved) {
+      return !isResolved && ssrExternal.includes(id)
+    },
+  })
+
   const server = (context.server = await vite.createServer(config))
   const watcher = (context.watcher = server.watcher!)
   Object.assign(
