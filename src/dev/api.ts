@@ -193,7 +193,6 @@ async function startServer(
       // Force all node_modules to be reloaded
       context.ssrForceReload = createFullReload()
       try {
-        console.log('loading routes…')
         context.plugins = await getSausPlugins(context)
         await loadRoutes(context)
 
