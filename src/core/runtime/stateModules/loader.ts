@@ -1,6 +1,6 @@
+import { klona as deepCopy } from '@/utils/klona'
 import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
-import { klona as deepCopy } from 'klona'
 import { Cache, CacheControl, globalCache } from '../cache'
 import { CachePlugin } from '../cachePlugin'
 import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'

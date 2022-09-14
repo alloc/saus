@@ -1,5 +1,5 @@
 import { AbortController } from '@/utils/AbortController'
-import { klona } from 'klona'
+import { klona } from '@/utils/klona'
 import { Promisable } from 'type-fest'
 import { debug } from '../../debug'
 import { noop } from '../../utils/noop'

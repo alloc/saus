@@ -1,4 +1,4 @@
-import { klona } from 'klona'
+import { klona } from '@/utils/klona'
 import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../html'
