@@ -1,3 +1,4 @@
+import { __exportFrom as exportFrom } from '@/node/esmInterop'
 import { toArray } from '@/utils/array'
 import chokidar from 'chokidar'
 import * as convertSourceMap from 'convert-source-map'
@@ -41,11 +42,11 @@ export async function compileNodeModule(
   } = {}
 ): Promise<CompiledModule> {
   const time = Date.now()
-  const env = {
+  const env: Record<string, any> = {
     require: Module.createRequire(filename),
     __dirname: path.dirname(filename),
     __filename: filename,
-    [exportsId]: {},
+    [exportsId]: Object.create(null),
     [importMetaId]: {
       env: { ...importMeta, SSR: true },
       glob: (globs: string | string[]) =>
@@ -65,6 +66,11 @@ export async function compileNodeModule(
 
   let script: Script
   if (cached) {
+    // Inject __exportFrom into env for cached module code.
+    if (!env[exportFrom.name] && /^__exportFrom\b/m.test(cached)) {
+      injectExportFrom(env)
+    }
+
     const mapComment = convertSourceMap.fromSource(cached)
     script = {
       code: convertSourceMap.removeComments(cached),
@@ -120,6 +126,13 @@ export async function compileNodeModule(
         sourcefile: filename,
       })
     )
+
+    // Any `export * from` statements need special handling,
+    // in case there are circular dependencies. To achieve this,
+    // we need a proxy that accesses the re-exported modules lazily.
+    if (esmHelpers.delete(exportFrom)) {
+      injectExportFrom(env)
+    }
 
     // Inject the local environment after compiling with Esbuild to avoid
     // renaming the `require` variable to `require2` which is wrong.

@@ -1,5 +1,6 @@
 import { isLiveModule } from '@/vm/isLiveModule'
 import { SausContext } from '..'
+import { __exportFrom as exportFrom } from '../node/esmInterop'
 import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
 import { isPackageRef } from '../utils/isPackageRef'
@@ -36,17 +37,6 @@ export async function compileSsrModule(
     }
   }
 
-  let module = await compileModule(loadedId, context, {
-    cache: context.compileCache,
-    transform: ssrCompileEsm({
-      forceLazyBinding: (_, id) =>
-        !isPackageRef(id) ||
-        (liveModulePaths &&
-          moduleMap[id] &&
-          isLiveModule(moduleMap[id]!, liveModulePaths)),
-    }),
-  })
-
   const importMeta = {
     url: servedPathForFile(id, context.root),
     env: {
@@ -56,11 +46,27 @@ export async function compileSsrModule(
   }
 
   const importer = cleanUrl(id)
-  const env = {
-    [exportsId]: {},
+  const env: Record<string, any> = {
+    [exportsId]: Object.create(null),
     [importMetaId]: importMeta,
     [importAsyncId]: (id: string) => context.ssrRequire!(id, importer, true),
     [requireAsyncId]: (id: string) => context.ssrRequire!(id, importer, false),
+  }
+
+  let module = await compileModule(loadedId, context, {
+    cache: context.compileCache,
+    transform: ssrCompileEsm(env, {
+      forceLazyBinding: (_, id) =>
+        !isPackageRef(id) ||
+        (liveModulePaths &&
+          moduleMap[id] &&
+          isLiveModule(moduleMap[id]!, liveModulePaths)),
+    }),
+  })
+
+  // Inject __exportFrom into env for cached module code.
+  if (!env[exportFrom.name] && /^__exportFrom\b/m.test(module.code)) {
+    injectExportFrom(env)
   }
 
   const params = Object.keys(env).join(', ')
@@ -76,7 +82,10 @@ export async function compileSsrModule(
   }
 }
 
-function ssrCompileEsm(esmOptions: Partial<EsmCompilerOptions>) {
+function ssrCompileEsm(
+  env: Record<string, any>,
+  esmOptions: Partial<EsmCompilerOptions>
+) {
   return async (code: string, id: string) => {
     const esmHelpers = new Set<Function>()
     const editor = await compileEsm({
@@ -85,6 +94,13 @@ function ssrCompileEsm(esmOptions: Partial<EsmCompilerOptions>) {
       filename: id,
       esmHelpers,
     })
+
+    // Any `export * from` statements need special handling,
+    // in case there are circular dependencies. To achieve this,
+    // we need a proxy that accesses the re-exported modules lazily.
+    if (esmHelpers.delete(exportFrom)) {
+      injectExportFrom(env)
+    }
 
     editor.append(
       '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')

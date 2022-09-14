@@ -531,10 +531,7 @@ function rewriteExport(
     }
   } else if (imported && path.isExportAllDeclaration()) {
     const fromExpr = imported.alias || awaitRequire(imported.source)
-    editor.appendRight(
-      start,
-      `__exportFrom(${exportsId}, ${fromExpr})` + kSemiReturn
-    )
+    editor.appendRight(start, `__exportFrom(${fromExpr})` + kSemiReturn)
     esmHelpers.add(__exportFrom)
   } else if (path.isExportDefaultDeclaration()) {
     const defaultDecl = path.get('declaration')
