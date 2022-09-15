@@ -1,13 +1,14 @@
 import { codeFrameColumns, SourceLocation } from '@babel/code-frame'
+import createDebug from 'debug'
 import fs from 'fs'
 import { removeSourceMapUrls } from '../node/sourceMap'
 import { parseStackTrace, StackFrame, traceStackFrame } from '../node/stack'
 import { ModuleMap } from './types'
 
 const kFormattedStack = Symbol.for('saus:formattedStack')
-const ignoredFrameRE = !process.env.DEBUG
-  ? /(^node:|\/saus\/(?!examples|packages))/
-  : /^$/
+const debugStack = createDebug('saus:stack')
+const sausFileRE = /\/saus\/(?!examples|packages)/
+const nodeBuiltinRE = /^node:/
 
 export function formatAsyncStack(
   error: any,
@@ -28,11 +29,17 @@ export function formatAsyncStack(
   let relevantFrames =
     error.code == 'MODULE_NOT_FOUND'
       ? []
-      : process.env.DEBUG
-      ? stack.frames
-      : stack.frames
-          .slice(error.framesToPop || 0)
-          .filter(frame => !ignoredFrameRE.test(frame.file))
+      : stack.frames.slice(error.framesToPop || 0)
+
+  if (!process.env.DEBUG)
+    relevantFrames = relevantFrames.filter(
+      frame => !nodeBuiltinRE.test(frame.file)
+    )
+
+  if (!debugStack.enabled)
+    relevantFrames = relevantFrames.filter(
+      frame => !sausFileRE.test(frame.file)
+    )
 
   // Async frames are omitted if their file/line pair exists
   // already in the synchronous stack trace.
@@ -124,8 +131,8 @@ export function traceDynamicImport(error: any, skip = 0) {
   if (skip) {
     stack.frames.splice(0, skip)
   }
-  const ignoredFrameIndex = stack.frames.findIndex(frame =>
-    ignoredFrameRE.test(frame.file)
+  const ignoredFrameIndex = stack.frames.findIndex(
+    frame => sausFileRE.test(frame.file) || nodeBuiltinRE.test(frame.file)
   )
   return stack.frames.slice(0, ignoredFrameIndex)
 }
