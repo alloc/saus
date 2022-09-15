@@ -136,10 +136,12 @@ export async function loadRoutes(context: SausContext) {
   } finally {
     setRoutesModule(null)
     task?.finish(
-      `${moduleCount} modules required. ` +
-        `(requireMean = ${prettySecs(
-          requireTimeSum / moduleCount
-        )}, compileMean = ${prettySecs(compileTimeSum / moduleCount)})`
+      `${moduleCount} modules required.` +
+        (moduleCount
+          ? ` (requireMean = ${prettySecs(
+              requireTimeSum / moduleCount
+            )}, compileMean = ${prettySecs(compileTimeSum / moduleCount)})`
+          : ``)
     )
   }
 
