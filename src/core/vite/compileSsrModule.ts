@@ -16,6 +16,8 @@ import {
 import { ImporterSet } from '../vm/ImporterSet'
 import { CompiledModule } from '../vm/types'
 import { checkPublicFile } from './checkPublicFile'
+import { injectExportFrom } from './exportFrom'
+import { exportNotFound } from './exportNotFound'
 
 export async function compileSsrModule(
   id: string,
@@ -47,7 +49,7 @@ export async function compileSsrModule(
 
   const importer = cleanUrl(id)
   const env: Record<string, any> = {
-    [exportsId]: Object.create(null),
+    [exportsId]: Object.create(exportNotFound(id)),
     [importMetaId]: importMeta,
     [importAsyncId]: (id: string) => context.ssrRequire!(id, importer, true),
     [requireAsyncId]: (id: string) => context.ssrRequire!(id, importer, false),

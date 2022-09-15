@@ -1,3 +1,5 @@
+import { setThrowOnMissingExport } from '@/vite/exportNotFound'
+
 /** Runtime `default` export unwrapping. */
 export function __importDefault(exports: any) {
   if (exports && exports.__esModule) {

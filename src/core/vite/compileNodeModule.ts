@@ -21,6 +21,8 @@ import {
 import { ImporterSet } from '../vm/ImporterSet'
 import { isLiveModule } from '../vm/isLiveModule'
 import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
+import { injectExportFrom } from './exportFrom'
+import { exportNotFound } from './exportNotFound'
 import { overwriteScript } from './overwriteScript'
 
 export async function compileNodeModule(
@@ -46,7 +48,7 @@ export async function compileNodeModule(
     require: Module.createRequire(filename),
     __dirname: path.dirname(filename),
     __filename: filename,
-    [exportsId]: Object.create(null),
+    [exportsId]: Object.create(exportNotFound(filename)),
     [importMetaId]: {
       env: { ...importMeta, SSR: true },
       glob: (globs: string | string[]) =>
