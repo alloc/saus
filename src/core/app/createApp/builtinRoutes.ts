@@ -89,11 +89,15 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
       const loaded = await globalCache.access(cacheKey, loader)
       if (loaded) {
         const [state, expiresAt, args] = loaded
-        const module = app.renderStateModule(id, args!, state, expiresAt)
-        sendModule(req, module)
-      } else {
-        req.respondWith(404)
+        if (Array.isArray(args)) {
+          const module = app.renderStateModule(id, args, state, expiresAt)
+          return sendModule(req, module)
+        }
+        console.warn(
+          'Cannot render a state module without its arguments: ' + cacheKey
+        )
       }
+      req.respondWith(404)
     }
   })
 
