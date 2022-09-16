@@ -71,9 +71,10 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 
     const stateModule = stateModulesById.get(id)
     if (stateModule) {
+      let args: any
       let loader: Cache.StateLoader | undefined
       if (!globalCache.has(cacheKey)) {
-        let args: any = req.headers['x-args']
+        args = req.headers['x-args']
         if (!args) {
           return req.respondWith(404)
         }
@@ -86,7 +87,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         args = JSON.parse(args)
         loader = () => stateModule.load(...args)
       }
-      const loaded = await globalCache.access(cacheKey, loader)
+      const loaded = await globalCache.access(cacheKey, loader, { args })
       if (loaded) {
         const [state, expiresAt, args] = loaded
         if (Array.isArray(args)) {
