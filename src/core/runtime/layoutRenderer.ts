@@ -39,6 +39,7 @@ export const defineLayoutRenderer = <RenderResult>({
       const rendered = await render(req)
       return toString(rendered) as any
     }
+    // TODO: clean this up
     const file: string = ((config as any).file ||= getCurrentModule())
     return config
     // const layout = layouts[file]
