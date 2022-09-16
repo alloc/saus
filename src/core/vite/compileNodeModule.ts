@@ -1,4 +1,3 @@
-import { __exportFrom as exportFrom } from '@/node/esmInterop'
 import { toArray } from '@/utils/array'
 import chokidar from 'chokidar'
 import * as convertSourceMap from 'convert-source-map'
@@ -13,7 +12,6 @@ import { isPackageRef } from '../utils/isPackageRef'
 import { vite } from '../vite'
 import {
   compileEsm,
-  exportsId,
   importAsyncId,
   importMetaId,
   requireAsyncId,
@@ -21,8 +19,6 @@ import {
 import { ImporterSet } from '../vm/ImporterSet'
 import { isLiveModule } from '../vm/isLiveModule'
 import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
-import { injectExportFrom } from './exportFrom'
-import { exportNotFound } from './exportNotFound'
 import { overwriteScript } from './overwriteScript'
 
 export async function compileNodeModule(
@@ -48,7 +44,6 @@ export async function compileNodeModule(
     require: Module.createRequire(filename),
     __dirname: path.dirname(filename),
     __filename: filename,
-    [exportsId]: Object.create(exportNotFound(filename)),
     [importMetaId]: {
       env: { ...importMeta, SSR: true },
       glob: (globs: string | string[]) =>
@@ -68,11 +63,6 @@ export async function compileNodeModule(
 
   let script: Script
   if (cached) {
-    // Inject __exportFrom into env for cached module code.
-    if (!env[exportFrom.name] && /^__exportFrom\b/m.test(cached)) {
-      injectExportFrom(env)
-    }
-
     const mapComment = convertSourceMap.fromSource(cached)
     script = {
       code: convertSourceMap.removeComments(cached),
@@ -104,11 +94,8 @@ export async function compileNodeModule(
           isLiveModule(moduleMap[id]!, liveModulePaths)),
     })
 
-    const topLevelId = '__compiledModule'
-    const eofLineBreak = script.code.endsWith('\n') ? '' : '\n'
-
-    editor.prepend(`async function ${topLevelId}(__env) { `)
-    editor.append(eofLineBreak + `}`)
+    editor.prepend(`async function $() { `)
+    editor.append(`\n}`)
 
     // Apply the edits.
     script = overwriteScript(filename, script, {
@@ -129,22 +116,14 @@ export async function compileNodeModule(
       })
     )
 
-    // Any `export * from` statements need special handling,
-    // in case there are circular dependencies. To achieve this,
-    // we need a proxy that accesses the re-exported modules lazily.
-    if (esmHelpers.delete(exportFrom)) {
-      injectExportFrom(env)
-    }
+    // Remove the async wrapper used to enable top-level await.
+    script.code = script.code.replace(/^async .+?\n/, '\n')
 
-    // Inject the local environment after compiling with Esbuild to avoid
-    // renaming the `require` variable to `require2` which is wrong.
-    script.code = script.code.replace('__env', Object.keys(env).join(', '))
-
-    // Append ESM helpers needed for CJS compatibility.
-    script.code += Array.from(esmHelpers, fn => fn.toString()).join('\n')
-
-    // Wrap in an IIFE that returns the module factory.
-    script.code = `(function() { ${script.code}\nreturn ${topLevelId}\n})()`
+    // Append the ESM helpers for CJS compatibility.
+    script.code = script.code.replace(
+      /\}\n$/, // …and remove the async wrapper's closing brace.
+      Array.from(esmHelpers, fn => fn.toString()).join('\n')
+    )
 
     // Store the compiled module on disk with an inline source map.
     if (compileCache && filename[0] !== '\0') {

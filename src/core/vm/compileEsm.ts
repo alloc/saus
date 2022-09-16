@@ -1,9 +1,9 @@
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
 import { getBabelProgram, MagicString, NodePath, t } from '../babel'
-import { __exportFrom, __exportLet, __importDefault } from '../node/esmInterop'
 import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
+import { __exportLet, __importDefault } from './esmInterop'
 import { ForceLazyBindingHook } from './types'
 
 type Binding = { path: NodePath; referencePaths: NodePath[] }
@@ -531,8 +531,9 @@ function rewriteExport(
     }
   } else if (imported && path.isExportAllDeclaration()) {
     const fromExpr = imported.alias || awaitRequire(imported.source)
+    // Skip adding __exportFrom to esmHelpers because it would be
+    // removed anyways, as it relies on internal module state.
     editor.appendRight(start, `__exportFrom(${fromExpr})` + kSemiReturn)
-    esmHelpers.add(__exportFrom)
   } else if (path.isExportDefaultDeclaration()) {
     const defaultDecl = path.get('declaration')
 

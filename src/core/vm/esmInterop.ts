@@ -1,4 +1,4 @@
-import { setThrowOnMissingExport } from '@/vite/exportNotFound'
+import { setThrowOnMissingExport } from './exportNotFound'
 
 /** Runtime `default` export unwrapping. */
 export function __importDefault(exports: any) {

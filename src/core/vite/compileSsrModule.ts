@@ -1,6 +1,5 @@
 import { isLiveModule } from '@/vm/isLiveModule'
 import { SausContext } from '..'
-import { __exportFrom as exportFrom } from '../node/esmInterop'
 import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
 import { isPackageRef } from '../utils/isPackageRef'
@@ -8,7 +7,6 @@ import { compileModule } from '../vite/compileModule'
 import {
   compileEsm,
   EsmCompilerOptions,
-  exportsId,
   importAsyncId,
   importMetaId,
   requireAsyncId,
@@ -16,8 +14,6 @@ import {
 import { ImporterSet } from '../vm/ImporterSet'
 import { CompiledModule } from '../vm/types'
 import { checkPublicFile } from './checkPublicFile'
-import { injectExportFrom } from './exportFrom'
-import { exportNotFound } from './exportNotFound'
 
 export async function compileSsrModule(
   id: string,
@@ -49,7 +45,6 @@ export async function compileSsrModule(
 
   const importer = cleanUrl(id)
   const env: Record<string, any> = {
-    [exportsId]: Object.create(exportNotFound(id)),
     [importMetaId]: importMeta,
     [importAsyncId]: (id: string) => context.ssrRequire!(id, importer, true),
     [requireAsyncId]: (id: string) => context.ssrRequire!(id, importer, false),
@@ -66,14 +61,8 @@ export async function compileSsrModule(
     }),
   })
 
-  // Inject __exportFrom into env for cached module code.
-  if (!env[exportFrom.name] && /^__exportFrom\b/m.test(module.code)) {
-    injectExportFrom(env)
-  }
-
-  const params = Object.keys(env).join(', ')
   return {
-    code: `(0, async function(${params}) { ${module.code}\n})`,
+    code: module.code,
     map: module.map,
     id,
     env,
@@ -96,13 +85,6 @@ function ssrCompileEsm(
       filename: id,
       esmHelpers,
     })
-
-    // Any `export * from` statements need special handling,
-    // in case there are circular dependencies. To achieve this,
-    // we need a proxy that accesses the re-exported modules lazily.
-    if (esmHelpers.delete(exportFrom)) {
-      injectExportFrom(env)
-    }
 
     editor.append(
       '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
