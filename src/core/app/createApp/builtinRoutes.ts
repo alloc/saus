@@ -77,7 +77,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         if (!args) {
           return req.respondWith(404)
         }
-        args = Buffer.from(args, 'base64')
+        args = Buffer.from(args, 'base64').toString()
         if (hash !== murmurHash(args)) {
           return req.respondWith(400, {
             json: { message: 'x-args hash mismatch' },
