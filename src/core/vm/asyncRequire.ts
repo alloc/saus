@@ -450,6 +450,11 @@ export function createAsyncRequire(
       }
     }
 
+    // Dynamic import() aliases the JSON as the default export.
+    if (isDynamic && resolvedId.endsWith('.json')) {
+      exports = { default: exports }
+    }
+
     if (!isCached) {
       const requireTime = Date.now() - time
       config.onModuleLoaded?.(resolvedId, requireTime, module)

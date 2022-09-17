@@ -1,5 +1,8 @@
 import { get } from './get'
 
-export async function jsonImport(url: string) {
-  return (await get(url)).toJSON()
+export type JsonModule = { default: any }
+
+export async function jsonImport(url: string): Promise<JsonModule> {
+  const json = (await get(url)).toJSON()
+  return { default: json }
 }
