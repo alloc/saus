@@ -29,7 +29,7 @@ export namespace StateModule {
   export type LoadCallback<T = any, Args extends readonly any[] = any> = (
     args: Args,
     state: T,
-    expiresAt?: number
+    expiresAt?: number | null
   ) => void
 }
 
