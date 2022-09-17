@@ -11,7 +11,7 @@ export function setState<Args extends readonly any[]>(
   expiresAt?: number
 ): any {
   const cacheKey = getStateModuleKey(moduleId, args)
-  globalCache.loaded[cacheKey] = [state, expiresAt]
+  globalCache.loaded[cacheKey] = [state, expiresAt, args]
   notifyStateListeners(moduleId, args, state, expiresAt)
   return state
 }
