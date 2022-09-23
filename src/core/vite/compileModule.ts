@@ -70,6 +70,7 @@ export async function compileModule(
     const [imports, exports] = esModuleLexer.parse(script.code)
     if (!imports.length && !exports.length) {
       // Likely a CommonJS module from a linked dependency.
+      script.isCommonJS = true
       return script
     }
   }

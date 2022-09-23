@@ -1,7 +1,7 @@
 import { SourceMap } from '../node/sourceMap'
 import type { ImporterSet } from './ImporterSet'
 
-export type Script = { code: string; map?: SourceMap }
+export type Script = { code: string; map?: SourceMap; isCommonJS?: boolean }
 
 /** This property exists on linked Node.js module instances */
 export const kLinkedModule = Symbol.for('saus.LinkedModule')

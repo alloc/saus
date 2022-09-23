@@ -1,3 +1,4 @@
+import { Module } from 'module'
 import { isLiveModule } from '@/vm/isLiveModule'
 import { SausContext } from '..'
 import { servedPathForFile } from '../node/servedPathForFile'
@@ -35,24 +36,9 @@ export async function compileSsrModule(
     }
   }
 
-  const importMeta = {
-    url: servedPathForFile(id, context.root),
-    env: {
-      ...config.env,
-      SSR: true,
-    },
-  }
-
-  const importer = cleanUrl(id)
-  const env: Record<string, any> = {
-    [importMetaId]: importMeta,
-    [importAsyncId]: (id: string) => context.ssrRequire!(id, importer, true),
-    [requireAsyncId]: (id: string) => context.ssrRequire!(id, importer, false),
-  }
-
-  let module = await compileModule(loadedId, context, {
+  const module = await compileModule(loadedId, context, {
     cache: context.compileCache,
-    transform: ssrCompileEsm(env, {
+    transform: ssrCompileEsm({
       forceLazyBinding: (_, id) =>
         !isPackageRef(id) ||
         (liveModulePaths &&
@@ -60,6 +46,27 @@ export async function compileSsrModule(
           isLiveModule(moduleMap[id]!, liveModulePaths)),
     }),
   })
+
+  const importer = cleanUrl(id)
+
+  let env: Record<string, any>
+  if (module.isCommonJS) {
+    env = {
+      require: Module.createRequire(importer),
+    }
+  } else {
+    env = {
+      [requireAsyncId]: (id: string) => context.ssrRequire(id, importer, false),
+      [importAsyncId]: (id: string) => context.ssrRequire(id, importer, true),
+      [importMetaId]: {
+        url: servedPathForFile(id, context.root),
+        env: {
+          ...config.env,
+          SSR: true,
+        },
+      },
+    }
+  }
 
   return {
     code: module.code,
@@ -73,10 +80,7 @@ export async function compileSsrModule(
   }
 }
 
-function ssrCompileEsm(
-  env: Record<string, any>,
-  esmOptions: Partial<EsmCompilerOptions>
-) {
+function ssrCompileEsm(esmOptions: Partial<EsmCompilerOptions>) {
   return async (code: string, id: string) => {
     const esmHelpers = new Set<Function>()
     const editor = await compileEsm({
