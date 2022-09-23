@@ -135,6 +135,14 @@ function isolatePages(context: DevContext): App.Plugin {
       }
     }
 
+    // Reset the route clients, so they don't reference old exports.
+    for (const client of Object.values(context.routeClients.clientsById)) {
+      const clientModule = context.moduleMap[client!.id]
+      if (clientModule) {
+        clearExports(clientModule)
+      }
+    }
+
     const oldHotReload = context.hotReload
     context.hotReload = createHotReload(context, {
       schedule: throttle(queueMicrotask),
