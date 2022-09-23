@@ -109,9 +109,11 @@ async function compileSsrRuntime(context: BundleContext) {
   const sausRoot = toSausPath('src/')
   const sausVersion = sausRoot.includes('/node_modules/')
     ? require(path.resolve(sausRoot, '../package.json')).version
-    : require('child_process').execSync('git rev-list --no-merges -n 1 HEAD', {
-        cwd: path.dirname(sausRoot),
-      })
+    : require('child_process')
+        .execSync('git rev-list --no-merges -n 1 HEAD', {
+          cwd: path.dirname(sausRoot),
+        })
+        .toString('utf8')
 
   const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
   const buildEntryMap = (entries: Record<string, string>) => {
