@@ -1,3 +1,4 @@
+import * as esModuleLexer from 'es-module-lexer'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
 import { Promisable } from 'type-fest'
@@ -36,9 +37,10 @@ export async function compileModule(
   { transform, cache }: Options = {}
 ): Promise<Script> {
   const filename = cleanUrl(id)
+  const loaded = await ctx.load(id)
 
   let code: string | undefined
-  let script = ((await ctx.load(id)) || {
+  let script = (loaded || {
     code: (code = readFileSync(filename, 'utf8')),
     map: loadSourceMap(code, filename),
   }) as Script
@@ -60,6 +62,16 @@ export async function compileModule(
 
   if (cached !== undefined) {
     return script
+  }
+
+  // For JS files loaded from the filesystem...
+  if (filename.endsWith('.js') && (!loaded || loaded.meta?.filename)) {
+    // Look for evidence of ESM syntax.
+    const [imports, exports] = esModuleLexer.parse(script.code)
+    if (!imports.length && !exports.length) {
+      // Likely a CommonJS module from a linked dependency.
+      return script
+    }
   }
 
   const transformed = await ctx.transform(script.code, id, script.map)
