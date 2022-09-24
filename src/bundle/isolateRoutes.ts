@@ -65,16 +65,30 @@ export async function isolateRoutes(
     },
   })
 
+  const plugins = config.plugins.filter(p => {
+    // CommonJS modules are externalized, so this plugin is just overhead.
+    if (p.name == 'commonjs') return false
+    // Leave static replacement up to the main build.
+    if (p.name == 'vite:define') return false
+
+    return true
+  })
+
+  const { external } = context.bundle
+  if (external) {
+    plugins.unshift({
+      name: 'isolateRoutes:external',
+      resolveId(id) {
+        if (external.some(e => e == id || id.startsWith(e + '/'))) {
+          return { id, external: true }
+        }
+      },
+    })
+  }
+
   const pluginContainer = await vite.createPluginContainer({
     ...config,
-    plugins: config.plugins.filter(p => {
-      // CommonJS modules are externalized, so this plugin is just overhead.
-      if (p.name == 'commonjs') return false
-      // Leave static replacement up to the main build.
-      if (p.name == 'vite:define') return false
-
-      return true
-    }),
+    plugins,
     ssr: {
       ...config.ssr,
       noExternal: [],
