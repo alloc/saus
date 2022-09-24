@@ -154,7 +154,7 @@ export async function compileClients(
           (_, assign) => assign + JSON.stringify(debugBase)
         )
     } else if (staticRoutesPath in chunk.modules) {
-      chunk.code = useDebugRoutes(chunk.code, base, debugBase)
+      debugText = useDebugRoutes(debugText, base, debugBase)
     }
     const map = chunk.map
     if (map) {
@@ -285,20 +285,18 @@ export async function compileClients(
  * Rewrite the static `routes` object to use the debug view.
  */
 function useDebugRoutes(code: string, base: string, debugBase: string) {
-  return code.replace(/\b(routes = )(\{[\s\S]*?})/, (_, assign, routesJson) => {
-    const routes: Record<string, string> = JSON.parse(routesJson)
-    const newRoutes: Record<string, string> = {}
-    for (let routePath in routes) {
-      let routeModuleId = routes[routePath]
-      if (routeModuleId.startsWith(base)) {
-        routeModuleId = routeModuleId.replace(base, debugBase)
-      }
-      if (routePath.startsWith(base)) {
-        routePath = routePath.replace(base, debugBase)
-      }
-      newRoutes[routePath] = routeModuleId
-    }
-    return assign + JSON.stringify(newRoutes, null, 2)
+  const regex = /\b(clientEntriesByRoute = )(\{[\s\S]*?})/g
+  return code.replace(regex, (_, assign: string, routesDecl: string) => {
+    return (
+      assign +
+      // Add the `debugBase` prefix to every route key.
+      routesDecl.replace(/"([^"]+)":/g, (_, match: string) => {
+        if (match[0] == '/') {
+          match = match.replace(base, debugBase)
+        }
+        return `"${match}":`
+      })
+    )
   })
 }
 

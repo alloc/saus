@@ -63,6 +63,8 @@ export async function compileRoutesMap(
     },
   }
 
+  // NOTE: If you change the name, make sure to also update the regex in
+  // the `useDebugRoutes` function used by the client bundle compiler.
   const name = options.isClient
     ? 'clientEntriesByRoute'
     : 'serverEntriesByRoute'
