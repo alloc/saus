@@ -107,9 +107,19 @@ export async function isolateRoutes(
   const sausExternalRE = /(^|\/)saus(?!.*\/(packages|examples))\b/
   const nodeModulesRE = /\/node_modules\//
 
+  // Virtual modules are always isolated, if imported.
   const isVirtual = (id: string) => id[0] === '\0'
+
+  // Dependencies can be isolated forcefully.
   const shouldForceIsolate = createFilter(
-    config.saus.bundle?.isolate || /^$/,
+    context.bundle.isolate || /^$/,
+    undefined,
+    { resolve: false }
+  )
+
+  // Default isolation can be prevented.
+  const shouldNotIsolate = createFilter(
+    context.bundle.noIsolate || /^$/,
     undefined,
     { resolve: false }
   )
@@ -160,10 +170,18 @@ export async function isolateRoutes(
         return { id, external: true }
       }
       let forceIsolate = false
-      if (bareImportRE.test(id) && !id.startsWith('@/')) {
-        forceIsolate = shouldForceIsolate(id)
-        if (!forceIsolate && !shouldResolve(id, importer)) {
+      if (bareImportRE.test(id)) {
+        if (shouldNotIsolate(id)) {
           return { id, external: true }
+        }
+        // Modules referenced with "@/" alias prefix are assumed
+        // to be project files, so they're isolated unless the
+        // `bundle.noIsolate` option happens to match them.
+        if (!id.startsWith('@/')) {
+          forceIsolate = shouldForceIsolate(id)
+          if (!forceIsolate && !shouldResolve(id, importer)) {
+            return { id, external: true }
+          }
         }
       }
       const resolved = await resolveId(id, importer)

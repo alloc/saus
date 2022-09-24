@@ -80,6 +80,11 @@ export interface UserBundleConfig {
    */
   isolate?: (string | RegExp)[]
   /**
+   * Prevent certain imports from being isolated, so their module instance
+   * is reused between page requests.
+   */
+  noIsolate?: (string | RegExp)[]
+  /**
    * Control how the client modules are stored and served.
    *
    * - `"inline"` (the default) \
