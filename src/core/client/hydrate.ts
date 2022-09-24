@@ -25,7 +25,7 @@ export async function hydrate(
 ) {
   // Cache page props in global cache.
   const path = location.pathname
-  globalCache.loaded[path] = [props]
+  globalCache.loaded[path] = [props] // TODO: should this expire?
 
   const req: RenderRequest = {
     path,
