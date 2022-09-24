@@ -1,5 +1,4 @@
 import { INDENT, RETURN, SPACE } from '@/tokens'
-import { prependBase } from '@/utils/base'
 import { dataToEsm } from '@/utils/dataToEsm'
 import { ParsedHeadTag } from '@/utils/parseHead'
 import { App, CommonServerProps } from '../types'
@@ -9,9 +8,9 @@ export const getPageStateFactory = (
   ctx: App.Context
 ): App['renderPageState'] =>
   function renderPageState(page, preloadUrls) {
-    const { path, props, head, isDebug } = page
-
+    const { path, props, head } = page
     const { base } = ctx.config
+
     const clientProps = (props as CommonServerProps)._clientProps
     const stateModuleIds = new Set(
       props._included.map(loaded => loaded.module.id)
@@ -48,8 +47,7 @@ export const getPageStateFactory = (
         )
       })
 
-      const stateCacheUrl = prependBase(ctx.config.clientCacheId, base)
-      imports.set(stateCacheUrl, ['setState'])
+      imports.set(base + ctx.config.clientCacheId, ['setState'])
       code = wrap(inlined.join('\n'), RETURN) + '\n' + code
     }
 
@@ -107,12 +105,7 @@ export const getPageStateFactory = (
     }
 
     if (helpers.length) {
-      const helpersId =
-        base +
-        (isDebug ? ctx.config.debugBase!.slice(1) : '') +
-        ctx.config.clientHelpersId
-
-      imports.set(helpersId, helpers)
+      imports.set(base + ctx.config.clientHelpersId, helpers)
     }
 
     if (imports.size) {
