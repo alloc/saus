@@ -121,6 +121,7 @@ function isolatePages(context: DevContext): App.Plugin {
   let entryPaths: string[]
 
   const reload: RenderPageOptions['setup'] = async (route, url) => {
+    // TODO: reset this cache when routes module is changed?
     entryPaths ||= await getEntryModules(context)
 
     // Reset all modules used by every route or layout, because we can't know
