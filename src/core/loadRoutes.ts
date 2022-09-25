@@ -1,4 +1,5 @@
 import { toDebugPath } from '@/node/toDebugPath'
+import { noop } from '@/utils/noop'
 import { upsertPlugin } from '@/vite/upsertPlugin'
 import * as esModuleLexer from 'es-module-lexer'
 import kleur from 'kleur'
@@ -219,7 +220,7 @@ function injectClientRoutes(context: SausContext) {
       // is changed, thereby merging the two reload passes.
       context.watcher.on('change', file => {
         if (file === context.routesPath) {
-          context.hotReload(modulePath, true)
+          context.hotReload(modulePath, true).catch(noop)
         }
       })
     }

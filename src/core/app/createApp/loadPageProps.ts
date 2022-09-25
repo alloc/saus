@@ -8,6 +8,7 @@ import { mergeArrays } from '@/utils/array'
 import { ascendBranch } from '@/utils/ascendBranch'
 import { prependBase } from '@/utils/base'
 import { noop } from '@/utils/noop'
+import { toArray } from '@saus/deploy-utils'
 import {
   App,
   CommonServerProps,
@@ -62,12 +63,12 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
     )
     for (const included of routeInclude) {
       if (included) {
-        loadIncludedState(included, request, route, addStateModule)
+        await loadIncludedState(included, request, route, addStateModule)
       }
     }
 
     if (routeConfig.inline) {
-      loadIncludedState(routeConfig.inline, request, route, inlineState)
+      await loadIncludedState(routeConfig.inline, request, route, inlineState)
     }
 
     const clientProps: CommonClientProps = (
@@ -141,15 +142,10 @@ async function loadIncludedState(
   if (typeof include == 'function') {
     include = await include(request, route)
   }
-  const loading: Promise<any>[] = []
+  const loadSafely = (state: StateModule<any, []>) => load(state).catch(noop)
   for (const value of include) {
-    if (Array.isArray(value)) {
-      loading.push(...value.map(load))
-    } else {
-      loading.push(load(value as any))
-    }
+    toArray(value).forEach(loadSafely)
   }
-  await Promise.all(loading)
 }
 
 /**

@@ -52,7 +52,7 @@ export function http(
 
     Promise.resolve(requestHook.current(req, opts?.body)).then(resp => {
       const onResponse = (resp: Response) =>
-        Promise.resolve(responseHook.current(req, resp)).then(
+        void Promise.resolve(responseHook.current(req, resp)).then(
           () => resolve(resp),
           reject
         )

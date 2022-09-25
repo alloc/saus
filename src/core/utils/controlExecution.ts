@@ -130,12 +130,12 @@ export function controlExecution<Args extends any[], State, Result>(
         const call = defer<Awaited<Result>>()
         call.promise.catch(noop)
         ctx.calls.set(args, call)
-        scheduleCall(args, false, call)
+        void scheduleCall(args, false, call)
         return call.promise.finally(() => {
           ctx.activeCalls.delete(args)
           ctx.calls.delete(args)
           process.nextTick(() => {
-            scheduleCall(ctx.queuedCalls.shift(), true)
+            void scheduleCall(ctx.queuedCalls.shift(), true)
           })
         })
       }

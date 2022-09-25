@@ -1,3 +1,4 @@
+import { noop } from '@/utils/noop'
 import { limitConcurrency } from '../node/limitConcurrency'
 import type { ParsedUrl } from '../node/url'
 import type { Route } from '../routes'
@@ -63,7 +64,7 @@ export const throttleRender =
       await args[3]
       // …as long as not too many pages are currently rendering.
       if (isRenderAllowed(ctx, wasQueued)) {
-        ctx.execute(args)
+        ctx.execute(args).catch(noop)
       } else {
         ctx.queuedCalls.push(args)
       }
