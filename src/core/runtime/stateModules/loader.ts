@@ -1,5 +1,4 @@
 import { klona as deepCopy } from '@/utils/klona'
-import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
 import { Cache, CacheControl, globalCache } from '../cache'
 import { CachePlugin } from '../cachePlugin'
@@ -58,28 +57,8 @@ export function loadStateModule<Args extends readonly any[]>(
           cacheControl,
           args as any
         )
-        if (result && typeof result == 'object') {
-          // When an array is returned, await its elements.
-          if (Array.isArray(result)) {
-            result = (await Promise.all(result)).map(unwrapDefault)
-          }
-
-          // When an object is returned, await its property values.
-          else if (result.constructor == Object)
-            await Promise.all(
-              Object.keys(result).map(async key => {
-                result[key] = unwrapDefault(await result[key])
-              })
-            )
-          else {
-            // When a promise is returned, await it.
-            if (result.constructor == Promise) {
-              result = await result
-            }
-            // When a module is returned/resolved and it only contains
-            // a default export, unwrap the default export.
-            result = unwrapDefault(result)
-          }
+        if (result && typeof result.then == 'function') {
+          result = await result
         }
         if (CachePlugin.put) {
           const expiresAt = Date.now() + cacheControl.maxAge * 1e3
