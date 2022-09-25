@@ -201,24 +201,31 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       return [null, error]
     }
 
-    if (!options.props) {
-      try {
-        options.props = await app.loadPageProps(url, route)
-      } catch (error) {
-        return renderFailed(error)
-      }
-    }
-
     debug(`Page in progress: %s (matching "%s" route)`, url, route.path)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)
     }
 
-    return limitTime(
+    let pagePromise: Promise<RenderedPage | null> | undefined
+    if (!options.props) {
+      try {
+        options.props = await app.loadPageProps(url, route)
+      } catch (error) {
+        if (!ctx.catchRoute) {
+          return renderFailed(error)
+        }
+        onError(error)
+        pagePromise = renderErrorPage(url, error, ctx.catchRoute, options)
+      }
+    }
+
+    pagePromise ||= limitTime(
       renderPageOrThrow(url, route, options),
       options.timeout || 0,
       `Page "${url}" rendering took too long`
     )
+
+    return pagePromise
       .then((page): Promisable<RenderPageResult> => {
         if (!page) {
           if (options.defaultRoute) {
