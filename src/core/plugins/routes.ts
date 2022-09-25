@@ -1,7 +1,7 @@
 import path from 'path'
 import { compileRoutesMap, routeMarker } from '../compileRoutesMap'
 import { bundleDir, clientDir } from '../paths'
-import { Plugin, vite } from '../vite'
+import { Plugin } from '../vite'
 
 const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
 const serverRouteMapStubPath = path.join(bundleDir, 'bundle/routes.ts')
