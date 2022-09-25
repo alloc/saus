@@ -81,7 +81,14 @@ export const wrapEndpoints =
       resolved.functions
     )
 
-    await callFunctions(functions)
+    try {
+      await callFunctions(functions)
+    } catch (error: any) {
+      // TODO: allow customization here
+      const body =
+        ctx.config.mode == 'development' ? { text: error.stack } : undefined
+      response = createResponse(route, headers, 500, body)
+    }
 
     if (response?.status) {
       const responseHooks = mergeArrays(
