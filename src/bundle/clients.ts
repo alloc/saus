@@ -182,7 +182,7 @@ export async function compileClients(
   for (const chunk of chunks) {
     fileMap[chunk.fileName] = chunk
 
-    const isInternalEntry = !!Object.entries(internalEntryToRuntimeKey).find(
+    const isInternalEntry = Object.entries(internalEntryToRuntimeKey).some(
       ([clientPath, runtimeKey]) => {
         if (clientPath in chunk.modules) {
           runtimeConfig[runtimeKey] = chunk.fileName
