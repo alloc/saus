@@ -153,8 +153,13 @@ export async function compileClients(
           /\b(BASE_URL = )"[^"]+"/,
           (_, assign) => assign + JSON.stringify(debugBase)
         )
-    } else if (staticRoutesPath in chunk.modules) {
+    }
+    if (staticRoutesPath in chunk.modules) {
       debugText = useDebugRoutes(debugText, base, debugBase)
+    }
+    if (globalCachePath in chunk.modules) {
+      // Use the same cache module for both debug and production views.
+      debugText = `export * from "${base}${chunk.fileName}"`
     }
     const map = chunk.map
     if (map) {
