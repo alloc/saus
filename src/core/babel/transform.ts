@@ -83,7 +83,7 @@ function getExpandedRange(path: NodePath, source: MagicString) {
   let end = path.node.end!
   if (path.node.leadingComments) {
     start = path.node.leadingComments.reduce(
-      (start, comment) => Math.min(start, comment.start),
+      (start, comment) => Math.min(start, comment.start!),
       start
     )
   }

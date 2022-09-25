@@ -19,7 +19,7 @@ const defaultProps = {
 /**
  * Attach `method` and `headers` properties to the given URL.
  */
-export const makeRequestUrl = <Params extends {}>(
+export function makeRequestUrl<Params extends {}>(
   url: ParsedUrl<Params>,
   props: {
     method?: string
@@ -27,8 +27,12 @@ export const makeRequestUrl = <Params extends {}>(
     read?: (encoding?: BufferEncoding) => Promise<string | Buffer>
     object?: any
   } = {}
-): Endpoint.RequestUrl<Params> =>
-  isRequestUrl(url) ? url : Object.assign(url, defaultProps, props)
+): Endpoint.RequestUrl<Params> {
+  if (isRequestUrl(url)) {
+    return url
+  }
+  return Object.assign(url, defaultProps, props) as any
+}
 
 async function readJson(this: Endpoint.RequestUrl) {
   const data = await this.read('utf8')
