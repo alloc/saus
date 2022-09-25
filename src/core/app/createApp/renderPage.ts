@@ -5,6 +5,7 @@ import { noop } from '@/utils/noop'
 import { parseHead } from '@/utils/parseHead'
 import { unwrapDefault } from '@/utils/unwrapDefault'
 import createDebug from 'debug'
+import { Promisable } from 'type-fest'
 import type { RenderRequest, Route, RouteModule } from '../../core'
 import { renderHtml } from '../renderHtml'
 import {
@@ -189,17 +190,36 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     route,
     options = {}
   ): Promise<RenderPageResult> {
-    options.props ||= await app.loadPageProps(url, route)
+    const renderFailed = (error: any): RenderPageResult => {
+      debug(`Page failed to render: %s`, url)
+      options.renderFinish?.(url, error)
+      if (options.onError) {
+        options.onError(error)
+      } else {
+        onError(error)
+      }
+      return [null, error]
+    }
+
+    if (!options.props) {
+      try {
+        options.props = await app.loadPageProps(url, route)
+      } catch (error) {
+        return renderFailed(error)
+      }
+    }
+
     debug(`Page in progress: %s (matching "%s" route)`, url, route.path)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)
     }
+
     return limitTime(
       renderPageOrThrow(url, route, options),
       options.timeout || 0,
       `Page "${url}" rendering took too long`
-    ).then(
-      page => {
+    )
+      .then((page): Promisable<RenderPageResult> => {
         if (!page) {
           if (options.defaultRoute) {
             debug(`Falling back to default route: %s`, url)
@@ -210,17 +230,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         }
         options.renderFinish?.(url, null, page)
         return [page]
-      },
-      error => {
-        debug(`Page failed to render: %s`, url)
-        options.renderFinish?.(url, error)
-        if (options.onError) {
-          options.onError(error)
-        } else {
-          onError(error)
-        }
-        return [null, error]
-      }
-    )
+      })
+      .catch(renderFailed)
   }
 }
