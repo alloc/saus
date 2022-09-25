@@ -120,7 +120,7 @@ export function access<State>(
 
   // Avoid updating the cache if an old value is returned.
   if (loadResult === cacheCtrl.oldValue) {
-    onLoad(toEntry(loadResult, cacheCtrl.expiresAt, options?.args))
+    onLoad(toEntry(loadResult as State, cacheCtrl.expiresAt, options?.args))
     return resolveEntry(promise, options)
   }
 
