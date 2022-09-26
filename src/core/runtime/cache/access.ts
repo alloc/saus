@@ -94,7 +94,10 @@ export function access<State>(
     }
   }
 
-  const oldPromise = this.loading[cacheKey]
+  const oldPromise = this.loading[cacheKey] as
+    | Cache.EntryPromise<State>
+    | undefined
+
   if (oldPromise || !loader) {
     return oldPromise && resolveEntry(oldPromise, options, oldPromise.cancel)
   }
