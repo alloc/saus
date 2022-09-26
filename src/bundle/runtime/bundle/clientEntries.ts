@@ -14,7 +14,7 @@ export type ClientEntries = {
  *
  * The keys are SSR paths, which are identical to dev server paths.
  */
-const clientEntries: ClientEntries = {}
+const clientEntries: ClientEntries = (globalThis as any).sausClientEntries
 
 // Stub module replaced at build time.
 export default clientEntries

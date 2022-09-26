@@ -24,6 +24,7 @@ export interface RouteClient {
   url: string
   renderer: RouteRenderer
   promise: LazyPromise<string | null>
+  chunk?: { fileName: string }
 }
 
 export const clientPreloadsMarker = '__CLIENT_PRELOADS__'

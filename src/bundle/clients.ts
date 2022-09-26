@@ -67,11 +67,9 @@ export async function compileClients(
   }
 
   const { base, minify } = runtimeConfig
-  const terser = minify ? await import('terser') : null!
   debugBase = debugBase.replace('/', base)
 
   const outDir = config.build.outDir
-  const clientRouteMap: Record<string, string> = {}
   const splitVendor = vite.splitVendorChunk({})
 
   const entryFilePattern = path.join(config.build.assetsDir, 'entry.[hash].js')
@@ -91,7 +89,7 @@ export async function compileClients(
       ]),
       clientModules.provider,
       moduleRedirection(clientRedirects),
-      routesPlugin(clientRouteMap)(),
+      routesPlugin(),
       rewriteHttpImports(context.logger, true),
       // ssrLayoutPlugin(),
       clientLayoutPlugin(),
@@ -177,6 +175,8 @@ export async function compileClients(
     [clientHelpersEntry]: 'clientHelpersId',
     [clientRuntimeEntry]: 'clientRuntimeId',
   } as const
+
+  const terser = minify ? await import('terser') : null!
 
   const entryChunks: OutputChunk[] = []
   for (const chunk of chunks) {
@@ -282,7 +282,6 @@ export async function compileClients(
   return {
     clientAssets: assets as ClientAsset[],
     clientChunks,
-    clientRouteMap,
   }
 }
 
