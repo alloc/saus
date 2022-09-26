@@ -75,7 +75,7 @@ export function loadStateModule<Args extends readonly any[]>(
       return result
     } catch (error: any) {
       throw error && 'message' in error
-        ? Object.assign(error, { stateModuleKey: cacheKey })
+        ? Object.assign(error, { stateModule: { cacheKey, args } })
         : error
     }
   }
