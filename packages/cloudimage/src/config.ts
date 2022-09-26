@@ -38,7 +38,7 @@ export interface CacheConfig {
 
 export type MissingImageBehavior =
   | 'default_200'
-  | 'return_200_1x1_gif'
+  | 'returns_200_1x1_gif'
   | 'returns_404'
   | 'returns_empty_404'
 
