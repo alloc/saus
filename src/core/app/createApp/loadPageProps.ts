@@ -38,7 +38,7 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
     const loadedModules = new Map<string, Promise<LoadedStateModule>>()
     const addStateModule = (module: StateModule<any, []>) => {
       let promise = loadedModules.get(module.id)
-      if (!promise)
+      if (!promise) {
         loadedModules.set(
           module.id,
           (promise = loadStateModule(module).then(([state, expiresAt]) => {
@@ -52,7 +52,8 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
             }
           }))
         )
-      return promise
+      }
+      return promise.catch(noop)
     }
 
     // Start loading state modules before the route state is awaited.
@@ -142,9 +143,8 @@ async function loadIncludedState(
   if (typeof include == 'function') {
     include = await include(request, route)
   }
-  const loadSafely = (state: StateModule<any, []>) => load(state).catch(noop)
   for (const value of include) {
-    toArray(value).forEach(loadSafely)
+    toArray(value).forEach(load)
   }
 }
 

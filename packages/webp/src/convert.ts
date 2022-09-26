@@ -1,3 +1,4 @@
+import { noop } from '@/utils/noop'
 import { createFilter } from '@rollup/pluginutils'
 import fs from 'fs/promises'
 import imagemin from 'imagemin'
@@ -49,11 +50,14 @@ export function convertToWebp(options: Options = {}): Plugin {
       if (!ctx.activeCalls.size && !options.silent) {
         task = startTask('Converting images to WebP')
       }
-      ctx.execute(args).finally(() => {
-        if (!ctx.activeCalls.size) {
-          task?.finish()
-        }
-      })
+      ctx
+        .execute(args)
+        .catch(noop)
+        .then(() => {
+          if (!ctx.activeCalls.size) {
+            task?.finish()
+          }
+        })
     } else {
       ctx.queuedCalls.push(args)
     }

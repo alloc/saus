@@ -162,8 +162,8 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     }))
 
     if (!error) {
-      const props = options.props || (await app.loadPageProps(url, route))
       try {
+        const props = options.props || (await app.loadPageProps(url, route))
         return await renderRouteLayout(
           url,
           props,
@@ -190,42 +190,15 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
     route,
     options = {}
   ): Promise<RenderPageResult> {
-    const renderFailed = (error: any): RenderPageResult => {
-      debug(`Page failed to render: %s`, url)
-      options.renderFinish?.(url, error)
-      if (options.onError) {
-        options.onError(error)
-      } else {
-        onError(error)
-      }
-      return [null, error]
-    }
-
     debug(`Page in progress: %s (matching "%s" route)`, url, route.path)
     if (route !== options.defaultRoute) {
       options.renderStart?.(url)
     }
-
-    let pagePromise: Promise<RenderedPage | null> | undefined
-    if (!options.props) {
-      try {
-        options.props = await app.loadPageProps(url, route)
-      } catch (error) {
-        if (!ctx.catchRoute) {
-          return renderFailed(error)
-        }
-        onError(error)
-        pagePromise = renderErrorPage(url, error, ctx.catchRoute, options)
-      }
-    }
-
-    pagePromise ||= limitTime(
+    return limitTime(
       renderPageOrThrow(url, route, options),
       options.timeout || 0,
       `Page "${url}" rendering took too long`
     )
-
-    return pagePromise
       .then((page): Promisable<RenderPageResult> => {
         if (!page) {
           if (options.defaultRoute) {
@@ -238,6 +211,15 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         options.renderFinish?.(url, null, page)
         return [page]
       })
-      .catch(renderFailed)
+      .catch((error: any): RenderPageResult => {
+        debug(`Page failed to render: %s`, url)
+        options.renderFinish?.(url, error)
+        if (options.onError) {
+          options.onError(error)
+        } else {
+          onError(error)
+        }
+        return [null, error]
+      })
   }
 }
