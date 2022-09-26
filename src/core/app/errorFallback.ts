@@ -98,17 +98,31 @@ function renderLoadingIcon(attrs = '') {
   `
 }
 
-function renderTableValue(value: any, className?: string) {
+function renderTableValue(
+  value: any,
+  className?: string,
+  stack: object[] = []
+) {
   let rows: string[] | undefined
   if (Array.isArray(value)) {
+    if (stack.includes(value)) {
+      return '[Circular]'
+    }
     if (!value.length) {
       return ''
     }
     const maxKeyLength = String(value.length - 1).length
     const width = maxKeyLength * 9
-    rows = value.map((value, i) => renderTableRow(value, i, width))
+    stack.push(value)
+    rows = value.map((value, i) => {
+      return renderTableRow(value, i, width, stack)
+    })
+    stack.pop()
   }
   if (value && typeof value == 'object') {
+    if (stack.includes(value)) {
+      return '[Circular]'
+    }
     const entries = Object.entries(value as Record<string, any>)
     if (!entries.length) {
       return ''
@@ -118,7 +132,11 @@ function renderTableValue(value: any, className?: string) {
       0
     )
     const width = maxKeyLength * 9
-    rows = entries.map(([key, value]) => renderTableRow(value, key, width))
+    stack.push(value)
+    rows = entries.map(([key, value]) => {
+      return renderTableRow(value, key, width, stack)
+    })
+    stack.pop()
   }
   if (rows) {
     return endent`<table${className ? ` class="${className}"` : ''}>
@@ -137,9 +155,10 @@ function renderTableValue(value: any, className?: string) {
 function renderTableRow(
   value: any,
   key: string | number,
-  width: number
+  width: number,
+  stack: object[]
 ): string {
-  const valueHtml = renderTableValue(value)
+  const valueHtml = renderTableValue(value, '', stack)
   return endent`
     <tr>
       <td class="key" width="${width}px">${key}</td>
