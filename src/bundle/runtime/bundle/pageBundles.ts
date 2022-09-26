@@ -6,7 +6,6 @@ import { getLayoutEntry } from '@/runtime/getLayoutEntry'
 import { renderPageScript } from '@/runtime/renderPageScript'
 import { prependBase } from '@/utils/base'
 import { getPageFilename } from '@/utils/getPageFilename'
-import { isCSSRequest } from '@/utils/isCSSRequest'
 import { isExternalUrl } from '@/utils/isExternalUrl'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { Promisable } from 'type-fest'
@@ -14,6 +13,7 @@ import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
 import { applyHtmlProcessors } from '../core/api'
 import clientEntries from './clientEntries'
+import clientStyles from './clientStyles'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
 import { PageBundle, ResolvedRoute } from './types'
@@ -142,23 +142,25 @@ export const providePageBundles: App.Plugin = app => {
         route = page.route
       }
 
-      let pageStateId: string | undefined
+      const assets = new Set<string>()
+
       let routeClientId: string | undefined
+      let pageStateId: string | undefined
+
       if (route.moduleId) {
         const routeLayoutId = getLayoutEntry(route, config.defaultLayout.id)
-        routeClientId = clientEntries[routeLayoutId]?.[route.moduleId!]
-        if (routeClientId) {
-          pageStateId = filename + '.js'
-          bodyTags.push({
-            tag: 'script',
-            attrs: { type: 'module' },
-            children: renderPageScript({
-              pageStateId: '/' + pageStateId,
-              sausClientId: base + config.clientHelpersId,
-              routeClientId: base + routeClientId,
-            }),
-          })
-        }
+        routeClientId = clientEntries[routeLayoutId][route.moduleId]
+        clientStyles[routeClientId].forEach(styleId => assets.add(styleId))
+        pageStateId = filename + '.js'
+        bodyTags.push({
+          tag: 'script',
+          attrs: { type: 'module' },
+          children: renderPageScript({
+            pageStateId: '/' + pageStateId,
+            sausClientId: base + config.clientHelpersId,
+            routeClientId: base + routeClientId,
+          }),
+        })
       }
 
       let html = page.html
@@ -177,7 +179,6 @@ export const providePageBundles: App.Plugin = app => {
         ]
       }
 
-      const assets = new Set<string>()
       return applyHtmlProcessors(
         html,
         postHtmlProcessors,
@@ -252,7 +253,7 @@ function generateAssetUrls(assetIds: Iterable<string>, config: RuntimeConfig) {
   const assetUrls: string[] = []
   for (const assetId of assetIds) {
     const url = isExternalUrl(assetId) ? assetId : config.base + assetId
-    if (isCSSRequest(url)) {
+    if (url.endsWith('.css')) {
       styleUrls.push(url)
     } else {
       assetUrls.push(url)

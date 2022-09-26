@@ -23,6 +23,8 @@ type OutputArray = vite.RollupOutput['output']
 type OutputChunk = OutputArray[0]
 type OutputAsset = Exclude<OutputArray[number], OutputChunk>
 
+export type ClientData = Awaited<ReturnType<typeof compileClients>>
+
 export async function compileClients(
   context: BundleContext,
   runtimeConfig: RuntimeConfig
@@ -246,9 +248,15 @@ export async function compileClients(
     context.basePath
   )
 
+  const clientStyles: Record<string, string[]> = {}
   for (const entryChunk of entryChunks) {
     if (Object.keys(entryChunk.modules).some(id => id in routesByClientId)) {
       const preloads = createPreloadList(entryChunk)
+
+      clientStyles[entryChunk.fileName] = preloads.filter(fileName =>
+        fileName.endsWith('.css')
+      )
+
       entryChunk.code = injectClientPreloads(
         entryChunk.code,
         preloads,
@@ -266,7 +274,7 @@ export async function compileClients(
     }
   }
 
-  const clientChunks: ClientChunk[] = chunks
+  const clientChunks = chunks as ClientChunk[]
   if (debugBase) {
     const debugDir = context.bundle.debugBase!.slice(1)
     Object.entries(debugChunks).forEach(([fileName, code]) => {
@@ -280,8 +288,9 @@ export async function compileClients(
   }
 
   return {
-    clientAssets: assets as ClientAsset[],
-    clientChunks,
+    assets: assets as ClientAsset[],
+    chunks: clientChunks,
+    styles: clientStyles,
   }
 }
 

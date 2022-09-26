@@ -13,7 +13,7 @@ import kleur from 'kleur'
 import path from 'path'
 import { BundleContext } from '../bundle'
 import { noop } from '../core/utils/noop'
-import { compileClients } from './clients'
+import { ClientData, compileClients } from './clients'
 import { IsolatedModuleMap, isolateRoutes } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { resolveRouteImports } from './routeImports'
@@ -21,7 +21,7 @@ import { injectAppVersionRoute } from './routes/appVersion'
 import { injectClientStoreRoute } from './routes/clientStore'
 import type { ClientEntries } from './runtime/bundle/clientEntries'
 import { compileServerBundle } from './ssrBundle'
-import type { ClientAsset, ClientChunk, OutputBundle } from './types'
+import type { ClientChunk, OutputBundle } from './types'
 
 export async function bundle(
   context: BundleContext,
@@ -115,13 +115,13 @@ export async function bundle(
     [await isolatedRoutesPlugin]
   )
 
-  let [{ clientChunks, clientAssets }, { code, map }] = await Promise.all([
+  let [clientData, { code, map }] = await Promise.all([
     pendingClientData,
     pendingServerBundle,
   ] as const)
 
   // Inject client data into the server bundle.
-  code = injectClientData(code, clientChunks, clientAssets, context)
+  code = injectClientData(code, clientData, runtimeConfig, context)
 
   // Replace route markers in client route map.
   code = replaceRouteMarkers(code, context.routeClients)
@@ -156,8 +156,8 @@ export async function bundle(
 
 function injectClientData(
   code: string,
-  chunks: ClientChunk[],
-  assets: ClientAsset[],
+  { chunks, assets, styles }: ClientData,
+  runtimeConfig: RuntimeConfig,
   context: BundleContext
 ) {
   const clientAssets =
@@ -191,6 +191,8 @@ function injectClientData(
     sausClientAssets: clientAssets,
     sausClientEntries: getClientEntries(chunks, context),
     sausClientModules: clientModules,
+    sausClientStyles: styles,
+    sausRuntimeConfig: runtimeConfig,
   }
 
   const injectedRE = new RegExp(
