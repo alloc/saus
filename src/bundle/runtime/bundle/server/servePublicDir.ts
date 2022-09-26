@@ -53,7 +53,7 @@ export function servePublicDir(options: Options = {}): connect.Middleware {
       res.write(content)
       res.end()
     } catch (e: any) {
-      if (e.code == 'ENOENT') {
+      if (e.code == 'ENOENT' || e.code == 'EISDIR') {
         return next()
       }
       throw e
