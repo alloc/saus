@@ -102,14 +102,20 @@ function renderTableValue(
   value: any,
   className?: string,
   stack: object[] = []
-) {
+): string {
+  if (value == null || Number.isNaN(value)) {
+    return String(value)
+  }
+  if (typeof value == 'function') {
+    return escape(Function.prototype.toString.call(value))
+  }
   let rows: string[] | undefined
   if (Array.isArray(value)) {
     if (stack.includes(value)) {
       return '[Circular]'
     }
     if (!value.length) {
-      return ''
+      return '[]'
     }
     const maxKeyLength = String(value.length - 1).length
     const width = maxKeyLength * 9
@@ -118,14 +124,26 @@ function renderTableValue(
       return renderTableRow(value, i, width, stack)
     })
     stack.pop()
-  }
-  if (value && typeof value == 'object') {
+  } else if (typeof value == 'object') {
     if (stack.includes(value)) {
       return '[Circular]'
     }
+    if (value.constructor && value.constructor.name !== 'Object') {
+      if (typeof value.toJSON == 'function') {
+        const json = value.toJSON()
+        if (
+          json !== null &&
+          typeof json == 'object' &&
+          (Array.isArray(json) || Object.keys(json).length)
+        ) {
+          return renderTableValue(json, className, stack)
+        }
+      }
+      return `[object ${value.constructor.name}]`
+    }
     const entries = Object.entries(value as Record<string, any>)
     if (!entries.length) {
-      return ''
+      return '{}'
     }
     const maxKeyLength = entries.reduce(
       (max, [key]) => Math.max(max, key.length),
@@ -142,9 +160,6 @@ function renderTableValue(
     return endent`<table${className ? ` class="${className}"` : ''}>
       ${rows.join('\n')}
     </table>`
-  }
-  if (value === undefined) {
-    return 'undefined'
   }
   const jsonValue = JSON.stringify(value)
   return jsonValue !== undefined
@@ -163,9 +178,9 @@ function renderTableRow(
     <tr>
       <td class="key" width="${width}px">${key}</td>
       ${
-        value && typeof value == 'object' && valueHtml
+        valueHtml.startsWith('<table')
           ? `<td class="object">${valueHtml}</td>`
-          : `<td>${valueHtml || (Array.isArray(value) ? '[]' : '{}')}</td>`
+          : `<td>${valueHtml}</td>`
       }
     </tr>
   `
