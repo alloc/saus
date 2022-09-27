@@ -1,5 +1,6 @@
-import { Module } from 'module'
 import { isLiveModule } from '@/vm/isLiveModule'
+import { Module } from 'module'
+import path from 'path'
 import { SausContext } from '..'
 import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
@@ -53,6 +54,8 @@ export async function compileSsrModule(
   if (module.isCommonJS) {
     env = {
       require: Module.createRequire(importer),
+      __dirname: path.dirname(importer),
+      __filename: importer,
     }
   } else {
     env = {
