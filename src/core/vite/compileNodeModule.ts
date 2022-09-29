@@ -21,6 +21,10 @@ import { isLiveModule } from '../vm/isLiveModule'
 import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
 import { overwriteScript } from './overwriteScript'
 
+/**
+ * Compile an ES module from `node_modules` into a CJS module.
+ * The module can be in any language supported by Esbuild.
+ */
 export async function compileNodeModule(
   code: string,
   filename: string,
