@@ -14,7 +14,7 @@ export interface StateModule<T = any, Args extends readonly any[] = any> {
   parent?: StateModule<T>
   bind(...args: Args): StateModule<T, []>
   get(...args: Args): T
-  set(args: Args, state: T, expiresAt?: number): void
+  set(args: Args, state: T, expiresAt?: number | null): void
   load(...args: Args): Promise<T>
   onLoad(cb: StateModule.LoadCallback<T, Args>): StateModule.LoadListener
 }
