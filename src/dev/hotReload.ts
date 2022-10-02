@@ -79,7 +79,9 @@ export function createHotReload(
     pendingReload!.resolve(currentReload)
     pendingReload = undefined
 
+    let stateCleared = 0
     let routesChanged = dirtyFiles.has(context.routesPath)
+
     dirtyFiles.clear()
     dirtyClientModules.clear()
 
@@ -117,6 +119,7 @@ export function createHotReload(
           )
           handler.clientChange(url)
         }
+        stateCleared++
         return true
       })
     }
@@ -126,7 +129,6 @@ export function createHotReload(
       try {
         logger.info(yellow('⨠ Reloading routes...'))
         await loadRoutes(context)
-        logger.info(green('✔︎ Routes are ready!'), { clear: true })
 
         // Reload the client-side routes map.
         if (handler.clientChange) {
@@ -140,6 +142,16 @@ export function createHotReload(
 
     if (handler.finish) {
       await handler.finish()
+    }
+
+    logger.clearScreen('info')
+    if (stateCleared > 0) {
+      logger.info(
+        green('✔︎') + ` Cleared ${stateCleared} state entries from the cache.`
+      )
+    }
+    if (routesChanged) {
+      logger.info(green('✔︎') + ' Routes have been updated!')
     }
 
     currentReload.resolve()
