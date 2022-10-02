@@ -98,7 +98,8 @@ export function createHotReload(
 
     const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
-      const moduleIds = take(stateModulesByFile, id)!.map(module => {
+      const moduleMap = take(stateModulesByFile, id)!
+      const moduleIds = Array.from(moduleMap.values(), module => {
         stateModulesById.delete(module.id)
         return module.id
       })
