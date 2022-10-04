@@ -79,7 +79,7 @@ export async function compileServerBundle(
       copyPublicDir(),
       routesPlugin(),
       preferExternalPlugin,
-      defineNodeConstants(),
+      bundleConfig.type == 'worker' && defineNodeConstants(),
       rewriteHttpImports(context.logger, isWorker),
       bundleConfig.entry &&
       bundleConfig.type == 'script' &&
