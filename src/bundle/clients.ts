@@ -339,7 +339,7 @@ function rewriteSources(
     sourcePath = path.resolve(chunkDir, sourcePath)
     let sourceId = vite.normalizePath(path.relative(context.root, sourcePath))
     if (sourceId[0] == '.' || sourceId.includes('/node_modules/')) {
-      const pkgPath = findPackage(path.dirname(sourcePath))
+      const pkgPath = findPackage(path.dirname(sourcePath), true)
       if (pkgPath) {
         const pkg = require(pkgPath)
         sourceId = posixPath.join(
