@@ -6,18 +6,11 @@ import { defer } from '../utils/defer'
 import { exportsId, requireAsyncId } from './compileEsm'
 import { __exportFrom as exportFrom } from './esmInterop'
 import { exportNotFound } from './exportNotFound'
-import {
-  kModuleSetTimeout,
-  kModuleTimeout,
-  kModuleTimeoutCallback,
-  kModuleTimeoutSecs,
-  setModuleTimeout,
-} from './moduleTimeout'
-import { CompiledModule } from './types'
+import { CompiledModule, RequireAsync } from './types'
 
 export function executeModule(
   module: CompiledModule,
-  timeout?: number
+  timeoutSecs?: number
 ): Promise<any> {
   if (!module.code) {
     return module.exports!
@@ -47,11 +40,28 @@ export function executeModule(
   const { promise, resolve, reject } = defer<any>()
   module.exports = promise
 
-  if (timeout) {
-    env[kModuleSetTimeout] = setModuleTimeout
-    exports[kModuleTimeoutSecs] = timeout
-    exports[kModuleTimeoutCallback] = () => {
-      reject(Error(`Module failed to load in ${timeout} secs: "${id}"`))
+  let timeout: NodeJS.Timeout | undefined
+  if (timeoutSecs && !isCommonJS) {
+    const onTimedOut = () => {
+      reject(Error(`Module failed to load in ${timeoutSecs} secs: "${id}"`))
+    }
+
+    let timestamp = Date.now()
+    let timeoutMs = timeoutSecs * 1000
+    timeout = setTimeout(onTimedOut, timeoutMs)
+
+    const requireAsync = env[requireAsyncId] as RequireAsync
+    env[requireAsyncId] = (id: string) => {
+      const now = Date.now()
+      clearTimeout(timeout)
+      return requireAsync(id).then(exports => {
+        timeoutMs += timestamp - now
+        timestamp = now
+        if (timeoutMs > 0) {
+          timeout = setTimeout(onTimedOut, timeoutMs)
+        }
+        return exports
+      })
     }
   }
 
@@ -67,10 +77,7 @@ export function executeModule(
 
   init(...Object.values(env))
     .then(() => {
-      if (timeout) {
-        clearTimeout(exports[kModuleTimeout])
-        exports[kModuleTimeout] = undefined
-      }
+      clearTimeout(timeout)
 
       if (isCommonJS) {
         // Use the `module.exports` property as the ESM exports

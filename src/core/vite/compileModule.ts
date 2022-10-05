@@ -1,11 +1,10 @@
-import { kModuleSetTimeout } from '@/vm/moduleTimeout'
 import * as esModuleLexer from 'es-module-lexer'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
 import type { CompileCache } from '../node/compileCache'
 import { loadSourceMap, toInlineSourceMap } from '../node/sourceMap'
 import { cleanUrl } from '../utils/cleanUrl'
-import { compileEsm, EsmCompilerOptions, exportsId } from '../vm/compileEsm'
+import { compileEsm, EsmCompilerOptions } from '../vm/compileEsm'
 import type { Script } from '../vm/types'
 import type { ViteFunctions } from './functions'
 import { overwriteScript } from './overwriteScript'
@@ -90,16 +89,10 @@ export async function compileModule(
     const esmHelpers = new Set<Function>()
     const editor = await compileEsm({
       ...esmOptions,
-      code,
+      code: script.code,
       filename: id,
       esmHelpers,
     })
-
-    // Enable (optional) module timeouts.
-    editor.appendRight(
-      editor.lastRequireEnd,
-      `${kModuleSetTimeout}(${exportsId})\n`
-    )
 
     editor.append(
       '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
