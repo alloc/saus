@@ -71,7 +71,7 @@ export async function compileClients(
   const { base, minify } = runtimeConfig
   debugBase = debugBase.replace('/', base)
 
-  const outDir = config.build.outDir
+  const outDir = path.join(config.root, config.build.outDir)
   const splitVendor = vite.splitVendorChunk({})
 
   const entryFilePattern = path.join(config.build.assetsDir, 'entry.[hash].js')
