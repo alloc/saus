@@ -343,7 +343,7 @@ function rewriteSources(
       if (pkgPath) {
         const pkg = require(pkgPath)
         sourceId = posixPath.join(
-          pkg.name + '@' + pkg.version,
+          pkg.name + (pkg.version ? '@' + pkg.version : ''),
           slash(path.relative(path.dirname(pkgPath), sourcePath))
         )
       } else {
