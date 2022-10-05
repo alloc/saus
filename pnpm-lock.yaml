@@ -235,10 +235,12 @@ importers:
 
   packages/aws/utils:
     specifiers:
+      '@saus/deploy-utils': workspace:^0.1.0
       '@types/aws4': ^1.11.2
       aws4: ^1.11.0
       saus: '*'
     dependencies:
+      '@saus/deploy-utils': link:../../deploy-utils
       aws4: 1.11.0
     devDependencies:
       '@types/aws4': 1.11.2
