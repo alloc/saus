@@ -26,8 +26,8 @@ export function clientContextPlugin(): Plugin {
           if (!isBuild) {
             clientContext.devRoot = path.resolve(config.root || '')
           }
-          return (
-            code +
+
+          code +=
             '\n' +
             Object.entries(clientContext)
               .filter(entry => entry[1] !== undefined)
@@ -37,7 +37,8 @@ export function clientContextPlugin(): Plugin {
               .join('\n') +
             '\n' +
             'Object.freeze(context)'
-          )
+
+          return { code, map: null }
         }
       }
     },
