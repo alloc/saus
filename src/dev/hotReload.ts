@@ -171,11 +171,11 @@ export function createHotReload(
     if (changedModule) {
       await moduleMap.__compileQueue
 
-      // State modules import "saus/client" to access the `defineStateModule`
-      // function. Then the routes module imports those state modules.
-      // But we want to avoid reloading the routes module when the live exports
-      // of the "saus/client" module are changed, since the routes module can't
-      // use them anyway.
+      // State modules import "saus/client" to access the
+      // `defineStateModule` function. Then the routes module imports
+      // those state modules. But we want to avoid reloading the routes
+      // module when the live exports of the "saus/client" module are
+      // changed, since the routes module can't use them anyway.
       const skipRoutesPath =
         !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
 
@@ -207,8 +207,8 @@ export function createHotReload(
           stateModuleFiles.delete(module)
         }
 
-        // Any state module that dynamically imported this module
-        // needs to invalidate any cached state it produced.
+        // Any state module that dynamically imported this module needs
+        // to invalidate any cached state it produced.
         for (const stateModule of stateModuleFiles) {
           if (module.importers.hasDynamic(stateModule)) {
             dirtyStateModules.add(stateModule)
@@ -228,14 +228,14 @@ export function createHotReload(
         : resetStateModule
 
       const onPurge: PurgeHandler = (module, isAccepted, stopPropagation) => {
-        // Live modules never have their exports destructured by importers,
-        // so we don't have to reload those importers.
+        // Live modules never have their exports destructured by
+        // importers, so we don't have to reload those importers.
         if (ssr && isLiveModule(module, liveModulePaths)) {
           dirtyLiveModules.set(module.id, module.exports)
           stopPropagation()
 
-          // Live importers must also be reloaded, in case they
-          // have re-exported this module.
+          // Live importers must also be reloaded, in case they have
+          // re-exported this module.
           for (const importer of module.importers)
             if (isLiveModule(importer, liveModulePaths))
               queueMicrotask(() => {
@@ -266,8 +266,8 @@ export function createHotReload(
       scheduleReload()
       return getPendingReload()
     }
-    // In the event of a syntax error, the routes module won't exist in the
-    // module map, but it still needs to be reloaded on file change.
+    // In the event of a syntax error, the routes module won't exist in
+    // the module map, but it still needs to be reloaded on file change.
     if (file == context.routesPath) {
       dirtyFiles.add(file)
       scheduleReload()
