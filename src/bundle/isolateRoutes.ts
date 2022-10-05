@@ -350,6 +350,7 @@ export async function isolateRoutes(
     sourcemap: 'hidden',
     minifyInternalExports: false,
     preserveModules: true,
+    preserveModulesRoot: config.root,
   })
 
   await pluginContainer.close()
