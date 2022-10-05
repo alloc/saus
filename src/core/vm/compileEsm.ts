@@ -14,7 +14,10 @@ export const importMetaId = '__importMeta'
 export const importAsyncId = '__importAsync'
 export const requireAsyncId = '__requireAsync'
 
-export type CompiledEsm = MagicString & { hoistIndex: number }
+export type CompiledEsm = MagicString & {
+  hoistIndex: number
+  lastRequireEnd: number
+}
 
 export type EsmCompilerOptions = {
   code: string
@@ -44,7 +47,7 @@ export async function compileEsm({
   resolveId,
 }: EsmCompilerOptions) {
   const ast = getBabelProgram(code, filename)
-  let editor = new MagicString(code)
+  let editor = new MagicString(code) as CompiledEsm
 
   // Rewrite async imports and import.meta access
   if (!keepImportCalls || !keepImportMeta)
@@ -206,15 +209,17 @@ export async function compileEsm({
     }
   }
 
+  const lastRequireEnd = hoistIndex
+
   // Reset the hoist index, since this will represent where
-  // the end of the final ESM import is located.
+  // the end of the final (preserved) ESM import is located.
   hoistIndex = 0
 
   // Hoist any preserved imports above rewritten imports/exports.
   if (preservedImports.size > 0) {
     const map = editor.generateMap({ hires: true })
     code = editor.toString()
-    editor = new MagicString(code)
+    editor = new MagicString(code) as CompiledEsm
     attachInputSourcemap(editor, map, filename)
 
     for (const imp of esModuleLexer.parse(code)[0]) {
@@ -229,10 +234,9 @@ export async function compileEsm({
     }
   }
 
-  // @ts-ignore
   editor.hoistIndex = hoistIndex
-
-  return editor as CompiledEsm
+  editor.lastRequireEnd = lastRequireEnd
+  return editor
 }
 
 function isTopLevelReference(path: NodePath): boolean {

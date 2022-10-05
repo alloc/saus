@@ -1,5 +1,4 @@
 import { toDebugPath } from '@/node/toDebugPath'
-import { limitTime } from '@/utils/limitTime'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
@@ -230,12 +229,16 @@ export function createAsyncRequire(
           return resolvedId
         }
 
-  const fetchExports = async (
-    id: string,
-    importer: string | null | undefined,
-    isDynamic: boolean | undefined,
-    asyncStack: (StackFrame | undefined)[]
-  ) => {
+  return async function requireAsync(id, importer, isDynamic, timeout) {
+    if (builtinModules.includes(id)) {
+      const nodeRequire = Module.createRequire(importer || __filename)
+      return nodeRequire(id)
+    }
+
+    const asyncStack = isDynamic
+      ? traceDynamicImport(Error(), 3)
+      : (callStack = [getStackFrame(3), ...callStack])
+
     let shouldReload = config.shouldReload || neverReload
     let virtualId: string | undefined
     let resolvedId: string | undefined
@@ -376,7 +379,7 @@ export function createAsyncRequire(
           })
         )
 
-        exports = await executeModule(module)
+        exports = await executeModule(module, timeout ?? config.timeout)
       } else {
         resolvedId = nodeResolvedId!
 
@@ -465,40 +468,6 @@ export function createAsyncRequire(
 
     return exports
   }
-
-  const requireAsync: RequireAsync = (
-    id,
-    importer,
-    isDynamic,
-    timeout = config.timeout
-  ) => {
-    if (builtinModules.includes(id)) {
-      const nodeRequire = Module.createRequire(importer || __filename)
-      const exports = nodeRequire(id)
-      return Promise.resolve(exports)
-    }
-
-    let promise = fetchExports(
-      id,
-      importer,
-      isDynamic,
-      isDynamic
-        ? traceDynamicImport(Error(), 3)
-        : (callStack = [getStackFrame(3), ...callStack])
-    )
-    if (timeout) {
-      promise = limitTime(
-        promise,
-        timeout,
-        `Module failed to load in ${timeout} secs: "${id}"${
-          importer ? ` imported by "${importer}"` : ''
-        }`
-      )
-    }
-    return promise
-  }
-
-  return requireAsync
 }
 
 function createRequire(importer: string) {

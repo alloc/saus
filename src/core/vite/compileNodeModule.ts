@@ -12,12 +12,14 @@ import { isPackageRef } from '../utils/isPackageRef'
 import { vite } from '../vite'
 import {
   compileEsm,
+  exportsId,
   importAsyncId,
   importMetaId,
   requireAsyncId,
 } from '../vm/compileEsm'
 import { ImporterSet } from '../vm/ImporterSet'
 import { isLiveModule } from '../vm/isLiveModule'
+import { kModuleSetTimeout } from '../vm/moduleTimeout'
 import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
 import { overwriteScript } from './overwriteScript'
 
@@ -97,6 +99,12 @@ export async function compileNodeModule(
           moduleMap[id] &&
           isLiveModule(moduleMap[id]!, liveModulePaths)),
     })
+
+    // Enable (optional) module timeouts.
+    editor.appendRight(
+      editor.lastRequireEnd,
+      `${kModuleSetTimeout}(${exportsId})\n`
+    )
 
     editor.prepend(`async function $() { `)
     editor.append(`\n}`)

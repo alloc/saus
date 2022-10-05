@@ -6,13 +6,7 @@ import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
 import { isPackageRef } from '../utils/isPackageRef'
 import { compileModule } from '../vite/compileModule'
-import {
-  compileEsm,
-  EsmCompilerOptions,
-  importAsyncId,
-  importMetaId,
-  requireAsyncId,
-} from '../vm/compileEsm'
+import { importAsyncId, importMetaId, requireAsyncId } from '../vm/compileEsm'
 import { ImporterSet } from '../vm/ImporterSet'
 import { CompiledModule } from '../vm/types'
 import { checkPublicFile } from './checkPublicFile'
@@ -39,13 +33,13 @@ export async function compileSsrModule(
 
   const module = await compileModule(loadedId, context, {
     cache: context.compileCache,
-    transform: ssrCompileEsm({
+    esmOptions: {
       forceLazyBinding: (_, id) =>
         !isPackageRef(id) ||
         (liveModulePaths &&
           moduleMap[id] &&
           isLiveModule(moduleMap[id]!, liveModulePaths)),
-    }),
+    },
   })
 
   const importer = cleanUrl(id)
@@ -80,26 +74,5 @@ export async function compileSsrModule(
     importers: new ImporterSet(),
     compileTime: Date.now() - time,
     requireTime: 0,
-  }
-}
-
-function ssrCompileEsm(esmOptions: Partial<EsmCompilerOptions>) {
-  return async (code: string, id: string) => {
-    const esmHelpers = new Set<Function>()
-    const editor = await compileEsm({
-      ...esmOptions,
-      code,
-      filename: id,
-      esmHelpers,
-    })
-
-    editor.append(
-      '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
-    )
-
-    return {
-      code: editor.toString(),
-      map: editor.generateMap({ hires: true }),
-    }
   }
 }

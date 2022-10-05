@@ -1,24 +1,20 @@
+import { kModuleSetTimeout } from '@/vm/moduleTimeout'
 import * as esModuleLexer from 'es-module-lexer'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
-import { Promisable } from 'type-fest'
 import type { CompileCache } from '../node/compileCache'
-import { loadSourceMap, SourceMap, toInlineSourceMap } from '../node/sourceMap'
+import { loadSourceMap, toInlineSourceMap } from '../node/sourceMap'
 import { cleanUrl } from '../utils/cleanUrl'
+import { compileEsm, EsmCompilerOptions, exportsId } from '../vm/compileEsm'
 import type { Script } from '../vm/types'
 import type { ViteFunctions } from './functions'
 import { overwriteScript } from './overwriteScript'
 
 interface Options {
   /**
-   * Perform a call-specific transformation after all plugin
-   * transformations have been applied.
+   * When defined, the module is compiled from ESM to CJS.
    */
-  transform?: (
-    code: string,
-    id: string,
-    inMap?: SourceMap
-  ) => Promisable<Script>
+  esmOptions?: Partial<EsmCompilerOptions>
   /**
    * Store the transformed code and its sourcemap
    * in a single file somewhere on disk.
@@ -34,7 +30,7 @@ interface Options {
 export async function compileModule(
   id: string,
   ctx: Pick<ViteFunctions, 'load' | 'transform'>,
-  { transform, cache }: Options = {}
+  { esmOptions, cache }: Options = {}
 ): Promise<Script> {
   const filename = cleanUrl(id)
   const loaded = await ctx.load(id)
@@ -90,9 +86,29 @@ export async function compileModule(
     }
   }
 
-  if (transform) {
-    const transformed = await transform(script.code, filename, script.map)
-    script = overwriteScript(id, script, transformed)
+  if (esmOptions) {
+    const esmHelpers = new Set<Function>()
+    const editor = await compileEsm({
+      ...esmOptions,
+      code,
+      filename: id,
+      esmHelpers,
+    })
+
+    // Enable (optional) module timeouts.
+    editor.appendRight(
+      editor.lastRequireEnd,
+      `${kModuleSetTimeout}(${exportsId})\n`
+    )
+
+    editor.append(
+      '\n' + Array.from(esmHelpers, fn => fn.toString() + '\n').join('')
+    )
+
+    script = overwriteScript(id, script, {
+      code: editor.toString(),
+      map: editor.generateMap({ hires: true }),
+    })
   }
 
   if (cache && filename[0] !== '\0') {

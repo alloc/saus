@@ -23,8 +23,12 @@ import { injectNodeModule } from './vm/nodeModules'
 import { isLinkedModule, RequireAsync } from './vm/types'
 
 export async function loadRoutes(context: SausContext) {
-  const { plugins, filterStack } = context.config
   const time = Date.now()
+  const {
+    plugins,
+    filterStack,
+    saus: { requireTimeout },
+  } = context.config
 
   // Maybe not the best place for these, but the loadRoutes function
   // is used by both the dev and bundle commands, so it works well.
@@ -89,7 +93,7 @@ export async function loadRoutes(context: SausContext) {
     ssrRequire: context.ssrRequire,
   })
   try {
-    await executeModule(routesModule)
+    await executeModule(routesModule, requireTimeout)
 
     // Exclude the routes module from its package, or else it
     // will have its modules cleared when it shouldn't.
