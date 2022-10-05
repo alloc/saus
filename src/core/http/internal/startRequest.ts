@@ -25,8 +25,7 @@ export function startRequest(
       })
     }
     resp.on('error', e => {
-      trace.message = e.message
-      reject(trace)
+      reject(updateTrace(trace, e))
     })
     resp.on('close', () => {
       if (isRedirect(resp) && redirectCount < 10) {
@@ -60,8 +59,7 @@ export function startRequest(
         retryCount + 1
       )
     }
-    trace.message = e.message
-    reject(trace)
+    reject(updateTrace(trace, e))
   })
 
   if (headers)
@@ -80,4 +78,10 @@ function isRedirect(resp: {
 }): resp is { headers: { location: string } } {
   const status = resp.statusCode!
   return (status == 301 || status == 302) && !!resp.headers.location
+}
+
+function updateTrace(trace: Error, e: Error) {
+  trace.stack = e.stack! + trace.stack!.split('\n').slice(1).join('\n')
+  trace.message = e.message
+  return trace
 }
