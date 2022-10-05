@@ -270,7 +270,7 @@ function isTopLevelReference(path: NodePath): boolean {
     ) as NodePath<any> | null
 
     if (namedParent?.isVariableDeclarator()) {
-      const nameNode: t.Node = namedParent.node.id
+      const nameNode = namedParent.node.id
       if (t.isIdentifier(nameNode)) {
         name = nameNode.name
         scope = namedParent.scope
