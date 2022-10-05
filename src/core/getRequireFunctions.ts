@@ -34,7 +34,7 @@ export function getRequireFunctions(context: SausContext) {
 
   const watchFile = watcher?.add.bind(watcher)
   const filterStack = config.filterStack
-  const timeout = config.saus.requireTimeout ?? 10
+  const timeout = config.saus.requireTimeout
 
   return {
     ssrRequire: createAsyncRequire({

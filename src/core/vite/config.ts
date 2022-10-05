@@ -74,6 +74,7 @@ export async function loadUserConfig(
   sausConfig.defaultPath ||= '/404'
   sausConfig.stateModuleBase ||= '/.saus/state/'
   sausConfig.defaultLayoutId ||= '/src/layouts/default'
+  sausConfig.requireTimeout ??= 10
 
   const { plugins, ...configDeps } = await loadConfigDeps(
     command,
