@@ -17,7 +17,7 @@ import { executeModule } from './executeModule'
 import { forceNodeReload } from './forceNodeReload'
 import { formatAsyncStack, traceDynamicImport } from './formatAsyncStack'
 import { hookNodeResolve, NodeResolveHook } from './hookNodeResolve'
-import { registerModuleOnceCompiled } from './moduleMap'
+import { ModuleMap } from './moduleMap'
 import { getNodeModule, unloadNodeModule } from './nodeModules'
 import { traceNodeRequire } from './traceNodeRequire'
 import {
@@ -27,7 +27,6 @@ import {
   kLinkedModule,
   LinkedModule,
   LinkedModuleMap,
-  ModuleMap,
   RequireAsync,
   ResolveIdHook,
 } from './types'
@@ -67,7 +66,7 @@ export interface RequireAsyncConfig extends RequireAsyncState {
   onModuleLoaded?: (
     id: string,
     requireTime: number,
-    module?: CompiledModule
+    module?: CompiledModule | null
   ) => void
   /**
    * Return `true` to mark an installed module as "live", implying that
@@ -128,7 +127,7 @@ export function createAsyncRequire(
   config: RequireAsyncConfig = {}
 ): RequireAsync {
   const {
-    moduleMap = {},
+    moduleMap = new ModuleMap(),
     linkedModules = {},
     isLiveModule = () => false,
     externalExports = new Map(),
@@ -140,6 +139,21 @@ export function createAsyncRequire(
     watchFile = noop,
   } = config
 
+  const watchModuleOrThrow = (
+    moduleId: string,
+    module: CompiledModule | null
+  ) => {
+    if (module) {
+      path.isAbsolute(module.id) &&
+        fs.existsSync(module.id) &&
+        watchFile(module.id)
+      return module
+    }
+    throw Object.assign(Error(`Cannot find module '${moduleId}'`), {
+      code: 'ERR_MODULE_NOT_FOUND',
+    })
+  }
+
   let callStack: (StackFrame | undefined)[] = []
 
   const trackImport = (
@@ -148,7 +162,7 @@ export function createAsyncRequire(
     isDynamic?: boolean,
     isConnected?: boolean
   ) => {
-    const importer = moduleMap[importerId] || linkedModules[importerId]
+    const importer = moduleMap.get(importerId) || linkedModules[importerId]
     if (!importer) return
     if (isLinkedModule(importer)) {
       if (!isLinkedModule(imported)) {
@@ -335,13 +349,20 @@ export function createAsyncRequire(
 
     let isCached = false
     let exports: any
-    let module: CompiledModule | undefined
+    let module: CompiledModule | null | undefined
 
     loadStep: try {
       if (resolvedId && compileModule) {
-        await moduleMap.__compileQueue
-
-        module = moduleMap[resolvedId]
+        module = moduleMap.get(resolvedId)
+        if (!module) {
+          const modulePromise = moduleMap.promises.get(resolvedId)
+          // Check whether the modulePromise exists before awaiting, so
+          // the `moduleMap.setPromise` call below won't be delayed when
+          // the module is unknown.
+          if (modulePromise) {
+            module = await modulePromise
+          }
+        }
         if (module?.exports && !shouldReload(resolvedId)) {
           const circularIndex = asyncStack.findIndex(
             frame => frame?.file == resolvedId
@@ -363,22 +384,13 @@ export function createAsyncRequire(
           exports = circularIndex >= 0 ? module.env[exportsId] : module.exports
           break loadStep
         }
-
-        module ||= await registerModuleOnceCompiled(
-          moduleMap,
-          compileModule(resolvedId, requireAsync, virtualId).then(module => {
-            if (module) {
-              path.isAbsolute(module.id) &&
-                fs.existsSync(module.id) &&
-                watchFile(module.id)
-              return module
-            }
-            throw Object.assign(Error(`Cannot find module '${resolvedId}'`), {
-              code: 'ERR_MODULE_NOT_FOUND',
-            })
-          })
+        module ||= watchModuleOrThrow(
+          resolvedId,
+          await moduleMap.setPromise(
+            resolvedId,
+            compileModule(resolvedId, requireAsync, virtualId)
+          )
         )
-
         exports = await executeModule(module, timeout ?? config.timeout)
       } else {
         resolvedId = nodeResolvedId!

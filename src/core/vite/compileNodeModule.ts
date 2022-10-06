@@ -18,7 +18,8 @@ import {
 } from '../vm/compileEsm'
 import { ImporterSet } from '../vm/ImporterSet'
 import { isLiveModule } from '../vm/isLiveModule'
-import { CompiledModule, ModuleMap, RequireAsync, Script } from '../vm/types'
+import { ModuleMap } from '../vm/moduleMap'
+import { CompiledModule, RequireAsync, Script } from '../vm/types'
 import { overwriteScript } from './overwriteScript'
 
 /**
@@ -94,10 +95,10 @@ export async function compileNodeModule(
         !isPackageRef(id) ||
         (liveModulePaths &&
           moduleMap &&
-          moduleMap[id] &&
-          isLiveModule(moduleMap[id]!, liveModulePaths)),
+          moduleMap.has(id) &&
+          isLiveModule(moduleMap.get(id)!, liveModulePaths)),
     })
-    
+
     editor.prepend(`async function $() { `)
     editor.append(`\n}`)
 

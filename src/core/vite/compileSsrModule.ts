@@ -37,8 +37,8 @@ export async function compileSsrModule(
       forceLazyBinding: (_, id) =>
         !isPackageRef(id) ||
         (liveModulePaths &&
-          moduleMap[id] &&
-          isLiveModule(moduleMap[id]!, liveModulePaths)),
+          moduleMap.has(id) &&
+          isLiveModule(moduleMap.get(id)!, liveModulePaths)),
     },
   })
 

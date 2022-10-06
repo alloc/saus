@@ -98,8 +98,8 @@ export function createHotReload(
 
     const { stateModuleBase } = context.app.config
     for (const { id } of dirtyStateModules) {
-      const moduleMap = take(stateModulesByFile, id)!
-      const moduleIds = Array.from(moduleMap.values(), module => {
+      const stateModules = take(stateModulesByFile, id)!
+      const moduleIds = Array.from(stateModules.values(), module => {
         stateModulesById.delete(module.id)
         return module.id
       })
@@ -167,9 +167,11 @@ export function createHotReload(
       return getPendingReload()
     }
     const moduleMap = context.moduleMap
-    const changedModule = moduleMap[file] || context.linkedModules[file]
+    const changedModule = moduleMap.get(file) || context.linkedModules[file]
     if (changedModule) {
-      await moduleMap.__compileQueue
+      while (moduleMap.promises.size) {
+        await Promise.all(moduleMap.promises.values())
+      }
 
       // State modules import "saus/client" to access the
       // `defineStateModule` function. Then the routes module imports
@@ -180,7 +182,7 @@ export function createHotReload(
         !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
 
       const stateModuleFiles = new Set(
-        Array.from(stateModulesByFile.keys(), file => moduleMap[file]!)
+        Array.from(stateModulesByFile.keys(), file => moduleMap.get(file)!)
       )
 
       const acceptModule = (

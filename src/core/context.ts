@@ -20,6 +20,7 @@ import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
 import { RequireAsyncState } from './vm/asyncRequire'
+import { ModuleMap } from './vm/moduleMap'
 import { CompiledModule, RequireAsync } from './vm/types'
 
 export type SausCommand = 'build' | 'serve' | 'deploy' | 'secrets'
@@ -134,7 +135,7 @@ async function createContext(props: {
     injectedModules: null!,
     linkedModules: {},
     logger: config.logger,
-    moduleMap: {},
+    moduleMap: new ModuleMap(),
     pageCache: createCache(),
     plugins: [],
     renderers: null!,

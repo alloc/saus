@@ -128,7 +128,7 @@ function isolatePages(context: DevContext): App.Plugin {
     // which modules have side effects and are also used by the route matched
     // for the currently rendering page.
     for (const entryPath of entryPaths) {
-      const entryModule = context.moduleMap[entryPath]
+      const entryModule = context.moduleMap.get(entryPath)
       if (entryModule) {
         for (const module of entryModule.package || [entryModule]) {
           clearExports(module)
@@ -138,7 +138,7 @@ function isolatePages(context: DevContext): App.Plugin {
 
     // Reset the route clients, so they don't reference old exports.
     for (const client of Object.values(context.routeClients.clientsById)) {
-      const clientModule = context.moduleMap[client!.id]
+      const clientModule = context.moduleMap.get(client!.id)
       if (clientModule) {
         clearExports(clientModule)
       }

@@ -1,42 +1,25 @@
+import { noop } from '@/utils/noop'
 import { getNodeModule, unloadNodeModule } from './nodeModules'
-import {
-  CompiledModule,
-  isLinkedModule,
-  LinkedModule,
-  ModuleMap,
-} from './types'
+import { CompiledModule, isLinkedModule, LinkedModule } from './types'
 
 const moduleMaps = new WeakMap<CompiledModule, ModuleMap>()
 
-export function registerModule(module: CompiledModule, moduleMap: ModuleMap) {
-  if (moduleMaps.has(module)) {
-    throw Error('Module is already registered')
-  }
-  moduleMaps.set(module, moduleMap)
-  moduleMap[module.id] = module
-}
-
-export function registerModuleOnceCompiled(
-  moduleMap: ModuleMap,
-  modulePromise: Promise<CompiledModule>
-) {
-  const compileQueue = moduleMap.__compileQueue
-  if (!compileQueue) {
-    Object.defineProperty(moduleMap, '__compileQueue', {
-      value: undefined,
-      writable: true,
+export class ModuleMap extends Map<string, CompiledModule> {
+  promises = new Map<string, Promise<CompiledModule | null>>()
+  setPromise(moduleId: string, promise: Promise<CompiledModule | null>) {
+    this.promises.set(moduleId, promise)
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    promise.catch(noop).then(module => {
+      if (promise == this.promises.get(moduleId)) {
+        this.promises.delete(moduleId)
+        if (module) {
+          this.set(moduleId, module)
+          moduleMaps.set(module, this)
+        }
+      }
     })
+    return promise
   }
-
-  moduleMap.__compileQueue = modulePromise.then(
-    module => {
-      registerModule(module, moduleMap)
-      return compileQueue
-    },
-    () => compileQueue
-  )
-
-  return modulePromise
 }
 
 export interface PurgeContext<T extends CompiledModule | LinkedModule> {
@@ -79,7 +62,7 @@ export function purgeModule(
     const moduleMap = moduleMaps.get(module)
     if (moduleMap) {
       moduleMaps.delete(module)
-      delete moduleMap[module.id]
+      moduleMap.delete(module.id)
     }
   }
 }

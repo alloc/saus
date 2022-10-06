@@ -44,10 +44,6 @@ export interface CompiledModule extends Script {
   [kLinkedModule]?: undefined
 }
 
-export type ModuleMap = Record<string, CompiledModule | undefined> & {
-  __compileQueue?: Promise<void>
-}
-
 export type LinkedModuleMap = Record<string, LinkedModule | undefined>
 
 export type ImportMeta = Record<string, any>

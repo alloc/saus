@@ -3,7 +3,7 @@ import createDebug from 'debug'
 import fs from 'fs'
 import { removeSourceMapUrls } from '../node/sourceMap'
 import { parseStackTrace, StackFrame, traceStackFrame } from '../node/stack'
-import { ModuleMap } from './types'
+import { ModuleMap } from './moduleMap'
 
 const kFormattedStack = Symbol.for('saus:formattedStack')
 const debugStack = createDebug('saus:stack')
@@ -46,7 +46,7 @@ export function formatAsyncStack(
   const syncFrameIds = new Set<string>()
 
   for (const frame of relevantFrames) {
-    const module = moduleMap[frame.file]
+    const module = moduleMap.get(frame.file)
     if (module?.map) {
       traceStackFrame(frame, module.map)
     }
@@ -55,7 +55,7 @@ export function formatAsyncStack(
 
   for (const frame of asyncStack) {
     if (!frame) continue
-    const module = moduleMap[frame.file]
+    const module = moduleMap.get(frame.file)
     if (module?.map) {
       traceStackFrame(frame, module.map)
     }
@@ -112,8 +112,8 @@ export function formatAsyncStack(
       error.file = file
       try {
         const code =
-          moduleMap[file]?.map?.sourcesContent?.[0] ??
-          moduleMap[file]?.code ??
+          moduleMap.get(file)?.map?.sourcesContent?.[0] ??
+          moduleMap.get(file)?.code ??
           fs.readFileSync(file, 'utf8')
         stack.header = codeFrameColumns(removeSourceMapUrls(code), location, {
           highlightCode: true,

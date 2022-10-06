@@ -18,7 +18,6 @@ import { compileNodeModule } from './vite/compileNodeModule'
 import { debug as vmDebug } from './vm/debug'
 import { executeModule } from './vm/executeModule'
 import { formatAsyncStack } from './vm/formatAsyncStack'
-import { registerModuleOnceCompiled } from './vm/moduleMap'
 import { injectNodeModule } from './vm/nodeModules'
 import { isLinkedModule, RequireAsync } from './vm/types'
 
@@ -193,8 +192,8 @@ async function compileRoutesModule(
     }
   }
 
-  return registerModuleOnceCompiled(
-    context.moduleMap,
+  return context.moduleMap.setPromise(
+    routesPath,
     compileNodeModule(editor.toString(), routesPath, requireAsync, context)
   )
 }
