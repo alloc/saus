@@ -137,10 +137,8 @@ export const providePageBundles: App.Plugin = app => {
         })
       }
 
-      if (route !== page.route) {
-        debugger // Might be able to remove this.
-        route = page.route
-      }
+      // If the route fails to render, the catch route is used instead.
+      route = page.route
 
       const assets = new Set<string>()
 
