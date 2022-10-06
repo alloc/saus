@@ -25,10 +25,10 @@ import {
   CompileModuleHook,
   isLinkedModule,
   kLinkedModule,
-  LinkedModule,
   LinkedModuleMap,
   RequireAsync,
   ResolveIdHook,
+  TrackedModule,
 } from './types'
 
 export interface RequireAsyncState {
@@ -154,11 +154,9 @@ export function createAsyncRequire(
     })
   }
 
-  let callStack: (StackFrame | undefined)[] = []
-
   const trackImport = (
     importerId: string,
-    imported: CompiledModule | LinkedModule,
+    imported: TrackedModule,
     isDynamic?: boolean,
     isConnected?: boolean
   ) => {
@@ -243,15 +241,32 @@ export function createAsyncRequire(
           return resolvedId
         }
 
-  return async function requireAsync(id, importer, isDynamic, timeout) {
+  return async function requireAsync(
+    id,
+    parentId,
+    isDynamic,
+    framesToPop = 0,
+    timeout
+  ) {
     if (builtinModules.includes(id)) {
-      const nodeRequire = Module.createRequire(importer || __filename)
+      const nodeRequire = Module.createRequire(parentId || __filename)
       return nodeRequire(id)
     }
 
-    const asyncStack = isDynamic
-      ? traceDynamicImport(Error(), 3)
-      : (callStack = [getStackFrame(3), ...callStack])
+    const parentModule = parentId
+      ? moduleMap.get(parentId) || linkedModules[parentId]
+      : null
+
+    // Always exclude this function.
+    framesToPop++
+
+    let requireStack: (StackFrame | undefined)[]
+    if (isDynamic) {
+      requireStack = traceDynamicImport(Error(), framesToPop)
+    } else {
+      requireStack = parentModule?.requireStack || []
+      requireStack = [getStackFrame(framesToPop), ...requireStack]
+    }
 
     let shouldReload = config.shouldReload || neverReload
     let virtualId: string | undefined
@@ -262,7 +277,7 @@ export function createAsyncRequire(
     const time = Date.now()
 
     resolveStep: try {
-      const resolved = await resolveId(id, importer, isDynamic)
+      const resolved = await resolveId(id, parentId, isDynamic)
       if (resolved) {
         if (resolved.reload == false) {
           shouldReload = neverReload
@@ -276,7 +291,7 @@ export function createAsyncRequire(
         }
         if (resolved.external) {
           if (isNodeRequirable(resolved.id)) {
-            nodeRequire = createRequire(importer || __filename)
+            nodeRequire = createRequire(parentId || __filename)
             nodeResolvedId = resolved.id
             break resolveStep
           }
@@ -305,7 +320,7 @@ export function createAsyncRequire(
         : noop
 
       try {
-        nodeRequire = createRequire(importer || __filename)
+        nodeRequire = createRequire(parentId || __filename)
         nodeResolvedId = nodeRequire.resolve(id)
         if (resolvedId) {
           if (isNodeRequirable(resolvedId)) {
@@ -340,10 +355,7 @@ export function createAsyncRequire(
       }
       resolvedId = undefined
     } catch (error: any) {
-      if (!isDynamic) {
-        callStack = callStack.slice(1)
-      }
-      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+      formatAsyncStack(error, moduleMap, requireStack, filterStack)
       throw error
     }
 
@@ -364,11 +376,11 @@ export function createAsyncRequire(
           }
         }
         if (module?.exports && !shouldReload(resolvedId)) {
-          const circularIndex = asyncStack.findIndex(
+          const circularIndex = requireStack.findIndex(
             frame => frame?.file == resolvedId
           )
           if (circularIndex >= 0 && isDebug) {
-            const importLoop = asyncStack
+            const importLoop = requireStack
               .slice(0, circularIndex + 1)
               .filter(Boolean)
               .map(frame => (frame as StackFrame).file)
@@ -391,7 +403,11 @@ export function createAsyncRequire(
             compileModule(resolvedId, requireAsync, virtualId)
           )
         )
-        exports = await executeModule(module, timeout ?? config.timeout)
+        exports = await executeModule(
+          module,
+          timeout ?? config.timeout,
+          requireStack
+        )
       } else {
         resolvedId = nodeResolvedId!
 
@@ -433,7 +449,7 @@ export function createAsyncRequire(
 
         const stopTracing = traceNodeRequire(
           moduleMap,
-          asyncStack,
+          requireStack,
           resolvedId,
           filterStack
         )
@@ -448,20 +464,17 @@ export function createAsyncRequire(
         }
       }
     } catch (error: any) {
-      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+      formatAsyncStack(error, moduleMap, requireStack, filterStack)
       throw error
     } finally {
-      if (!isDynamic) {
-        callStack = callStack.slice(1)
-      }
       // Track importers even when a compile/runtime error is encountered,
       // so that module reloading still works when a file is changed.
       if (module) {
-        if (importer) {
-          trackImport(importer, module, isDynamic, internalPathRE.test(id))
+        if (parentId) {
+          trackImport(parentId, module, isDynamic, internalPathRE.test(id))
         }
       } else if (resolvedId && isLinkedModuleId(resolvedId)) {
-        trackLinkedModule(resolvedId, importer, () => exports)
+        trackLinkedModule(resolvedId, parentId, () => exports)
       }
     }
 

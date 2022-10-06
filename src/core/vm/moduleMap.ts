@@ -8,8 +8,7 @@ export class ModuleMap extends Map<string, CompiledModule> {
   promises = new Map<string, Promise<CompiledModule | null>>()
   setPromise(moduleId: string, promise: Promise<CompiledModule | null>) {
     this.promises.set(moduleId, promise)
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    promise.catch(noop).then(module => {
+    promise.then(module => {
       if (promise == this.promises.get(moduleId)) {
         this.promises.delete(moduleId)
         if (module) {
@@ -17,7 +16,7 @@ export class ModuleMap extends Map<string, CompiledModule> {
           moduleMaps.set(module, this)
         }
       }
-    })
+    }, noop)
     return promise
   }
 }

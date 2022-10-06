@@ -27,7 +27,7 @@ import type {
  *     }
  */
 export const defineDeployHook: DefineDeployHook = (hook: any) => {
-  const frame = getStackFrame(2)
+  const frame = getStackFrame(1)
   if (!frame) {
     throw Error('Failed to infer source file')
   }

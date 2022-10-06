@@ -7,4 +7,6 @@ import { getStackFrame } from './stack/getStackFrame'
  * In SSR bundles, this function is swapped out for an implementation
  * that introspects the in-memory SSR module system (see `../runtime/ssrModules.ts`).
  */
-export const getCurrentModule = () => getStackFrame(3)?.file
+export const getCurrentModule = () =>
+  // Skip this function and its caller.
+  getStackFrame(2)?.file

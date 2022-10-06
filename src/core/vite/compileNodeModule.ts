@@ -54,8 +54,9 @@ export async function compileNodeModule(
       glob: (globs: string | string[]) =>
         lazyGlobRequire(toArray(globs), filename, requireAsync, watcher),
     },
-    [importAsyncId]: (id: string) => requireAsync(id, filename, true),
-    [requireAsyncId]: (id: string) => requireAsync(id, filename, false),
+    [importAsyncId]: (id: string) => requireAsync(id, filename, true, 1),
+    [requireAsyncId]: (id: string, framesToPop = 0) =>
+      requireAsync(id, filename, false, framesToPop + 1),
   }
 
   let cacheKey = ''

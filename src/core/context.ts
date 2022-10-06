@@ -32,7 +32,7 @@ export interface SausEvents {
    *
    * The `requireTime` includes time spent loading dependencies.
    */
-  require(id: string, requireTime: number, module?: CompiledModule): void
+  require(id: string, requireTime: number, module?: CompiledModule | null): void
 }
 
 export type SausEventEmitter = EventEmitter<SausEvents>

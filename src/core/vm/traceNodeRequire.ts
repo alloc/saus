@@ -1,10 +1,10 @@
 import { getStackFrame, StackFrame } from '../node/stack'
 import { formatAsyncStack } from './formatAsyncStack'
-import { ModuleMap } from './types'
+import { ModuleMap } from './moduleMap'
 
 export function traceNodeRequire(
   moduleMap: ModuleMap,
-  asyncStack: (StackFrame | undefined)[],
+  requireStack: (StackFrame | undefined)[],
   skippedFile: string,
   filterStack?: (file: string) => boolean
 ) {
@@ -13,15 +13,16 @@ export function traceNodeRequire(
   requireHooks['.js'] = (module, filename) => {
     const isNestedRequire = skippedFile !== filename
     if (isNestedRequire) {
-      asyncStack = [getStackFrame(2), ...asyncStack]
+      // Add the caller of this require hook.
+      requireStack = [getStackFrame(1), ...requireStack]
     }
     try {
       evaluate(module, filename)
       if (isNestedRequire) {
-        asyncStack = asyncStack.slice(1)
+        requireStack = requireStack.slice(1)
       }
     } catch (error: any) {
-      formatAsyncStack(error, moduleMap, asyncStack, filterStack)
+      formatAsyncStack(error, moduleMap, requireStack, filterStack)
       throw error
     }
   }

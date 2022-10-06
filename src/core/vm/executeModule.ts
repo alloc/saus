@@ -1,16 +1,19 @@
 import { isObject } from '@saus/deploy-utils'
+import createDebug from 'debug'
 import vm from 'vm'
 import { toInlineSourceMap } from '../node/sourceMap'
 import { cleanUrl } from '../utils/cleanUrl'
 import { defer } from '../utils/defer'
+import { StackFrame } from '../utils/parseStackTrace'
 import { exportsId, requireAsyncId } from './compileEsm'
 import { __exportFrom as exportFrom } from './esmInterop'
 import { exportNotFound } from './exportNotFound'
-import { CompiledModule, RequireAsync } from './types'
+import { CompiledModule } from './types'
 
 export function executeModule(
   module: CompiledModule,
-  timeoutSecs?: number
+  timeoutSecs?: number,
+  requireStack?: (StackFrame | undefined)[]
 ): Promise<any> {
   if (!module.code) {
     return module.exports!
@@ -39,6 +42,7 @@ export function executeModule(
 
   const { promise, resolve, reject } = defer<any>()
   module.exports = promise
+  module.requireStack = requireStack
 
   let timeout: NodeJS.Timeout | undefined
   if (timeoutSecs && !isCommonJS) {
@@ -50,18 +54,24 @@ export function executeModule(
     let timeoutMs = timeoutSecs * 1000
     timeout = setTimeout(onTimedOut, timeoutMs)
 
-    const requireAsync = env[requireAsyncId] as RequireAsync
+    const resumeTimeout = (exports: any) => {
+      if (timeoutMs > 0) {
+        timeout = setTimeout(onTimedOut, timeoutMs)
+      }
+      return exports
+    }
+
+    const requireAsync = env[requireAsyncId] as (
+      id: string,
+      framesToPop: number
+    ) => Promise<any>
+
     env[requireAsyncId] = (id: string) => {
       const now = Date.now()
+      timeoutMs += timestamp - now
+      timestamp = now
       clearTimeout(timeout)
-      return requireAsync(id).then(exports => {
-        timeoutMs += timestamp - now
-        timestamp = now
-        if (timeoutMs > 0) {
-          timeout = setTimeout(onTimedOut, timeoutMs)
-        }
-        return exports
-      })
+      return requireAsync(id, 1).then(resumeTimeout)
     }
   }
 
@@ -73,7 +83,7 @@ export function executeModule(
 
   const init = vm.runInThisContext('"use strict";' + code, {
     filename: id[0] !== '\0' ? cleanUrl(id) : undefined,
-  })
+  }) as (...env: any[]) => Promise<void>
 
   init(...Object.values(env))
     .then(() => {

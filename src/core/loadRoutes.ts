@@ -39,9 +39,15 @@ export async function loadRoutes(context: SausContext) {
   const routesModule = await compileRoutesModule(
     context,
     serverModules.transform,
-    (id, importer, isDynamic) =>
+    (id, importer, isDynamic, framesToPop = 0, timeout) =>
       // Dynamic imports are assumed to *not* be Node.js modules
-      context[isDynamic ? 'ssrRequire' : 'require'](id, importer, isDynamic)
+      context[isDynamic ? 'ssrRequire' : 'require'](
+        id,
+        importer,
+        isDynamic,
+        framesToPop + 1,
+        timeout
+      )
   )
 
   let moduleCount = 0

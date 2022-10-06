@@ -1,34 +1,52 @@
 import { SourceMap } from '../node/sourceMap'
+import { StackFrame } from '../utils/parseStackTrace'
 import type { ImporterSet } from './ImporterSet'
 
-export type Script = { code: string; map?: SourceMap; isCommonJS?: boolean }
+export type Script = {
+  code: string
+  map?: SourceMap
+  isCommonJS?: boolean
+}
 
 /** This property exists on linked Node.js module instances */
 export const kLinkedModule = Symbol.for('saus.LinkedModule')
 
-export function isLinkedModule(
-  module: CompiledModule | LinkedModule
-): module is LinkedModule {
+export function isLinkedModule(module: TrackedModule): module is LinkedModule {
   return module[kLinkedModule] == true
 }
+
+interface ModuleLike {
+  id: string
+  imports: Set<any>
+  importers: Set<any>
+  exports?: any
+  compileTime?: number
+  requireTime?: number
+  requireStack?: (StackFrame | undefined)[]
+}
+
+/**
+ * A module that's tracked in the module graph.
+ */
+export type TrackedModule = CompiledModule | LinkedModule
 
 /**
  * A Node.js-compatible module that's been linked into the
  * `node_modules` of the project.
  */
-export interface LinkedModule {
-  id: string
-  exports: any
-  imports: Set<LinkedModule>
-  importers: Set<CompiledModule | LinkedModule>
-  requireTime?: undefined
+export interface LinkedModule extends ModuleLike {
   [kLinkedModule]: true
+  imports: Set<LinkedModule>
+  importers: Set<TrackedModule>
+  exports: any
 }
 
-export interface CompiledModule extends Script {
-  id: string
+/**
+ * A module that's been compiled on-demand.
+ */
+export interface CompiledModule extends Script, ModuleLike {
   env: Record<string, any>
-  imports: Set<CompiledModule | LinkedModule>
+  imports: Set<TrackedModule>
   importers: ImporterSet
   exports?: Promise<any>
   /**
@@ -41,6 +59,7 @@ export interface CompiledModule extends Script {
   package?: Set<CompiledModule>
   compileTime: number
   requireTime: number
+  // Exists for type narrowing purposes.
   [kLinkedModule]?: undefined
 }
 
@@ -90,5 +109,6 @@ export type RequireAsync = (
   id: string,
   importer?: string | null,
   isDynamic?: boolean,
+  framesToPop?: number,
   timeout?: number
 ) => Promise<any>

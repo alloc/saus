@@ -53,8 +53,10 @@ export async function compileSsrModule(
     }
   } else {
     env = {
-      [requireAsyncId]: (id: string) => context.ssrRequire(id, importer, false),
-      [importAsyncId]: (id: string) => context.ssrRequire(id, importer, true),
+      [requireAsyncId]: (id: string, framesToPop = 0) =>
+        context.ssrRequire(id, importer, false, framesToPop + 1),
+      [importAsyncId]: (id: string) =>
+        context.ssrRequire(id, importer, true, 1),
       [importMetaId]: {
         url: servedPathForFile(id, context.root),
         env: {

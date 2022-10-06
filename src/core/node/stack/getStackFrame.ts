@@ -6,7 +6,8 @@ export function getStackFrame(depth: number): StackFrame | undefined {
     const fileName = callsite.getFileName()
     return !!fileName && !fileName.startsWith('node:')
   })
-  const callsite = callStack[depth]
+  // Always exclude this function.
+  const callsite = callStack[depth + 1]
   if (!callsite) {
     return
   }

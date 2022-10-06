@@ -5,7 +5,7 @@ import type { DeployHookRef, DeployPlugin } from './types'
 
 export async function loadDeployFile(context: DeployContext) {
   try {
-    await context.ssrRequire(context.deployPath, null, true, 0)
+    await context.ssrRequire(context.deployPath, null, true, 0, 0)
   } catch (error: any) {
     formatAsyncStack(error, context.moduleMap, [], context.config.filterStack)
     throw error
