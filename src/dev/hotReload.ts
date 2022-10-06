@@ -41,7 +41,7 @@ export interface HotReloadHandler {
 }
 
 export interface HotReloadConfig {
-  schedule: (reload: () => void) => void
+  schedule: (reload: () => any) => void
   start?: (info: HotReloadInfo) => Promisable<HotReloadHandler>
   ssr?: boolean
 }
@@ -241,7 +241,7 @@ export function createHotReload(
           for (const importer of module.importers)
             if (isLiveModule(importer, liveModulePaths))
               queueMicrotask(() => {
-                reloadFile(importer.id, ssr)
+                void reloadFile(importer.id, ssr)
               })
         }
         clearExports(module as any)

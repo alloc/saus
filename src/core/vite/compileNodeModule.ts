@@ -193,7 +193,7 @@ function lazyGlobRequire(
   if (watcher) {
     const globWatchers: chokidar.FSWatcher[] = []
     const reloadImporter = () => {
-      globWatchers.forEach(w => w.close())
+      globWatchers.forEach(w => void w.close())
       watcher.emit('change', importer)
     }
     for (const [base, globs] of roots) {
