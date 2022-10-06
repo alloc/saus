@@ -70,6 +70,8 @@ export async function isolateRoutes(
     if (p.name == 'commonjs') return false
     // Leave static replacement up to the main build.
     if (p.name == 'vite:define') return false
+    // Silence irrelevant logs.
+    if (p.name == 'vite:reporter') return false
 
     return true
   })

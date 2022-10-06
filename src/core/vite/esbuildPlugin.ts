@@ -18,6 +18,9 @@ export async function esbuildViteBridge(
     debug: 'export default () => () => {}',
   }
 
+  // @ts-expect-error 2540
+  config.plugins = config.plugins.filter(p => p.name !== 'vite:reporter')
+
   const pluginContainer = await vite.createPluginContainer(config)
   const { resolveId, ...compiler } = getViteFunctions(pluginContainer, {
     ssr: !!config.build.ssr,
