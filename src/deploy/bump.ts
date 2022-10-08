@@ -1,5 +1,6 @@
 import { prompt } from '@saus/deploy-utils'
 import { readFileSync, writeFileSync } from 'fs'
+import { fatal } from 'misty'
 import path from 'path'
 import { onDeploy } from './hooks'
 
@@ -39,7 +40,7 @@ export function bumpAppVersion() {
     })
 
     if (!type) {
-      return { type: null, version }
+      fatal('No release kind was selected')
     }
 
     const newVersion = bumps[type]
