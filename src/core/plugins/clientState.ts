@@ -49,12 +49,16 @@ export function clientStatePlugin(): Plugin {
           },
         })
 
+        resolveReferences(Array.from(preserved)).forEach(path => {
+          preserved.add(path)
+        })
+
         const transformer: babel.Visitor = {
           Program(path) {
             const stmts = new Set(
-              Array.from(preserved)
-                .concat(resolveReferences(Array.from(preserved)))
-                .sort((a, b) => a.node.start! - b.node.start!)
+              Array.from(preserved).sort(
+                (a, b) => a.node.start! - b.node.start!
+              )
             )
 
             for (const stmt of stmts) {
