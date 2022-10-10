@@ -1,4 +1,5 @@
 import { babel, getBabelConfig, NodePath, resolveReferences, t } from '../babel'
+import { SourceMap } from '../node/sourceMap'
 import { Plugin } from '../vite'
 
 const includeRE = /\.m?[tj]sx?$/
@@ -67,9 +68,18 @@ export function clientStatePlugin(): Plugin {
           },
         }
 
-        return babel.transformSync('', {
+        const transformed = babel.transformSync('', {
           plugins: [{ visitor: transformer }],
-        }) as { code: string }
+          sourceMaps: true,
+        }) as {
+          code: string
+          map: SourceMap
+        }
+
+        transformed.map.sources = [id]
+        transformed.map.sourcesContent = [code]
+
+        return transformed
       }
     },
   }

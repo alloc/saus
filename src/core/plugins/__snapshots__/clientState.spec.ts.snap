@@ -1,0 +1,111 @@
+// Vitest Snapshot v1
+
+exports[`clientStatePlugin 1`] = `
+{
+  "ast": null,
+  "code": "import { defineStateModule } from \\"saus/client\\";
+import someClientLib from \\"some-client-lib\\";
+import anotherClientLib from \\"another-client-lib\\";
+export const foo = defineStateModule('foo');
+
+const clientSideEffect = (args, state, expiresAt) => {
+  someClientLib(state);
+};
+
+foo.onLoad(clientSideEffect);
+export { anotherClientLib };",
+  "externalDependencies": Set {},
+  "map": {
+    "file": undefined,
+    "mappings": "AAAA,SAASA,iBAAT,QAAkC,aAAlC;AACA,OAAOC,aAAP,MAA0B,iBAA1B;AACA,OAAOC,gBAAP,MAA6B,oBAA7B;AAGA,OAAO,MAAMC,GAAG,GAAGH,iBAAiB,CAAC,KAAD,CAA7B;;AAEP,MAAMI,gBAAgB,GAAG,CAACC,IAAD,EAAOC,KAAP,EAAcC,SAAd,KAA4B;EACnDN,aAAa,CAACK,KAAD,CAAb;AACD,CAFD;;AAIAH,GAAG,CAACK,MAAJ,CAAWJ,gBAAX;AAEA,SAASF,gBAAT",
+    "names": [
+      "defineStateModule",
+      "someClientLib",
+      "anotherClientLib",
+      "foo",
+      "clientSideEffect",
+      "args",
+      "state",
+      "expiresAt",
+      "onLoad",
+    ],
+    "sourceRoot": undefined,
+    "sources": [
+      "state.ts",
+    ],
+    "sourcesContent": [
+      "import { defineStateModule } from \\"saus/client\\"
+import someClientLib from \\"some-client-lib\\"
+import anotherClientLib from \\"another-client-lib\\"
+import { fetch } from \\"node-fetch\\"
+
+export const foo = defineStateModule('foo', () => fetch('/foo'))
+
+const clientSideEffect = (args, state, expiresAt) => {
+  someClientLib(state)
+}
+
+foo.onLoad(clientSideEffect)
+
+export { anotherClientLib }",
+    ],
+    "version": 3,
+  },
+  "metadata": {},
+  "options": {
+    "assumptions": {},
+    "babelrc": false,
+    "browserslistConfigFile": false,
+    "cloneInputAst": true,
+    "configFile": false,
+    "cwd": "/Users/alec/dev/alloc/saus",
+    "envName": "test",
+    "generatorOpts": {
+      "auxiliaryCommentAfter": undefined,
+      "auxiliaryCommentBefore": undefined,
+      "comments": true,
+      "compact": "auto",
+      "filename": undefined,
+      "minified": undefined,
+      "retainLines": undefined,
+      "shouldPrintComment": undefined,
+      "sourceFileName": "unknown",
+      "sourceMaps": true,
+      "sourceRoot": undefined,
+    },
+    "parserOpts": {
+      "plugins": [],
+      "sourceFileName": undefined,
+      "sourceType": "module",
+    },
+    "passPerPreset": false,
+    "plugins": [
+      Plugin {
+        "externalDependencies": [],
+        "generatorOverride": undefined,
+        "key": "base$0",
+        "manipulateOptions": undefined,
+        "options": {},
+        "parserOverride": undefined,
+        "post": undefined,
+        "pre": undefined,
+        "visitor": {
+          "Program": {
+            "enter": [
+              [Function],
+            ],
+          },
+          "_exploded": true,
+          "_verified": true,
+        },
+      },
+    ],
+    "presets": [],
+    "root": "/Users/alec/dev/alloc/saus",
+    "rootMode": "root",
+    "sourceMaps": true,
+    "targets": {},
+  },
+  "sourceType": "module",
+}
+`;
