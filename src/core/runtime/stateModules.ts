@@ -1,4 +1,4 @@
-import { CacheControl, setState } from './cache'
+import { Cache, CacheControl, globalCache, setState } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { createStateListener } from './stateModules/events'
 import { trackStateModule } from './stateModules/global'
@@ -13,6 +13,7 @@ export interface StateModule<T = any, Args extends readonly any[] = any> {
   /** The module used when binding arguments. */
   parent?: StateModule<T>
   bind(...args: Args): StateModule<T, []>
+  entries(): [key: string, cached: Cache.Entry<T>][]
   get(...args: Args): T
   set(args: Args, state: T, expiresAt?: Cache.EntryExpiration): void
   load(...args: Args): Promise<T>
@@ -52,6 +53,13 @@ export function defineStateModule<T, Args extends readonly any[]>(
     [kStateModule]: true,
     id,
     loader,
+    entries() {
+      // TODO: escape moduleIds for regex syntax
+      const cacheKeyPatterns = new RegExp('^(' + this.id + ')(\\.[^.]+)?$')
+      return Object.entries(globalCache.loaded).filter(([key]) =>
+        cacheKeyPatterns.test(key)
+      )
+    },
     get(...args) {
       return loadStateModule(this, args, true)[0]
     },
