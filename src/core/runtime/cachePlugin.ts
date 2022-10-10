@@ -17,7 +17,11 @@ export interface CachePlugin {
   /**
    * Upsert a cache entry with freshly loaded state.
    */
-  put?: (name: string, state: any, expiresAt?: number) => Promisable<void>
+  put?: (
+    name: string,
+    state: any,
+    expiresAt?: Cache.EntryExpiration
+  ) => Promisable<void>
 }
 
 let cachePlugin: CachePlugin | undefined

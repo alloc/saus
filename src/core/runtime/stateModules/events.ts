@@ -1,3 +1,4 @@
+import type { Cache } from '../cache'
 import type { StateModule } from '../stateModules'
 
 export function createStateListener<Args extends readonly any[]>(
@@ -12,7 +13,7 @@ export function notifyStateListeners(
   id: string,
   args: readonly any[],
   state: any,
-  expiresAt: number | undefined
+  expiresAt: Cache.EntryExpiration
 ): void {
   // Do nothing in server context.
 }

@@ -60,7 +60,7 @@ export interface App {
     moduleId: string,
     args: readonly any[],
     state: any,
-    expiresAt?: number | null,
+    expiresAt?: Cache.EntryExpiration,
     inline?: boolean
   ): string
   preProcessHtml?: MergedHtmlProcessor
@@ -100,7 +100,7 @@ export type LoadedStateModule = {
   module: StateModule
   state: any
   /** Expiration date in milliseconds since 1/1/1970 */
-  expiresAt?: number | null
+  expiresAt?: Cache.EntryExpiration
   /** When true, this module was inlined with page-specific state */
   inlined?: boolean
 }

@@ -193,19 +193,19 @@ function resolveEntry<State>(
 
 function toEntry<State = unknown>(
   state: Promise<State>,
-  expiresAt: number | null | undefined,
+  expiresAt: Cache.EntryExpiration,
   args: readonly any[] | undefined
 ): Promise<Cache.Entry<State>>
 
 function toEntry<State = unknown>(
   state: State,
-  expiresAt: number | null | undefined,
+  expiresAt: Cache.EntryExpiration,
   args: readonly any[] | undefined
 ): Cache.Entry<State>
 
 function toEntry(
   state: any,
-  expiresAt: number | null | undefined,
+  expiresAt: Cache.EntryExpiration,
   args: readonly any[] | undefined
 ): Cache.Entry | Promise<Cache.Entry> {
   return state instanceof Promise

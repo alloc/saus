@@ -23,9 +23,11 @@ export namespace Cache {
    */
   export type Entry<State = unknown> = [
     state: State,
-    expiresAt?: number | null,
+    expiresAt?: EntryExpiration,
     args?: readonly any[]
   ]
+
+  export type EntryExpiration = number | null | undefined
 
   export interface EntryPromise<State>
     extends globalThis.Promise<Entry<State>> {

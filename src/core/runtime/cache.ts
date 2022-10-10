@@ -1,3 +1,4 @@
+import type { Cache } from './cache'
 import { createCache } from './cache/create'
 import { getStateModuleKey } from './getStateModuleKey'
 import { notifyStateListeners } from './stateModules/events'
@@ -8,7 +9,7 @@ export function setState<Args extends readonly any[]>(
   moduleId: string,
   args: Args,
   state: any,
-  expiresAt?: number
+  expiresAt?: Cache.EntryExpiration
 ): any {
   const cacheKey = getStateModuleKey(moduleId, args)
   globalCache.loaded[cacheKey] = [state, expiresAt, args]
