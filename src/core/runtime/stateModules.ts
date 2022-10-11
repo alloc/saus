@@ -1,25 +1,45 @@
 import { Promisable } from 'type-fest'
-import { Cache, CacheControl, globalCache, setState } from './cache'
+import { NoInfer } from '../utils/types'
+import {
+  Cache,
+  CacheControl,
+  globalCache,
+  hydrateState,
+  setState,
+} from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { trackStateModule } from './stateModules/global'
 import { hydrateStateListener } from './stateModules/listener'
-import { getState, loadState, serveState } from './stateModules/loader'
+import { getState, serveState } from './stateModules/loader'
+
+type ServerArgs<T> = T extends StateModule.ServeFunction<any, infer Args>
+  ? Args
+  : never
+type ServedState<T> = T extends StateModule.ServeFunction<infer Served>
+  ? Served
+  : never
 
 /**
- * State modules are loaded at compile time. Any arguments passed to their loader
- * functions must be JSON-compatible. Once loaded, these modules are injected into
- * pages whose route includes them.
+ * State modules are loaded at compile time. Any arguments passed to
+ * their loader functions must be JSON-compatible. Once loaded, these
+ * modules are injected into pages whose route includes them.
  */
 export function defineStateModule<
-  Args extends readonly any[],
-  ServerState,
-  ClientState = ServerState
+  Server extends StateModule.ServeFunction,
+  Hydrated = ServedState<Server>
 >(
   name: string,
   config:
-    | StateModule.ServeFunction<ServerState, Args>
-    | StateModule.LoadConfig<ServerState, ClientState, Args>
-): StateModule<ResolvedState<ClientState>, Args> {
+    | Server
+    | {
+        serve: Server
+        hydrate: StateModule.HydrateFunction<
+          ServedState<Server>,
+          Hydrated,
+          ServerArgs<Server>
+        >
+      }
+): StateModule<Awaited<Hydrated>, ServerArgs<Server>, ServedState<Server>> {
   // @ts-expect-error 2673
   const module: StateModule = new StateModule(name, config)
   const hydrate = module['_hydrate']
@@ -125,7 +145,7 @@ export class StateModule<
   /**
    * Manually update the cache for a specific instance of this module.
    */
-  set(args: Args, state: T, expiresAt?: Cache.EntryExpiration): void {
+  set(args: Args, state: Served, expiresAt?: Cache.EntryExpiration): void {
     setState(this.name, args, state, expiresAt)
   }
 
@@ -133,17 +153,24 @@ export class StateModule<
    * Load the served data for this module. This data won't be hydrated.
    */
   async serve(...args: Args): Promise<Served> {
-    const [state] = await serveState(globalCache, this, args)
+    const [state] = await serveState(this, args)
     return state
   }
 
   /**
    * Load the hydrated data for this module. Works identically to
    * `.serve` if there exists no `hydrator` function.
+   *
+   * ⚠️ Avoid calling this from another state module's `serve` function.
+   * Prefer calling the `serve` method instead.
    */
   async load(...args: Args): Promise<T> {
-    const [state] = await loadState(globalCache, this, args)
-    return state
+    const key = getStateModuleKey(this.key, args)
+    return globalCache.load(key, async cacheControl => {
+      const served = await serveState(this, args)
+      cacheControl.expiresAt = served[1] ?? 0
+      return hydrateState(key, served, this)
+    })
   }
 
   /**
@@ -175,7 +202,7 @@ export namespace StateModule {
     Args extends readonly any[] = any
   > = {
     serve: ServeFunction<Served, Args>
-    hydrate: HydrateFunction<Served, Hydrated, Args>
+    hydrate: HydrateFunction<NoInfer<Served>, Hydrated, Args>
   }
 
   export type ServeFunction<T = any, Args extends readonly any[] = any> = (
@@ -192,7 +219,7 @@ export namespace StateModule {
     args: Args,
     state: Served,
     expiresAt: Cache.EntryExpiration
-  ) => Promisable<Hydrated>
+  ) => Hydrated
 
   export type LoadListener = { dispose: () => void }
   export type LoadCallback<T = any, Args extends readonly any[] = any> = (
@@ -201,21 +228,3 @@ export namespace StateModule {
     expiresAt?: Cache.EntryExpiration
   ) => void
 }
-
-export type ResolvedState<T> = T extends Promise<any>
-  ? Resolved<T>
-  : T extends ReadonlyArray<infer Element>
-  ? Element[] extends T
-    ? readonly Resolved<Element>[]
-    : { [P in keyof T]: Resolved<T[P]> }
-  : T extends object
-  ? { [P in keyof T]: Resolved<T[P]> }
-  : ResolvedModule<T>
-
-type Resolved<T> = ResolvedModule<T extends Promise<infer U> ? U : T>
-
-type ResolvedModule<T> = T extends { default: infer DefaultExport }
-  ? { default: DefaultExport } extends T
-    ? DefaultExport
-    : T
-  : T

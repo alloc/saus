@@ -1,10 +1,8 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
-import { globalCache } from '@/runtime/cache'
-import {
-  stateModulesByFile,
-  stateModulesByName,
-} from '@/runtime/stateModules/global'
+import { globalCache, stateModulesByName } from '@/runtime/cache'
+import { stateModulesByFile } from '@/runtime/stateModules/global'
+import { serveCache } from '@/runtime/stateModules/serve'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
 import { take } from '@/utils/take'
@@ -120,6 +118,7 @@ export function createHotReload(
           )
           handler.clientChange(url)
         }
+        serveCache.clear(key)
         stateCleared++
         return true
       })

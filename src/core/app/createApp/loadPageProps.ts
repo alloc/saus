@@ -1,9 +1,9 @@
 import { Endpoint } from '@/endpoint'
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { BareRoute, RouteIncludeOption } from '@/routes'
-import { Cache, setState } from '@/runtime/cache'
+import { globalCache, setState } from '@/runtime/cache'
 import { StateModule } from '@/runtime/stateModules'
-import { loadState } from '@/runtime/stateModules/loader'
+import { serveState } from '@/runtime/stateModules/serve'
 import { CommonClientProps } from '@/types'
 import { mergeArrays } from '@/utils/array'
 import { ascendBranch } from '@/utils/ascendBranch'
@@ -18,10 +18,7 @@ import {
   PagePropsLoader,
 } from '../types'
 
-export function createPagePropsLoader(
-  context: App.Context,
-  cache: Cache
-): PagePropsLoader {
+export function createPagePropsLoader(context: App.Context): PagePropsLoader {
   const { config, profile } = context
   const { debugBase } = config
 
@@ -44,30 +41,32 @@ export function createPagePropsLoader(
     const addStateModule = (module: StateModule<any, []>) => {
       let promise = loadedModules.get(module.key)
       if (!promise) {
-        const wasCached = cache.has(module.key)
+        const wasCached = globalCache.has(module.key)
         loadedModules.set(
           module.key,
-          (promise = loadState(cache, module).then(([state, expiresAt]) => {
-            // Update the `globalCache` when a state module is loaded
-            // for the first time. If we don't do this, the renderer
-            // won't have access to the client-normalized state.
-            if (!wasCached) {
-              setState(
-                module.name,
-                module.args || [],
-                deepCopy(state),
-                expiresAt
-              )
+          (promise = serveState(globalCache, module).then(
+            ([state, expiresAt]) => {
+              // Update the `globalCache` when a state module is loaded
+              // for the first time. If we don't do this, the renderer
+              // won't have access to the client-normalized state.
+              if (!wasCached) {
+                setState(
+                  module.name,
+                  module.args || [],
+                  deepCopy(state),
+                  expiresAt
+                )
+              }
+              return {
+                module,
+                state,
+                expiresAt,
+                get inlined() {
+                  return inlinedModules.has(module)
+                },
+              }
             }
-            return {
-              module,
-              state,
-              expiresAt,
-              get inlined() {
-                return inlinedModules.has(module)
-              },
-            }
-          }))
+          ))
         )
       }
       return promise.catch(noop)

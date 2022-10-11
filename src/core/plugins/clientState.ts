@@ -45,13 +45,13 @@ export function clientStatePlugin(): Plugin {
               if (args[1].isObjectExpression()) {
                 // Remove the `serve` method.
                 for (const prop of args[1].get('properties')) {
-                  if (!prop.isObjectMethod()) {
+                  if (prop.isSpreadElement()) {
                     throw syntaxErr(
-                      'Only object method syntax is allowed in StateModule config',
+                      'Spread syntax is not allowed in StateModule config',
                       prop.node
                     )
                   }
-                  const key = prop.get('key')
+                  const key = prop.get('key') as NodePath<t.Expression>
                   if (!key.isIdentifier()) {
                     throw syntaxErr(
                       'Only non-computed keys are allowed in StateModule config',

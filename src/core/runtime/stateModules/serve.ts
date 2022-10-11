@@ -1,41 +1,28 @@
-import { klona as deepCopy } from '@/utils/klona'
 import createDebug from 'debug'
-import { Cache, CacheControl } from '../cache'
+import { Cache, CacheControl, createCache } from '../cache'
 import { CachePlugin } from '../cachePlugin'
-import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'
 import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
 
 const debug = createDebug('saus:state')
 
-export const stateModuleArguments = new Map<string, readonly any[]>()
-
 /**
- * Unwrap a state module with the given arguments. \
- * Throws an error when the state isn't already loaded.
+ * Data served by state modules is cached here.
+ *
+ * Hydrated data is stored in the global cache.
  */
-export function getState<T, Args extends readonly any[]>(
-  cache: Cache,
-  module: StateModule<T, Args, any>,
-  args: Args
-) {
-  const cached = getLoadedStateOrThrow(cache, module.key, args)
-  return deepCopy(cached) as Cache.Entry<T>
-}
+export const serveCache = createCache()
 
 export function serveState<T>(
-  cache: Cache,
   module: StateModule<any, [], T>
 ): Cache.EntryPromise<T>
 
 export function serveState<T, Args extends readonly any[]>(
-  cache: Cache,
   module: StateModule<any, Args, T>,
   args: Args
 ): Cache.EntryPromise<T>
 
 export function serveState(
-  cache: Cache,
   module: StateModule,
   args: readonly any[] = module.args || []
 ) {
@@ -65,7 +52,6 @@ export function serveState(
         key,
         ((Date.now() - timestamp) / 1e3).toFixed(3)
       )
-      stateModuleArguments.set(key, args)
       return result
     } catch (error: any) {
       throw error && 'message' in error
@@ -74,34 +60,8 @@ export function serveState(
     }
   }
 
-  return cache.access(key, loadStateModule, {
+  return serveCache.access(key, loadStateModule, {
     deepCopy: true,
     args,
   })
-}
-
-export function loadState<T>(
-  cache: Cache,
-  module: StateModule<T, [], any>
-): Cache.EntryPromise<T>
-
-export function loadState<T, Args extends readonly any[]>(
-  cache: Cache,
-  module: StateModule<T, Args, any>,
-  args: Args
-): Cache.EntryPromise<T>
-
-export async function loadState(
-  cache: Cache,
-  module: StateModule,
-  args: readonly any[] = module.args || []
-) {
-  const served = await serveState(cache, module, args)
-  const hydrate = module['_hydrate']
-  if (hydrate) {
-    let [state, expiresAt] = served
-    state = await hydrate(args, state, expiresAt)
-    return [state, expiresAt, args]
-  }
-  return served
 }

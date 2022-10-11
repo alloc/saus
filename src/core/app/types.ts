@@ -18,7 +18,6 @@ export interface App {
   readonly config: RuntimeConfig
   readonly catchRoute: Route | undefined
   readonly defaultRoute: Route | undefined
-  readonly cache: Cache
   resolveRoute: RouteResolver
   getEndpoints: Endpoint.Generator | null
   callEndpoints(

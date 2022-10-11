@@ -1,7 +1,7 @@
 import { getStackFrame } from '@/node/stack/getStackFrame'
+import { stateModulesByName } from '../cache'
 import type { StateModule } from '../stateModules'
 
-export const stateModulesByName = new Map<string, StateModule>()
 export const stateModulesByFile = new Map<string, Map<string, StateModule>>()
 
 export function trackStateModule(module: StateModule) {

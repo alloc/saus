@@ -3,7 +3,6 @@ import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../html'
 import { matchRoute, Route, RouteEndpointMap } from '../routes'
-import { createCache } from '../runtime/cache/create'
 import { RuntimeConfig, RuntimeHook } from '../runtime/config'
 import { setRoutesModule } from '../runtime/global'
 import { toArray } from '../utils/array'
@@ -125,7 +124,6 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
   }
 
   const app = {
-    cache: createCache(),
     config,
     resolveRoute,
     getEndpoints: null,
@@ -138,7 +136,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
     renderPage: () => getPageFactory(app, ctx),
     renderPageState: () => getPageStateFactory(app, ctx),
     renderStateModule: () => getStateModuleFactory(ctx),
-    loadPageProps: () => createPagePropsLoader(ctx, app.cache),
+    loadPageProps: () => createPagePropsLoader(ctx),
     preProcessHtml: () =>
       ctx.htmlProcessors &&
       mergeHtmlProcessors(ctx.htmlProcessors, page => ({ page, config }), [
