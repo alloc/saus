@@ -1,5 +1,5 @@
 // HTTP helpers suitable for Node environments.
-import { CacheControl, globalCache } from '@/runtime/cache'
+import { Cache, globalCache } from '@/runtime/cache'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
 import { http, HttpRequestOptions } from './http'
@@ -20,7 +20,7 @@ export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
     opts?.headers
   )
 
-  return globalCache.load(cacheKey, cacheControl => {
+  return globalCache.load(cacheKey, entry => {
     const cachedResponse = responseCache?.read(cacheKey)
     if (cachedResponse && !cachedResponse.expired) {
       debug('Using cached GET request: %O', url)
@@ -29,9 +29,9 @@ export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
 
     const cacheResponse = (resp: Response) => {
       if (resp.status == 200) {
-        useCacheControl(cacheControl, resp.headers['cache-control'] as string)
-        if (responseCache && isFinite(cacheControl.maxAge)) {
-          responseCache.write(cacheControl.key, resp, cacheControl.maxAge)
+        parseCacheControl(entry, resp.headers['cache-control'] as string)
+        if (responseCache && isFinite(entry.maxAge)) {
+          responseCache.write(entry.key, resp, entry.maxAge)
         }
       }
       return resp
@@ -50,17 +50,17 @@ export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
 const noCacheDirective = 'no-cache'
 const maxAgeDirective = 'max-age'
 
-function useCacheControl(cacheControl: CacheControl, header?: string) {
+function parseCacheControl(entry: Cache.EntryContext, header?: string) {
   if (!header) return
 
   const directives = header.split(/, */)
   if (directives.includes(noCacheDirective)) {
-    cacheControl.maxAge = 0
+    entry.maxAge = 0
   } else {
     const maxAge = directives.find(d => d.startsWith(maxAgeDirective))
     if (maxAge) {
       // TODO: support must-revalidate?
-      cacheControl.maxAge = Number(maxAge.slice(maxAgeDirective.length + 1))
+      entry.maxAge = Number(maxAge.slice(maxAgeDirective.length + 1))
     }
   }
 }

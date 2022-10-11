@@ -4,6 +4,7 @@ import type { SausContext } from './context'
 import type { Endpoint } from './endpoint'
 import type { HtmlContext } from './html'
 import type { RouteRenderer } from './routeRenderer'
+import type { Cache } from './runtime/cache'
 import type { RuntimeHook } from './runtime/config'
 import type { RouteLayout } from './runtime/layouts'
 import type { RoutePlugin } from './runtime/routePlugins'
@@ -113,6 +114,12 @@ interface RouteStateConfig<
   Module extends object = any,
   Params extends object = any
 > {
+  /**
+   * The maximum number of seconds that the page props should be cached
+   * for. Note that any state modules used by this route may lower the
+   * max age.
+   */
+  maxAge?: Cache.MaxAge
   /**
    * Load the page props for this route. These props exist during
    * hydration and are usually provided to the root component on the

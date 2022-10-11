@@ -1,10 +1,11 @@
 import { Promisable } from 'type-fest'
+import type { StateModule } from '../stateModules'
 import { access, get, has, load } from './access'
-import { CacheControl } from './cacheControl'
 import { clear } from './clear'
 import { forEach } from './forEach'
 
 export type Cache<State = unknown> = {
+  listeners: Record<string, Set<Cache.Listener>>
   loading: Record<string, Cache.EntryPromise<State>>
   loaded: Record<string, Cache.Entry<State>>
   has: typeof has
@@ -18,27 +19,68 @@ export type Cache<State = unknown> = {
 export namespace Cache {
   /**
    * The internal data structure used by `Cache` type.
-   *
-   * The `args` property doesn't exist for URL-based state.
    */
-  export type Entry<State = unknown> = [
-    state: State,
-    expiresAt?: EntryExpiration,
-    args?: readonly any[]
-  ]
+  export interface Entry<State = unknown, Args extends readonly any[] = any> {
+    /**
+     * The generated data.
+     */
+    state: State
+    /**
+     * The UNIX timestamp for when this entry was generated.
+     */
+    timestamp: number
+    /**
+     * The number of seconds until the entry expires.
+     *
+     * Note: Expired entries remain in the cache until the next access
+     * call, so their expired data can be provided to the entry loader.
+     */
+    maxAge?: MaxAge
+    /**
+     * An array of arguments that were used to generate the
+     * cache key.
+     */
+    args?: Args
+    /**
+     * This entry is invalidated when any of these files are changed in
+     * development.
+     *
+     * ⚠️ Exists in server context only.
+     */
+    deps?: readonly string[]
+    /**
+     * The state module used to generate this entry.
+     *
+     * ⚠️ Exists in server context only.
+     */
+    stateModule?: StateModule
+  }
 
-  export type EntryExpiration = number | null | undefined
+  export type MaxAge = number | null | undefined
+
+  export type EntryContext<State = unknown> =
+    import('./context').EntryContext<State>
 
   export interface EntryPromise<State>
     extends globalThis.Promise<Entry<State>> {
     cancel: () => void
   }
 
-  export type StateLoader<State = unknown> = {
-    (cacheControl: CacheControl<State>): Promisable<State>
+  export type Listener<State = unknown, Args extends readonly any[] = any> = (
+    state: State,
+    entry: Cache.Entry<State, Args>
+  ) => void
+
+  export type EntryLoader<State = unknown> = {
+    (ctx: EntryContext<State>): Promisable<State>
   }
 
-  export interface AccessOptions<State = unknown> {
+  export interface AccessOptions
+    extends Pick<Entry, 'args' | 'deps' | 'stateModule'> {
+    /**
+     * Return expired data (if possible) instead of loading new data.
+     */
+    acceptExpired?: boolean
     /**
      * When this state is accessed in a server context,
      * it will be deep-copied so it can be mutated in preparation
@@ -47,12 +89,11 @@ export namespace Cache {
      */
     deepCopy?: boolean
     /**
-     * An array of arguments that were used to generate the
-     * cache key.
+     * Skip calling `CachePlugin.get` and `CachePlugin.put` hooks
+     * provided by `injectCachePlugin` call.
      *
-     * At the moment, this property is only used when rendering
-     * state modules in a server context.
+     * ⚠️ Used in server context only.
      */
-    args?: readonly any[]
+    skipCachePlugin?: boolean
   }
 }

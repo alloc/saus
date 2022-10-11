@@ -1,7 +1,7 @@
 import { getStackFrame } from '@/node/stack/getStackFrame'
+import { stateModulesByName } from '../cache'
 import type { StateModule } from '../stateModules'
 
-export const stateModulesById = new Map<string, StateModule>()
 export const stateModulesByFile = new Map<string, Map<string, StateModule>>()
 
 export function trackStateModule(module: StateModule) {
@@ -10,7 +10,7 @@ export function trackStateModule(module: StateModule) {
   if (caller) {
     const modules = stateModulesByFile.get(caller.file) || new Map()
     stateModulesByFile.set(caller.file, modules)
-    modules.set(module.id, module)
+    modules.set(module.name, module)
   }
-  stateModulesById.set(module.id, module)
+  stateModulesByName.set(module.name, module)
 }

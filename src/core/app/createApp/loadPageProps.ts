@@ -1,8 +1,10 @@
 import { Endpoint } from '@/endpoint'
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { BareRoute, RouteIncludeOption } from '@/routes'
-import { isStateModule, StateModule } from '@/runtime/stateModules'
-import { loadStateModule } from '@/runtime/stateModules/loader'
+import { globalCache } from '@/runtime/cache'
+import { StateModule } from '@/runtime/stateModules'
+import { hydrateState } from '@/runtime/stateModules/hydrate'
+import { serveState } from '@/runtime/stateModules/serve'
 import { CommonClientProps } from '@/types'
 import { mergeArrays } from '@/utils/array'
 import { ascendBranch } from '@/utils/ascendBranch'
@@ -37,21 +39,29 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     const loadedModules = new Map<string, Promise<LoadedStateModule>>()
     const addStateModule = (module: StateModule<any, []>) => {
-      let promise = loadedModules.get(module.id)
+      const { key } = module
+      let promise = loadedModules.get(key)
       if (!promise) {
-        loadedModules.set(
-          module.id,
-          (promise = loadStateModule(module).then(([state, expiresAt]) => {
-            return {
-              module,
-              state,
-              expiresAt,
-              get inlined() {
-                return inlinedModules.has(module)
-              },
+        promise = serveState(module).then(served => {
+          if (!globalCache.loaded[key]) {
+            // Expose the hydrated state to SSR components.
+            const hydratedState = hydrateState(key, served, module, {
+              deepCopy: true,
+            })
+            globalCache.loaded[key] = {
+              ...served,
+              state: hydratedState,
             }
-          }))
-        )
+          }
+          return {
+            ...served,
+            stateModule: module,
+            get inlined() {
+              return inlinedModules.has(module)
+            },
+          }
+        })
+        loadedModules.set(key, promise)
       }
       return promise.catch(noop)
     }
@@ -92,7 +102,8 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     type InternalProps = Omit<CommonServerProps, keyof CommonClientProps>
     const internalProps: InternalProps = {
-      _ts: undefined,
+      _ts: timestamp,
+      _maxAge: routeConfig.maxAge,
       _inlined: [],
       _included: [],
       _headProps: undefined,
@@ -105,7 +116,7 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     // Wait for state modules to load.
     for (const loaded of await Promise.all(loadedModules.values())) {
-      if (inlinedModules.has(loaded.module)) {
+      if (inlinedModules.has(loaded.stateModule)) {
         props._inlined.push(loaded)
       } else {
         props._included.push(loaded)
@@ -118,10 +129,6 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
         typeof headProps == 'function'
           ? await headProps(request, props)
           : { ...headProps }
-    }
-
-    if (config.command == 'dev') {
-      props._ts = Date.now()
     }
 
     profile?.('load state', {
@@ -162,9 +169,9 @@ async function loadServerProps(
 
   let ssrContainer: any
   forEach(container, (state, key) => {
-    if (isStateModule(state)) {
+    if (state instanceof StateModule) {
       ssrContainer ||= shallowCopy(container)
-      container[key] = { '@import': state.id }
+      container[key] = { '@import': state.key }
       promises.push(
         load(state as any).then(ssrState => {
           ssrContainer[key] = ssrState

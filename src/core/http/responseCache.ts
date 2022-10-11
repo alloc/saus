@@ -1,5 +1,4 @@
 import { unwrapBuffer } from '@/node/buffer'
-import { Cache } from '@/runtime/cache'
 import { murmurHash } from '@/utils/murmur3'
 import { readJson } from '@/utils/readJson'
 import fs from 'fs'
@@ -16,7 +15,7 @@ export const setResponseCache = (cache: ResponseCache | null) =>
 export function loadResponseCache(root: string) {
   const cacheDir = resolve(root, 'node_modules/.saus/http-cache')
   const metadataFile = resolve(cacheDir, 'metadata.json')
-  let metadata: Record<string, Cache.Entry<string>>
+  let metadata: Record<string, [string, number]>
   try {
     metadata = readJson(metadataFile)
   } catch {

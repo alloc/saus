@@ -8,7 +8,7 @@ import type {
 } from '@/core'
 import type { Endpoint } from '@/endpoint'
 import type { ParsedUrl } from '@/node/url'
-import type { Cache } from '@/runtime/cache/types'
+import type { Cache } from '@/runtime/cache'
 import type { StateModule } from '@/runtime/stateModules'
 import type { ParsedHead } from '@/utils/parseHead'
 import type { Falsy } from '@/utils/types'
@@ -56,13 +56,7 @@ export interface App {
    * stored in the client's global cache, which allows for synchronous access via
    * the `StateModule#get` method.
    */
-  renderStateModule(
-    moduleId: string,
-    args: readonly any[],
-    state: any,
-    expiresAt?: Cache.EntryExpiration,
-    inline?: boolean
-  ): string
+  renderStateModule(name: string, entry: Cache.Entry, inline?: boolean): string
   preProcessHtml?: MergedHtmlProcessor
   postProcessHtml?: (page: RenderedPage, timeout?: number) => Promise<string>
 }
@@ -84,6 +78,7 @@ export type RenderedFile = {
   id: string
   data: BufferLike
   mime: string
+  expiresAt?: number
 }
 
 export type RenderedPage = {
@@ -96,11 +91,8 @@ export type RenderedPage = {
   isDebug?: boolean
 }
 
-export type LoadedStateModule = {
-  module: StateModule
-  state: any
-  /** Expiration date in milliseconds since 1/1/1970 */
-  expiresAt?: Cache.EntryExpiration
+export type LoadedStateModule = Cache.Entry & {
+  stateModule: StateModule
   /** When true, this module was inlined with page-specific state */
   inlined?: boolean
 }
@@ -188,10 +180,10 @@ export type PagePropsLoader = (
 export type AnyServerProps = CommonServerProps & Record<string, any>
 
 export interface CommonServerProps extends CommonClientProps {
+  _ts: number
+  _maxAge: Cache.MaxAge
   _inlined: LoadedStateModule[]
   _included: LoadedStateModule[]
   _headProps: Record<string, any> | undefined
   _clientProps: CommonClientProps
-  /** Only exists in development mode */
-  _ts: number | undefined
 }

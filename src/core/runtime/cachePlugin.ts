@@ -1,5 +1,5 @@
 import type { Promisable } from 'type-fest'
-import type { Cache, CacheControl } from './cache'
+import type { Cache } from './cache'
 
 /**
  * The `CachePlugin` is a normalized data storage layer.
@@ -13,15 +13,14 @@ export interface CachePlugin {
    * You should leave this undefined if you don't care about reloading
    * a possibly cached state module when used by an uncached page.
    */
-  get?: (name: string) => Promisable<Cache.Entry | undefined>
+  get?: (
+    cacheKey: string,
+    abortSignal: AbortSignal
+  ) => Promisable<Cache.Entry<any> | undefined>
   /**
    * Upsert a cache entry with freshly loaded state.
    */
-  put?: (
-    name: string,
-    state: any,
-    expiresAt?: Cache.EntryExpiration
-  ) => Promisable<void>
+  put?: (cacheKey: string, entry: Cache.Entry<any>) => Promisable<void>
 }
 
 let cachePlugin: CachePlugin | undefined
@@ -45,19 +44,5 @@ export const CachePlugin = {
   get put() {
     return cachePlugin?.put
   },
-  get loader() {
-    if (cachePlugin?.get) {
-      return loader
-    }
-  },
-}
-
-const loader = async (name: string, cacheControl: CacheControl) => {
-  const entry = await cachePlugin!.get!(name)
-  if (entry) {
-    if (entry[1]) {
-      cacheControl.maxAge = (entry[1] - Date.now()) / 1e3
-    }
-    return entry[0]
-  }
+  pendingPuts: new Map<string, Promise<any>>(),
 }

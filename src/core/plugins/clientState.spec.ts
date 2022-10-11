@@ -7,15 +7,25 @@ const code = endent`
   import { defineStateModule } from "saus/client"
   import someClientLib from "some-client-lib"
   import anotherClientLib from "another-client-lib"
+  import yetAnotherClientLib from "yet-another-client-lib"
   import { fetch } from "node-fetch"
 
   export const foo = defineStateModule('foo', () => fetch('/foo'))
 
-  const clientSideEffect = (args, state, expiresAt) => {
+  export const bar = defineStateModule('bar', {
+    serve() {
+      return fetch('/bar')
+    },
+    hydrate(args, state) {
+      state.bar = yetAnotherClientLib(state.bar)
+    }
+  })
+
+  const onLoadFoo = (args, state, expiresAt) => {
     someClientLib(state)
   }
 
-  foo.onLoad(clientSideEffect)
+  foo.onLoad(onLoadFoo)
 
   export { anotherClientLib }
 `

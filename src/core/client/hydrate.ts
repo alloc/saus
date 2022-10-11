@@ -1,5 +1,4 @@
 import type { CommonClientProps, RenderRequest } from '../core'
-import { globalCache } from '../runtime/cache'
 import type { RouteLayout } from '../runtime/layouts'
 
 export type Hydrator<RenderResult = any> = (
@@ -25,8 +24,6 @@ export async function hydrate(
 ) {
   // Cache page props in global cache.
   const path = location.pathname
-  globalCache.loaded[path] = [props] // TODO: should this expire?
-
   const req: RenderRequest = {
     path,
     query: location.search.slice(1),

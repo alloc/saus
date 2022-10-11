@@ -3,9 +3,9 @@ import type { Headers } from '@/http'
 import { makeRequestUrl } from '@/makeRequest'
 import { ParsedUrl, parseUrl } from '@/node/url'
 import type { Route } from '@/routes'
-import { Cache, globalCache } from '@/runtime/cache'
+import { Cache, stateModulesByName } from '@/runtime/cache'
 import { route } from '@/runtime/routes'
-import { stateModulesById } from '@/runtime/stateModules/global'
+import { serveCache } from '@/runtime/stateModules/serve'
 import { prependBase } from '@/utils/base'
 import { defer } from '@/utils/defer'
 import { murmurHash } from '@/utils/murmur3'
@@ -64,16 +64,16 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
     }
   })
 
-  // State modules
+  // State modules (non-hydrated)
   route(`${context.config.stateModuleBase}*.js`).get(async req => {
     const cacheKey = req.wild
-    const [id, hash] = parseStateModuleKey(cacheKey)!
+    const [name, hash] = parseStateModuleKey(cacheKey)!
 
-    const stateModule = stateModulesById.get(id)
+    const stateModule = stateModulesByName.get(name)
     if (stateModule) {
       let args: any
-      let loader: Cache.StateLoader | undefined
-      if (!globalCache.has(cacheKey)) {
+      let loader: Cache.EntryLoader | undefined
+      if (!serveCache.has(cacheKey)) {
         args = req.headers['x-args']
         if (!args) {
           return req.respondWith(404)
@@ -85,13 +85,12 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
           })
         }
         args = JSON.parse(args)
-        loader = () => stateModule.load(...args)
+        loader = () => stateModule.serve(...args)
       }
-      const loaded = await globalCache.access(cacheKey, loader, { args })
+      const loaded = await serveCache.access(cacheKey, loader, { args })
       if (loaded) {
-        const [state, expiresAt, args] = loaded
-        if (Array.isArray(args)) {
-          const module = app.renderStateModule(id, args, state, expiresAt)
+        if (Array.isArray(loaded.args)) {
+          const module = app.renderStateModule(name, loaded)
           return sendModule(req, module)
         }
         console.warn(
@@ -105,7 +104,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   // Ensure a state module is generated.
   route('/.saus/state').post(async req => {
     const [id, args] = await req.json<[string, any[]]>()
-    const stateModule = stateModulesById.get(id)
+    const stateModule = stateModulesByName.get(id)
     if (stateModule) {
       await stateModule.load(...args)
       req.respondWith(200)
