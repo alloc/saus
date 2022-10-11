@@ -1,5 +1,4 @@
 import { isObject } from '@saus/deploy-utils'
-import createDebug from 'debug'
 import vm from 'vm'
 import { toInlineSourceMap } from '../node/sourceMap'
 import { cleanUrl } from '../utils/cleanUrl'
@@ -31,13 +30,12 @@ export function executeModule(
     exports = Object.create(exportNotFound(id))
     if (/^\s*__exportFrom\b/m.test(module.code)) {
       const forwardedExports: any[] = []
-      env[exportsId] = exportFrom(exports, forwardedExports)
+      exports = exportFrom(exports, forwardedExports)
       env[exportFrom.name] = function __exportFrom(imported: any) {
         forwardedExports.unshift(imported)
       }
-    } else {
-      env[exportsId] = exports
     }
+    env[exportsId] = exports
   }
 
   const { promise, resolve, reject } = defer<any>()
