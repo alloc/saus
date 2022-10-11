@@ -1,16 +1,11 @@
 import { Promisable } from 'type-fest'
 import { NoInfer } from '../utils/types'
-import {
-  Cache,
-  CacheControl,
-  globalCache,
-  hydrateState,
-  setState,
-} from './cache'
+import { Cache, CacheControl, globalCache, setState } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
+import { getState } from './stateModules/get'
 import { trackStateModule } from './stateModules/global'
-import { hydrateStateListener } from './stateModules/listener'
-import { getState, serveState } from './stateModules/loader'
+import { hydrateState, hydrateStateListener } from './stateModules/hydrate'
+import { serveState } from './stateModules/serve'
 
 type ServerArgs<T> = T extends StateModule.ServeFunction<any, infer Args>
   ? Args
@@ -51,9 +46,9 @@ export function defineStateModule<
 }
 
 export class StateModule<
-  T = any,
+  Hydrated = any,
   Args extends readonly any[] = any,
-  Served = T
+  Served = Hydrated
 > {
   /**
    * The prefix used by all instances of this module.
@@ -87,7 +82,7 @@ export class StateModule<
    * data (in either a client or server context) so it's compatible with
    * the UI code that's used to render the page.
    */
-  private _hydrate?: StateModule.HydrateFunction<Served, T, Args>
+  private _hydrate?: StateModule.HydrateFunction<Served, Hydrated, Args>
 
   private constructor(
     name: string,
@@ -114,7 +109,7 @@ export class StateModule<
   /**
    * Bind arguments to a copy of this module.
    */
-  bind(...args: Args): StateModule<T, [], Served> {
+  bind(...args: Args): StateModule<Hydrated, [], Served> {
     if (this.parent) {
       throw Error('Cannot bind arguments twice')
     }
@@ -138,7 +133,7 @@ export class StateModule<
    * Synchronously access a specific instance of this module. If such an
    * instance is not yet loaded, this method will throw.
    */
-  get(...args: Args): T {
+  get(...args: Args): Hydrated {
     return getState(globalCache, this, args)[0]
   }
 
@@ -164,11 +159,11 @@ export class StateModule<
    * ⚠️ Avoid calling this from another state module's `serve` function.
    * Prefer calling the `serve` method instead.
    */
-  async load(...args: Args): Promise<T> {
+  async load(...args: Args): Promise<Hydrated> {
     const key = getStateModuleKey(this.key, args)
     return globalCache.load(key, async cacheControl => {
       const served = await serveState(this, args)
-      cacheControl.expiresAt = served[1] ?? 0
+      cacheControl.expiresAt = served[1]
       return hydrateState(key, served, this)
     })
   }
@@ -181,7 +176,7 @@ export class StateModule<
    * change how the UI is rendered.
    */
   onLoad(
-    listener: StateModule.LoadCallback<T, Args>
+    listener: StateModule.LoadCallback<Hydrated, Args>
   ): StateModule.LoadListener {
     const { name } = this
     globalCache.listeners[name] ||= new Set()

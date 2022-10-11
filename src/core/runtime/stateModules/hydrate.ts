@@ -1,9 +1,11 @@
-import { Cache, globalCache } from '../cache'
+import { Cache } from '../cache'
 import type { StateModule } from '../stateModules'
 
 /**
- * Hydrate the data served for a state module, and inject it into the
- * global cache.
+ * Hydrate the data served for an instance of the given state module.
+ *
+ * In a client context, this function also mutates the global cache and
+ * calls any relevant cache listeners.
  */
 export function hydrateState(
   key: string,
@@ -12,10 +14,9 @@ export function hydrateState(
 ) {
   const [state, expiresAt, args] = served
   const hydrate = module['_hydrate']
-  const hydratedState = hydrate ? hydrate(args, state, expiresAt) : state
-  globalCache.loaded[key] = [hydratedState, expiresAt, args]
-  globalCache.listeners[module.name]?.forEach(callback =>
-    callback(args, hydratedState, expiresAt)
-  )
-  return hydratedState
+  return hydrate ? hydrate(args, state, expiresAt) : state
+}
+
+export function hydrateStateListener(id: string, listener: Cache.Listener) {
+  // Do nothing in a server context.
 }

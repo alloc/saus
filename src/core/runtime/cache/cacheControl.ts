@@ -1,3 +1,5 @@
+import type { Cache } from './types'
+
 /**
  * Used to control the cache behavior from within a state loader.
  */
@@ -31,7 +33,7 @@ export class CacheControl<State = unknown> {
   /**
    * The Unix timestamp for when this entry expires.
    */
-  get expiresAt() {
+  get expiresAt(): Cache.EntryExpiration {
     const maxAge = Math.max(0, this.maxAge)
     return maxAge !== Infinity ? Date.now() + maxAge * 1e3 : null
   }

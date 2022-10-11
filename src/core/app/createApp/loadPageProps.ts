@@ -1,8 +1,9 @@
 import { Endpoint } from '@/endpoint'
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { BareRoute, RouteIncludeOption } from '@/routes'
-import { globalCache, setState } from '@/runtime/cache'
+import { globalCache } from '@/runtime/cache'
 import { StateModule } from '@/runtime/stateModules'
+import { hydrateState } from '@/runtime/stateModules/hydrate'
 import { serveState } from '@/runtime/stateModules/serve'
 import { CommonClientProps } from '@/types'
 import { mergeArrays } from '@/utils/array'
@@ -39,35 +40,28 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     const loadedModules = new Map<string, Promise<LoadedStateModule>>()
     const addStateModule = (module: StateModule<any, []>) => {
-      let promise = loadedModules.get(module.key)
+      const { key } = module
+      let promise = loadedModules.get(key)
       if (!promise) {
-        const wasCached = globalCache.has(module.key)
-        loadedModules.set(
-          module.key,
-          (promise = serveState(globalCache, module).then(
-            ([state, expiresAt]) => {
-              // Update the `globalCache` when a state module is loaded
-              // for the first time. If we don't do this, the renderer
-              // won't have access to the client-normalized state.
-              if (!wasCached) {
-                setState(
-                  module.name,
-                  module.args || [],
-                  deepCopy(state),
-                  expiresAt
-                )
-              }
-              return {
-                module,
-                state,
-                expiresAt,
-                get inlined() {
-                  return inlinedModules.has(module)
-                },
-              }
-            }
-          ))
-        )
+        const wasCached = globalCache.has(key)
+        promise = serveState(module).then(served => {
+          let [state, expiresAt, args] = served
+          if (!wasCached) {
+            state = deepCopy(state)
+            state = hydrateState(key, [state, expiresAt, args], module)
+            // Expose the hydrated state to SSR components.
+            globalCache.loaded[key] = [state, expiresAt, args]
+          }
+          return {
+            module,
+            state,
+            expiresAt,
+            get inlined() {
+              return inlinedModules.has(module)
+            },
+          }
+        })
+        loadedModules.set(key, promise)
       }
       return promise.catch(noop)
     }
