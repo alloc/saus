@@ -1,19 +1,24 @@
 import type { Cache } from './cache'
 import { createCache } from './cache/create'
 import { getStateModuleKey } from './getStateModuleKey'
-import { notifyStateListeners } from './stateModules/events'
 
+/**
+ * All state in the global cache is meant to be used when rendering.
+ * This means the state has been processed by `onLoad` listeners.
+ */
 export const globalCache = createCache()
 
 export function setState<Args extends readonly any[]>(
-  moduleId: string,
+  name: string,
   args: Args,
   state: any,
   expiresAt?: Cache.EntryExpiration
 ): any {
-  const cacheKey = getStateModuleKey(moduleId, args)
-  globalCache.loaded[cacheKey] = [state, expiresAt, args]
-  notifyStateListeners(moduleId, args, state, expiresAt)
+  const key = getStateModuleKey(name, args)
+  globalCache.loaded[key] = [state, expiresAt, args]
+  globalCache.listeners[name]?.forEach(callback =>
+    callback(args, state, expiresAt)
+  )
   return state
 }
 

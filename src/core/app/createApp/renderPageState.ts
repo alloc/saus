@@ -12,24 +12,24 @@ export const getPageStateFactory = (
     const { base } = ctx.config
 
     const clientProps = (props as CommonServerProps)._clientProps
-    const stateModuleIds = new Set(
-      props._included.map(loaded => loaded.module.id)
+    const stateModuleKeys = new Set(
+      props._included.map(loaded => loaded.module.key)
     )
 
-    const nestedStateIds: string[] = []
-    const nestedStateIdents: string[] = []
+    const nestedStateKeys: string[] = []
+    const nestedStateAliases: string[] = []
 
     let code = dataToEsm(clientProps, null, (_, value) => {
-      const inlinedStateId = value && value['@import']
-      if (inlinedStateId) {
-        let index = nestedStateIds.indexOf(inlinedStateId)
+      const nestedStateKey = value && value['@import']
+      if (nestedStateKey) {
+        let index = nestedStateKeys.indexOf(nestedStateKey)
         if (index < 0) {
-          index = nestedStateIds.push(inlinedStateId) - 1
-          stateModuleIds.delete(inlinedStateId)
+          index = nestedStateKeys.push(nestedStateKey) - 1
+          stateModuleKeys.delete(nestedStateKey)
         }
-        const ident = 's' + (index + 1)
-        nestedStateIdents[index] = ident
-        return ident
+        const alias = 's' + (index + 1)
+        nestedStateAliases[index] = alias
+        return alias
       }
     })
 
@@ -39,7 +39,7 @@ export const getPageStateFactory = (
       const inlined = props._inlined.map(loaded => {
         const { module } = loaded
         return app.renderStateModule(
-          (module.parent || module).id,
+          module.name,
           module.args || [],
           loaded.state,
           loaded.expiresAt,
@@ -53,22 +53,22 @@ export const getPageStateFactory = (
 
     const helpers: string[] = []
 
-    if (nestedStateIds.length) {
+    if (nestedStateKeys.length) {
       helpers.push('importStateModules')
-      const idents = nestedStateIdents.join(',' + SPACE)
+      const idents = nestedStateAliases.join(',' + SPACE)
       code =
         `const [${idents}] = await importStateModules(${wrap(
-          nestedStateIds
+          nestedStateKeys
             .map(quoteIndent)
-            .concat(Array.from(stateModuleIds, quoteIndent))
+            .concat(Array.from(stateModuleKeys, quoteIndent))
             .join(',' + RETURN),
           RETURN
         )})\n` + code
-    } else if (stateModuleIds.size) {
+    } else if (stateModuleKeys.size) {
       helpers.push('importStateModules')
       code =
         `await importStateModules(${wrap(
-          Array.from(stateModuleIds, quoteIndent).join(',' + RETURN),
+          Array.from(stateModuleKeys, quoteIndent).join(',' + RETURN),
           RETURN
         )})\n` + code
     }

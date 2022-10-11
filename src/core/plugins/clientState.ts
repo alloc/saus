@@ -29,6 +29,11 @@ export function clientStatePlugin(): Plugin {
 
         const preserved = new Set<NodePath<t.Statement>>()
 
+        const syntaxErr = (msg: string, node: t.Node) => {
+          const { start } = node.loc!
+          return SyntaxError(`${id}:${start.line}:${start.column} ${msg}`)
+        }
+
         babel.traverse(parsed, {
           ExportDeclaration(path) {
             preserved.add(path)
@@ -37,14 +42,35 @@ export function clientStatePlugin(): Plugin {
             const callee = path.get('callee')
             if (callee.isIdentifier({ name: 'defineStateModule' })) {
               const args = path.get('arguments')
-              for (let i = 1; i < args.length; i++) {
+              if (args[1].isObjectExpression()) {
+                // Remove the `serve` method.
+                for (const prop of args[1].get('properties')) {
+                  if (!prop.isObjectMethod()) {
+                    throw syntaxErr(
+                      'Only object method syntax is allowed in StateModule config',
+                      prop.node
+                    )
+                  }
+                  const key = prop.get('key')
+                  if (!key.isIdentifier()) {
+                    throw syntaxErr(
+                      'Only non-computed keys are allowed in StateModule config',
+                      key.node
+                    )
+                  }
+                  if (key.node.name == 'serve') {
+                    prop.remove()
+                  }
+                }
+              } else {
                 // Remove all arguments except the first.
-                args[i].remove()
+                for (let i = 1; i < args.length; i++) {
+                  args[i].remove()
+                }
               }
-            }
-            // FIXME: Be smarter about which onLoad calls we preserve.
-            else if (callee.toString().endsWith('.onLoad')) {
-              preserved.add(path.getStatementParent()!)
+            } else if (callee.toString().endsWith('.onLoad')) {
+              const onLoadStmt = path.getStatementParent()!
+              preserved.add(onLoadStmt)
               path.skip()
             }
           },

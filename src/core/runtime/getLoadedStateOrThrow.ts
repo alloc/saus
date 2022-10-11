@@ -1,10 +1,11 @@
-import { Cache, globalCache } from './cache'
+import { Cache } from './cache'
 
 export function getLoadedStateOrThrow(
+  cache: Cache,
   cacheKey: string,
   args: readonly any[]
 ): Cache.Entry {
-  const cached = globalCache.loaded[cacheKey]
+  const cached = cache.loaded[cacheKey]
   if (!cached) {
     const error = Error(
       `Failed to access "${cacheKey}" state module. ` +

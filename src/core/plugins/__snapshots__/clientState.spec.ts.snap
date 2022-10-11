@@ -6,26 +6,36 @@ exports[`clientStatePlugin 1`] = `
   "code": "import { defineStateModule } from \\"saus/client\\";
 import someClientLib from \\"some-client-lib\\";
 import anotherClientLib from \\"another-client-lib\\";
+import yetAnotherClientLib from \\"yet-another-client-lib\\";
 export const foo = defineStateModule('foo');
+export const bar = defineStateModule('bar', {
+  hydrate(args, state) {
+    state.bar = yetAnotherClientLib(state.bar);
+  }
 
-const clientSideEffect = (args, state, expiresAt) => {
+});
+
+const onLoadFoo = (args, state, expiresAt) => {
   someClientLib(state);
 };
 
-foo.onLoad(clientSideEffect);
+foo.onLoad(onLoadFoo);
 export { anotherClientLib };",
   "externalDependencies": Set {},
   "map": {
     "file": undefined,
-    "mappings": "AAAA,SAASA,iBAAT,QAAkC,aAAlC;AACA,OAAOC,aAAP,MAA0B,iBAA1B;AACA,OAAOC,gBAAP,MAA6B,oBAA7B;AAGA,OAAO,MAAMC,GAAG,GAAGH,iBAAiB,CAAC,KAAD,CAA7B;;AAEP,MAAMI,gBAAgB,GAAG,CAACC,IAAD,EAAOC,KAAP,EAAcC,SAAd,KAA4B;EACnDN,aAAa,CAACK,KAAD,CAAb;AACD,CAFD;;AAIAH,GAAG,CAACK,MAAJ,CAAWJ,gBAAX;AAEA,SAASF,gBAAT",
+    "mappings": "AAAA,SAASA,iBAAT,QAAkC,aAAlC;AACA,OAAOC,aAAP,MAA0B,iBAA1B;AACA,OAAOC,gBAAP,MAA6B,oBAA7B;AACA,OAAOC,mBAAP,MAAgC,wBAAhC;AAGA,OAAO,MAAMC,GAAG,GAAGJ,iBAAiB,CAAC,KAAD,CAA7B;AAEP,OAAO,MAAMK,GAAG,GAAGL,iBAAiB,CAAC,KAAD,EAAQ;EAI1CM,OAAO,CAACC,IAAD,EAAOC,KAAP,EAAc;IACnBA,KAAK,CAACH,GAAN,GAAYF,mBAAmB,CAACK,KAAK,CAACH,GAAP,CAA/B;EACD;;AANyC,CAAR,CAA7B;;AASP,MAAMI,SAAS,GAAG,CAACF,IAAD,EAAOC,KAAP,EAAcE,SAAd,KAA4B;EAC5CT,aAAa,CAACO,KAAD,CAAb;AACD,CAFD;;AAIAJ,GAAG,CAACO,MAAJ,CAAWF,SAAX;AAEA,SAASP,gBAAT",
     "names": [
       "defineStateModule",
       "someClientLib",
       "anotherClientLib",
+      "yetAnotherClientLib",
       "foo",
-      "clientSideEffect",
+      "bar",
+      "hydrate",
       "args",
       "state",
+      "onLoadFoo",
       "expiresAt",
       "onLoad",
     ],
@@ -37,15 +47,25 @@ export { anotherClientLib };",
       "import { defineStateModule } from \\"saus/client\\"
 import someClientLib from \\"some-client-lib\\"
 import anotherClientLib from \\"another-client-lib\\"
+import yetAnotherClientLib from \\"yet-another-client-lib\\"
 import { fetch } from \\"node-fetch\\"
 
 export const foo = defineStateModule('foo', () => fetch('/foo'))
 
-const clientSideEffect = (args, state, expiresAt) => {
+export const bar = defineStateModule('bar', {
+  serve() {
+    return fetch('/bar')
+  },
+  hydrate(args, state) {
+    state.bar = yetAnotherClientLib(state.bar)
+  }
+})
+
+const onLoadFoo = (args, state, expiresAt) => {
   someClientLib(state)
 }
 
-foo.onLoad(clientSideEffect)
+foo.onLoad(onLoadFoo)
 
 export { anotherClientLib }",
     ],

@@ -3,7 +3,7 @@ import { loadRoutes } from '@/loadRoutes'
 import { globalCache } from '@/runtime/cache'
 import {
   stateModulesByFile,
-  stateModulesById,
+  stateModulesByName,
 } from '@/runtime/stateModules/global'
 import { prependBase } from '@/utils/base'
 import { defer, Deferred } from '@/utils/defer'
@@ -100,8 +100,8 @@ export function createHotReload(
     for (const { id } of dirtyStateModules) {
       const stateModules = take(stateModulesByFile, id)!
       const moduleIds = Array.from(stateModules.values(), module => {
-        stateModulesById.delete(module.id)
-        return module.id
+        stateModulesByName.delete(module.name)
+        return module.name
       })
 
       // TODO: escape moduleIds for regex syntax

@@ -123,9 +123,9 @@ export const providePageBundles: App.Plugin = app => {
       // State modules are not renamed for debug view.
       for (const loaded of [...page.props._included].reverse()) {
         const { module } = loaded
-        const stateModuleUrl = stateModuleBase + module.id + '.js'
+        const stateModuleUrl = stateModuleBase + module.key + '.js'
         const stateModuleText = app.renderStateModule(
-          (module.parent || module).id,
+          module.name,
           module.args || [],
           loaded.state,
           loaded.expiresAt

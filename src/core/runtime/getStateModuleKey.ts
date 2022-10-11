@@ -16,16 +16,15 @@ export function getStateModuleKey(
 
 export function getStateModuleKey(
   module: string | StateModule,
-  args: string | readonly any[] = (module as StateModule).args!
+  args?: string | readonly any[]
 ): string {
   let cacheKey: string
   if (typeof module == 'string') {
     cacheKey = module
+  } else if (args) {
+    cacheKey = module.name
   } else {
-    cacheKey = module.id
-    if (module.parent) {
-      return cacheKey
-    }
+    return module.key
   }
   if (typeof args !== 'string') {
     args = JSON.stringify(args, sortObjects)

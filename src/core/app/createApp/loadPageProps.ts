@@ -1,12 +1,14 @@
 import { Endpoint } from '@/endpoint'
 import { makeRequest, makeRequestUrl } from '@/makeRequest'
 import { BareRoute, RouteIncludeOption } from '@/routes'
-import { isStateModule, StateModule } from '@/runtime/stateModules'
-import { loadStateModule } from '@/runtime/stateModules/loader'
+import { Cache, setState } from '@/runtime/cache'
+import { StateModule } from '@/runtime/stateModules'
+import { loadState } from '@/runtime/stateModules/loader'
 import { CommonClientProps } from '@/types'
 import { mergeArrays } from '@/utils/array'
 import { ascendBranch } from '@/utils/ascendBranch'
 import { prependBase } from '@/utils/base'
+import { klona as deepCopy } from '@/utils/klona'
 import { noop } from '@/utils/noop'
 import { toArray } from '@saus/deploy-utils'
 import {
@@ -16,7 +18,10 @@ import {
   PagePropsLoader,
 } from '../types'
 
-export function createPagePropsLoader(context: App.Context): PagePropsLoader {
+export function createPagePropsLoader(
+  context: App.Context,
+  cache: Cache
+): PagePropsLoader {
   const { config, profile } = context
   const { debugBase } = config
 
@@ -37,11 +42,23 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     const loadedModules = new Map<string, Promise<LoadedStateModule>>()
     const addStateModule = (module: StateModule<any, []>) => {
-      let promise = loadedModules.get(module.id)
+      let promise = loadedModules.get(module.key)
       if (!promise) {
+        const wasCached = cache.has(module.key)
         loadedModules.set(
-          module.id,
-          (promise = loadStateModule(module).then(([state, expiresAt]) => {
+          module.key,
+          (promise = loadState(cache, module).then(([state, expiresAt]) => {
+            // Update the `globalCache` when a state module is loaded
+            // for the first time. If we don't do this, the renderer
+            // won't have access to the client-normalized state.
+            if (!wasCached) {
+              setState(
+                module.name,
+                module.args || [],
+                deepCopy(state),
+                expiresAt
+              )
+            }
             return {
               module,
               state,
@@ -162,9 +179,9 @@ async function loadServerProps(
 
   let ssrContainer: any
   forEach(container, (state, key) => {
-    if (isStateModule(state)) {
+    if (state instanceof StateModule) {
       ssrContainer ||= shallowCopy(container)
-      container[key] = { '@import': state.id }
+      container[key] = { '@import': state.key }
       promises.push(
         load(state as any).then(ssrState => {
           ssrContainer[key] = ssrState

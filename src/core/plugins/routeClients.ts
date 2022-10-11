@@ -77,7 +77,10 @@ export function routeClientsPlugin(): Plugin {
           pageStateId,
           sausClientId,
           ...[...page.props._inlined, ...page.props._included].map(loaded =>
-            prependBase(config.stateModuleBase + loaded.module.id + '.js', base)
+            prependBase(
+              config.stateModuleBase + loaded.module.key + '.js',
+              base
+            )
           ),
         ]
 

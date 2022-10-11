@@ -1,4 +1,3 @@
-import { globalCache } from '@/runtime/cache'
 import { App } from './types'
 
 export function cacheClientProps(maxAge: number): App.Plugin {
@@ -7,7 +6,7 @@ export function cacheClientProps(maxAge: number): App.Plugin {
 
     return {
       loadPageProps: (url, route) =>
-        globalCache.load(url.path, async cacheControl => {
+        app.cache.load(url.path, async cacheControl => {
           const props = await loadPageProps(url, route)
           cacheControl.maxAge = maxAge
           return props

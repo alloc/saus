@@ -4,6 +4,7 @@ import { forEach } from './forEach'
 import { Cache } from './types'
 
 export const createCache = <State = unknown>(): Cache<State> => ({
+  listeners: {},
   loading: {},
   loaded: {},
   has,

@@ -5,6 +5,7 @@ import { clear } from './clear'
 import { forEach } from './forEach'
 
 export type Cache<State = unknown> = {
+  listeners: Record<string, Set<Cache.Listener>>
   loading: Record<string, Cache.EntryPromise<State>>
   loaded: Record<string, Cache.Entry<State>>
   has: typeof has
@@ -33,6 +34,12 @@ export namespace Cache {
     extends globalThis.Promise<Entry<State>> {
     cancel: () => void
   }
+
+  export type Listener<State = unknown, Args extends any[] = any> = (
+    args: Args,
+    state: State,
+    expiresAt?: EntryExpiration
+  ) => void
 
   export type StateLoader<State = unknown> = {
     (cacheControl: CacheControl<State>): Promisable<State>
