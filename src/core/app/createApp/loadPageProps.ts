@@ -45,12 +45,16 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
       if (!promise) {
         const wasCached = globalCache.has(key)
         promise = serveState(module).then(served => {
-          let [state, expiresAt, args] = served
+          const [state, expiresAt, args] = served
           if (!wasCached) {
-            state = deepCopy(state)
-            state = hydrateState(key, [state, expiresAt, args], module)
+            const copiedState = deepCopy(state)
+            const hydratedState = hydrateState(
+              key,
+              [copiedState, expiresAt, args],
+              module
+            )
             // Expose the hydrated state to SSR components.
-            globalCache.loaded[key] = [state, expiresAt, args]
+            globalCache.loaded[key] = [hydratedState, expiresAt, args]
           }
           return {
             module,
