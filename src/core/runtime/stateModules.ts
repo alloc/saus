@@ -37,10 +37,6 @@ export function defineStateModule<
 ): StateModule<Awaited<Hydrated>, ServerArgs<Server>, ServedState<Server>> {
   // @ts-expect-error 2673
   const module: StateModule = new StateModule(name, config)
-  const hydrate = module['_hydrate']
-  if (hydrate) {
-    hydrateStateListener(module.name, hydrate)
-  }
   trackStateModule(module)
   return module
 }
@@ -95,6 +91,8 @@ export class StateModule<
       this.parent = parent
       this.args = args
       this.key = getStateModuleKey(parent.name, args!)
+      this.get = (this.get as any).bind(this, args)
+      this.load = (this.load as any).bind(this, args)
     } else {
       this.key = name
     }
@@ -131,7 +129,7 @@ export class StateModule<
 
   /**
    * Synchronously access a specific instance of this module. If such an
-   * instance is not yet loaded, this D will throw.
+   * instance is not yet loaded, this method will throw.
    */
   get(...args: Args): Hydrated {
     return getState(globalCache, this, args)[0]

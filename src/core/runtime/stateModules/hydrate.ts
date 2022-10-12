@@ -1,3 +1,4 @@
+import { klona as deepCopy } from '@/utils/klona'
 import { Cache } from '../cache'
 import type { StateModule } from '../stateModules'
 
@@ -14,7 +15,7 @@ export function hydrateState(
 ) {
   const [state, expiresAt, args] = served
   const hydrate = module['_hydrate']
-  return hydrate ? hydrate(args, state, expiresAt) : state
+  return hydrate ? hydrate(args, deepCopy(state), expiresAt) : state
 }
 
 export function hydrateStateListener(id: string, listener: Cache.Listener) {

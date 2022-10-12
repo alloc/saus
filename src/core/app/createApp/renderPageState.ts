@@ -19,7 +19,7 @@ export const getPageStateFactory = (
     const nestedStateKeys: string[] = []
     const nestedStateAliases: string[] = []
 
-    let code = dataToEsm(clientProps, null, (_, value) => {
+    let code = dataToEsm(clientProps, '', (_, value) => {
       const nestedStateKey = value && value['@import']
       if (nestedStateKey) {
         let index = nestedStateKeys.indexOf(nestedStateKey)
@@ -34,6 +34,21 @@ export const getPageStateFactory = (
     })
 
     const imports = new Map<string, string[]>()
+    const helpers: string[] = []
+
+    if (nestedStateKeys.length) {
+      helpers.push('importState')
+      const idents = nestedStateAliases.join(',' + SPACE)
+      code = `importState(${wrap(
+        nestedStateKeys.map(quoteIndent).join(',' + RETURN),
+        RETURN
+      )}).then(([${idents}]) => (${code}))`
+    } else {
+      // For consistency's sake, always export a promise even if not
+      // required.
+      code = `Promise.resolve(${code})`
+    }
+    code = `export default ` + code
 
     if (props._inlined.length) {
       const inlined = props._inlined.map(loaded => {
@@ -48,26 +63,13 @@ export const getPageStateFactory = (
       })
 
       imports.set(base + ctx.config.clientCacheId, ['setState'])
-      code = wrap(inlined.join('\n'), RETURN) + '\n' + code
+      code = inlined.join('\n') + '\n' + code
     }
 
-    const helpers: string[] = []
-
-    if (nestedStateKeys.length) {
-      helpers.push('importStateModules')
-      const idents = nestedStateAliases.join(',' + SPACE)
+    if (stateModuleKeys.size) {
+      helpers.push('preCacheState')
       code =
-        `const [${idents}] = await importStateModules(${wrap(
-          nestedStateKeys
-            .map(quoteIndent)
-            .concat(Array.from(stateModuleKeys, quoteIndent))
-            .join(',' + RETURN),
-          RETURN
-        )})\n` + code
-    } else if (stateModuleKeys.size) {
-      helpers.push('importStateModules')
-      code =
-        `await importStateModules(${wrap(
+        `await preCacheState(${wrap(
           Array.from(stateModuleKeys, quoteIndent).join(',' + RETURN),
           RETURN
         )})\n` + code

@@ -9,7 +9,6 @@ import { CommonClientProps } from '@/types'
 import { mergeArrays } from '@/utils/array'
 import { ascendBranch } from '@/utils/ascendBranch'
 import { prependBase } from '@/utils/base'
-import { klona as deepCopy } from '@/utils/klona'
 import { noop } from '@/utils/noop'
 import { toArray } from '@saus/deploy-utils'
 import {
@@ -47,13 +46,8 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
         promise = serveState(module).then(served => {
           const [state, expiresAt, args] = served
           if (!wasCached) {
-            const copiedState = deepCopy(state)
-            const hydratedState = hydrateState(
-              key,
-              [copiedState, expiresAt, args],
-              module
-            )
             // Expose the hydrated state to SSR components.
+            const hydratedState = hydrateState(key, served, module)
             globalCache.loaded[key] = [hydratedState, expiresAt, args]
           }
           return {
