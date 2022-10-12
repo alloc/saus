@@ -10,8 +10,11 @@ import { globalCachePath } from '@/paths'
 import { callPlugins } from '@/utils/callPlugins'
 import { throttle } from '@/utils/throttle'
 import { clearExports } from '@/vm/moduleMap'
+import createDebug from 'debug'
 import os from 'os'
 import { createHotReload } from './hotReload'
+
+const debug = createDebug('saus:dev')
 
 export async function createDevApp(
   context: DevContext,
@@ -49,6 +52,9 @@ export async function createDevApp(
   return createApp(
     {
       ...context,
+      profile(type, event) {
+        debug(type, event)
+      },
       config: runtimeConfig,
       onError,
     },
