@@ -87,12 +87,12 @@ export class StateModule<
     args?: readonly any[]
   ) {
     this.name = name
-    if (parent) {
+    if (parent && args) {
       this.parent = parent
       this.args = args
-      this.key = getStateModuleKey(parent.name, args!)
-      this.get = (this.get as any).bind(this, args)
-      this.load = (this.load as any).bind(this, args)
+      this.key = getStateModuleKey(parent.name, args)
+      this.get = (this.get as any).bind(this, ...args)
+      this.load = (this.load as any).bind(this, ...args)
     } else {
       this.key = name
     }
