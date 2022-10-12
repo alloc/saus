@@ -162,7 +162,9 @@ export class StateModule<
     return globalCache.load(key, async cacheControl => {
       const served = await serveState(this, args)
       cacheControl.expiresAt = served[1]
-      return hydrateState(key, served, this)
+      return hydrateState(key, served, this, {
+        deepCopy: true,
+      })
     })
   }
 
