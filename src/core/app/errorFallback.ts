@@ -72,7 +72,9 @@ function createFileLink(file: string, root: string, origin?: string) {
     }
   }
   return (
-    `<a class="file-link" href="/__open-in-editor?file=${encodeURI(file)}">` +
+    `<a class="file-link" target="_blank" href="/__open-in-editor?file=${encodeURI(
+      file
+    )}">` +
     file.replace(new RegExp('^' + root + '/'), '') +
     `</a>`
   )
