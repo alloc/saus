@@ -58,8 +58,8 @@ export interface RouteConfig<
   Params extends object = RouteParams
 > extends RouteStateConfig<Module, Params> {
   /**
-   * Either a file path (relative to the caller) or a function that loads
-   * the entry module for this route.
+   * Either a file path (relative to the caller) or a function that
+   * loads the entry module for this route.
    */
   entry?: string | (() => Promise<Module>)
   layout?: string | (() => Promise<{ default: RouteLayout }>)
@@ -69,14 +69,15 @@ export interface RouteConfig<
    */
   paths?: () => Promisable<readonly StaticPageParams<Params>[]>
   /**
-   * If intermediate state is shared between the `state`, `include`, and/or
-   * `headProps` options, define a `config` function to avoid work duplication.
+   * If intermediate state is shared between the `state`, `include`,
+   * and/or `headProps` options, define a `config` function to avoid
+   * work duplication.
    */
   config?: PageSpecificOption<RouteStateConfig<Module, Params>, Module, Params>
   /**
-   * The route plugin is a runtime module that modifies the route as
-   * it sees fit, such as by adding endpoint functions or mutating
-   * the route configuration. It can even load the route module
+   * The route plugin is a runtime module that modifies the route as it
+   * sees fit, such as by adding endpoint functions or mutating the
+   * route configuration. It can even load the route module
    * ahead-of-time.
    *
    * This is its module ID (relative to the caller).
@@ -113,25 +114,29 @@ interface RouteStateConfig<
   Params extends object = any
 > {
   /**
-   * Load the page props for this route. These props exist during hydration
-   * and are usually provided to the root component on the page.
+   * Load the page props for this route. These props exist during
+   * hydration and are usually provided to the root component on the
+   * page.
    */
   props?: RoutePropsOption<Module, Params>
   /**
    * Declare which state modules are required by this route.
    *
-   * For state modules whose `load` method expects one or more arguments,
-   * you should define those arguments with the `bind` method. If no arguments
-   * are expected, pass the state module without calling any method.
+   * For state modules whose `load` method expects one or more
+   * arguments, you should define those arguments with the `bind`
+   * method. If no arguments are expected, pass the state module without
+   * calling any method.
    */
   include?: RouteIncludeOption<Module, Params>
   /**
-   * Similar to the `include` option, but the state modules' data is declared
-   * inside the "page state module" so no extra HTTP requests are needed.
+   * Similar to the `include` option, but the state modules' data is
+   * declared inside the "page state module" so no extra HTTP requests
+   * are needed.
    */
   inline?: RouteIncludeOption<Module, Params>
   /**
-   * Load or generate state used only when rendering the `<head>` element.
+   * Load or generate state used only when rendering the `<head>`
+   * element.  \
    * This state is never sent to the client.
    */
   headProps?:
@@ -181,8 +186,8 @@ export namespace Route {
   export interface API<Params extends object = any>
     extends Endpoint.Declarators<API<Params>, Params> {
     /**
-     * In the given callback, you can add routes that have this
-     * route's path automatically prepended to theirs.
+     * In the given callback, you can add routes that have this route's
+     * path automatically prepended to theirs.
      */
     extend: (extension: () => void) => API<Params>
   }
@@ -199,8 +204,8 @@ export function matchRoute(path: string, route: ParsedRoute) {
 }
 
 /**
- * Values configurable from the `saus.routes` module defined
- * in your Vite config.
+ * Values configurable from the `saus.routes` module defined in your
+ * Vite config.
  */
 export interface RoutesModule extends HtmlContext {
   /** These hooks are called after the routes module is loaded */
@@ -225,10 +230,11 @@ type RoutePathHandlers = {
 }
 
 /**
- * Using `context.routes` and `context.defaultRoute`, every known path is passed
- * to the `path` handler. The default route generates the `default` path. Routes
- * with dynamic params will be called once per element in their `paths` array,
- * and you still need to call `getPagePath` to get the real path.
+ * Using `context.routes` and `context.defaultRoute`, every known path
+ * is passed to the `path` handler. The default route generates the
+ * `default` path. Routes with dynamic params will be called once per
+ * element in their `paths` array, and you still need to call
+ * `getPagePath` to get the real path.
  */
 export async function generateRoutePaths(
   context: Pick<SausContext, 'routes' | 'defaultRoute' | 'defaultPath'>,
