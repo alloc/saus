@@ -7,15 +7,15 @@ import type { StateModule } from '@/runtime/stateModules'
  */
 export function hydrateState(
   key: string,
-  served: Cache.Entry,
+  served: Cache.Entry<any> & { args: readonly any[] },
   module: StateModule
 ) {
-  const [state, expiresAt, args] = served
   const hydrate = module['_hydrate']
-  const hydratedState = hydrate ? hydrate(args, state, expiresAt) : state
-  globalCache.loaded[key] = [hydratedState, expiresAt, args]
+  const hydratedState = hydrate ? hydrate(served.state, served) : null!
+  const hydrated = hydrate ? { ...served, state: hydratedState } : served
+  globalCache.loaded[key] = hydrated
   globalCache.listeners[module.name]?.forEach(callback =>
-    callback(args, hydratedState, expiresAt)
+    callback(hydratedState, hydrated)
   )
   return hydratedState
 }
@@ -27,8 +27,8 @@ export function hydrateStateListener(id: string, listener: Cache.Listener) {
   const keyPattern = new RegExp(`^${id}(\\.\\d+)?$`)
   for (const key in globalCache.loaded) {
     if (keyPattern.test(key)) {
-      const [state, expiresAt, args] = globalCache.loaded[key]
-      listener(args, state, expiresAt)
+      const entry = globalCache.loaded[key]
+      listener(entry.state, entry)
     }
   }
 }
