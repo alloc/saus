@@ -1,7 +1,7 @@
-import type { App } from '@/app/types'
-import { createCache } from '@/runtime/cache/create'
-import type { MutableRuntimeConfig } from '@/runtime/config'
-import { ssrImport } from '@/runtime/ssrModules'
+import type { App } from '@runtime/app/types'
+import { createCache } from '@runtime/cache/create'
+import type { MutableRuntimeConfig } from '@runtime/config'
+import { ssrImport } from '@runtime/ssrModules'
 import config from './config'
 
 export const context: App.Context = {

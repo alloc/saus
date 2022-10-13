@@ -1,4 +1,4 @@
-import { readJson } from '@/utils/readJson'
+import { readJson } from '@utils/readJson'
 import fs from 'fs'
 import path from 'path'
 

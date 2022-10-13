@@ -1,7 +1,7 @@
-import { defineRoutePlugin } from '@/runtime/routePlugins'
+import { defineRoutePlugin } from '@runtime/routePlugins'
 import etag from 'etag'
 import * as mime from 'mrmime'
-import { Endpoint } from '../../core/endpoint'
+import { Endpoint } from '../../core/runtime/endpoint'
 import { loadAsset, loadModule } from '../runtime/bundle/clientStore'
 
 type Params = { wild: string }

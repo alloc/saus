@@ -1,5 +1,5 @@
 import { Promisable } from 'type-fest'
-import { RenderRequest } from '../renderer'
+import { RenderRequest } from './renderer'
 
 export interface ClientHooks {
   /** This layout is about to be hydrated. */

@@ -7,8 +7,6 @@ import {
   moduleRedirection,
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
-import { assignDefaults } from '@/utils/assignDefaults'
-import { plural } from '@/utils/plural'
 import {
   BundleConfig,
   BundleConfigDefaults,
@@ -16,6 +14,8 @@ import {
   vite,
 } from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
+import { assignDefaults } from '@utils/assignDefaults'
+import { plural } from '@utils/plural'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'

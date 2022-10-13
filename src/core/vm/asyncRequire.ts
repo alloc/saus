@@ -1,4 +1,4 @@
-import { toDebugPath } from '@/node/toDebugPath'
+import { toDebugPath } from '@utils/node/toDebugPath'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'

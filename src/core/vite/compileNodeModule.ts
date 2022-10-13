@@ -1,4 +1,4 @@
-import { toArray } from '@/utils/array'
+import { toArray } from '@utils/array'
 import chokidar from 'chokidar'
 import * as convertSourceMap from 'convert-source-map'
 import * as esbuild from 'esbuild'

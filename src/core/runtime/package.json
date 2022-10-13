@@ -1,0 +1,15 @@
+{
+  "name": "@saus/runtime",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rimraf dist && tsc --incremental -p .",
+    "dev": "rimraf dist && tsc --incremental -p . --watch --sourcemap"
+  },
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.mjs",
+      "default": "./dist/*.js"
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import type { Buffer } from '../client/buffer'
+import type { Buffer } from '../utils/buffer'
 import type { ResponseHeaders } from './headers'
 import { normalizeHeaders } from './normalizeHeaders'
 

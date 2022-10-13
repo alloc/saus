@@ -1,5 +1,5 @@
 import type { Route } from '@/routes'
-import { parseLazyImport } from '@/utils/parseLazyImport'
+import { parseLazyImport } from '@utils/parseLazyImport'
 import path from 'path'
 
 export function getLayoutEntry(

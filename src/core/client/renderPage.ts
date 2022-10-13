@@ -1,7 +1,7 @@
-import { getPagePath } from '../utils/getPagePath'
+import { getPagePath } from '../runtime/getPagePath'
+import type { RouteParams } from '../runtime/types/clientTypes'
 import { loadPageClient, PageClient } from './pageClient'
 import { prependBase } from './prependBase'
-import type { RouteParams } from './types'
 
 export async function renderPage<RenderResult = any>(
   routePath: string,

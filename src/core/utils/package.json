@@ -1,4 +1,8 @@
 {
   "name": "@saus/utils",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p .",
+    "dev": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p . --watch --sourcemap"
+  }
 }

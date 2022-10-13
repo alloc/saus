@@ -1,4 +1,4 @@
-import { noop } from '@/utils/noop'
+import { noop } from '@utils/noop'
 import { getNodeModule, unloadNodeModule } from './nodeModules'
 import { CompiledModule, isLinkedModule, LinkedModule } from './types'
 

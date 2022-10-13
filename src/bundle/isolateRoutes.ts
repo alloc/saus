@@ -1,17 +1,21 @@
 import { babel } from '@/babel'
 import { vite } from '@/core'
-import { relativeToCwd } from '@/node/relativeToCwd'
-import { servedPathForFile } from '@/node/servedPathForFile'
-import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { createModuleProvider } from '@/plugins/moduleProvider'
 import { renderRouteEntry } from '@/routeEntries'
-import { bareImportRE, relativePathRE } from '@/utils/importRegex'
-import { plural } from '@/utils/plural'
 import { getViteFunctions } from '@/vite/functions'
 import { compileEsm, exportsId, requireAsyncId } from '@/vm/compileEsm'
 import { ForceLazyBindingHook } from '@/vm/types'
 import { codeFrameColumns } from '@babel/code-frame'
 import { createFilter } from '@rollup/pluginutils'
+import { bareImportRE, relativePathRE } from '@utils/importRegex'
+import { relativeToCwd } from '@utils/node/relativeToCwd'
+import { servedPathForFile } from '@utils/node/servedPathForFile'
+import {
+  loadSourceMap,
+  resolveMapSources,
+  SourceMap,
+} from '@utils/node/sourceMap'
+import { plural } from '@utils/plural'
 import builtinModules from 'builtin-modules'
 import escalade from 'escalade/sync'
 import fs from 'fs'

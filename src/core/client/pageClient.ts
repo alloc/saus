@@ -1,5 +1,5 @@
-import { getPagePath } from '@/utils/getPagePath'
-import { AnyToObject } from '@/utils/types'
+import { getPagePath } from '@utils/getPagePath'
+import { AnyToObject } from '@utils/types'
 import type { CommonClientProps, RouteParams } from '../core'
 import { RouteEntry } from '../routeEntries'
 import { noop } from '../utils/noop'

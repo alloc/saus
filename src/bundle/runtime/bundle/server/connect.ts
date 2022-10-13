@@ -1,4 +1,4 @@
-import { Promisable } from '@/utils/types'
+import { Promisable } from '@utils/types'
 import EventEmitter from 'events'
 import http from 'http'
 

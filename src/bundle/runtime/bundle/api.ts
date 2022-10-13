@@ -1,7 +1,7 @@
 // Overrides "saus/bundle" entry in SSR bundles
 export { setResponseCache } from '@/http/responseCache'
-export { printFiles } from '@/node/printFiles'
-export { ssrImport, __d as ssrDefine } from '@/runtime/ssrModules'
+export { ssrImport, __d as ssrDefine } from '@runtime/ssrModules'
+export { printFiles } from '@utils/node/printFiles'
 export { createApp as default } from './app'
 export { loadAsset, loadModule } from './clientStore'
 export { default as config } from './config'

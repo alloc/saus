@@ -1,4 +1,4 @@
-import { Endpoint } from './endpoint'
+import { Endpoint } from './runtime/endpoint'
 import { routesModule } from './runtime/global'
 
 export function onRequest(hook: Endpoint.RequestHook): void

@@ -32,5 +32,4 @@ export default defineConfig({
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
   noExternal: ['@'],
   define: { __VERSION__: JSON.stringify(pkgJson.version) },
-  clean: true,
 })

@@ -1,5 +1,5 @@
-import { murmurHash } from '@/utils/murmur3'
-import { sortObjects } from '@/utils/sortObjects'
+import { murmurHash } from '@utils/murmur3'
+import { sortObjects } from '@utils/sortObjects'
 import { StateModule } from './stateModules'
 
 export function getStateModuleKey(module: StateModule<any, []>): string

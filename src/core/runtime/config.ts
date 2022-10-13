@@ -1,5 +1,5 @@
-import type { App, ProfiledEventHandler } from '../app/types'
-import { Falsy, OneOrMany } from '../utils/types'
+import { Falsy, OneOrMany } from '@utils/types'
+import type { App, ProfiledEventHandler } from './app/types'
 
 export interface RuntimeConfig {
   appVersion?: string

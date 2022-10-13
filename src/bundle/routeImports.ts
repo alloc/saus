@@ -1,4 +1,4 @@
-import { servedPathForFile } from '@/node/servedPathForFile'
+import { servedPathForFile } from '@utils/node/servedPathForFile'
 import * as esModuleLexer from 'es-module-lexer'
 import { BundleContext } from './context'
 

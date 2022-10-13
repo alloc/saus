@@ -1,6 +1,6 @@
-import { globalCache } from '@/runtime/cache'
+import { globalCache } from '@runtime/cache'
 import type { DevContext } from '../../context'
-import { getPagePath } from '../../utils/getPagePath'
+import { getPagePath } from '../../runtime/getPagePath'
 import type { PageClient } from '../pageClient'
 
 export async function loadPageClient(routePath: string, routeParams?: any) {

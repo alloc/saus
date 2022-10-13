@@ -1,5 +1,5 @@
-import { toObjectHash } from '@/utils/objectHash'
 import { omitKeys } from '@saus/deploy-utils'
+import { toObjectHash } from '@utils/objectHash'
 import { DeployPlugin, DeployTarget, DeployTargetId } from './types'
 
 export function omitEphemeral(

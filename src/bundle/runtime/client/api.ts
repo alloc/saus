@@ -1,5 +1,5 @@
 import { BASE_URL, isDebug } from '@/client/baseUrl'
-import { prependBase as prepend } from '@/utils/base'
+import { prependBase as prepend } from '@utils/base'
 
 export * from '@/client/node/api'
 export { default as routes } from '@/client/routes'

@@ -1,4 +1,4 @@
-import { deployedEnv } from '@/runtime/deployedEnv'
+import { deployedEnv } from '@runtime/deployedEnv'
 import type { SecretMap } from '../../secrets/types'
 
 export function defineSecrets(secrets: SecretMap) {

@@ -1,14 +1,13 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["core/client"],
+  "exclude": ["core/client", "core/runtime", "core/utils"],
   "compilerOptions": {
     "composite": true,
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["es2019"],
     "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmit": true,
+    "moduleResolution": "node16",
     "noUnusedLocals": true,
     "outDir": "../dist",
     "skipLibCheck": true,

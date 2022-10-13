@@ -1,5 +1,5 @@
-import { Endpoint } from '../endpoint'
-import { unwrapBuffer } from '../node/buffer'
+import { Endpoint } from '@runtime/endpoint'
+import { unwrapBuffer } from '@utils/buffer'
 
 export function unwrapBody(body: Endpoint.AnyBody) {
   return body.stream

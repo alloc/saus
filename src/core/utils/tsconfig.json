@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["**/*.ts", "../runtime/imports.ts"],
+  "exclude": [],
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+, "../runtime/getPagePath.ts"    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  }
+}

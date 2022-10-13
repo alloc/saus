@@ -1,4 +1,4 @@
-import { dedupe } from '@/utils/dedupe'
+import { dedupe } from '@utils/dedupe'
 import { SausContext } from './context'
 
 export async function getEntryModules(context: SausContext) {

@@ -1,11 +1,5 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
-import { globalCache, stateModulesByName } from '@/runtime/cache'
-import { stateModulesByFile } from '@/runtime/stateModules/global'
-import { serveCache } from '@/runtime/stateModules/serve'
-import { prependBase } from '@/utils/base'
-import { defer, Deferred } from '@/utils/defer'
-import { take } from '@/utils/take'
 import { isLiveModule } from '@/vm/isLiveModule'
 import {
   PurgeHandler,
@@ -13,6 +7,12 @@ import {
   unloadModuleAndImporters,
 } from '@/vm/moduleMap'
 import { CompiledModule, isLinkedModule, LinkedModule } from '@/vm/types'
+import { globalCache, stateModulesByName } from '@runtime/cache'
+import { stateModulesByFile } from '@runtime/stateModules/global'
+import { serveCache } from '@runtime/stateModules/serve'
+import { prependBase } from '@utils/base'
+import { defer, Deferred } from '@utils/defer'
+import { take } from '@utils/take'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'

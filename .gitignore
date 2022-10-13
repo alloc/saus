@@ -5,5 +5,6 @@ node_modules
 starters
 vendor
 dist
+!dist/package.json
 .vscode/pinned-files.json
 .tsbuildinfo

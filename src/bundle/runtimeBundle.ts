@@ -1,10 +1,14 @@
-import { CompileCache } from '@/node/compileCache'
-import { relativeToCwd } from '@/node/relativeToCwd'
-import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
 import { bundleDir, httpDir, toSausPath } from '@/paths'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { vite } from '@/vite'
 import remapping from '@ampproject/remapping'
+import { CompileCache } from '@utils/node/compileCache'
+import { relativeToCwd } from '@utils/node/relativeToCwd'
+import {
+  loadSourceMap,
+  resolveMapSources,
+  SourceMap,
+} from '@utils/node/sourceMap'
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
 import fs from 'fs'

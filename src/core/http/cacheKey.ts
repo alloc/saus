@@ -1,4 +1,4 @@
-import { murmurHash } from '@/utils/murmur3'
+import { murmurHash } from '@utils/murmur3'
 import { Headers } from './headers'
 
 /**

@@ -1,4 +1,4 @@
-import { prependBase } from '@/utils/base'
+import { prependBase } from '@utils/base'
 import endent from 'endent'
 import path from 'path'
 import { babel, t } from './babel'

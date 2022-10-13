@@ -1,6 +1,6 @@
 import { clientPreloadsMarker } from '@/routeClients'
 import { RETURN } from '@/tokens'
-import { dataToEsm } from '@/utils/dataToEsm'
+import { dataToEsm } from '@utils/dataToEsm'
 
 export function injectClientPreloads(
   code: string,

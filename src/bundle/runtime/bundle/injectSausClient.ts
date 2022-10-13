@@ -1,4 +1,4 @@
-import { __d } from '@/runtime/ssrModules'
+import { __d } from '@runtime/ssrModules'
 import * as clientExports from '../client/api'
 
 /**

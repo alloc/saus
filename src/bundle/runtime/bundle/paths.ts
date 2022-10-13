@@ -1,6 +1,6 @@
 import { generateRoutePaths } from '@/routes'
-import { ssrImport } from '@/runtime/ssrModules'
-import { getPagePath } from '@/utils/getPagePath'
+import { ssrImport } from '@runtime/ssrModules'
+import { getPagePath } from '@utils/getPagePath'
 import config from './config'
 import { context } from './context'
 

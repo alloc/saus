@@ -1,6 +1,6 @@
 import assert from 'assert'
 import { SausContext } from './context'
-import { Route } from './routes'
+import { Route } from './runtime/routeTypes'
 import { murmurHash } from './utils/murmur3'
 
 export interface RouteRenderer {

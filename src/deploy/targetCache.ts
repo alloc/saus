@@ -1,4 +1,4 @@
-import { deployedEnv } from '@/runtime/deployedEnv'
+import { deployedEnv } from '@runtime/deployedEnv'
 import { exec } from '@saus/deploy-utils'
 import assert from 'assert'
 import { startTask } from 'misty/task'

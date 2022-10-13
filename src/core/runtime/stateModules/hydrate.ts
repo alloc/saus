@@ -1,4 +1,4 @@
-import { klona as deepCopy } from '@/utils/klona'
+import { klona as deepCopy } from '@utils/klona'
 import { Cache } from '../cache'
 import type { StateModule } from '../stateModules'
 

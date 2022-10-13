@@ -1,4 +1,4 @@
-import { toArray } from '@/utils/array'
+import { toArray } from '@utils/array'
 import { green } from 'kleur/colors'
 import { join } from 'path'
 import { plural } from '../api'

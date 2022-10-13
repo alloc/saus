@@ -1,5 +1,5 @@
 import http, { Agent } from 'http'
-import type { Endpoint } from '../endpoint'
+import type { Endpoint } from '../runtime/endpoint'
 import { httpMethods } from '../utils/httpMethods'
 import type { RequestHeaders } from './headers'
 

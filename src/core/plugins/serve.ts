@@ -1,4 +1,4 @@
-import { stripHtmlSuffix } from '@/utils/stripHtmlSuffix'
+import { stripHtmlSuffix } from '@utils/stripHtmlSuffix'
 import { IncomingMessage, ServerResponse } from 'http'
 import os from 'os'
 import { renderErrorFallback } from '../app/errorFallback'

@@ -1,5 +1,7 @@
 packages:
   - 'src'
+  - 'src/core/runtime'
+  - 'src/core/utils/dist'
   - 'packages/*'
   - 'packages/aws/*'
   - 'packages/cloudflare/*'

@@ -1,5 +1,5 @@
-import { preHydrateCache, stateModulesByName } from '@/runtime/cache'
-import type { StateModule } from '@/runtime/stateModules'
+import { preHydrateCache, stateModulesByName } from '@runtime/cache'
+import type { StateModule } from '@runtime/stateModules'
 import { hydrateState } from './hydrate'
 
 export function trackStateModule(module: StateModule) {

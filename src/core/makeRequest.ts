@@ -1,7 +1,7 @@
 import { emptyHeaders } from './app/constants'
-import type { Endpoint } from './endpoint'
 import type { RequestHeaders } from './http'
 import { ParsedUrl } from './node/url'
+import type { Endpoint } from './runtime/endpoint'
 import { assignDefaults } from './utils/assignDefaults'
 import { defer } from './utils/defer'
 

@@ -1,5 +1,5 @@
-import { Cache, globalCache } from '@/runtime/cache'
-import type { StateModule } from '@/runtime/stateModules'
+import { Cache, globalCache } from '@runtime/cache'
+import type { StateModule } from '@runtime/stateModules'
 
 /**
  * Hydrate the data served for a state module, and inject it into the

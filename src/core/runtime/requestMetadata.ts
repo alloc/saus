@@ -1,5 +1,5 @@
 import type { RenderedPage } from '../app/types'
-import type { Endpoint } from '../endpoint'
+import type { Endpoint } from './endpoint'
 
 /**
  * Custom metadata about an `Endpoint.Request` object

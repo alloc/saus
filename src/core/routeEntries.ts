@@ -1,8 +1,8 @@
 import endent from 'endent'
 import type { RouteRenderer } from './routeRenderer'
-import type { RouteModule } from './routes'
+import { dataToEsm } from './runtime/dataToEsm'
 import type { RouteLayout } from './runtime/layouts'
-import { dataToEsm } from './utils/dataToEsm'
+import type { RouteModule } from './runtime/routeTypes'
 import { AnyToObject } from './utils/types'
 
 /**

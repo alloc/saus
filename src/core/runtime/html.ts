@@ -1,5 +1,5 @@
-import { escape } from '../utils/escape'
-import { Falsy } from '../utils/types'
+import { escape } from '@utils/escape'
+import { Falsy } from '@utils/types'
 
 export function html(
   staticHtml: TemplateStringsArray,

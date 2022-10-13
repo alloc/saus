@@ -1,6 +1,6 @@
 import type { Plugin, UserConfig } from '@/core'
 import type { TestPlugin } from '@/testPlugin'
-import { unwrapDefault } from '@/utils/unwrapDefault'
+import { unwrapDefault } from '@utils/unwrapDefault'
 import { fatal } from 'misty'
 import { command } from '../command'
 

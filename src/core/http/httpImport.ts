@@ -1,10 +1,10 @@
+import { unwrapBuffer } from '@utils/buffer'
+import { emptyDir } from '@utils/node/emptyDir'
+import { lazyImport } from '@utils/node/lazyImport'
 import fs from 'fs'
 import os from 'os'
 import { join } from 'path'
 import { URL } from 'url'
-import { unwrapBuffer } from '../node/buffer'
-import { emptyDir } from '../node/emptyDir'
-import { lazyImport } from '../node/lazyImport'
 import { get } from './get'
 
 export async function httpImport(url: string) {

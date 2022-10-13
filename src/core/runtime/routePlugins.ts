@@ -1,5 +1,5 @@
 import { Promisable } from 'type-fest'
-import { Route, RouteConfig, RouteModule } from '../routes'
+import { Route, RouteConfig, RouteModule } from './routeTypes'
 
 export type RoutePlugin<
   Module extends object = any,

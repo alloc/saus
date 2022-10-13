@@ -1,4 +1,4 @@
-import { getStackFrame } from '@/node/stack/getStackFrame'
+import { getStackFrame } from '@utils/node/stack/getStackFrame'
 import { stateModulesByName } from '../cache'
 import type { StateModule } from '../stateModules'
 

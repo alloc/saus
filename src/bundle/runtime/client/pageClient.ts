@@ -1,7 +1,7 @@
-import { globalCache } from '@/runtime/cache'
-import { ssrImport } from '@/runtime/ssrModules'
-import { baseToRegex } from '@/utils/base'
-import { getPagePath } from '@/utils/getPagePath'
+import { globalCache } from '@runtime/cache'
+import { ssrImport } from '@runtime/ssrModules'
+import { baseToRegex } from '@utils/base'
+import { getPagePath } from '@utils/getPagePath'
 import config from '../bundle/config'
 import routes from '../bundle/routes'
 

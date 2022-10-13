@@ -1,7 +1,7 @@
 import * as kleur from 'kleur/colors'
-import { Endpoint } from '../endpoint'
 import { onRequest, onResponse } from '../endpointHooks'
 import type { Headers } from '../http'
+import { Endpoint } from '../runtime/endpoint'
 import { setup } from '../runtime/setup'
 import { Falsy } from '../utils/types'
 

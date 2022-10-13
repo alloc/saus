@@ -3,7 +3,7 @@ import type { GetOptions } from '../../http/get'
 import type { Headers } from '../../http/headers'
 import { normalizeHeaders } from '../../http/normalizeHeaders'
 import { Response } from '../../http/response'
-import { Buffer } from '../buffer'
+import { Buffer } from '../../utils/buffer'
 
 export async function get(url: string, options?: GetOptions) {
   let signal: AbortSignal | undefined

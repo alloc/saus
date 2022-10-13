@@ -1,5 +1,8 @@
 {
   "name": "@saus/vm",
-  "private": true,
-  "main": "./index.ts"
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rimraf dist && tsup",
+    "dev": "rimraf dist && tsup --watch --sourcemap"
+  }
 }

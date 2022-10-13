@@ -1,5 +1,5 @@
-import { BufferLike, RenderedFile } from '@/app'
 import { Headers, HttpRedirect, normalizeHeaders } from '@/http'
+import { BufferLike, RenderedFile } from '@runtime/app'
 import QuickLRU, { Options } from 'quick-lru'
 
 type BoundHeadersFn = () => Headers | null | undefined

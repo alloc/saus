@@ -1,6 +1,6 @@
-import { createCache } from '@/runtime/cache/create'
+import { createCache } from '@runtime/cache/create'
+import { noop } from '@utils/noop'
 import createDebug from 'debug'
-import { noop } from '../utils/noop'
 
 const debug = createDebug('saus:ssr')
 

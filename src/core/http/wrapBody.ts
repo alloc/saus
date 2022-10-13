@@ -1,5 +1,5 @@
-import { Endpoint } from '../endpoint'
-import { Buffer, unwrapBuffer } from '../node/buffer'
+import { Endpoint } from '@runtime/endpoint'
+import { Buffer, unwrapBuffer } from '@utils/buffer'
 
 export function wrapBody<T>(body: T): ToBody<T>
 export function wrapBody(body: any): Endpoint.Body | undefined

@@ -1,6 +1,6 @@
-import { toDebugPath } from '@/node/toDebugPath'
-import { noop } from '@/utils/noop'
 import { upsertPlugin } from '@/vite/upsertPlugin'
+import { toDebugPath } from '@utils/node/toDebugPath'
+import { noop } from '@utils/noop'
 import * as esModuleLexer from 'es-module-lexer'
 import kleur from 'kleur'
 import MagicString from 'magic-string'
