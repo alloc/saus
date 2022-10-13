@@ -6,6 +6,17 @@ const moduleMaps = new WeakMap<CompiledModule, ModuleMap>()
 
 export class ModuleMap extends Map<string, CompiledModule> {
   promises = new Map<string, Promise<CompiledModule | null>>()
+
+  setPromise(
+    moduleId: string,
+    promise: Promise<CompiledModule>
+  ): Promise<CompiledModule>
+
+  setPromise(
+    moduleId: string,
+    promise: Promise<CompiledModule | null>
+  ): Promise<CompiledModule | null>
+
   setPromise(moduleId: string, promise: Promise<CompiledModule | null>) {
     this.promises.set(moduleId, promise)
     promise.then(module => {
