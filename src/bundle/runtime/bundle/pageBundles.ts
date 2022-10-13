@@ -1,6 +1,7 @@
 import { App } from '@/app/types'
 import { makeRequestUrl } from '@/makeRequest'
 import { parseUrl } from '@/node/url'
+import { toExpirationTime } from '@/runtime/cache/expiration'
 import { RuntimeConfig } from '@/runtime/config'
 import { getLayoutEntry } from '@/runtime/getLayoutEntry'
 import { renderPageScript } from '@/runtime/renderPageScript'
@@ -9,9 +10,10 @@ import { getPageFilename } from '@/utils/getPageFilename'
 import { isExternalUrl } from '@/utils/isExternalUrl'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { Promisable } from 'type-fest'
+import { CommonServerProps } from '../../../core/app/types'
 import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
-import { applyHtmlProcessors } from '../core/api'
+import { applyHtmlProcessors, CachePlugin } from '../core/api'
 import clientEntries from './clientEntries'
 import clientStyles from './clientStyles'
 import { context } from './context'
@@ -122,18 +124,14 @@ export const providePageBundles: App.Plugin = app => {
 
       // State modules are not renamed for debug view.
       for (const loaded of [...page.props._included].reverse()) {
-        const { module } = loaded
-        const stateModuleUrl = stateModuleBase + module.key + '.js'
-        const stateModuleText = app.renderStateModule(
-          module.name,
-          module.args || [],
-          loaded.state,
-          loaded.expiresAt
-        )
+        const { key, name } = loaded.stateModule
+        const stateModuleUrl = stateModuleBase + key + '.js'
+        const stateModuleText = app.renderStateModule(name, loaded)
         page.files.push({
           id: stateModuleUrl,
           data: stateModuleText,
           mime: 'application/javascript',
+          expiresAt: toExpirationTime(loaded, undefined),
         })
       }
 
@@ -206,13 +204,18 @@ export const providePageBundles: App.Plugin = app => {
           }
         }
 
-        // The page's state module is rendered after HTML post processors
-        // run to ensure all <link> tags are included.
+        // The page's state module is rendered after HTML post
+        // processors run to ensure all <link> tags are included.
         if (pageStateId) {
+          const pageProps = page.props as CommonServerProps
           files.push({
             id: pageStateId,
             data: app.renderPageState(page),
             mime: 'application/javascript',
+            expiresAt:
+              pageProps._maxAge != null
+                ? pageProps._ts + pageProps._maxAge
+                : undefined,
           })
         }
 
@@ -232,6 +235,9 @@ export const providePageBundles: App.Plugin = app => {
           getPreloadTagsForModules([config.base + pageStateId], headTags)
           html = injectToHead(html, headTags)
         }
+
+        // Wait for pending cache updates that the page may depend on.
+        await Promise.all(CachePlugin.pendingPuts.values())
 
         const finishedPage: PageBundle = {
           id: filename,

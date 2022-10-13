@@ -13,14 +13,14 @@ export function renderPageScript(opts: {
   // on page state). This won't delay page hydration, since the route
   // client is pre-loaded in the <head> element.
   return endent`
-    import pageStatePromise from "${opts.pageStateId}"
+    import pagePropsPromise from "${opts.pageStateId}"
     import * as Saus from "${opts.sausClientId}"
 
     Promise.all([
       import("${opts.routeClientId}"),
-      pageStatePromise,
-    ]).then(([client, pageState]) => {
-      Saus.hydrate(client, pageState, document.getElementById("root"))${
+      pagePropsPromise,
+    ]).then(([client, pageProps]) => {
+      Saus.hydrate(client, pageProps, document.getElementById("root"))${
         opts.catchHandler ? `.catch(${opts.catchHandler})` : ``
       }
     })

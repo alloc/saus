@@ -1,6 +1,6 @@
 import { Promisable } from 'type-fest'
 import { NoInfer } from '../utils/types'
-import { Cache, CacheControl, globalCache, setState } from './cache'
+import { Cache, globalCache, setState } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { getState } from './stateModules/get'
 import { trackStateModule } from './stateModules/global'
@@ -132,22 +132,27 @@ export class StateModule<
    * instance is not yet loaded, this method will throw.
    */
   get(...args: Args): Hydrated {
-    return getState(globalCache, this, args)[0]
+    return getState(globalCache, this, args).state
   }
 
   /**
    * Manually update the cache for a specific instance of this module.
    */
-  set(args: Args, state: Served, expiresAt?: Cache.EntryExpiration): void {
-    setState(this.name, args, state, expiresAt)
+  set(
+    args: Args,
+    state: Served,
+    timestamp = Date.now(),
+    maxAge?: Cache.MaxAge
+  ): void {
+    setState(this.name, args, state, timestamp, maxAge)
   }
 
   /**
    * Load the served data for this module. This data won't be hydrated.
    */
   async serve(...args: Args): Promise<Served> {
-    const [state] = await serveState(this, args)
-    return state
+    const served = await serveState(this, { args })
+    return served.state
   }
 
   /**
@@ -159,9 +164,9 @@ export class StateModule<
    */
   async load(...args: Args): Promise<Hydrated> {
     const key = getStateModuleKey(this.key, args)
-    return globalCache.load(key, async cacheControl => {
-      const served = await serveState(this, args)
-      cacheControl.expiresAt = served[1]
+    return globalCache.load(key, async entry => {
+      const served = await serveState(this, { args })
+      entry.maxAge = served.maxAge ?? Infinity
       return hydrateState(key, served, this, {
         deepCopy: true,
       })
@@ -201,7 +206,7 @@ export namespace StateModule {
   }
 
   export type ServeFunction<T = any, Args extends readonly any[] = any> = (
-    this: CacheControl<T>,
+    this: Cache.EntryContext<T>,
     ...args: Args
   ) => Promisable<T>
 
@@ -213,13 +218,13 @@ export namespace StateModule {
     this: void,
     args: Args,
     state: Served,
-    expiresAt: Cache.EntryExpiration
+    expiresAt: Cache.MaxAge
   ) => Hydrated
 
   export type LoadListener = { dispose: () => void }
   export type LoadCallback<T = any, Args extends readonly any[] = any> = (
     args: Args,
     state: T,
-    expiresAt?: Cache.EntryExpiration
+    expiresAt?: Cache.MaxAge
   ) => void
 }

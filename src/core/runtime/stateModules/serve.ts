@@ -1,6 +1,5 @@
 import createDebug from 'debug'
-import { Cache, CacheControl, createCache } from '../cache'
-import { CachePlugin } from '../cachePlugin'
+import { Cache, createCache } from '../cache'
 import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
 
@@ -14,43 +13,22 @@ const debug = createDebug('saus:state')
 export const serveCache = createCache()
 
 export function serveState<T>(
-  module: StateModule<any, [], T>
-): Cache.EntryPromise<T>
-
-export function serveState<T, Args extends readonly any[]>(
-  module: StateModule<any, Args, T>,
-  args: Args
-): Cache.EntryPromise<T>
-
-export function serveState(
-  module: StateModule,
-  args: readonly any[] = module.args || []
-) {
+  module: StateModule<any, any, T>,
+  options: Cache.AccessOptions = {}
+): Cache.EntryPromise<T> {
+  const args = options.args || module.args || []
   const key = getStateModuleKey(module, args)
-  const loadStateModule = async (cacheControl: CacheControl) => {
+  const loadStateModule = async (entry: Cache.EntryContext<T>) => {
     debug(`Loading "%s" state with arguments:`, key, args)
-    const timestamp = Date.now()
     try {
-      let result: any
-      if (CachePlugin.loader) {
-        result = await CachePlugin.loader(key, cacheControl)
-      }
-      if (result === undefined) {
-        result = module['_serve']!.apply(cacheControl, args as any)
-        if (result && typeof result.then == 'function') {
-          result = await result
-        }
-        if (CachePlugin.put) {
-          const expiresAt = Date.now() + cacheControl.maxAge * 1e3
-          // TODO: delay the response so page rendering doesn't have to
-          // wait for upload unnecessarily
-          await CachePlugin.put(key, result, expiresAt)
-        }
+      let result: any = module['_serve']!.apply(entry, args as any)
+      if (result && typeof result.then == 'function') {
+        result = await result
       }
       debug(
         `Loaded "%s" state in %ss`,
         key,
-        ((Date.now() - timestamp) / 1e3).toFixed(3)
+        ((Date.now() - entry.timestamp) / 1e3).toFixed(3)
       )
       return result
     } catch (error: any) {
@@ -62,6 +40,8 @@ export function serveState(
 
   return serveCache.access(key, loadStateModule, {
     deepCopy: true,
+    ...options,
+    stateModule: module,
     args,
   })
 }

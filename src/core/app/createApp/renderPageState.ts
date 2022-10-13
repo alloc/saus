@@ -11,15 +11,25 @@ export const getPageStateFactory = (
     const { path, props, head } = page
     const { base } = ctx.config
 
+    const maxAge = [...props._inlined, ...props._included].reduce(
+      (maxAge, module) =>
+        module.maxAge == null
+          ? maxAge
+          : maxAge == null
+          ? module.maxAge
+          : Math.min(maxAge, module.maxAge),
+      (props as CommonServerProps)._maxAge
+    )
+
     const clientProps = (props as CommonServerProps)._clientProps
     const stateModuleKeys = new Set(
-      props._included.map(loaded => loaded.module.key)
+      props._included.map(loaded => loaded.stateModule.key)
     )
 
     const nestedStateKeys: string[] = []
     const nestedStateAliases: string[] = []
 
-    let code = dataToEsm(clientProps, '', (_, value) => {
+    const pagePropsExpr = dataToEsm(clientProps, '', (_, value) => {
       const nestedStateKey = value && value['@import']
       if (nestedStateKey) {
         let index = nestedStateKeys.indexOf(nestedStateKey)
@@ -33,6 +43,10 @@ export const getPageStateFactory = (
       }
     })
 
+    let code = `setState("${page.path}", [], ${pagePropsExpr}, ${
+      (props as CommonServerProps)._ts
+    }${maxAge == null ? '' : `, ${maxAge}`})`
+
     const imports = new Map<string, string[]>()
     const helpers: string[] = []
 
@@ -42,7 +56,7 @@ export const getPageStateFactory = (
       code = `importState(${wrap(
         nestedStateKeys.map(quoteIndent).join(',' + RETURN),
         RETURN
-      )}).then(([${idents}]) => (${code}))`
+      )}).then(([${idents}]) => ${code})`
     } else {
       // For consistency's sake, always export a promise even if not
       // required.
@@ -52,14 +66,8 @@ export const getPageStateFactory = (
 
     if (props._inlined.length) {
       const inlined = props._inlined.map(loaded => {
-        const { module } = loaded
-        return app.renderStateModule(
-          module.name,
-          module.args || [],
-          loaded.state,
-          loaded.expiresAt,
-          true
-        )
+        const { name } = loaded.stateModule
+        return app.renderStateModule(name, loaded, true)
       })
 
       imports.set(base + ctx.config.clientCacheId, ['setState'])

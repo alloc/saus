@@ -1,4 +1,5 @@
 import { globalCache } from '@/runtime/cache'
+import { toExpirationTime } from '@/runtime/cache/expiration'
 import { getPageFilename } from '../utils/getPageFilename'
 import { AnyToObject } from '../utils/types'
 import { unwrapDefault } from '../utils/unwrapDefault'
@@ -15,16 +16,14 @@ export function loadPageState<Props extends object = any>(
   return Promise.resolve(globalCache.access(pagePath))
     .then(cached => {
       if (cached) {
-        const [state, expiresAt] = cached
-        if (expiresAt == null || expiresAt > timestamp) {
-          return state as any
+        const expiresAt = toExpirationTime(cached)
+        if (expiresAt > timestamp) {
+          return cached.state as any
         }
       }
-      return globalCache.load(pagePath, async () => {
-        return unwrapDefault(
-          await import(/* @vite-ignore */ moduleUrl + '?t=' + timestamp)
-        )
-      })
+      return import(/* @vite-ignore */ moduleUrl + '?t=' + timestamp).then(
+        unwrapDefault
+      )
     })
     .catch(error => {
       const reason = error.message

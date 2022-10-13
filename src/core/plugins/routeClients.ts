@@ -5,7 +5,7 @@ import { collectCss } from '@/vite/collectCss'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { CommonServerProps } from '../app/types'
 import { DevContext } from '../context'
-import { Plugin, RuntimeConfig, vite } from '../core'
+import { CachePlugin, Plugin, RuntimeConfig, vite } from '../core'
 import { debug } from '../debug'
 import { RouteClients } from '../routeClients'
 import { renderRouteEntry } from '../routeEntries'
@@ -78,7 +78,7 @@ export function routeClientsPlugin(): Plugin {
           sausClientId,
           ...[...page.props._inlined, ...page.props._included].map(loaded =>
             prependBase(
-              config.stateModuleBase + loaded.module.key + '.js',
+              config.stateModuleBase + loaded.stateModule.key + '.js',
               base
             )
           ),
@@ -146,6 +146,9 @@ export function routeClientsPlugin(): Plugin {
             })
           )
         )
+
+        // Wait for pending cache updates that the page may depend on.
+        await Promise.all(CachePlugin.pendingPuts.values())
 
         tags.push(...injectedStyles)
         return tags

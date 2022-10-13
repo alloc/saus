@@ -29,10 +29,11 @@ export function setState<Args extends readonly any[]>(
   name: string,
   args: Args,
   state: any,
-  expiresAt?: Cache.EntryExpiration
+  timestamp: number,
+  maxAge?: Cache.MaxAge
 ): any {
   const key = getStateModuleKey(name, args)
-  const served: Cache.Entry = [state, expiresAt, args]
+  const served: Cache.Entry = { state, args, timestamp, maxAge }
   const module = stateModulesByName.get(name)
   if (module) {
     hydrateState(key, served, module)
@@ -42,6 +43,5 @@ export function setState<Args extends readonly any[]>(
   return state
 }
 
-export type { CacheControl } from './cache/cacheControl'
 export type { Cache } from './cache/types'
 export { createCache }

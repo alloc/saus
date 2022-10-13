@@ -1,5 +1,5 @@
 import { prependBase } from '@/client/prependBase'
-import { createCache } from '@/runtime/cache'
+import { Cache, createCache } from '@/runtime/cache'
 import { getStateModuleKey } from '@/runtime/getStateModuleKey'
 import type { StateModule } from '@/runtime/stateModules'
 import { sortObjects } from '@/utils/sortObjects'
@@ -12,11 +12,15 @@ export const serveCache = createCache()
  *
  * See the server-side implementation for more info.
  */
-export function serveState(module: StateModule | string, args: readonly any[]) {
+export function serveState(
+  module: StateModule,
+  options: Cache.AccessOptions = {}
+) {
+  const args = options.args || []
   const sortedArgsPayload = JSON.stringify(args, sortObjects)
-  const key = getStateModuleKey(module, sortedArgsPayload)
 
-  return serveCache.access(key, async () => {
+  const key = getStateModuleKey(module, sortedArgsPayload)
+  const loader = async () => {
     const stateUrl = prependBase(saus.stateModuleBase + key + '.js')
     const resp = await fetch(stateUrl, {
       headers: { 'x-args': btoa(sortedArgsPayload) },
@@ -41,5 +45,11 @@ export function serveState(module: StateModule | string, args: readonly any[]) {
     // Skip updating the cache and use the cache entry that was
     // injected by the script we just evaluated.
     return Symbol.for('skip')
+  }
+
+  return serveCache.access(key, loader, {
+    ...options,
+    stateModule: module,
+    args,
   })
 }
