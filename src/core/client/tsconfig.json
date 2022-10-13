@@ -1,8 +1,9 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["./"],
+  "include": ["**/*.ts"],
   "exclude": [],
   "compilerOptions": {
+    "composite": true,
     "lib": ["dom", "esnext"],
     "module": "esnext",
     "types": ["../../../env/client"]

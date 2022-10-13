@@ -1,14 +1,20 @@
 {
+  "include": ["**/*.ts"],
   "exclude": ["core/client"],
   "compilerOptions": {
+    "composite": true,
+    "declaration": true,
     "esModuleInterop": true,
     "lib": ["es2019"],
     "module": "commonjs",
     "moduleResolution": "node",
+    "noEmit": true,
     "noUnusedLocals": true,
+    "outDir": "../dist",
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,
-    "target": "es2019"
+    "target": "es2019",
+    "tsBuildInfoFile": ".tsbuildinfo"
   }
 }

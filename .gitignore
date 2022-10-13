@@ -6,3 +6,4 @@ starters
 vendor
 dist
 .vscode/pinned-files.json
+.tsbuildinfo
