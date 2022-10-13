@@ -1,5 +1,6 @@
-import { joinUrl, vite } from 'saus/core'
+import { vite } from 'saus/core'
 import { http, HttpMethod, HttpRequestOptions } from 'saus/http'
+import { joinUrl } from 'saus/utils/joinUrl'
 
 export function createRequestFn(config: {
   apiToken: string

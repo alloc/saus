@@ -1,8 +1,8 @@
-import { bindExec } from '@saus/deploy-utils'
 import { existsSync } from 'fs'
 import path from 'path'
-import { relativeToCwd } from 'saus/core'
 import { onDeploy } from 'saus/deploy'
+import { bindExec } from 'saus/node/bindExec'
+import { relativeToCwd } from 'saus/node/relativeToCwd'
 import { GitRepository, InitConfig } from './config'
 import { stashedRoots } from './stash'
 

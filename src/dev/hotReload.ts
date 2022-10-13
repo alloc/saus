@@ -1,24 +1,23 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
-import { globalCache, stateModulesByName } from '@/runtime/cache'
-import { stateModulesByFile } from '@/runtime/stateModules/global'
-import { serveCache } from '@/runtime/stateModules/serve'
-import { prependBase } from '@/utils/base'
-import { defer, Deferred } from '@/utils/defer'
-import { take } from '@/utils/take'
-import { isLiveModule } from '@/vm/isLiveModule'
+import { clientDir } from '@/paths'
+import { globalCache, stateModulesByName } from '@runtime/cache'
+import { stateModulesByFile } from '@runtime/stateModules/global'
+import { serveCache } from '@runtime/stateModules/serve'
+import { prependBase } from '@utils/base'
+import { defer, Deferred } from '@utils/defer'
+import { take } from '@utils/take'
+import { isLiveModule } from '@vm/isLiveModule'
 import {
   PurgeHandler,
   purgeModule,
   unloadModuleAndImporters,
-} from '@/vm/moduleMap'
-import { CompiledModule, isLinkedModule, LinkedModule } from '@/vm/types'
+} from '@vm/moduleMap'
+import { CompiledModule, isLinkedModule, LinkedModule } from '@vm/types'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
 import { DevContext } from './context'
-
-const clientDir = path.resolve(__dirname, '../../client') + '/'
 
 export interface HotReloadFn {
   (file: string, ssr?: boolean): Promise<void>
@@ -132,7 +131,7 @@ export function createHotReload(
 
         // Reload the client-side routes map.
         if (handler.clientChange) {
-          handler.clientChange('/@fs' + path.join(clientDir, 'routes.ts'))
+          handler.clientChange('/@fs' + path.join(clientDir, 'routes.mjs'))
         }
       } catch (error: any) {
         routesChanged = false
@@ -178,7 +177,7 @@ export function createHotReload(
       // module when the live exports of the "saus/client" module are
       // changed, since the routes module can't use them anyway.
       const skipRoutesPath =
-        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
+        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir + '/')
 
       const stateModuleFiles = new Set(
         Array.from(stateModulesByFile.keys(), file => moduleMap.get(file)!)

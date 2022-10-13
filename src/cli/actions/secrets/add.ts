@@ -8,7 +8,7 @@ export { addSecrets as add }
 
 async function addSecrets() {
   const { loadDeployContext, loadSecretSources, selectSource } = await import(
-    '../../../secrets/api'
+    '../../../secrets/api.js'
   )
 
   const context = await loadDeployContext({

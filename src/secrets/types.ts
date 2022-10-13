@@ -22,5 +22,3 @@ export interface MutableSecretSource extends SecretSource {
 export type DefinedSecrets<T extends SecretMap = any> = {
   [kSecretDefinition]: SecretMap
 } & { [P in keyof T]: string }
-
-export type { SecretHub } from './hub'

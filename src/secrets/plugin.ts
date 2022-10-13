@@ -1,6 +1,6 @@
 import type { Plugin } from '@/core'
+import { MagicString } from '@utils/magic-string'
 import * as esModuleLexer from 'es-module-lexer'
-import MagicString from 'magic-string'
 
 /**
  * Register all imports with `trackSecretDependencies` so that we can

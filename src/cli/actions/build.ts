@@ -1,7 +1,7 @@
 import { BuildOptions } from '@/core'
-import { onShortcut } from '@/node/shortcuts'
-import { AbortController } from '@/utils/AbortController'
-import { resolveModules } from '@/utils/resolveModules'
+import { AbortController } from '@utils/AbortController'
+import { onShortcut } from '@utils/node/shortcuts'
+import { resolveModules } from '@utils/resolveModules'
 import arrify from 'arrify'
 import { addExitCallback } from 'catch-exit'
 import { cyan, gray, red } from 'kleur/colors'
@@ -33,8 +33,8 @@ export type BuildFlags = BuildOptions & {
 
 export async function build(cacheDir: string | undefined, options: BuildFlags) {
   const [{ build }, { getFailedPages, setFailedPages }] = await resolveModules(
-    import('../../build/api'),
-    import('../../build/failedPages')
+    import('../../build/api.js'),
+    import('../../build/failedPages.js')
   )
 
   if (process.stdin.isTTY) {

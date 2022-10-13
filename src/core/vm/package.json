@@ -1,5 +1,0 @@
-{
-  "name": "@saus/vm",
-  "private": true,
-  "main": "./index.ts"
-}

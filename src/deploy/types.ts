@@ -1,4 +1,4 @@
-import { Changed } from '@/utils/types'
+import { Changed } from '@utils/types'
 import { Merge, Promisable } from 'type-fest'
 import { DeployContext } from './context'
 

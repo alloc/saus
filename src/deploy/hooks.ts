@@ -1,5 +1,5 @@
-import { getStackFrame } from '@/node/stack'
-import { defer } from '@/utils/defer'
+import { defer } from '@utils/defer'
+import { getStackFrame } from '@utils/node/stack'
 import { Merge, Promisable } from 'type-fest'
 import { getDeployContext } from './context'
 import type {

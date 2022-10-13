@@ -1,5 +1,5 @@
-import { createCommit } from '@/node/git/createCommit'
 import exec from '@cush/exec'
+import { createCommit } from '@utils/node/git/createCommit'
 import fs from 'fs'
 import path from 'path'
 import yaml from 'yaml'

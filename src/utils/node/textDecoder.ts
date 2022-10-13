@@ -1,0 +1,1 @@
+export { TextDecoder } from 'util'

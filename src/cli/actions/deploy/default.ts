@@ -14,7 +14,7 @@ export type DeployFlags = {
 export { deploy as default }
 
 async function deploy(options: DeployFlags) {
-  const { deploy } = await import('../../../deploy/api')
+  const { deploy } = await import('../../../deploy/api.js')
   await deploy({
     ...options,
     noCache: options.cache === false,

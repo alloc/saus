@@ -1,5 +1,9 @@
 {
   "editor.codeActionsOnSave": ["source.organizeImports"],
+  "files.exclude": {
+    "**/.git": true,
+    "**/dist": true
+  },
   "typescript.tsdk": "node_modules/typescript/lib",
   "searchEverywhere.shouldDisplayNotificationInStatusBar": true,
   "searchEverywhere.exclude": [

@@ -1,4 +1,4 @@
-import { defer } from '@/utils/defer'
+import { defer } from '@utils/defer'
 import { kSecretDefinition } from './symbols'
 import type {
   DefinedSecrets,

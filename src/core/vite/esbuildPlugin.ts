@@ -1,9 +1,9 @@
+import { toInlineSourceMap } from '@utils/node/sourceMap'
+import { compileModule } from '@vm/compileModule'
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
 import path from 'path'
-import { toInlineSourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
-import { compileModule } from './compileModule'
 import { getViteFunctions } from './functions'
 
 /**

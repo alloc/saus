@@ -1,19 +1,19 @@
-import { MagicString } from '@/babel'
 import { debug } from '@/debug'
-import { resolveMapSources } from '@/node/sourceMap'
 import { bundleDir, clientDir, httpDir } from '@/paths'
 import { rewriteHttpImports } from '@/plugins/httpImport'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import { copyPublicDir } from '@/plugins/publicDir'
 import { routesPlugin } from '@/plugins/routes'
 import { BundleConfig, vite } from '@/vite'
+import { MagicString } from '@utils/magic-string'
+import { resolveMapSources } from '@utils/node/sourceMap'
 import arrify from 'arrify'
 import builtinModules from 'builtin-modules'
 import esModuleLexer from 'es-module-lexer'
 import fs from 'fs'
 import kleur from 'kleur'
 import path from 'path'
-import { BundleContext } from '../bundle'
+import { BundleContext } from '../bundle/context'
 import { IsolatedModuleMap } from './isolateRoutes'
 import type { BundleOptions } from './options'
 import { preferExternal } from './preferExternal'
@@ -30,13 +30,13 @@ export async function compileServerBundle(
 
   if (bundleConfig.clientStore !== 'external')
     injectedModules.addServerModule({
-      id: path.join(bundleDir, 'bundle/clientStore/index.ts'),
+      id: path.join(bundleDir, 'bundle/clientStore/index.mjs'),
       code: `export * from "./${bundleConfig.clientStore}"`,
     })
 
   if (!bundleConfig.debugBase)
     injectedModules.addServerModule({
-      id: path.join(bundleDir, 'bundle/debugBase.ts'),
+      id: path.join(bundleDir, 'bundle/debugBase.mjs'),
       code: `export function injectDebugBase() {}`,
     })
 
@@ -52,12 +52,12 @@ export async function compileServerBundle(
   if (isWorker) {
     workerPlugins.push(
       redirectModule(
-        path.join(httpDir, 'get.ts'),
-        path.join(clientDir, 'http/get.ts')
+        path.join(httpDir, 'get.mjs'),
+        path.join(clientDir, 'http/get.mjs')
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&
-        overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.ts'))
+        overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.mjs'))
     )
   }
 

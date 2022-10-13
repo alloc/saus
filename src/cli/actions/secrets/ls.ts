@@ -7,7 +7,7 @@ export { listSecrets as ls }
 
 async function listSecrets() {
   const { loadDeployContext, loadSecretSources } = await import(
-    '../../../secrets/api'
+    '../../../secrets/api.js'
   )
 
   const context = await loadDeployContext({

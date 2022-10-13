@@ -1,5 +1,5 @@
-import { defer } from '@/utils/defer'
-import { noop } from '@/utils/noop'
+import { defer } from '@utils/defer'
+import { noop } from '@utils/noop'
 import { green } from 'kleur/colors'
 import { DeployContext } from '../deploy/context'
 import { loadDeployFile } from '../deploy/loader'

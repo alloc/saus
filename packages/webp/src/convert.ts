@@ -1,5 +1,5 @@
-import { noop } from '@/utils/noop'
 import { createFilter } from '@rollup/pluginutils'
+import { noop } from '@utils/noop'
 import fs from 'fs/promises'
 import imagemin from 'imagemin'
 import webp, { Options as WebpOptions } from 'imagemin-webp'

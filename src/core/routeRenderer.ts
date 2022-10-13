@@ -1,23 +1,14 @@
+import { Route, RouteRenderer, RoutesModule } from '@runtime/routeTypes'
+import { murmurHash } from '@utils/murmur3'
+import { ResolveIdHook } from '@utils/rollupTypes'
 import assert from 'assert'
-import { SausContext } from './context'
-import { Route } from './routes'
-import { murmurHash } from './utils/murmur3'
 
-export interface RouteRenderer {
-  fileName: string
-  routeModuleId: string
-  layoutModuleId: string
-  routes: Route[]
+interface Context extends RoutesModule {
+  defaultLayout: { id: string; hydrated?: boolean }
+  resolveId: ResolveIdHook
 }
 
-type UsedKeys =
-  | 'routes'
-  | 'catchRoute'
-  | 'defaultRoute'
-  | 'defaultLayout'
-  | 'resolveId'
-
-export async function getRouteRenderers(context: Pick<SausContext, UsedKeys>) {
+export async function getRouteRenderers(context: Context) {
   const resolving: Promise<any>[] = []
   const resolve = (
     renderer: RouteRenderer,
@@ -58,10 +49,7 @@ export async function getRouteRenderers(context: Pick<SausContext, UsedKeys>) {
   return Object.values(renderers)
 }
 
-function getRouteRenderer(
-  route: Route,
-  context: Pick<SausContext, 'defaultLayout'>
-): RouteRenderer {
+function getRouteRenderer(route: Route, context: Context): RouteRenderer {
   assert(route.moduleId)
   const layoutModuleId = route.layoutEntry || context.defaultLayout.id
   const hash = murmurHash(layoutModuleId + route.moduleId)

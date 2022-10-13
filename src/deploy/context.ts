@@ -1,10 +1,11 @@
 import { getGitRepoByName } from '@/git'
-import { noop } from '@/utils/noop'
+import { toSausPath } from '@/paths'
 import { vite } from '@/vite'
-import { ModuleMap } from '@/vm/moduleMap'
-import { injectNodeModule } from '@/vm/nodeModules'
-import { RequireAsync } from '@/vm/types'
 import exec from '@cush/exec'
+import { noop } from '@utils/noop'
+import { ModuleMap } from '@vm/moduleMap'
+import { injectNodeModule } from '@vm/nodeModules'
+import { RequireAsync } from '@vm/types'
 import fs from 'fs'
 import path from 'path'
 import { PackageJson, Promisable } from 'type-fest'
@@ -150,6 +151,9 @@ export function getDeployContext() {
 }
 
 export function injectDeployContext(context: DeployContext) {
-  contextPath = path.resolve(__dirname, '../core/context.cjs')
+  // Note: The __dirname here equals the path of the `dist` directory,
+  // because this function is extracted into a common chunk and all
+  // common chunks are stored in the `dist` directory.
+  contextPath = toSausPath('core/context.cjs')
   injectNodeModule(contextPath, context)
 }

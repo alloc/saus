@@ -7,7 +7,7 @@ export function injectClientStoreRoute(context: BundleContext) {
   injectRoutes(context, [
     {
       path: '/*',
-      plugin: resolve(bundleDir, '../routes/clientStorePlugin.ts'),
+      plugin: resolve(bundleDir, '../routes/clientStorePlugin.mjs'),
     },
   ])
 }

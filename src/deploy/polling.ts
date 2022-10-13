@@ -1,4 +1,4 @@
-import { http } from '@/http'
+import { http } from '@runtime/http'
 
 interface PollOptions {
   /**

@@ -1,6 +1,6 @@
+import { SourceMap } from '@utils/node/sourceMap'
 import endent from 'endent'
 import { expect, test } from 'vitest'
-import { SourceMap } from '../node/sourceMap'
 import { clientStatePlugin } from './clientState'
 
 const code = endent`

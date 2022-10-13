@@ -4,8 +4,8 @@ import { bundleDir, clientDir } from '../paths'
 import { RouteClients } from '../routeClients'
 import { Plugin } from '../vite'
 
-const clientRouteMapStubPath = path.join(clientDir, 'routes.ts')
-const serverRouteMapStubPath = path.join(bundleDir, 'bundle/routes.ts')
+const clientRouteMapStubPath = path.join(clientDir, 'routes.mjs')
+const serverRouteMapStubPath = path.join(bundleDir, 'bundle/routes.mjs')
 
 /**
  * This plugin extracts the `route` calls from the routes module,

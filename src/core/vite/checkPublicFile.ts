@@ -1,5 +1,5 @@
-import { cleanUrl } from '@/utils/cleanUrl'
 import { vite } from '@/vite'
+import { cleanUrl } from '@utils/cleanUrl'
 import fs from 'fs'
 import path from 'path'
 

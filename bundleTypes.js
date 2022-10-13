@@ -5,7 +5,7 @@ const rollup = require('rollup')
 const dts = require('rollup-plugin-dts').default
 const ts = require('typescript')
 
-const outFile = 'bundle/index.d.ts'
+const outFile = 'src/dist/bundle/index.d.ts'
 
 async function run() {
   const bundle = await rollup.rollup({
@@ -24,7 +24,7 @@ async function run() {
         compilerOptions: {
           lib: ['lib.dom.d.ts', 'lib.es2019.d.ts'],
           module: ts.ModuleKind.ESNext,
-          types: [path.resolve('env/client')],
+          types: [path.resolve('src/dist/env/client')],
         },
       }),
       reporter,

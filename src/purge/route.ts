@@ -1,5 +1,5 @@
-import { Endpoint } from '@/endpoint'
-import { route } from '@/runtime/routes'
+import { Endpoint } from '@runtime/endpoint'
+import { route } from '@runtime/routeHooks'
 import createDebug from 'debug'
 import { makePurgeRequest } from './request'
 import { PurgeOptions, PurgePlugin } from './types'

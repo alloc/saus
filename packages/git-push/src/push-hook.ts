@@ -1,7 +1,8 @@
-import { bindExec } from '@saus/deploy-utils'
 import path from 'path'
-import { createCommit, relativeToCwd } from 'saus/core'
 import { defineDeployHook } from 'saus/deploy'
+import { bindExec } from 'saus/node/bindExec'
+import { createCommit } from 'saus/node/git/createCommit'
+import { relativeToCwd } from 'saus/node/relativeToCwd'
 import { PushConfig } from './config'
 import { stashedRoots } from './stash'
 

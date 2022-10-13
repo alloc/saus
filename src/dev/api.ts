@@ -1,11 +1,10 @@
-import { App } from '@/app/types'
 import { loadContext } from '@/context'
-import { Endpoint } from '@/core'
 import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
 import { clientRedirects } from '@/moduleRedirects'
+import { clientDir, toSausPath } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
 import { clientLayoutPlugin } from '@/plugins/clientLayout'
 import { clientStatePlugin } from '@/plugins/clientState'
@@ -15,18 +14,20 @@ import { routeClientsPlugin } from '@/plugins/routeClients'
 import { routesPlugin } from '@/plugins/routes'
 import { servePlugin } from '@/plugins/serve'
 import { ssrLayoutPlugin } from '@/plugins/ssrLayout'
-import { toArray } from '@/utils/array'
-import { prependBase } from '@/utils/base'
-import { callPlugins } from '@/utils/callPlugins'
-import { defer } from '@/utils/defer'
-import { getPageFilename } from '@/utils/getPageFilename'
 import { vite } from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
-import { formatAsyncStack } from '@/vm/formatAsyncStack'
-import { createFullReload } from '@/vm/fullReload'
-import { injectNodeModule } from '@/vm/nodeModules'
+import { App } from '@runtime/app/types'
+import { Endpoint } from '@runtime/endpoint'
+import { toArray } from '@utils/array'
+import { prependBase } from '@utils/base'
+import { callPlugins } from '@utils/callPlugins'
+import { defer } from '@utils/defer'
+import { getPageFilename } from '@utils/getPageFilename'
+import { formatAsyncStack } from '@vm/formatAsyncStack'
+import { createFullReload } from '@vm/fullReload'
+import { injectNodeModule } from '@vm/nodeModules'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
-import { EventEmitter } from 'events'
+import { EventEmitter } from 'ee-ts'
 import { readFile } from 'fs/promises'
 import http from 'http'
 import { bold, gray, red } from 'kleur/colors'
@@ -181,7 +182,7 @@ async function startServer(
   setupClientInjections(context)
 
   // Make the dev context available to internal functions.
-  injectNodeModule(path.resolve(__dirname, '../../core/context.cjs'), context)
+  injectNodeModule(toSausPath('core/context.cjs'), context)
 
   // We want to load routes before the `runOptimize` call that's made
   // by Vite internals after `buildStart` hooks have finished.
@@ -244,7 +245,10 @@ function listen(
   let listening = false
 
   const { resolve, promise } = defer<void>()
-  events.once('close', () => resolve())
+  const closeHandler = events.on('close', () => {
+    events.off('close', closeHandler)
+    resolve()
+  })
 
   // When optimizing deps, a syntax error may be hit. If so, we need to
   // handle it here by waiting for the offending file to be updated, and
@@ -337,22 +341,26 @@ async function prepareDevApp(context: DevContext) {
         async finish() {
           let pendingPages: Promise<void> | undefined
           if (routesChanged) {
-            pendingPages = context.pageCache.forEach((pagePath, [[page]]) => {
-              // Emit change events for page state modules.
-              if (routesChanged) {
-                const filename = getPageFilename(pagePath, context.basePath)
-                clientChanges.add('/' + filename + '.js')
+            pendingPages = context.pageCache.forEach(
+              (pagePath, { state: [page] }) => {
+                // Emit change events for page state modules.
+                if (routesChanged) {
+                  const filename = getPageFilename(pagePath, context.basePath)
+                  clientChanges.add('/' + filename + '.js')
+                }
+                // TODO: why is this disabled?
+                // Ensure the generated clients are updated.
+                // if (clientChanged && page?.client) {
+                //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
+                // }
               }
-              // Ensure the generated clients are updated.
-              // if (clientChanged && page?.client) {
-              //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
-              // }
-            })
+            )
             context.pageCache.clear()
             await resetDevApp()
           }
 
           // Emit watcher events after the reload promise is resolved.
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           queueMicrotask(async () => {
             await pendingPages
             for (const url of clientChanges) {
@@ -375,7 +383,7 @@ async function prepareDevApp(context: DevContext) {
 
 // Some "saus/client" exports depend on project config.
 function setupClientInjections(context: DevContext) {
-  const modulePath = path.resolve(__dirname, '../../client/baseUrl.cjs')
+  const modulePath = path.resolve(clientDir, 'baseUrl.cjs')
   context.liveModulePaths.add(modulePath)
   context.liveModulePaths.add(
     // This module re-exports us, so it's also live.

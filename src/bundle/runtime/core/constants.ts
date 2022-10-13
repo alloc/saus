@@ -1,3 +1,3 @@
-// This module overrides ../../src/core/constants.ts
+// This module overrides @/constants.ts
 
 export const compact = true

@@ -1,10 +1,11 @@
+import { sausRootDir } from '@/paths'
+import { bareImportRE } from '@utils/importRegex'
 import createDebug from 'debug'
-import { existsSync } from 'fs'
+import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
-import { bareImportRE } from '../utils/importRegex'
 
 type Promisable<T> = T | Promise<T>
 
@@ -37,10 +38,9 @@ export function moduleRedirection(
   forbiddenModules: string[] = []
 ): vite.Plugin {
   if (isDebug && forbiddenModules.length) {
-    const sausRoot = path.resolve(__dirname, '..')
     forbiddenModules.forEach((id, i) => {
       if (id[0] == '.') {
-        forbiddenModules[i] = path.resolve(sausRoot, id)
+        forbiddenModules[i] = fs.realpathSync(path.resolve(sausRootDir, id))
       }
     })
   }
@@ -121,7 +121,7 @@ export function moduleRedirection(
           }
         }
       }
-      if (isDebug && existsSync(absoluteId)) {
+      if (isDebug && fs.existsSync(absoluteId)) {
         onResolved(absoluteId, id, importer)
       }
       return resolved

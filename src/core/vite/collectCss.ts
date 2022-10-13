@@ -1,4 +1,4 @@
-import { isCSSRequest } from '../utils/isCSSRequest'
+import { isCSSRequest } from '@utils/isCSSRequest'
 import { vite } from '../vite'
 
 export async function collectCss(

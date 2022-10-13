@@ -1,18 +1,15 @@
-import { ProfiledEventHandler } from '@/app/types'
-import {
-  BuildOptions,
-  generateRoutePaths,
-  loadBundle,
-  RouteParams,
-  vite,
-} from '@/core'
-import { emptyDir } from '@/node/emptyDir'
-import { printFiles } from '@/node/printFiles'
-import { loadTinypool } from '@/node/tinypool'
-import { prependBase } from '@/utils/base'
-import { callPlugins } from '@/utils/callPlugins'
-import { defer, Deferred } from '@/utils/defer'
-import { getPagePath } from '@/utils/getPagePath'
+import { BuildOptions, loadBundle, vite } from '@/core'
+import { toSausPath } from '@/paths'
+import { ProfiledEventHandler } from '@runtime/app/types'
+import { getPagePath } from '@runtime/getPagePath'
+import { generateRoutePaths } from '@runtime/routes/generateRoutePaths'
+import { RouteParams } from '@runtime/routeTypes'
+import { prependBase } from '@utils/base'
+import { callPlugins } from '@utils/callPlugins'
+import { defer, Deferred } from '@utils/defer'
+import { emptyDir } from '@utils/node/emptyDir'
+import { printFiles } from '@utils/node/printFiles'
+import { loadTinypool } from '@utils/node/tinypool'
 import fs from 'fs'
 import { gray, red, yellow } from 'kleur/colors'
 import { warn } from 'misty'
@@ -132,7 +129,7 @@ async function buildPages(
     })
 
     const pool = new WorkerPool({
-      filename: path.resolve(__dirname, 'build/worker.js'),
+      filename: toSausPath('build/worker.js'),
       workerData,
       maxThreads: options.maxWorkers,
       idleTimeout: Infinity,

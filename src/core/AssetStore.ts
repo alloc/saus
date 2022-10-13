@@ -1,5 +1,5 @@
+import { ResponseHeaders } from '@runtime/http'
 import { Promisable } from 'type-fest'
-import { ResponseHeaders } from './http'
 
 /**
  * The `AssetStore` is a normalized object storage layer.

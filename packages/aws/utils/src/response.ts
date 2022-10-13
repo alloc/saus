@@ -1,5 +1,5 @@
-import { rewriteObjectKeys } from '@saus/deploy-utils'
 import { Response, ResponseHeaders } from 'saus/http'
+import { rewriteObjectKeys } from 'saus/utils/keys'
 import { camelize } from './utils'
 import { xml } from './xml'
 import { XmlParserOptions } from './xml/parse'

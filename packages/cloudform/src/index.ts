@@ -1,4 +1,3 @@
-import { isObject } from '@saus/deploy-utils'
 import * as CloudForm from 'cloudform-types'
 import {
   addDeployHook,
@@ -6,6 +5,7 @@ import {
   addSecrets,
   getDeployContext,
 } from 'saus/deploy'
+import { isObject } from 'saus/utils/isObject'
 import secrets from './secrets'
 import {
   AttributeRef,
