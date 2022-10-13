@@ -1,6 +1,6 @@
 import type { Plugin, UserConfig } from '@/core'
 import type { TestPlugin } from '@/testPlugin'
-import { unwrapDefault } from '@/utils/unwrapDefault'
+import { unwrapDefault } from '@utils/unwrapDefault'
 import { fatal } from 'misty'
 import { command } from '../command'
 
@@ -27,8 +27,8 @@ async function startTestServer() {
     },
   }
 
-  const { vite } = await import('../../core')
-  const { createServer } = await import('../../dev/api')
+  const { vite } = await import('../../core/vite.js')
+  const { createServer } = await import('../../dev/api.js')
 
   await createServer({
     plugins: [mainPlugin],

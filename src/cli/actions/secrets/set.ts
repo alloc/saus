@@ -1,3 +1,4 @@
+import { prompt } from '@utils/node/prompt'
 import { green } from 'kleur/colors'
 import { askForSecrets } from '../../../secrets/prompt'
 import { command } from '../../command'
@@ -9,7 +10,7 @@ export { setSecrets as set }
 
 async function setSecrets(opts: { all?: boolean } = {}) {
   const { loadDeployContext, loadSecretSources, selectSource } = await import(
-    '../../../secrets/api'
+    '../../../secrets/api.js'
   )
 
   const context = await loadDeployContext({
@@ -29,7 +30,6 @@ async function setSecrets(opts: { all?: boolean } = {}) {
   if (opts.all) {
     names = Object.keys(context.secrets['_secrets'])
   } else {
-    const { prompt } = await import('@saus/deploy-utils')
     names =
       (
         await prompt({

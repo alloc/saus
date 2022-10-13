@@ -1,0 +1,10 @@
+#!/usr/bin/env node
+
+if (process.env.DEBUG) {
+  require('source-map-support').install()
+  if (/(^| )saus:\*( |$)/.test(process.env.DEBUG)) {
+    process.env.DEBUG += ' saus'
+  }
+}
+
+require('../cli').default.parse()

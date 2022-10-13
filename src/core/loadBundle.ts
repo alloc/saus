@@ -1,24 +1,28 @@
 import exec from '@cush/exec'
-import { isObject } from '@saus/deploy-utils'
+import { MutableRuntimeConfig, RuntimeConfig } from '@runtime/config'
+import { callPlugins } from '@utils/callPlugins'
+import { isObject } from '@utils/isObject'
+import { pick } from '@utils/pick'
+import { readJson } from '@utils/readJson'
 import * as base64ArrayBuffer from 'base64-arraybuffer'
 import fs from 'fs'
 import { green } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
-import { BundleOptions, OutputBundle } from '../bundle'
 import {
   BuildContext,
   BundleContext,
   InlineBundleConfig,
   loadBundleContext,
 } from '../bundle/context'
-import { ClientAsset, ClientChunk } from '../bundle/types'
+import {
+  BundleOptions,
+  ClientAsset,
+  ClientChunk,
+  OutputBundle,
+} from '../bundle/types'
 import { DeployContext, getDeployContext } from '../deploy'
 import { getBundleHash } from './getBundleHash'
-import { MutableRuntimeConfig, RuntimeConfig } from './runtime/config'
-import { callPlugins } from './utils/callPlugins'
-import { pick } from './utils/pick'
-import { readJson } from './utils/readJson'
 import { vite } from './vite'
 import { writeBundle } from './writeBundle'
 
@@ -142,9 +146,7 @@ export async function loadBundle({
       })
     }
   } else {
-    const { bundle } =
-      require('../bundle/api') as typeof import('../bundle/api')
-
+    const { bundle } = await import('../bundle/api.js')
     await options.onBundleStart?.(bundleOptions)
     bundleResult = await bundle(context, bundleOptions)
   }

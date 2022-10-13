@@ -1,8 +1,10 @@
-import { prompt } from '@saus/deploy-utils'
+import exec from '@cush/exec'
 import { AESEncryption } from 'aes-password'
 import { red } from 'kleur/colors'
-import { createCommit, exec, pickAllExcept } from 'saus/core'
 import { File, getDeployContext, SecretMap } from 'saus/deploy'
+import { createCommit } from 'saus/node/git/createCommit'
+import { prompt } from 'saus/node/prompt'
+import { pickAllExcept } from 'saus/utils/pick'
 
 /**
  * Use secrets stored in your git repository and

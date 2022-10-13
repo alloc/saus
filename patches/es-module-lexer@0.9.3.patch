@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index bdabf21f4040523b3f3abe632b272f80ad6e073d..3ca5b1e821ab23359c0245883ac2777d4132df3a 100644
+--- a/package.json
++++ b/package.json
+@@ -7,6 +7,7 @@
+   "types": "types/lexer.d.ts",
+   "exports": {
+     ".": {
++      "types": "./types/lexer.d.ts",
+       "module": "./dist/lexer.js",
+       "import": "./dist/lexer.js",
+       "require": "./dist/lexer.cjs"

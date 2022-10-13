@@ -1,7 +1,7 @@
-import { callPlugins } from '@/utils/callPlugins'
-import { generateId } from '@/utils/generateId'
-import { serializeImports } from '@/utils/imports'
-import { klona } from '@/utils/klona'
+import { serializeImports } from '@runtime/imports'
+import { callPlugins } from '@utils/callPlugins'
+import { generateId } from '@utils/generateId'
+import { klona } from '@utils/klona'
 import { SausContext } from './context'
 import {
   createModuleProvider,

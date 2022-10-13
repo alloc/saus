@@ -1,5 +1,0 @@
-{
-  "name": "@saus/http",
-  "private": true,
-  "main": "./index.ts"
-}

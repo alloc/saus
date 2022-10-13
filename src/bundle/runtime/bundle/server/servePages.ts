@@ -1,8 +1,8 @@
-import type { App } from '@/app'
-import { makeRequestUrl } from '@/makeRequest'
-import { parseUrl } from '@/node/url'
-import { writeResponse } from '@/node/writeResponse'
-import { streamToBuffer } from '@/utils/streamToBuffer'
+import type { App } from '@runtime/app'
+import { writeResponse } from '@runtime/http/writeResponse'
+import { makeRequestUrl } from '@runtime/makeRequest'
+import { parseUrl } from '@runtime/url'
+import { streamToBuffer } from '@utils/streamToBuffer'
 import { connect } from './connect'
 
 interface RequestProps {

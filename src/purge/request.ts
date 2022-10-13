@@ -1,4 +1,4 @@
-import { getPageFilename } from '@/utils/getPageFilename'
+import { getPageFilename } from '@utils/getPageFilename'
 import { PurgeOptions, PurgeRequest } from './types'
 
 export function makePurgeRequest(

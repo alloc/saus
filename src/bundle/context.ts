@@ -7,8 +7,6 @@ import {
   moduleRedirection,
   overrideBareImport,
 } from '@/plugins/moduleRedirection'
-import { assignDefaults } from '@/utils/assignDefaults'
-import { plural } from '@/utils/plural'
 import {
   BundleConfig,
   BundleConfigDefaults,
@@ -16,11 +14,12 @@ import {
   vite,
 } from '@/vite'
 import { getViteFunctions } from '@/vite/functions'
+import { assignDefaults } from '@utils/assignDefaults'
+import { plural } from '@utils/plural'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
-import { internalRedirects, ssrRedirects } from './moduleRedirects'
-import { preBundleSsrRuntime } from './runtimeBundle'
+import { internalRedirects, ssrBundleRedirects } from './moduleRedirects'
 
 type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'clientStore' | 'target'
 
@@ -158,21 +157,19 @@ export async function loadBundleContext<
   context.bundleModuleId = '\0saus/bundle.js'
   const redirects = [
     ...internalRedirects,
-    ...ssrRedirects,
+    ...ssrBundleRedirects,
     overrideBareImport('saus/bundle', context.bundleModuleId),
   ]
 
   context.bundlePlugins = [
-    preBundleSsrRuntime(context),
+    // preBundleSsrRuntime(context),
     moduleRedirection(redirects, [
       'vite',
-      './babel/index.js',
-      './client/index.js',
-      './deploy/index.js',
-      './src/core/index.ts',
-      './src/core/babel/index.ts',
-      './src/core/client/index.ts',
-      './src/core/context.ts',
+      './client/index.mjs',
+      './core/index.mjs',
+      './core/context.mjs',
+      './deploy/index.mjs',
+      './utils/babel.mjs',
     ]),
   ]
 

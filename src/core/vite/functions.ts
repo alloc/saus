@@ -1,3 +1,5 @@
+import { SourceMap } from '@utils/node/sourceMap'
+import { Script } from '@vm/types'
 import {
   LoadResult,
   PartialResolvedId,
@@ -6,10 +8,8 @@ import {
   TransformResult,
 } from 'rollup'
 import { Promisable } from 'type-fest'
-import { SourceMap } from '../node/sourceMap'
+import { compileModule } from '../../vm/compileModule'
 import { vite } from '../vite'
-import { Script } from '../vm/types'
-import { compileModule } from './compileModule'
 
 export interface ViteFunctions {
   buildStart(): Promise<void>

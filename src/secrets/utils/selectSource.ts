@@ -1,4 +1,4 @@
-import { prompt } from '@saus/deploy-utils'
+import { prompt } from '@utils/node/prompt'
 import { MutableSecretSource } from '../types'
 
 export async function selectSource(

@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import * as mime from 'mrmime'
-import { controlExecution } from 'saus/core'
 import { unwrapBody } from 'saus/http'
+import { controlExecution } from 'saus/utils/controlExecution'
 import { paramsToHeaders } from './api/headers'
 import { signedRequest } from './api/request'
 import { writeThrottler } from './utils/throttle'

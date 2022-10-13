@@ -1,10 +1,9 @@
-import { LazyPromise } from '@/utils/LazyPromise'
+import type { RouteLayout } from '@runtime/layouts'
+import type { Route, RouteRenderer } from '@runtime/routeTypes'
+import { LazyPromise } from '@utils/LazyPromise'
+import { unwrapDefault } from '@utils/unwrapDefault'
 import endent from 'endent'
 import type { SausContext } from './context'
-import type { RouteRenderer } from './routeRenderer'
-import type { Route } from './routes'
-import type { RouteLayout } from './runtime/layouts'
-import { unwrapDefault } from './utils/unwrapDefault'
 
 export interface RouteClients {
   /** Route clients by virtual ID */

@@ -1,9 +1,9 @@
+import type { ClientConstants } from '@client/context'
 import path from 'path'
-import type { ClientConstants } from '../client/context'
 import { Plugin } from '../core'
 import { clientDir } from '../paths'
 
-const contextModuleId = path.join(clientDir, 'context.ts')
+const contextModuleId = path.join(clientDir, 'context.mjs')
 
 /**
  * Client modules have access to the global `saus` object,

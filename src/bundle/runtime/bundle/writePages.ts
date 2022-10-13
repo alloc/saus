@@ -1,9 +1,9 @@
+import type { PageBundle } from '@runtime/bundleTypes'
 import fs from 'fs'
 import path from 'path'
 import clientAssets from './clientAssets'
 import clientModules from './clientModules'
 import { loadAsset, loadModule } from './clientStore'
-import type { PageBundle } from './types'
 
 /**
  * Write an array of rendered pages to disk. Shared modules are deduplicated.

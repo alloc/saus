@@ -1,4 +1,4 @@
-import { createHtmlResolver, createVisitor } from '@saus/html'
+import { createHtmlResolver, createVisitor } from '@runtime/html'
 import config from './config'
 
 /**

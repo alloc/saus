@@ -1,0 +1,21 @@
+{
+  "name": "@saus/client",
+  "version": "0.4.10",
+  "scripts": {
+    "clean": "rimraf dist && git checkout HEAD dist",
+    "build": "npm run clean && tsup-node && tsc -p . --emitDeclarationOnly",
+    "dev": "concurrently npm:dev:*",
+    "dev:build": "tsup --watch --sourcemap",
+    "dev:types": "tsc -p . --emitDeclarationOnly --watch"
+  },
+  "dependencies": {
+    "@saus/runtime": "workspace:*",
+    "@saus/utils": "workspace:*",
+    "@saus/vm": "workspace:*"
+  },
+  "devDependencies": {
+    "@runtime": "link:./node_modules/@saus/runtime/dist",
+    "@utils": "link:./node_modules/@saus/utils/dist",
+    "@vm": "link:./node_modules/@saus/vm/dist"
+  }
+}

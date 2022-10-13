@@ -1,4 +1,18 @@
-import { toArray } from '@/utils/array'
+import { toArray } from '@utils/array'
+import { isPackageRef } from '@utils/isPackageRef'
+import { CompileCache } from '@utils/node/compileCache'
+import { resolveMapSources, toInlineSourceMap } from '@utils/node/sourceMap'
+import {
+  compileEsm,
+  importAsyncId,
+  importMetaId,
+  requireAsyncId,
+} from '@vm/compileEsm'
+import { ImporterSet } from '@vm/ImporterSet'
+import { isLiveModule } from '@vm/isLiveModule'
+import { ModuleMap } from '@vm/moduleMap'
+import { overwriteScript } from '@vm/overwriteScript'
+import { CompiledModule, RequireAsync, Script } from '@vm/types'
 import chokidar from 'chokidar'
 import * as convertSourceMap from 'convert-source-map'
 import * as esbuild from 'esbuild'
@@ -6,21 +20,7 @@ import toGlobBase from 'glob-base'
 import { Module } from 'module'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
-import { CompileCache } from '../node/compileCache'
-import { resolveMapSources, toInlineSourceMap } from '../node/sourceMap'
-import { isPackageRef } from '../utils/isPackageRef'
 import { vite } from '../vite'
-import {
-  compileEsm,
-  importAsyncId,
-  importMetaId,
-  requireAsyncId,
-} from '../vm/compileEsm'
-import { ImporterSet } from '../vm/ImporterSet'
-import { isLiveModule } from '../vm/isLiveModule'
-import { ModuleMap } from '../vm/moduleMap'
-import { CompiledModule, RequireAsync, Script } from '../vm/types'
-import { overwriteScript } from './overwriteScript'
 
 /**
  * Compile an ES module from `node_modules` into a CJS module.

@@ -1,0 +1,27 @@
+{
+  "name": "@saus/runtime",
+  "version": "0.4.10",
+  "scripts": {
+    "clean": "rimraf dist && git checkout HEAD dist",
+    "build": "npm run clean && tsup-node && tsc -p . --emitDeclarationOnly",
+    "dev": "concurrently npm:dev:*",
+    "dev:build": "tsup --watch --sourcemap",
+    "dev:types": "tsc -p . --emitDeclarationOnly --watch"
+  },
+  "dependencies": {
+    "@cush/relative": "^1.0.0",
+    "@saus/utils": "workspace:*",
+    "@saus/vm": "workspace:*",
+    "css-what": "^6.0.1",
+    "debug": "^4.3.2",
+    "endent": "^2.1.0",
+    "etag": "^1.8.1",
+    "kleur": "^4.1.4",
+    "misty": "^1.6.7",
+    "type-fest": "^2.13.0"
+  },
+  "devDependencies": {
+    "@utils": "link:./node_modules/@saus/utils/dist",
+    "@vm": "link:./node_modules/@saus/vm/dist"
+  }
+}

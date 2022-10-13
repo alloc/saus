@@ -1,4 +1,4 @@
-import { formatAsyncStack } from '@/vm/formatAsyncStack'
+import { formatAsyncStack } from '@vm/formatAsyncStack'
 import { DeployContext, getDeployContext } from './context'
 import { setLogFunctions } from './logger'
 import type { DeployHookRef, DeployPlugin } from './types'

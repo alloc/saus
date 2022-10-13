@@ -1,10 +1,14 @@
-import { CompileCache } from '@/node/compileCache'
-import { relativeToCwd } from '@/node/relativeToCwd'
-import { loadSourceMap, resolveMapSources, SourceMap } from '@/node/sourceMap'
-import { bundleDir, httpDir, toSausPath } from '@/paths'
+import { bundleDir, httpDir, isSausPath, sausRootDir } from '@/paths'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { vite } from '@/vite'
 import remapping from '@ampproject/remapping'
+import { CompileCache } from '@utils/node/compileCache'
+import { relativeToCwd } from '@utils/node/relativeToCwd'
+import {
+  loadSourceMap,
+  resolveMapSources,
+  SourceMap,
+} from '@utils/node/sourceMap'
 import builtinModules from 'builtin-modules'
 import * as esbuild from 'esbuild'
 import fs from 'fs'
@@ -14,14 +18,14 @@ import { internalRedirects } from './moduleRedirects'
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
-  'bundle/runtime/bundle/clientAssets.ts',
-  'bundle/runtime/bundle/clientEntries.ts',
-  'bundle/runtime/bundle/clientModules.ts',
-  'bundle/runtime/bundle/config.ts',
-  'bundle/runtime/bundle/debugBase.ts',
-  'bundle/runtime/bundle/routes.ts',
-  'core/client/baseUrl.ts',
-  'core/client/routes.ts',
+  'bundle/runtime/bundle/clientAssets.mjs',
+  'bundle/runtime/bundle/clientEntries.mjs',
+  'bundle/runtime/bundle/clientModules.mjs',
+  'bundle/runtime/bundle/config.mjs',
+  'bundle/runtime/bundle/debugBase.mjs',
+  'bundle/runtime/bundle/routes.mjs',
+  'client/baseUrl.mjs',
+  'client/routes.mjs',
 ]
 
 // These imports are handled by Rollup.
@@ -106,16 +110,15 @@ export interface RuntimeBundleInfo {
 }
 
 async function compileSsrRuntime(context: BundleContext) {
-  const sausRoot = toSausPath('src/')
-  const sausVersion = sausRoot.includes('/node_modules/')
-    ? require(path.resolve(sausRoot, '../package.json')).version
-    : require('child_process')
+  const sausVersion = sausRootDir.includes('/node_modules/')
+    ? (void 0, require)(path.resolve(sausRootDir, '../package.json')).version
+    : (void 0, require)('child_process')
         .execSync('git rev-list --no-merges -n 1 HEAD', {
-          cwd: path.dirname(sausRoot),
+          cwd: path.dirname(sausRootDir),
         })
         .toString('utf8')
 
-  const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
+  const cache = new CompileCache('dist/.runtime', path.dirname(sausRootDir))
   const buildEntryMap = (entries: Record<string, string>) => {
     const entryMap: Record<string, string> = {}
     for (const name in entries) {
@@ -127,17 +130,17 @@ async function compileSsrRuntime(context: BundleContext) {
 
   const entryMap = buildEntryMap({
     // "saus" entry point
-    saus: path.join(bundleDir, 'api.ts'),
+    saus: path.join(bundleDir, 'api.mjs'),
     // "saus/core" entry point
-    core: path.join(bundleDir, 'core/api.ts'),
+    core: path.join(bundleDir, 'core/api.mjs'),
     // "saus/bundle" entry point
-    bundle: path.join(bundleDir, 'bundle/api.ts'),
+    bundle: path.join(bundleDir, 'bundle/api.mjs'),
     // "saus/client" entry point
-    client: path.join(bundleDir, 'client/api.ts'),
+    client: path.join(bundleDir, 'client/api.mjs'),
     // used by @saus/html
-    html: path.resolve(bundleDir, '../html.ts'),
+    html: path.resolve(bundleDir, '../html.mjs'),
     // "saus/http" entry point
-    http: path.join(httpDir, 'index.ts'),
+    http: path.join(httpDir, 'index.mjs'),
   })
 
   let bundleInfo: RuntimeBundleInfo
@@ -161,13 +164,11 @@ async function compileSsrRuntime(context: BundleContext) {
           plugins: [
             moduleRedirection(internalRedirects, [
               'vite',
-              './babel/index.js',
-              './client/index.js',
-              './deploy/index.js',
-              './src/core/index.ts',
-              './src/core/babel/index.ts',
-              './src/core/client/index.ts',
-              './src/core/context.ts',
+              './client/index.mjs',
+              './core/index.mjs',
+              './core/context.mjs',
+              './deploy/index.mjs',
+              './utils/babel.mjs',
             ]),
           ],
           configFile: false,
@@ -197,14 +198,16 @@ async function compileSsrRuntime(context: BundleContext) {
           }
 
           const external =
-            !resolved.id.startsWith(sausRoot) ||
-            resolved.id.includes('/node_modules/')
+            !isSausPath(resolved.id) || resolved.id.includes('/node_modules/')
 
           if (external) {
             return { path: id, external }
           }
 
-          const moduleId = path.relative(sausRoot, resolved.id)
+          const moduleId = path.relative(sausRootDir, resolved.id)
+          if (sausExternals.some(e => moduleId.endsWith(e))) {
+            debugger // TODO remove this
+          }
           if (sausExternals.includes(moduleId)) {
             return {
               path: path.relative(cache.path, resolved.id),

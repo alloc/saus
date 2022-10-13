@@ -1,6 +1,5 @@
 import { BundleContext, SausContext } from '@/context'
-import { findPackage } from '@/node/findPackage'
-import { toInlineSourceMap } from '@/node/sourceMap'
+import { getClientInjection } from '@/injectModules'
 import { clientDir, globalCachePath } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
 import { clientLayoutPlugin } from '@/plugins/clientLayout'
@@ -9,12 +8,14 @@ import { debugForbiddenImports } from '@/plugins/debug'
 import { rewriteHttpImports } from '@/plugins/httpImport'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { routesPlugin } from '@/plugins/routes'
-import { RuntimeConfig } from '@/runtime/config'
-import { prependBase } from '@/utils/base'
 import { vite } from '@/vite'
+import { RuntimeConfig } from '@runtime/config'
+import { prependBase } from '@utils/base'
+import { combineSourcemaps } from '@utils/combineSourcemaps'
+import { findPackage } from '@utils/node/findPackage'
+import { toInlineSourceMap } from '@utils/node/sourceMap'
 import path from 'path'
 import posixPath from 'path/posix'
-import { getClientInjection } from '../core/injectModules'
 import { injectClientPreloads } from './clientPreloads'
 import { clientRedirects } from './moduleRedirects'
 import { ClientAsset, ClientChunk } from './types'
@@ -50,10 +51,10 @@ export async function compileClients(
     })
   )
 
-  const clientHelpersEntry = path.join(clientDir, 'helpers.ts')
+  const clientHelpersEntry = path.join(clientDir, 'helpers.mjs')
   entryPaths.push('/@fs/' + clientHelpersEntry)
 
-  const clientRuntimeEntry = path.join(clientDir, 'index.ts')
+  const clientRuntimeEntry = path.join(clientDir, 'index.mjs')
   entryPaths.push('/@fs/' + clientRuntimeEntry)
 
   let sourceMaps = userConfig.build?.sourcemap
@@ -84,11 +85,7 @@ export async function compileClients(
   // debug('Resolving "build" config for client bundle')
   config = await context.resolveConfig({
     plugins: [
-      debugForbiddenImports([
-        'vite',
-        './src/core/index.ts',
-        './src/core/context.ts',
-      ]),
+      debugForbiddenImports(['vite', './core/index.mjs', './core/context.mjs']),
       clientModules.provider,
       moduleRedirection(clientRedirects),
       routesPlugin(),
@@ -140,8 +137,8 @@ export async function compileClients(
     }
   }
 
-  const baseUrlPath = path.join(clientDir, 'baseUrl.ts')
-  const staticRoutesPath = path.join(clientDir, 'routes.ts')
+  const baseUrlPath = path.join(clientDir, 'baseUrl.mjs')
+  const staticRoutesPath = path.join(clientDir, 'routes.mjs')
 
   const debugChunks: Record<string, string> = {}
   const createDebugChunk = (chunk: OutputChunk) => {
@@ -213,7 +210,7 @@ export async function compileClients(
         sourceMap: !!sourceMaps,
       })
       if (chunk.map && minified.map) {
-        chunk.map = vite.combineSourcemaps(chunk.fileName, [
+        chunk.map = combineSourcemaps(chunk.fileName, [
           minified.map as any,
           chunk.map as any,
         ]) as any
@@ -341,7 +338,7 @@ function rewriteSources(
     if (sourceId[0] == '.' || sourceId.includes('/node_modules/')) {
       const pkgPath = findPackage(path.dirname(sourcePath), true)
       if (pkgPath) {
-        const pkg = require(pkgPath)
+        const pkg = (void 0, require)(pkgPath)
         sourceId = posixPath.join(
           pkg.name + (pkg.version ? '@' + pkg.version : ''),
           slash(path.relative(path.dirname(pkgPath), sourcePath))

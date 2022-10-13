@@ -1,4 +1,4 @@
-import type { RuntimeConfig } from '@/runtime/config'
+import type { RuntimeConfig } from '@runtime/config'
 
 /**
  * Configures the runtime behavior of the SSR bundle.

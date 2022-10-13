@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.spec.ts", "dist", "tsup.config.ts"],
+  "compilerOptions": {
+    "incremental": true,
+    "lib": ["dom", "esnext"],
+    "module": "esnext",
+    "outDir": "dist",
+    "target": "esnext",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "types": ["../dist/env/client"]
+  }
+}

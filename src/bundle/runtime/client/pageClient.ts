@@ -1,7 +1,8 @@
-import { globalCache } from '@/runtime/cache'
-import { ssrImport } from '@/runtime/ssrModules'
-import { baseToRegex } from '@/utils/base'
-import { getPagePath } from '@/utils/getPagePath'
+import { globalCache } from '@runtime/cache'
+import { getPagePath } from '@runtime/getPagePath'
+import { ssrImport } from '@runtime/ssrModules'
+import { baseToRegex } from '@utils/base'
+import { noop } from '@utils/noop'
 import config from '../bundle/config'
 import routes from '../bundle/routes'
 
@@ -23,7 +24,9 @@ export async function loadPageClient(routePath: string, routeParams: any) {
   }
 
   const pagePath = getPagePath(routePath, routeParams)
-  const pageProps = globalCache.load(pagePath, cache => cache.oldValue)
+  const pageProps = globalCache.load<any>(pagePath, noop, {
+    acceptExpired: true,
+  })
 
   const client = await ssrImport(clientUrl)
   client.props = await pageProps

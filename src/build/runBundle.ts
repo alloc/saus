@@ -1,4 +1,4 @@
-import { removeSourceMapUrls } from '@/node/sourceMap'
+import { removeSourceMapUrls } from '@utils/node/sourceMap'
 import path from 'path'
 import vm from 'vm'
 

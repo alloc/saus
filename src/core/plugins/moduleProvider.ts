@@ -1,4 +1,4 @@
-import { SourceMap } from '../node/sourceMap'
+import { SourceMap } from '@utils/node/sourceMap'
 import { Plugin, vite } from '../vite'
 
 export interface VirtualModule {

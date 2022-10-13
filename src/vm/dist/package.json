@@ -1,0 +1,14 @@
+{
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.js"
+    },
+    "./*": {
+      "types": "./*.d.ts",
+      "import": "./*.mjs",
+      "default": "./*.js"
+    }
+  }
+}

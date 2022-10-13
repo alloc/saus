@@ -1,9 +1,11 @@
 import * as S3 from '@saus/aws-s3'
 import createDebug from 'debug'
 import { OutputBundle } from 'saus'
-import { murmurHash, plural, scanPublicDir } from 'saus/core'
+import { scanPublicDir } from 'saus/core'
 import { DeployContext } from 'saus/deploy'
 import { wrapBody } from 'saus/http'
+import { murmurHash } from 'saus/utils/murmur3'
+import { plural } from 'saus/utils/plural'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 

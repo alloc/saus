@@ -1,4 +1,7 @@
-import { dataToEsm, endent, Plugin, plural, SausPlugin, vite } from '@/core'
+import { Plugin, SausPlugin, vite } from '@/core'
+import { dataToEsm } from '@runtime/dataToEsm'
+import { plural } from '@utils/plural'
+import endent from 'endent'
 import { green } from 'kleur/colors'
 import { success } from 'misty'
 import path from 'path'
@@ -87,7 +90,7 @@ export function copyPublicDir() {
                 id: '@saus/copyPublicDir/renamer.js',
                 // Rewrite HTML references of public files.
                 code: endent`
-                  import {resolveHtmlImports} from "@saus/html"
+                  import {resolveHtmlImports} from "saus/html/resolver"
                   ${dataToEsm(publicDir.renamedFiles, 'const renamedFiles')}
                   resolveHtmlImports(id => renamedFiles[id])
                 `,

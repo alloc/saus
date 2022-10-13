@@ -1,7 +1,7 @@
-import { loadContext } from '../core/context'
-import { prependBase } from '../core/utils/base'
-import { noop } from '../core/utils/noop'
-import { vite } from '../core/vite'
+import { loadContext } from '@/context'
+import { vite } from '@/vite'
+import { prependBase } from '@utils/base'
+import { noop } from '@utils/noop'
 import { PreviewOptions } from './options'
 
 export async function startPreviewServer(preview: PreviewOptions) {

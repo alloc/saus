@@ -1,4 +1,4 @@
-import MagicString from 'magic-string'
+import { MagicString } from '@utils/magic-string'
 import path from 'path'
 import { vite } from '../core'
 import { bundleDir } from '../paths'
@@ -12,7 +12,7 @@ export function rewriteHttpImports(
   skipJsImport?: boolean
 ): vite.Plugin {
   // Avoid rewriting the code of inlined client modules.
-  const modulesId = path.join(bundleDir, 'bundle/moduleMap.ts')
+  const modulesId = path.join(bundleDir, 'bundle/moduleMap.mjs')
 
   return {
     name: 'saus:rewriteHttpImports',

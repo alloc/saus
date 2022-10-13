@@ -1,4 +1,4 @@
-import { generateId } from '@/utils/generateId'
+import { generateId } from '@utils/generateId'
 import endent from 'endent'
 import { SausContext } from './context'
 import { VirtualModule } from './plugins/moduleProvider'

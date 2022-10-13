@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index 31e84c2f4fd234aa5186c2affd336b44f54414c8..7057120642d02589d3e87d9f0e17dd29ec763458 100644
+--- a/package.json
++++ b/package.json
+@@ -10,7 +10,6 @@
+ 		"email": "sindresorhus@gmail.com",
+ 		"url": "https://sindresorhus.com"
+ 	},
+-	"type": "module",
+ 	"exports": "./index.js",
+ 	"engines": {
+ 		"node": ">=12"
