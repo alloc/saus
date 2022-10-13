@@ -35,8 +35,8 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
   let context: DevContext
   let fileCache: Record<string, RenderedFile> = {}
 
-  let serveApp: vite.Connect.NextHandleFunction
-  serveApp = (req, res, next) =>
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
+  let serveApp: vite.Connect.NextHandleFunction = (req, res, next) =>
     requestMetas.has(req) &&
     processRequest(context, req, res, next).catch(error => {
       onError(error)
@@ -73,6 +73,7 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
       }
     },
     configureServer: server => {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       server.middlewares.use(async (req, res, next) => {
         let url = req.url!
         if (!url.startsWith(context.basePath)) {
