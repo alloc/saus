@@ -10,15 +10,16 @@ import type { StateModule } from '../stateModules'
  */
 export function hydrateState(
   key: string,
-  served: Cache.Entry,
+  served: Cache.Entry<any> & { args: readonly any[] },
   module: StateModule,
   opts: { deepCopy?: boolean } = {}
 ) {
-  const [state, expiresAt, args] = served
   const hydrate = module['_hydrate']
-  return hydrate
-    ? hydrate(args, opts.deepCopy ? deepCopy(state) : state, expiresAt)
-    : state
+  if (hydrate) {
+    const hydratedState = opts.deepCopy ? deepCopy(served.state) : served.state
+    return hydrate(hydratedState, served)
+  }
+  return served.state
 }
 
 export function hydrateStateListener(id: string, listener: Cache.Listener) {

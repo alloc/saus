@@ -67,6 +67,7 @@ export namespace Cache {
   }
 
   export type Listener<State = unknown, Args extends readonly any[] = any> = (
+    state: State,
     entry: Cache.Entry<State, Args>
   ) => void
 

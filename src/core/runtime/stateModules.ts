@@ -216,9 +216,8 @@ export namespace StateModule {
     Args extends readonly any[] = any
   > = (
     this: void,
-    args: Args,
     state: Served,
-    expiresAt: Cache.MaxAge
+    entry: Cache.Entry<Served> & { args: Args }
   ) => Hydrated
 
   export type LoadListener = { dispose: () => void }
