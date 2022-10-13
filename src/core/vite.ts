@@ -293,7 +293,7 @@ export interface SausPlugin {
    * Generate runtime code for development/production and client/server.
    * @experimental
    */
-  injectModules?: (api: ModuleInjection) => void
+  injectModules?: (api: ModuleInjection) => Promisable<void>
   /**
    * Inspect or mutate the `RuntimeConfig` object, which is serialized to
    * JSON and used by the SSR bundle. The runtime config is also used
@@ -329,7 +329,7 @@ export interface SausPlugin {
    *
    * ⚠︎ This is only called when `saus build` is used.
    */
-  onWritePages?: (pages: PageBundle[]) => void
+  onWritePages?: (pages: PageBundle[]) => Promisable<void>
   /**
    * In development only, SSR errors can be sent to the browser
    * for a better developer experience. The default behavior is
