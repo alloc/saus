@@ -1,13 +1,17 @@
+import { cleanUrl } from '@utils/cleanUrl'
+import type { CompileCache } from '@utils/node/compileCache'
+import {
+  loadSourceMap,
+  SourceMap,
+  toInlineSourceMap,
+} from '@utils/node/sourceMap'
+import { SourceDescription, TransformResult } from '@utils/rollupTypes'
 import * as esModuleLexer from 'es-module-lexer'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
-import type { CompileCache } from '../node/compileCache'
-import { loadSourceMap, toInlineSourceMap } from '../node/sourceMap'
-import { cleanUrl } from '../utils/cleanUrl'
-import { compileEsm, EsmCompilerOptions } from '../vm/compileEsm'
-import type { Script } from '../vm/types'
-import type { ViteFunctions } from './functions'
+import { compileEsm, EsmCompilerOptions } from './compileEsm'
 import { overwriteScript } from './overwriteScript'
+import type { Script } from './types'
 
 interface Options {
   /**
@@ -21,6 +25,15 @@ interface Options {
   cache?: CompileCache
 }
 
+interface Context {
+  load: (id: string) => Promise<SourceDescription | null | undefined>
+  transform: (
+    code: string,
+    id: string,
+    inMap?: SourceMap
+  ) => Promise<TransformResult>
+}
+
 /**
  * Using the `load` and `transform` hooks of your configured
  * Vite plugins, fetch and compile the module associated with
@@ -28,7 +41,7 @@ interface Options {
  */
 export async function compileModule(
   id: string,
-  ctx: Pick<ViteFunctions, 'load' | 'transform'>,
+  ctx: Context,
   { esmOptions, cache }: Options = {}
 ): Promise<Script> {
   const filename = cleanUrl(id)

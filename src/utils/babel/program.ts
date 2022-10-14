@@ -1,5 +1,4 @@
-import { NodePath } from '@babel/core'
-import { t } from './babel'
+import { NodePath, types as t } from '@babel/core'
 import { transformSync } from './transform'
 
 export function getBabelProgram(source: string, filename: string) {

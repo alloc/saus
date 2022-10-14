@@ -1,6 +1,6 @@
-import { toArray } from '../utils/array'
-import { babel, NodePath, t } from './babel'
-import { getFirstAncestor, isPropertyName } from './queries'
+import { toArray } from '@utils/array'
+import { babel, NodePath, t } from '@utils/babel'
+import { getFirstAncestor, isPropertyName } from '@utils/babel/queries'
 
 export function resolveReferences(
   rootPaths: NodePath | NodePath[],

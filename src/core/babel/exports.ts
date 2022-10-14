@@ -1,4 +1,4 @@
-import { NodePath, t } from './babel'
+import { NodePath, t } from '@utils/babel'
 
 export function getExportDeclarations(program: NodePath<t.Program>) {
   return program

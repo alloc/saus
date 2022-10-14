@@ -1,6 +1,6 @@
 {
   "extends": "../tsconfig.json",
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "../utils/rollupTypes.ts"],
   "exclude": ["dist"],
   "compilerOptions": {
     "composite": false,

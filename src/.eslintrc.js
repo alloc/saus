@@ -5,8 +5,9 @@ module.exports = {
     project: [
       'tsconfig.json',
       'core/client/tsconfig.json',
-      'core/runtime/tsconfig.json',
-      'core/utils/tsconfig.json',
+      'runtime/tsconfig.json',
+      'utils/tsconfig.json',
+      'vm/tsconfig.json',
     ],
   },
   plugins: ['@typescript-eslint'],

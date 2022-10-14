@@ -1,5 +1,5 @@
-import { SourceMap } from '../node/sourceMap'
-import { StackFrame } from '../utils/parseStackTrace'
+import { SourceMap } from '@utils/node/sourceMap'
+import { StackFrame } from '@utils/parseStackTrace'
 import type { ImporterSet } from './ImporterSet'
 
 export type Script = {

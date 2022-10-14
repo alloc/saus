@@ -1,5 +1,6 @@
-import { babel, NodePath, resolveReferences, t, transformSync } from '@/babel'
 import { vite } from '@/vite'
+import { babel, NodePath, t, transformSync } from '@utils/babel'
+import { resolveReferences } from '../babel/resolveReferences'
 
 const includeRE = /\.m?[tj]sx?$/
 const layoutExport = /\bexport default defineLayout\b/

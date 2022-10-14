@@ -1,8 +1,7 @@
-import { getBabelProgram, MagicString, NodePath, t } from '@/babel'
-import { vite } from '@/vite'
+import { getBabelProgram, MagicString, NodePath, t } from '@utils/babel'
+import { SourceMap } from '@utils/node/sourceMap'
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
-import { SourceMap } from '../node/sourceMap'
 import { __exportLet, __importDefault } from './esmInterop'
 import { ForceLazyBindingHook } from './types'
 
@@ -327,7 +326,7 @@ function attachInputSourcemap(
   const { generateMap } = editor
   editor.generateMap = function (options) {
     const map = generateMap.call(editor, options)
-    return vite.combineSourcemaps(filename, [map as any, inMap as any]) as any
+    return combineSourcemaps(filename, [map as any, inMap as any]) as any
   }
   return editor
 }
@@ -413,6 +412,7 @@ function injectAliasedImport(
     }
     editor.prepend(
       `import { ${declarators.join(', ')} } from "${imported.source}"` +
+import { combineSourcemaps } from '@utils/combineSourcemaps'
         kSemiReturn
     )
   }

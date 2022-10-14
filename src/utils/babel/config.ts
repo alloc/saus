@@ -1,4 +1,4 @@
-import { babel } from './babel'
+import * as babel from '@babel/core'
 
 export function getBabelConfig(
   filename: string,

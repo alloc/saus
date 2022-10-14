@@ -1,4 +1,4 @@
-import { NodePath, t } from './babel'
+import { NodePath, types as t } from '@babel/core'
 
 export function getWhitespaceStart(start: number, source: string) {
   return start - /(^|\n)([\n ]*)$/.exec(source.slice(0, start))![2].length

@@ -1,7 +1,7 @@
+import { babel, t } from '@utils/babel'
 import { prependBase } from '@utils/base'
 import endent from 'endent'
 import path from 'path'
-import { babel, t } from './babel'
 import { SausContext } from './context'
 
 const clientDir = path.resolve(__dirname, '../client')

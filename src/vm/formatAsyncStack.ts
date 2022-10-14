@@ -1,8 +1,8 @@
 import { codeFrameColumns, SourceLocation } from '@babel/code-frame'
+import { removeSourceMapUrls } from '@utils/node/sourceMap'
+import { parseStackTrace, StackFrame, traceStackFrame } from '@utils/node/stack'
 import createDebug from 'debug'
 import fs from 'fs'
-import { removeSourceMapUrls } from '../node/sourceMap'
-import { parseStackTrace, StackFrame, traceStackFrame } from '../node/stack'
 import { ModuleMap } from './moduleMap'
 
 const kFormattedStack = Symbol.for('saus:formattedStack')

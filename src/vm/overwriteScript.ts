@@ -1,6 +1,6 @@
-import type { SourceMap } from '../node/sourceMap'
-import { vite } from '../vite'
-import { Script } from '../vm/types'
+import { combineSourcemaps } from '@utils/combineSourcemaps'
+import type { SourceMap } from '@utils/node/sourceMap'
+import { Script } from './types'
 
 export function overwriteScript(
   filename: string,
@@ -9,7 +9,7 @@ export function overwriteScript(
 ): Script {
   let map: SourceMap | undefined
   if (oldScript.map && newScript.map) {
-    map = vite.combineSourcemaps(filename, [
+    map = combineSourcemaps(filename, [
       newScript.map,
       oldScript.map as any,
     ]) as any

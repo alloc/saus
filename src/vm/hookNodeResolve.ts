@@ -1,7 +1,7 @@
+import { relativeToCwd } from '@utils/node/relativeToCwd'
 import kleur from 'kleur'
 import { Module } from 'module'
 import path from 'path'
-import { relativeToCwd } from '../node/relativeToCwd'
 import { debug } from './debug'
 import { getNodeModule } from './nodeModules'
 

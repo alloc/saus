@@ -47,7 +47,7 @@
     "node": ">=14"
   },
   "dependencies": {
-    "@ampproject/remapping": "^2.1.2",
+    "@ampproject/remapping": "^1.1.1",
     "@babel/code-frame": "^7.16.7",
     "@babel/core": "^7.16.7",
     "@babel/plugin-syntax-typescript": "^7.14.5",

@@ -10,6 +10,7 @@ import { routesPlugin } from '@/plugins/routes'
 import { vite } from '@/vite'
 import { RuntimeConfig } from '@runtime/config'
 import { prependBase } from '@utils/base'
+import { combineSourcemaps } from '@utils/combineSourcemaps'
 import { findPackage } from '@utils/node/findPackage'
 import { toInlineSourceMap } from '@utils/node/sourceMap'
 import path from 'path'
@@ -213,7 +214,7 @@ export async function compileClients(
         sourceMap: !!sourceMaps,
       })
       if (chunk.map && minified.map) {
-        chunk.map = vite.combineSourcemaps(chunk.fileName, [
+        chunk.map = combineSourcemaps(chunk.fileName, [
           minified.map as any,
           chunk.map as any,
         ]) as any

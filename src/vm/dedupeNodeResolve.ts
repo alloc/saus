@@ -1,5 +1,5 @@
+import { bareImportRE } from '@utils/importRegex'
 import { join } from 'path'
-import { bareImportRE } from '../utils/importRegex'
 import { NodeResolveHook } from './hookNodeResolve'
 
 export function dedupeNodeResolve(

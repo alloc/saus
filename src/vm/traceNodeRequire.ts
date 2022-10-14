@@ -1,4 +1,4 @@
-import { getStackFrame, StackFrame } from '../node/stack'
+import { getStackFrame, StackFrame } from '@utils/node/stack'
 import { formatAsyncStack } from './formatAsyncStack'
 import { ModuleMap } from './moduleMap'
 
