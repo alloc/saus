@@ -1,3 +1,4 @@
+import { Script } from '@vm/types'
 import {
   LoadResult,
   PartialResolvedId,
@@ -9,7 +10,6 @@ import { Promisable } from 'type-fest'
 import { compileModule } from '../../vm/compileModule'
 import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
-import { Script } from '../vm/types'
 
 export interface ViteFunctions {
   buildStart(): Promise<void>

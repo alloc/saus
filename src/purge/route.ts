@@ -1,4 +1,4 @@
-import { Endpoint } from '@/endpoint'
+import { Endpoint } from '@runtime/endpoint'
 import { route } from '@runtime/routes'
 import createDebug from 'debug'
 import { makePurgeRequest } from './request'

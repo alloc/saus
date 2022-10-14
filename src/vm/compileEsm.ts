@@ -1,4 +1,5 @@
 import { getBabelProgram, MagicString, NodePath, t } from '@utils/babel'
+import { combineSourcemaps } from '@utils/combineSourcemaps'
 import { SourceMap } from '@utils/node/sourceMap'
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
@@ -412,7 +413,6 @@ function injectAliasedImport(
     }
     editor.prepend(
       `import { ${declarators.join(', ')} } from "${imported.source}"` +
-import { combineSourcemaps } from '@utils/combineSourcemaps'
         kSemiReturn
     )
   }

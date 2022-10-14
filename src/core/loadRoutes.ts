@@ -1,6 +1,11 @@
 import { upsertPlugin } from '@/vite/upsertPlugin'
 import { toDebugPath } from '@utils/node/toDebugPath'
 import { noop } from '@utils/noop'
+import { debug as vmDebug } from '@vm/debug'
+import { executeModule } from '@vm/executeModule'
+import { formatAsyncStack } from '@vm/formatAsyncStack'
+import { injectNodeModule } from '@vm/nodeModules'
+import { isLinkedModule, RequireAsync } from '@vm/types'
 import * as esModuleLexer from 'es-module-lexer'
 import kleur from 'kleur'
 import MagicString from 'magic-string'
@@ -15,11 +20,6 @@ import { getRouteRenderers } from './routeRenderer'
 import { setRoutesModule } from './runtime/global'
 import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
-import { debug as vmDebug } from './vm/debug'
-import { executeModule } from './vm/executeModule'
-import { formatAsyncStack } from './vm/formatAsyncStack'
-import { injectNodeModule } from './vm/nodeModules'
-import { isLinkedModule, RequireAsync } from './vm/types'
 
 export async function loadRoutes(context: SausContext) {
   const time = Date.now()

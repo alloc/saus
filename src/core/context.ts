@@ -1,3 +1,6 @@
+import { RequireAsyncState } from '@vm/asyncRequire'
+import { ModuleMap } from '@vm/moduleMap'
+import { CompiledModule, RequireAsync } from '@vm/types'
 import arrify from 'arrify'
 import { EventEmitter } from 'ee-ts'
 import type { BuildContext, BundleContext } from '../bundle'
@@ -19,9 +22,6 @@ import type { Falsy } from './utils/types'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'
-import { RequireAsyncState } from './vm/asyncRequire'
-import { ModuleMap } from './vm/moduleMap'
-import { CompiledModule, RequireAsync } from './vm/types'
 
 export type SausCommand = 'build' | 'serve' | 'deploy' | 'secrets'
 export type SausContext = BuildContext | DeployContext | DevContext

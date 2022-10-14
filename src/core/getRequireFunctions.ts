@@ -1,9 +1,11 @@
+import { httpImport } from '@runtime/http/httpImport'
+import { jsonImport } from '@runtime/http/jsonImport'
+import { createAsyncRequire, RequireAsyncConfig } from '@vm/asyncRequire'
+import { dedupeNodeResolve } from '@vm/dedupeNodeResolve'
 import fs from 'fs'
 import { SausContext, SausEventEmitter } from './context'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { compileSsrModule } from './vite/compileSsrModule'
-import { createAsyncRequire, RequireAsyncConfig } from './vm/asyncRequire'
-import { dedupeNodeResolve } from './vm/dedupeNodeResolve'
 
 export function getRequireFunctions(context: SausContext) {
   const {
@@ -45,6 +47,8 @@ export function getRequireFunctions(context: SausContext) {
       externalExports,
       nodeResolve,
       watchFile,
+      httpImport,
+      jsonImport,
       timeout,
       filterStack,
       onModuleLoaded,
@@ -64,6 +68,8 @@ export function getRequireFunctions(context: SausContext) {
       externalExports,
       nodeResolve,
       watchFile,
+      httpImport,
+      jsonImport,
       timeout,
       filterStack,
       onModuleLoaded,

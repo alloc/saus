@@ -1,4 +1,7 @@
+import { importAsyncId, importMetaId, requireAsyncId } from '@vm/compileEsm'
+import { ImporterSet } from '@vm/ImporterSet'
 import { isLiveModule } from '@vm/isLiveModule'
+import { CompiledModule } from '@vm/types'
 import { Module } from 'module'
 import path from 'path'
 import { SausContext } from '..'
@@ -6,9 +9,6 @@ import { compileModule } from '../../vm/compileModule'
 import { servedPathForFile } from '../node/servedPathForFile'
 import { cleanUrl } from '../utils/cleanUrl'
 import { isPackageRef } from '../utils/isPackageRef'
-import { importAsyncId, importMetaId, requireAsyncId } from '../vm/compileEsm'
-import { ImporterSet } from '../vm/ImporterSet'
-import { CompiledModule } from '../vm/types'
 import { checkPublicFile } from './checkPublicFile'
 
 export async function compileSsrModule(

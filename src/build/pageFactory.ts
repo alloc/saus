@@ -1,6 +1,6 @@
-import { loadResponseCache, responseCache } from '@http/responseCache'
 import { ProfiledEventHandler } from '@runtime/app/types'
 import { MutableRuntimeConfig } from '@runtime/config'
+import { loadResponseCache, responseCache } from '@runtime/http/responseCache'
 import { makeRequestUrl } from '@runtime/makeRequest'
 import { parseUrl } from '@runtime/url'
 import { loadSourceMap, SourceMap } from '@utils/node/sourceMap'

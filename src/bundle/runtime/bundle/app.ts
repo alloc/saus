@@ -1,7 +1,7 @@
-import { defineEndpoint } from '@/endpoint'
 import { createApp as create } from '@runtime/app/createApp'
 import type { App, RenderedPage } from '@runtime/app/types'
 import { loadDeployedEnv } from '@runtime/deployedEnv'
+import { defineEndpoint } from '@runtime/endpoint'
 import { setRequestMetadata } from '@runtime/requestMetadata'
 import { ssrClearCache, ssrImport } from '@runtime/ssrModules'
 import { prependBase } from '@utils/base'

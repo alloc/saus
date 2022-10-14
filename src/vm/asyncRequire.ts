@@ -1,5 +1,3 @@
-import { httpImport } from '@http/httpImport'
-import { jsonImport } from '@http/jsonImport'
 import { internalPathRE } from '@utils/importRegex'
 import { isExternalUrl } from '@utils/isExternalUrl'
 import { getStackFrame, StackFrame } from '@utils/node/stack'
@@ -118,6 +116,8 @@ export interface RequireAsyncConfig extends RequireAsyncState {
    * be able to reload the SSR-only modules when they're changed.
    */
   watchFile?: (file: string) => void
+  httpImport?: (url: string) => Promise<any>
+  jsonImport?: (url: string) => Promise<{ default: any }>
 }
 
 const isDebug = !!process.env.DEBUG
@@ -137,6 +137,8 @@ export function createAsyncRequire(
     filterStack,
     nodeResolve,
     watchFile = noop,
+    httpImport,
+    jsonImport,
   } = config
 
   const watchModuleOrThrow = (
@@ -283,10 +285,10 @@ export function createAsyncRequire(
           shouldReload = neverReload
         }
         const resolvedUrl = isExternalUrl(resolved.id) && resolved.id
-        if (resolvedUrl) {
-          if (resolvedUrl.endsWith('.json')) {
-            return jsonImport(resolvedUrl)
-          }
+        if (jsonImport && resolvedUrl && resolvedUrl.endsWith('.json')) {
+          return jsonImport(resolvedUrl)
+        }
+        if (httpImport && resolvedUrl) {
           return httpImport(resolvedUrl)
         }
         if (resolved.external) {

@@ -435,7 +435,10 @@ importers:
     specifiers: {}
 
   src/runtime:
-    specifiers: {}
+    specifiers:
+      '@utils': workspace:@saus/utils@*
+    dependencies:
+      '@utils': link:../utils/dist
 
   src/runtime/dist:
     specifiers: {}
@@ -458,7 +461,10 @@ importers:
     specifiers: {}
 
   src/vm:
-    specifiers: {}
+    specifiers:
+      '@utils': workspace:@saus/utils@*
+    dependencies:
+      '@utils': link:../utils/dist
 
   src/vm/dist:
     specifiers: {}

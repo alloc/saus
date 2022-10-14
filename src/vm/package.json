@@ -4,5 +4,8 @@
     "clean": "rimraf dist && git checkout head -- dist",
     "build": "npm run clean && tsc --incremental -p . && esbuild **/*.ts --out-extension:.js=.mjs --outdir=dist",
     "dev": "npm run clean && tsc --incremental -p . --watch --sourcemap"
+  },
+  "dependencies": {
+    "@utils": "workspace:@saus/utils@*"
   }
 }
