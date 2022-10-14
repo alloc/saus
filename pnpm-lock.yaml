@@ -426,33 +426,25 @@ importers:
   src:
     specifiers:
       '@': link:./core
-      '@http': workspace:@saus/http@*
       '@runtime': workspace:@saus/runtime@*
       '@utils': workspace:@saus/utils@*
       '@vm': workspace:@saus/vm@*
     dependencies:
       '@': link:core
-      '@http': link:core/http/dist
-      '@runtime': link:core/runtime/dist
-      '@utils': link:core/utils/dist
-      '@vm': link:core/vm/dist
+      '@runtime': link:runtime/dist
+      '@utils': link:utils/dist
+      '@vm': link:vm/dist
 
-  src/core/babel:
+  src/core:
     specifiers: {}
 
-  src/core/http:
+  src/runtime:
     specifiers: {}
 
-  src/core/http/dist:
+  src/runtime/dist:
     specifiers: {}
 
-  src/core/runtime:
-    specifiers: {}
-
-  src/core/runtime/dist:
-    specifiers: {}
-
-  src/core/utils:
+  src/utils:
     specifiers:
       ohash: ^0.1.5
       tinypool: ^0.1.1
@@ -460,13 +452,13 @@ importers:
       ohash: 0.1.5
       tinypool: 0.1.3
 
-  src/core/utils/dist:
+  src/utils/dist:
     specifiers: {}
 
-  src/core/vm:
+  src/vm:
     specifiers: {}
 
-  src/core/vm/dist:
+  src/vm/dist:
     specifiers: {}
 
 packages:

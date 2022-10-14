@@ -3,8 +3,8 @@ import { setRoutesModule } from '@runtime/global'
 import { context } from '../bundle/context'
 
 export * from '@/api'
-export * from '@/vm/esmInterop'
 export * from '@runtime/ssrModules'
+export * from '@vm/esmInterop'
 
 // In SSR bundles, these globals are mutated at the top level
 // immediately, so they need to be defined now.

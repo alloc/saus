@@ -1,5 +1,5 @@
-import type { SecretMap } from '@/runtime/secrets/types'
 import { deployedEnv } from '@runtime/deployedEnv'
+import type { SecretMap } from '../../secrets/types'
 
 export function defineSecrets(secrets: SecretMap) {
   // Secret access is forwarded to the deployedEnv object,

@@ -1,7 +1,7 @@
 import type { ParsedRoute } from '@/routes'
-import { debug } from '@/vm/debug'
 import { parseRoutePath } from '@utils/parseRoutePath'
 import { plural } from '@utils/plural'
+import { debug } from '@vm/debug'
 
 type RendererInit = () => Promise<any>
 

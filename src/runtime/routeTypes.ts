@@ -1,6 +1,6 @@
 import type { OneOrMany } from '@utils/types'
-import type { RequireAsync } from '@vm/types'
 import { Promisable } from 'type-fest'
+import type { RequireAsync } from '../vm/dist/types'
 import { CommonServerProps } from './app/types'
 import type { Cache } from './cache'
 import type { RuntimeHook } from './config'

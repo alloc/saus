@@ -1,5 +1,5 @@
-import { DefinedSecrets } from '@/runtime/secrets/types'
 import { getDeployContext } from '../../deploy/context'
+import { DefinedSecrets } from '../types'
 
 /**
  * Associate the given `fn` with a `defineSecrets` result,

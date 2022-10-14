@@ -1,7 +1,7 @@
 packages:
   - 'src'
-  - 'src/core/*'
-  - 'src/core/*/dist'
+  - 'src/*'
+  - 'src/*/dist'
   - 'packages/*'
   - 'packages/aws/*'
   - 'packages/cloudflare/*'

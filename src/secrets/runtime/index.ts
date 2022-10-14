@@ -1,3 +1,3 @@
-export * from '@/runtime/secrets/types'
+export * from '../types'
 export * from './addSecrets'
 export * from './checkSecrets'

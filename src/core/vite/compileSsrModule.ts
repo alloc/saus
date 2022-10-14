@@ -1,4 +1,4 @@
-import { isLiveModule } from '@/vm/isLiveModule'
+import { isLiveModule } from '@vm/isLiveModule'
 import { Module } from 'module'
 import path from 'path'
 import { SausContext } from '..'

@@ -1,5 +1,4 @@
 {
-  "name": "@saus/core",
   "private": true,
   "scripts": {
     "build": "rimraf ../dist && tsup",
@@ -8,7 +7,6 @@
   },
   "dependencies": {
     "@": "link:./core",
-    "@http": "workspace:@saus/http@*",
     "@runtime": "workspace:@saus/runtime@*",
     "@utils": "workspace:@saus/utils@*",
     "@vm": "workspace:@saus/vm@*"

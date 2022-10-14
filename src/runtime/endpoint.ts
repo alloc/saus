@@ -1,15 +1,15 @@
+import type { Buffer } from '@utils/buffer'
+import type { httpMethods } from '@utils/httpMethods'
+import type { AnyToObject, Falsy, Promisable } from '@utils/types'
+import { Simplify, UnionToIntersection } from 'type-fest'
+import type { App } from './app/types'
 import type {
   DeclaredHeaders,
   HttpRedirect,
   RequestHeaders,
   Response as HttpResponse,
   ResponseHeaders,
-} from '@http'
-import type { Buffer } from '@utils/buffer'
-import type { httpMethods } from '@utils/httpMethods'
-import type { AnyToObject, Falsy, Promisable } from '@utils/types'
-import { Simplify, UnionToIntersection } from 'type-fest'
-import type { App } from './app/types'
+} from './http'
 import type { InferRouteParams, Route, RouteParams } from './routeTypes'
 import type { ParsedUrl } from './url'
 

@@ -1,8 +1,8 @@
-import type { RequestHeaders } from '@http'
 import { assignDefaults } from '@utils/assignDefaults'
 import { defer } from '@utils/defer'
 import { emptyHeaders } from './app/constants'
 import type { Endpoint } from './endpoint'
+import type { RequestHeaders } from './http'
 import { ParsedUrl } from './url'
 
 const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)

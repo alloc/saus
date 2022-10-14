@@ -1,8 +1,8 @@
+import { getBabelProgram, MagicString, NodePath, t } from '@/babel'
+import { vite } from '@/vite'
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'
-import { getBabelProgram, MagicString, NodePath, t } from '../babel'
 import { SourceMap } from '../node/sourceMap'
-import { vite } from '../vite'
 import { __exportLet, __importDefault } from './esmInterop'
 import { ForceLazyBindingHook } from './types'
 

@@ -1,8 +1,8 @@
-import type { Headers } from '@http'
 import { Falsy } from '@utils/types'
 import * as kleur from 'kleur/colors'
 import { Endpoint } from '../endpoint'
 import { onRequest, onResponse } from '../endpointHooks'
+import type { Headers } from '../http'
 import { setup } from '../setup'
 
 /**
