@@ -2,7 +2,7 @@
   "name": "@saus/vm",
   "version": "0.1.0",
   "scripts": {
-    "build": "rimraf dist && tsup",
-    "dev": "rimraf dist && tsup --watch --sourcemap"
+    "build": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p .",
+    "dev": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p . --watch --sourcemap"
   }
 }

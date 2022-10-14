@@ -1,5 +1,8 @@
 {
   "name": "@saus/http",
-  "private": true,
-  "main": "./index.ts"
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p .",
+    "dev": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p . --watch --sourcemap"
+  }
 }

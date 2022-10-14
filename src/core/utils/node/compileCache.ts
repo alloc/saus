@@ -1,6 +1,6 @@
-import { murmurHash } from '@utils/murmur3'
 import fs from 'fs'
 import path from 'path'
+import { murmurHash } from '../murmur3'
 import { loadFileMappings, saveFileMappings } from './compileCache/fileMappings'
 
 /**

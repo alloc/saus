@@ -1,8 +1,11 @@
 {
-  "name": "@saus/utils",
   "private": true,
   "scripts": {
     "build": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p .",
     "dev": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p . --watch --sourcemap"
+  },
+  "dependencies": {
+    "ohash": "^0.1.5",
+    "tinypool": "^0.1.1"
   }
 }

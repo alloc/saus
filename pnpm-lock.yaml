@@ -17,6 +17,7 @@ importers:
       '@babel/plugin-syntax-typescript': ^7.14.5
       '@cush/exec': ^1.8.0
       '@cush/relative': ^1.0.0
+      '@http': workspace:@saus/http@*
       '@rollup/pluginutils': ^4.1.2
       '@runtime': workspace:@saus/runtime@*
       '@saus/deploy-utils': workspace:^0.1.0
@@ -37,6 +38,7 @@ importers:
       '@typescript-eslint/eslint-plugin': ^5.38.0
       '@typescript-eslint/parser': ^5.38.0
       '@utils': workspace:@saus/utils@*
+      '@vm': workspace:@saus/vm@*
       ansi-to-html: ^0.7.2
       arrify: ^3.0.0
       base64-arraybuffer: ^1.0.2
@@ -61,7 +63,6 @@ importers:
       magic-string: ^0.25.7
       misty: ^1.6.7
       mrmime: ^1.0.0
-      ohash: ^0.1.5
       prettier: ^2.0.5
       quick-lru: ^6.1.1
       recrawl-sync: ^2.2.1
@@ -73,7 +74,6 @@ importers:
       strict-event-emitter-types: ^2.0.0
       strip-comments: ^2.0.1
       terser: ^5.10.0
-      tinypool: ^0.1.1
       ts-debounce: 2.0.0
       tsup: ^5.12.8
       type-fest: ^2.13.0
@@ -87,10 +87,12 @@ importers:
       '@babel/code-frame': 7.18.6
       '@babel/core': 7.18.6
       '@babel/plugin-syntax-typescript': 7.18.6_@babel+core@7.18.6
+      '@http': link:src/core/http
       '@runtime': link:src/core/runtime
       '@saus/deploy-utils': link:packages/deploy-utils
       '@saus/html': link:packages/html
       '@utils': link:src/core/utils/dist
+      '@vm': link:src/core/vm
       ansi-to-html: 0.7.2
       cac: 6.7.12
       convert-source-map: 1.8.0
@@ -104,14 +106,12 @@ importers:
       magic-string: 0.25.9
       misty: 1.6.10
       mrmime: 1.0.1
-      ohash: 0.1.5
       recrawl-sync: 2.2.2
       rollup: 2.77.0
       shared-log: 1.2.8
       source-map-support: 0.5.21
       strict-event-emitter-types: 2.0.0
       terser: 5.14.2
-      tinypool: 0.1.3
       type-fest: 2.16.0
       vite: /@alloc/vite/2.6.3-3
       yaml: 2.1.1
@@ -436,10 +436,24 @@ importers:
   src:
     specifiers: {}
 
+  src/core/http:
+    specifiers: {}
+
   src/core/runtime:
     specifiers: {}
 
+  src/core/utils:
+    specifiers:
+      ohash: ^0.1.5
+      tinypool: ^0.1.1
+    dependencies:
+      ohash: 0.1.5
+      tinypool: 0.1.3
+
   src/core/utils/dist:
+    specifiers: {}
+
+  src/core/vm:
     specifiers: {}
 
 packages:
