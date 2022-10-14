@@ -1,10 +1,7 @@
 packages:
   - 'src'
-  - 'src/core/http'
-  - 'src/core/runtime'
-  - 'src/core/utils'
-  - 'src/core/utils/dist'
-  - 'src/core/vm'
+  - 'src/core/*'
+  - 'src/core/*/dist'
   - 'packages/*'
   - 'packages/aws/*'
   - 'packages/cloudflare/*'

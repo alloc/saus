@@ -1,8 +1,8 @@
 {
-  "name": "@saus/http",
-  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "build": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p .",
-    "dev": "rimraf dist/**/*.{ts,js,map} && tsc --incremental -p . --watch --sourcemap"
+    "clean": "rimraf dist && git checkout head -- dist",
+    "build": "npm run clean && tsc --incremental -p .",
+    "dev": "npm run clean && tsc --incremental -p . --watch --sourcemap"
   }
 }

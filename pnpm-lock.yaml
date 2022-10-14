@@ -87,12 +87,12 @@ importers:
       '@babel/code-frame': 7.18.6
       '@babel/core': 7.18.6
       '@babel/plugin-syntax-typescript': 7.18.6_@babel+core@7.18.6
-      '@http': link:src/core/http
-      '@runtime': link:src/core/runtime
+      '@http': link:src/core/http/dist
+      '@runtime': link:src/core/runtime/dist
       '@saus/deploy-utils': link:packages/deploy-utils
       '@saus/html': link:packages/html
       '@utils': link:src/core/utils/dist
-      '@vm': link:src/core/vm
+      '@vm': link:src/core/vm/dist
       ansi-to-html: 0.7.2
       cac: 6.7.12
       convert-source-map: 1.8.0
@@ -436,10 +436,19 @@ importers:
   src:
     specifiers: {}
 
+  src/core/babel:
+    specifiers: {}
+
   src/core/http:
     specifiers: {}
 
+  src/core/http/dist:
+    specifiers: {}
+
   src/core/runtime:
+    specifiers: {}
+
+  src/core/runtime/dist:
     specifiers: {}
 
   src/core/utils:
@@ -454,6 +463,9 @@ importers:
     specifiers: {}
 
   src/core/vm:
+    specifiers: {}
+
+  src/core/vm/dist:
     specifiers: {}
 
 packages:
