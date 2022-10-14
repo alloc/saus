@@ -1,15 +1,11 @@
-import {
-  BuildOptions,
-  generateRoutePaths,
-  loadBundle,
-  RouteParams,
-  vite,
-} from '@/core'
+import { BuildOptions, loadBundle, vite } from '@/core'
 import { ProfiledEventHandler } from '@runtime/app/types'
+import { getPagePath } from '@runtime/getPagePath'
+import { generateRoutePaths } from '@runtime/routes/generateRoutePaths'
+import { RouteParams } from '@runtime/routeTypes'
 import { prependBase } from '@utils/base'
 import { callPlugins } from '@utils/callPlugins'
 import { defer, Deferred } from '@utils/defer'
-import { getPagePath } from '@utils/getPagePath'
 import { emptyDir } from '@utils/node/emptyDir'
 import { printFiles } from '@utils/node/printFiles'
 import { loadTinypool } from '@utils/node/tinypool'
