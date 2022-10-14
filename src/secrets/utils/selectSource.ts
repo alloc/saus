@@ -1,5 +1,5 @@
+import { MutableSecretSource } from '@/runtime/secrets/types'
 import { prompt } from '@saus/deploy-utils'
-import { MutableSecretSource } from '../types'
 
 export async function selectSource(
   sources: MutableSecretSource[]

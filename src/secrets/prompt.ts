@@ -1,5 +1,5 @@
+import { SecretMap } from '@/runtime/secrets/types'
 import { bold } from 'kleur/colors'
-import { SecretMap } from './types'
 
 export async function askForSecrets(names: Iterable<string>) {
   const { prompt } = await import('@saus/deploy-utils')

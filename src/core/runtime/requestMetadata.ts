@@ -1,4 +1,4 @@
-import type { RenderedPage } from '../app/types'
+import type { RenderedPage } from './app/types'
 import type { Endpoint } from './endpoint'
 
 /**

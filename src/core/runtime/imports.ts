@@ -1,4 +1,4 @@
-import { SPACE } from '../tokens'
+import { SPACE } from './tokens'
 
 export type ImportDescriptorMap = {
   [source: string]: string | (string | [name: string, alias: string])[]

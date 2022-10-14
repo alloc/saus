@@ -1,6 +1,6 @@
 import { noop } from '@utils/noop'
-import { INDENT, RETURN, SPACE } from '../tokens'
 import { compact } from './constants'
+import { INDENT, RETURN, SPACE } from './tokens'
 
 const varDeclRE = /^(const|let|var) /
 
