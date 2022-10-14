@@ -4,6 +4,14 @@ import {
   RawSourceMap,
 } from '@ampproject/remapping/dist/types/types'
 
+// based on https://github.com/sveltejs/svelte/blob/abf11bb02b2afbd3e4cac509a0f70e318c306364/src/compiler/utils/mapped_code.ts#L221
+const nullSourceMap: RawSourceMap = {
+  names: [],
+  sources: [],
+  mappings: '',
+  version: 3,
+}
+
 export function combineSourcemaps(
   filename: string,
   sourcemapList: Array<DecodedSourceMap | RawSourceMap>

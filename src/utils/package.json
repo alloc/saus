@@ -7,6 +7,8 @@
   },
   "dependencies": {
     "@ampproject/remapping": "^1.1.1",
+    "@babel/core": "^7.16.7",
+    "@babel/plugin-syntax-typescript": "^7.14.5",
     "ohash": "^0.1.5",
     "tinypool": "^0.1.1"
   }

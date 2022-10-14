@@ -49,8 +49,6 @@
   "dependencies": {
     "@ampproject/remapping": "^1.1.1",
     "@babel/code-frame": "^7.16.7",
-    "@babel/core": "^7.16.7",
-    "@babel/plugin-syntax-typescript": "^7.14.5",
     "@saus/deploy-utils": "workspace:^0.1.0",
     "@saus/html": "workspace:^0.1.0",
     "ansi-to-html": "^0.7.2",
@@ -59,7 +57,7 @@
     "debug": "^4.3.2",
     "ee-ts": "2.0.0-rc.6",
     "endent": "^2.1.0",
-    "es-module-lexer": "^0.9.3",
+    "es-module-lexer": "^1.0.5",
     "esbuild": "^0.14.15",
     "etag": "^1.8.1",
     "kleur": "^4.1.4",
