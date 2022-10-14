@@ -1,6 +1,6 @@
+import { prependBase } from '@utils/base'
+import { noop } from '@utils/noop'
 import { loadContext } from '../core/context'
-import { prependBase } from '../core/utils/base'
-import { noop } from '../core/utils/noop'
 import { vite } from '../core/vite'
 import { PreviewOptions } from './options'
 
