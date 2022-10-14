@@ -1,8 +1,0 @@
-{
-  "private": true,
-  "scripts": {
-    "clean": "rimraf dist && git checkout head -- dist",
-    "build": "npm run clean && tsc --incremental -p .",
-    "dev": "npm run clean && tsc --incremental -p . --watch --sourcemap"
-  }
-}

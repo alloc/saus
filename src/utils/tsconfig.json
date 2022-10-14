@@ -9,6 +9,6 @@
     "incremental": true,
     "moduleResolution": "node",
     "outDir": "dist",
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
   }
 }
