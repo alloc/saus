@@ -1,4 +1,4 @@
-import { HttpRedirect } from '@/http/redirect'
+import { HttpRedirect } from '@runtime/http/redirect'
 import etag from 'etag'
 import * as mime from 'mrmime'
 import { connect } from './connect'

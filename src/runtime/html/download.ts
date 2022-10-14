@@ -1,21 +1,21 @@
 import { relative } from '@cush/relative'
+import { isExternalUrl } from '@utils/isExternalUrl'
+import { limitTime } from '@utils/limitTime'
+import { murmurHash } from '@utils/murmur3'
+import { unwrapBuffer } from '@utils/node/buffer'
+import createDebug from 'debug'
 import fs from 'fs'
 import MagicString from 'magic-string'
 import { startTask } from 'misty/task'
 import path from 'path'
-import { setup } from 'saus'
-import {
-  EnforcementPhase,
-  isExternalUrl,
-  limitTime,
-  murmurHash,
-  unwrapBuffer,
-} from 'saus/core'
-import { get, Response } from 'saus/http'
-import { debug } from './debug'
-import { $ } from './selector'
-import { traverseHtml } from './traversal'
-import { HtmlDocument, HtmlVisitorState } from './types'
+import { $ } from '../../html/src/selector'
+import { traverseHtml } from '../../html/src/traversal'
+import { HtmlDocument, HtmlVisitorState } from '../../html/src/types'
+import { get, Response } from '../http'
+import { setup } from '../setup'
+import { EnforcementPhase } from './process'
+
+const debug = createDebug('saus:html:download')
 
 type ContentPromise = Promise<string | Buffer>
 type ReplicaListener = (replicaUrl: string) => void

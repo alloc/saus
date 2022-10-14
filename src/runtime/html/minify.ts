@@ -1,5 +1,5 @@
-import { setup } from 'saus'
-import { processHtml } from 'saus/core'
+import { setup } from '../setup'
+import { processHtml } from './process'
 
 /**
  * An ultra lightweight means of minifying the HTML of each page.

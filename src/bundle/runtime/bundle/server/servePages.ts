@@ -1,7 +1,7 @@
-import { makeRequestUrl } from '@/makeRequest'
 import type { App } from '@runtime/app'
-import { parseUrl } from '@utils/node/url'
-import { writeResponse } from '@utils/node/writeResponse'
+import { writeResponse } from '@runtime/http/writeResponse'
+import { makeRequestUrl } from '@runtime/makeRequest'
+import { parseUrl } from '@runtime/url'
 import { streamToBuffer } from '@utils/streamToBuffer'
 import { connect } from './connect'
 

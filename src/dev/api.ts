@@ -26,7 +26,7 @@ import { formatAsyncStack } from '@vm/formatAsyncStack'
 import { createFullReload } from '@vm/fullReload'
 import { injectNodeModule } from '@vm/nodeModules'
 import { addExitCallback, removeExitCallback } from 'catch-exit'
-import { EventEmitter } from 'events'
+import { EventEmitter } from 'ee-ts'
 import { readFile } from 'fs/promises'
 import http from 'http'
 import { bold, gray, red } from 'kleur/colors'
@@ -244,7 +244,10 @@ function listen(
   let listening = false
 
   const { resolve, promise } = defer<void>()
-  events.once('close', () => resolve())
+  const closeHandler = events.on('close', () => {
+    events.off('close', closeHandler)
+    resolve()
+  })
 
   // When optimizing deps, a syntax error may be hit. If so, we need to
   // handle it here by waiting for the offending file to be updated, and

@@ -1,6 +1,6 @@
+import type { PageBundle } from '@runtime/bundleTypes'
 import fs from 'fs'
 import path from 'path'
-import type { PageBundle } from '../../../core/runtime/bundleTypes'
 import clientAssets from './clientAssets'
 import clientModules from './clientModules'
 import { loadAsset, loadModule } from './clientStore'

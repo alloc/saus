@@ -1,7 +1,7 @@
 import { AnyToObject } from '@utils/types'
 import { Promisable } from 'type-fest'
 import { ClientHooks } from './clientHooks'
-import { UnsafeHTML } from './html'
+import { UnsafeHTML } from './html/template'
 import { defineLayoutRenderer } from './layoutRenderer'
 import { RenderRequest } from './renderer'
 
