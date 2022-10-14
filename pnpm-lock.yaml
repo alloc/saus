@@ -7,7 +7,6 @@ importers:
 
   .:
     specifiers:
-      '@': link:./src/core
       '@alloc/fast-rimraf': ^1.0.8
       '@alloc/prettier-config': ^1.0.0
       '@ampproject/remapping': ^2.1.2
@@ -17,9 +16,7 @@ importers:
       '@babel/plugin-syntax-typescript': ^7.14.5
       '@cush/exec': ^1.8.0
       '@cush/relative': ^1.0.0
-      '@http': workspace:@saus/http@*
       '@rollup/pluginutils': ^4.1.2
-      '@runtime': workspace:@saus/runtime@*
       '@saus/deploy-utils': workspace:^0.1.0
       '@saus/html': workspace:^0.1.0
       '@types/babel__code-frame': ^7.0.3
@@ -37,8 +34,6 @@ importers:
       '@types/strip-comments': ^2.0.1
       '@typescript-eslint/eslint-plugin': ^5.38.0
       '@typescript-eslint/parser': ^5.38.0
-      '@utils': workspace:@saus/utils@*
-      '@vm': workspace:@saus/vm@*
       ansi-to-html: ^0.7.2
       arrify: ^3.0.0
       base64-arraybuffer: ^1.0.2
@@ -82,17 +77,12 @@ importers:
       vitest: '*'
       yaml: ^2.1.1
     dependencies:
-      '@': link:src/core
       '@ampproject/remapping': 2.2.0
       '@babel/code-frame': 7.18.6
       '@babel/core': 7.18.6
       '@babel/plugin-syntax-typescript': 7.18.6_@babel+core@7.18.6
-      '@http': link:src/core/http/dist
-      '@runtime': link:src/core/runtime/dist
       '@saus/deploy-utils': link:packages/deploy-utils
       '@saus/html': link:packages/html
-      '@utils': link:src/core/utils/dist
-      '@vm': link:src/core/vm/dist
       ansi-to-html: 0.7.2
       cac: 6.7.12
       convert-source-map: 1.8.0
@@ -434,7 +424,18 @@ importers:
       saus: link:../..
 
   src:
-    specifiers: {}
+    specifiers:
+      '@': link:./core
+      '@http': workspace:@saus/http@*
+      '@runtime': workspace:@saus/runtime@*
+      '@utils': workspace:@saus/utils@*
+      '@vm': workspace:@saus/vm@*
+    dependencies:
+      '@': link:core
+      '@http': link:core/http/dist
+      '@runtime': link:core/runtime/dist
+      '@utils': link:core/utils/dist
+      '@vm': link:core/vm/dist
 
   src/core/babel:
     specifiers: {}

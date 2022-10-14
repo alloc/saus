@@ -5,5 +5,12 @@
     "build": "rimraf ../dist && tsup",
     "dev": "rimraf ../dist && tsup --watch --sourcemap",
     "lint": "tsc --build && eslint . --ext .ts"
+  },
+  "dependencies": {
+    "@": "link:./core",
+    "@http": "workspace:@saus/http@*",
+    "@runtime": "workspace:@saus/runtime@*",
+    "@utils": "workspace:@saus/utils@*",
+    "@vm": "workspace:@saus/vm@*"
   }
 }
