@@ -1,4 +1,16 @@
 {
   "name": "@saus/utils",
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "exports": {
+    "./AbortController": {
+      "node": "./index.node.js",
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./*": {
+      "types": "./*.d.ts",
+      "import": "./*.mjs",
+      "default": "./*.js"
+    }
+  }
 }

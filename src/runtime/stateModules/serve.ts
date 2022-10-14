@@ -1,9 +1,7 @@
-import createDebug from 'debug'
 import { Cache, createCache } from '../cache'
 import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
-
-const debug = createDebug('saus:state')
+import { debug } from './debug'
 
 /**
  * Data served by state modules is cached here.
