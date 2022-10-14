@@ -3,6 +3,15 @@ import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
 import { debug } from './debug'
 
+type ServedStateEntry<State> = Cache.Entry<State> & {
+  args: readonly any[]
+}
+
+interface ServedStatePromise<State>
+  extends globalThis.Promise<ServedStateEntry<State>> {
+  cancel: () => void
+}
+
 /**
  * Data served by state modules is cached here.
  *
@@ -13,7 +22,7 @@ export const serveCache = createCache()
 export function serveState<T>(
   module: StateModule<any, any, T>,
   options: Cache.AccessOptions = {}
-): Cache.EntryPromise<T> {
+): ServedStatePromise<T> {
   const args = options.args || module.args || []
   const key = getStateModuleKey(module, args)
   const loadStateModule = async (entry: Cache.EntryContext<T>) => {
@@ -41,5 +50,5 @@ export function serveState<T>(
     ...options,
     stateModule: module,
     args,
-  })
+  }) as any
 }

@@ -2,9 +2,6 @@ import { Promisable } from 'type-fest'
 import type { RouteLayout } from './layouts'
 import { getCurrentModule } from './ssrModules'
 
-// The first instance of a layout module is reused.
-const layouts: { [file: string]: RouteLayout } = {}
-
 export interface LayoutRenderer<RenderResult = any> {
   /** Stringify the SSR result of a layout's `render` method. */
   toString: (result: RenderResult) => Promisable<string>
@@ -28,28 +25,16 @@ export const defineLayoutRenderer = <RenderResult>({
     ServerProps extends object = any,
     RouteModule extends object = any
   >(
-    config: Omit<
-      RouteLayout<ClientProps, ServerProps, RouteModule, RenderResult>,
-      'file'
-    >
+    config: RouteLayout<ClientProps, ServerProps, RouteModule, RenderResult>
   ): RouteLayout<ClientProps, ServerProps, RouteModule, string> {
-    const { render } = config
+    config.file ||= getCurrentModule()
     config.hydrator ||= hydrator
+
+    const { render } = config
     config.render = async req => {
       const rendered = await render(req)
       return toString(rendered) as any
     }
-    // TODO: clean this up
-    const file: string = ((config as any).file ||= getCurrentModule())
-    return config
-    // const layout = layouts[file]
-    // if (layout) {
-    //   return Object.assign(layout, {
-    //     clientHooks: undefined,
-    //     head: undefined,
-    //     hydrator: undefined,
-    //     ...config,
-    //   })
-    // }
-    // return (layouts[file] = config as any)
+
+    return config as any
   }

@@ -1,6 +1,6 @@
+import { httpMethods } from '@utils/httpMethods'
 import http, { Agent } from 'http'
-import type { Endpoint } from '../runtime/endpoint'
-import { httpMethods } from '../utils/httpMethods'
+import type { Endpoint } from '../endpoint'
 import type { RequestHeaders } from './headers'
 
 export type { BufferLike } from '../app/types'

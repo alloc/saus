@@ -1,4 +1,4 @@
-import { renderRoutePath } from '@utils/renderRoutePath'
+import { renderRoutePath } from './renderRoutePath'
 import type { RouteParams } from './routeTypes'
 
 export function getPagePath(

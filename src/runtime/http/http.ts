@@ -1,6 +1,5 @@
 import { joinUrl } from '@utils/joinUrl'
-import { writeBody } from '@utils/node/writeBody'
-import { Endpoint } from '../core'
+import { Endpoint } from '../endpoint'
 import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
@@ -8,6 +7,7 @@ import { urlToHttpOptions } from './internal/urlToHttpOptions'
 import { normalizeHeaders } from './normalizeHeaders'
 import { Response } from './response'
 import { HttpMethod, HttpOptions, URL } from './types'
+import { writeBody } from './writeBody'
 
 type ForwardedKeys =
   | 'agent'

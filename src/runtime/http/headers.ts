@@ -1,9 +1,8 @@
-import { writeHeaders } from '@utils/node/writeHeaders'
 import { pick } from '@utils/pick'
-import { AnyToObject } from '@utils/types'
+import { AnyToObject, PickResult, PossibleKeys } from '@utils/types'
 import { CamelCase } from 'type-fest'
-import { PickResult, PossibleKeys } from '../core'
 import { normalizeHeaders } from './normalizeHeaders'
+import { writeHeaders } from './writeHeaders'
 
 export interface CommonHeaders
   extends CommonRequestHeaders,

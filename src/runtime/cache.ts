@@ -33,7 +33,7 @@ export function setState<Args extends readonly any[]>(
   maxAge?: Cache.MaxAge
 ): any {
   const key = getStateModuleKey(name, args)
-  const served: Cache.Entry = { state, args, timestamp, maxAge }
+  const served = { state, args, timestamp, maxAge }
   const module = stateModulesByName.get(name)
   if (module) {
     hydrateState(key, served, module)
