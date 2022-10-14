@@ -1,4 +1,4 @@
-import { ImportDescriptorMap } from './runtime/imports'
+import { ImportDescriptorMap } from '@runtime/imports'
 
 export function defineClient(description: ClientDescription) {
   return description

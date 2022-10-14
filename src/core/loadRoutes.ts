@@ -1,4 +1,6 @@
 import { upsertPlugin } from '@/vite/upsertPlugin'
+import { setRoutesModule } from '@runtime/global'
+import { callPlugins } from '@utils/callPlugins'
 import { toDebugPath } from '@utils/node/toDebugPath'
 import { noop } from '@utils/noop'
 import { debug as vmDebug } from '@vm/debug'
@@ -17,8 +19,6 @@ import { getClientInjection, getServerInjection } from './injectModules'
 import { servedPathForFile } from './node/servedPathForFile'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
-import { setRoutesModule } from './runtime/global'
-import { callPlugins } from './utils/callPlugins'
 import { compileNodeModule } from './vite/compileNodeModule'
 
 export async function loadRoutes(context: SausContext) {

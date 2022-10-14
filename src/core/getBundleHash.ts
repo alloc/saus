@@ -1,6 +1,6 @@
+import { murmurHash } from '@utils/murmur3'
+import { pick, pickAllExcept } from '@utils/pick'
 import { BundleOptions } from '../bundle/options'
-import { murmurHash } from './utils/murmur3'
-import { pick, pickAllExcept } from './utils/pick'
 import { BundleConfig } from './vite'
 
 export function getBundleHash(

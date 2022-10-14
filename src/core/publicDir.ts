@@ -1,10 +1,10 @@
 import { createFilter } from '@rollup/pluginutils'
+import { memoizeFn } from '@utils/memoizeFn'
 import createDebug from 'debug'
 import fs from 'fs'
 import path from 'path'
 import { Promisable } from 'type-fest'
 import { SausContext } from './context'
-import { memoizeFn } from './utils/memoizeFn'
 
 const publicDirs = new WeakMap<SausContext, PublicDir>()
 

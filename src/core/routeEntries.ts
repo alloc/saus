@@ -1,9 +1,9 @@
+import { dataToEsm } from '@runtime/dataToEsm'
+import type { RouteLayout } from '@runtime/layouts'
+import type { RouteModule } from '@runtime/routeTypes'
+import { AnyToObject } from '@utils/types'
 import endent from 'endent'
 import type { RouteRenderer } from './routeRenderer'
-import { dataToEsm } from './runtime/dataToEsm'
-import type { RouteLayout } from './runtime/layouts'
-import type { RouteModule } from './runtime/routeTypes'
-import { AnyToObject } from './utils/types'
 
 /**
  * Server-side route entry
