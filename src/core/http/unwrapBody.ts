@@ -1,7 +1,7 @@
-import { Endpoint } from '@runtime/endpoint'
 import { unwrapBuffer } from '@utils/buffer'
+import { AnyBody } from './writeBody'
 
-export function unwrapBody(body: Endpoint.AnyBody) {
+export function unwrapBody(body: AnyBody) {
   return body.stream
     ? body.stream
     : body.buffer

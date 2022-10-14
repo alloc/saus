@@ -1,4 +1,4 @@
-import { parseStackTrace } from '../../utils/parseStackTrace'
+import { parseStackTrace } from '../../parseStackTrace'
 import { SourceMap } from '../sourceMap'
 import { traceStackFrame } from './traceStackFrame'
 

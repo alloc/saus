@@ -1,15 +1,14 @@
 import type { ServerResponse } from 'http'
-import { DeclaredHeaders, Headers } from '../http/headers'
-import { normalizeHeaders } from '../http/normalizeHeaders'
-import type { Endpoint } from '../runtime/endpoint'
-import { writeBody } from './writeBody'
+import { DeclaredHeaders, Headers } from './headers'
+import { normalizeHeaders } from './normalizeHeaders'
+import { AnyBody, writeBody } from './writeBody'
 import { writeHeaders } from './writeHeaders'
 
 export function writeResponse(
   res: ServerResponse,
   status: number,
   headers?: Headers | DeclaredHeaders | null,
-  body?: Endpoint.AnyBody
+  body?: AnyBody
 ) {
   if (headers) {
     if (headers instanceof DeclaredHeaders) {

@@ -1,6 +1,8 @@
 import * as convertSourceMap from 'convert-source-map'
+import createDebug from 'debug'
 import { dirname, resolve } from 'path'
-import { debug } from '../debug'
+
+const debug = createDebug('saus:sourcemap')
 
 export interface SourceMap {
   version: number

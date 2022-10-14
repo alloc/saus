@@ -1,5 +1,5 @@
 import { SourceMapConsumer } from 'source-map'
-import { StackFrame } from '../../utils/parseStackTrace'
+import { StackFrame } from '../../parseStackTrace'
 import { SourceMap } from '../sourceMap'
 
 const consumers = new WeakMap<SourceMap, SourceMapConsumer>()

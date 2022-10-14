@@ -1,5 +1,5 @@
 import callsites from 'callsites'
-import { StackFrame } from '../../utils/parseStackTrace'
+import { StackFrame } from '../../parseStackTrace'
 
 export function getStackFrame(depth: number): StackFrame | undefined {
   const callStack = callsites().filter(callsite => {

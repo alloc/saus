@@ -1,5 +1,5 @@
+import { noop } from '@utils/noop'
 import { Endpoint } from '../core'
-import { noop } from '../utils/noop'
 import { Response } from './response'
 import { HttpOptions } from './types'
 

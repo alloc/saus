@@ -1,8 +1,8 @@
+import { writeHeaders } from '@utils/node/writeHeaders'
+import { pick } from '@utils/pick'
+import { AnyToObject } from '@utils/types'
 import { CamelCase } from 'type-fest'
 import { PickResult, PossibleKeys } from '../core'
-import { writeHeaders } from '../node/writeHeaders'
-import { pick } from '../utils/pick'
-import { AnyToObject } from '../utils/types'
 import { normalizeHeaders } from './normalizeHeaders'
 
 export interface CommonHeaders

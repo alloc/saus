@@ -1,9 +1,9 @@
-import { Endpoint } from '@runtime/endpoint'
 import { Buffer, unwrapBuffer } from '@utils/buffer'
+import { Body } from './writeBody'
 
 export function wrapBody<T>(body: T): ToBody<T>
-export function wrapBody(body: any): Endpoint.Body | undefined
-export function wrapBody(body: any): Endpoint.Body | undefined {
+export function wrapBody(body: any): Body | undefined
+export function wrapBody(body: any): Body | undefined {
   return body === undefined
     ? undefined
     : typeof body == 'string'

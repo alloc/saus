@@ -1,6 +1,6 @@
+import { joinUrl } from '@utils/joinUrl'
+import { writeBody } from '@utils/node/writeBody'
 import { Endpoint } from '../core'
-import { writeBody } from '../node/writeBody'
-import { joinUrl } from '../utils/joinUrl'
 import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
