@@ -1,7 +1,5 @@
-import type { RenderedPage, RenderPageOptions } from '@runtime/app/types'
-import type { ParsedUrl } from '@utils/node/url'
-
-export * from '@runtime/app/types'
+import type { RenderedPage, RenderPageOptions } from './app/types'
+import type { ParsedUrl } from './url'
 
 export interface PageBundleOptions
   extends Pick<RenderPageOptions, 'timeout' | 'onError'> {

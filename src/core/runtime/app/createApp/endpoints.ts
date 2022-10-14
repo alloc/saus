@@ -1,11 +1,11 @@
-import { Endpoint } from '@/endpoint'
-import { DeclaredHeaders, ResponseHeaders } from '@/http/headers'
-import { HttpRedirect } from '@/http/redirect'
-import { makeRequest } from '@/makeRequest'
-import type { Route } from '@/routes'
+import { DeclaredHeaders, ResponseHeaders } from '@http/headers'
+import { HttpRedirect } from '@http/redirect'
 import { mergeArrays } from '@utils/array'
 import { ascendBranch } from '@utils/ascendBranch'
 import { pickAllExcept } from '@utils/pick'
+import { Endpoint } from '../../endpoint'
+import { makeRequest } from '../../makeRequest'
+import { Route } from '../../routeTypes'
 import { App } from '../types'
 
 export const wrapEndpoints =

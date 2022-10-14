@@ -1,18 +1,15 @@
-import type { Buffer } from '@/client/buffer'
-import type {
-  CommonClientProps,
-  MergedHtmlProcessor,
-  Route,
-  RoutesModule,
-  RuntimeConfig,
-} from '@/core'
-import type { Endpoint } from '@/endpoint'
-import type { Cache } from '@runtime/cache'
-import type { StateModule } from '@runtime/stateModules'
-import type { ParsedUrl } from '@utils/node/url'
+import type { Buffer } from '@utils/buffer'
 import type { ParsedHead } from '@utils/parseHead'
 import type { Falsy } from '@utils/types'
-import type { PageBundle, PageBundleOptions } from '../../bundle/types'
+import type { PageBundle, PageBundleOptions } from '../bundleTypes'
+import type { Cache } from '../cache'
+import type { CommonClientProps } from '../clientTypes'
+import type { RuntimeConfig } from '../config'
+import type { Endpoint } from '../endpoint'
+import type { MergedHtmlProcessor } from '../htmlProcessors'
+import type { Route, RoutesModule } from '../routeTypes'
+import type { StateModule } from '../stateModules'
+import type { ParsedUrl } from '../url'
 
 export interface App {
   readonly config: RuntimeConfig

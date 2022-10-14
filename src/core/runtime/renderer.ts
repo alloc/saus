@@ -1,6 +1,6 @@
-import type { CommonClientProps } from '@/client'
 import { AnyToObject } from '@utils/types'
 import type { BufferLike } from './app/types'
+import type { CommonClientProps } from './clientTypes'
 import type { RouteModule, RouteParams } from './routeTypes'
 
 /**

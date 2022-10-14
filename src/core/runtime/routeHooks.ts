@@ -1,18 +1,18 @@
-import { Endpoint } from '@/endpoint'
+import { httpMethods } from '@utils/httpMethods'
+import { getCurrentModule } from '@utils/node/currentModule'
+import { parseLazyImport } from '@utils/parseLazyImport'
+import { Endpoint } from './endpoint'
+import { getLayoutEntry } from './getLayoutEntry'
+import { routesModule, routeStack, useParentRoute } from './global'
+import { parseRoutePath } from './parseRoutePath'
+import { RoutePlugin } from './routePlugins'
 import type {
   InferRouteParams,
   ParsedRoute,
   Route,
   RouteConfig,
   RouteLoader,
-} from '@/routes'
-import { httpMethods } from '@utils/httpMethods'
-import { getCurrentModule } from '@utils/node/currentModule'
-import { parseLazyImport } from '@utils/parseLazyImport'
-import { parseRoutePath } from '@utils/parseRoutePath'
-import { getLayoutEntry } from './getLayoutEntry'
-import { routesModule, routeStack, useParentRoute } from './global'
-import { RoutePlugin } from './routePlugins'
+} from './routeTypes'
 
 const privateRoute: ParsedRoute = {
   pattern: /^$/,

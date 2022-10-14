@@ -1,5 +1,5 @@
-import { Endpoint } from './runtime/endpoint'
-import { routesModule } from './runtime/global'
+import { Endpoint } from './endpoint'
+import { routesModule } from './global'
 
 export function onRequest(hook: Endpoint.RequestHook): void
 export function onRequest(priority: number, hook: Endpoint.RequestHook): void

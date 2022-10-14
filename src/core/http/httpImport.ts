@@ -1,4 +1,4 @@
-import { unwrapBuffer } from '@utils/buffer'
+import { unwrapBuffer } from '@utils/node/buffer'
 import { emptyDir } from '@utils/node/emptyDir'
 import { lazyImport } from '@utils/node/lazyImport'
 import fs from 'fs'

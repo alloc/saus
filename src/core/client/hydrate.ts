@@ -1,5 +1,5 @@
+import type { RouteLayout } from '@runtime/layouts'
 import type { CommonClientProps, RenderRequest } from '../core'
-import type { RouteLayout } from '../runtime/layouts'
 
 export type Hydrator<RenderResult = any> = (
   root: HTMLElement,

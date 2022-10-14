@@ -1,10 +1,13 @@
-import { RoutesModule, RouteParams } from '../routeTypes'
+import { RouteParams, RoutesModule } from '../routeTypes'
 
 type RoutePathHandlers = {
   path: (path: string, params?: RouteParams) => void
   error: (error: { reason: string; path: string }) => void
 }
 
+interface Context extends Pick<RoutesModule, 'routes' | 'defaultRoute'> {
+  defaultPath: string
+}
 
 /**
  * Using `context.routes` and `context.defaultRoute`, every known path
@@ -14,7 +17,7 @@ type RoutePathHandlers = {
  * `getPagePath` to get the real path.
  */
 export async function generateRoutePaths(
-  context: Pick<RoutesModule, 'routes' | 'defaultRoute' | 'defaultPath'>,
+  context: Context,
   handlers: RoutePathHandlers
 ) {
   const { path: onPath, error: onError } = handlers

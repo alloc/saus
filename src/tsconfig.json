@@ -1,6 +1,12 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["core/client", "core/runtime", "core/utils"],
+  "exclude": [
+    "core/client",
+    "core/http",
+    "core/runtime",
+    "core/utils",
+    "core/vm"
+  ],
   "compilerOptions": {
     "composite": true,
     "declaration": true,

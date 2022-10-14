@@ -1,4 +1,4 @@
-import { globalCache } from '@runtime/cache'
+import { globalCache } from '../cache'
 import { App } from './types'
 
 export function cacheClientProps(maxAge: number): App.Plugin {

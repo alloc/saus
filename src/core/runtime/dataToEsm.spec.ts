@@ -1,6 +1,6 @@
-import { dataToEsm } from '@/utils/dataToEsm'
 import { transformSync } from 'esbuild'
 import { describe, expect, it } from 'vitest'
+import { dataToEsm } from './dataToEsm'
 
 describe('dataToEsm', () => {
   it('handles multi-line strings', () => {

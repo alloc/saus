@@ -1,4 +1,4 @@
-import { Cache } from '@runtime/cache/types'
+import { Cache } from '../cache/types'
 import { App, RenderPageResult } from './types'
 
 export function cachePages(

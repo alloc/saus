@@ -1,5 +1,5 @@
 import { prependBase } from '@utils/base'
-import { dataToEsm } from '@utils/dataToEsm'
+import { dataToEsm } from '../../dataToEsm'
 import { App } from '../types'
 
 export const getStateModuleFactory = (

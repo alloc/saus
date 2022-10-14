@@ -1,7 +1,7 @@
 import type { BufferLike } from '@/http'
 import type { SourceMap } from '@utils/node/sourceMap'
 
-export * from './runtime/bundle/types'
+export * from '@runtime/bundleTypes'
 
 export type ClientChunk = {
   fileName: string

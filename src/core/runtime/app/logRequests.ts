@@ -1,9 +1,9 @@
+import type { Headers } from '@http'
 import { Falsy } from '@utils/types'
 import * as kleur from 'kleur/colors'
 import { Endpoint } from '../endpoint'
 import { onRequest, onResponse } from '../endpointHooks'
-import type { Headers } from '../http'
-import { setup } from '../runtime/setup'
+import { setup } from '../setup'
 
 /**
  * Note that request/response hooks added by `logRequests` use a

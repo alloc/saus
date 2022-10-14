@@ -3,8 +3,10 @@
   "include": ["**/*.ts"],
   "exclude": ["dist"],
   "compilerOptions": {
-    "declaration": true,
+    "composite": false,
     "declarationMap": true,
+    "incremental": true,
+    "moduleResolution": "node",
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   }

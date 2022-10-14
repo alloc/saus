@@ -4,14 +4,14 @@ import type {
   RequestHeaders,
   Response as HttpResponse,
   ResponseHeaders,
-} from '@/http'
+} from '@http'
 import type { Buffer } from '@utils/buffer'
 import type { httpMethods } from '@utils/httpMethods'
-import type { ParsedUrl } from '@utils/node/url'
 import type { AnyToObject, Falsy, Promisable } from '@utils/types'
 import { Simplify, UnionToIntersection } from 'type-fest'
 import type { App } from './app/types'
 import type { InferRouteParams, Route, RouteParams } from './routeTypes'
+import type { ParsedUrl } from './url'
 
 export interface Endpoint<Params extends object = any>
   extends Endpoint.Function<AnyToObject<Params, RouteParams>> {

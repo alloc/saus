@@ -1,12 +1,11 @@
-import type { RequireAsync } from '@/vm/types'
 import type { OneOrMany } from '@utils/types'
+import type { RequireAsync } from '@vm/types'
 import { Promisable } from 'type-fest'
-import type { HtmlContext } from '../html'
-import type { RouteRenderer } from '../routeRenderer'
 import { CommonServerProps } from './app/types'
 import type { Cache } from './cache'
 import type { RuntimeHook } from './config'
 import type { Endpoint } from './endpoint'
+import type { HtmlContext } from './htmlProcessors'
 import type { RouteLayout } from './layouts'
 import type { RoutePlugin } from './routePlugins'
 import type { StateModule } from './stateModules'
@@ -182,6 +181,13 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   methods?: { [method: string]: RouteEndpointMap }
 }
 
+export interface RouteRenderer {
+  fileName: string
+  routeModuleId: string
+  layoutModuleId: string
+  routes: Route[]
+}
+
 export type RouteEndpointMap = Record<Endpoint.ContentType, Endpoint[]>
 
 export interface Route<Module extends object = any, Params extends object = any>
@@ -197,16 +203,6 @@ export namespace Route {
      */
     extend: (extension: () => void) => API<Params>
   }
-}
-
-export function matchRoute(path: string, route: ParsedRoute) {
-  return route.pattern
-    .exec(path)
-    ?.slice(1)
-    .reduce((params: Record<string, string>, value, i) => {
-      params[route.keys[i]] = value
-      return params
-    }, {})
 }
 
 /**

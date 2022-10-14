@@ -1,6 +1,6 @@
-import { RouteIncludeOption } from '@/routes'
-import { routesModule } from '@runtime/global'
-import { parseRoutePath } from '@utils/parseRoutePath'
+import { routesModule } from './global'
+import { parseRoutePath } from './parseRoutePath'
+import { RouteIncludeOption } from './routeTypes'
 
 /**
  * Include the provided state modules in all routes by default.

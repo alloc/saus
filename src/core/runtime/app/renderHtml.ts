@@ -1,5 +1,5 @@
-import { RouteLayout } from '@runtime/layouts'
-import { RenderRequest } from '../runtime/renderer'
+import { RouteLayout } from '../layouts'
+import { RenderRequest } from '../renderer'
 import { RETURN } from '../tokens'
 
 export async function renderHtml(

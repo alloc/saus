@@ -1,5 +1,5 @@
-import { getPagePath } from '../runtime/getPagePath'
-import type { RouteParams } from '../runtime/types/clientTypes'
+import { getPagePath } from '@runtime/getPagePath'
+import type { RouteParams } from '@runtime/types/clientTypes'
 import { loadPageClient, PageClient } from './pageClient'
 import { prependBase } from './prependBase'
 

@@ -1,5 +1,5 @@
 import { AnyToObject } from '@utils/types'
-import type { RouteParams } from '../../routes'
+import type { RouteParams } from './routeTypes'
 
 export type AnyClientProps = CommonClientProps & Record<string, any>
 
@@ -10,6 +10,3 @@ export interface CommonClientProps<Params extends object = any> {
   routeParams: AnyToObject<Params, RouteParams>
   error?: any
 }
-
-export type { RouteModule, RouteParams } from '../../routes'
-export type { RenderRequest } from '../renderer'

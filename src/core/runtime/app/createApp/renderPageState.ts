@@ -1,6 +1,6 @@
-import { INDENT, RETURN, SPACE } from '@/tokens'
-import { dataToEsm } from '@utils/dataToEsm'
 import { ParsedHeadTag } from '@utils/parseHead'
+import { dataToEsm } from '../../dataToEsm'
+import { INDENT, RETURN, SPACE } from '../../tokens'
 import { App, CommonServerProps } from '../types'
 
 export const getPageStateFactory = (

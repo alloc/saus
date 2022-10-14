@@ -11,6 +11,7 @@ import { isExternalUrl } from '@utils/isExternalUrl'
 import { parseUrl } from '@utils/node/url'
 import { Promisable } from 'type-fest'
 import { CommonServerProps } from '../../../core/app/types'
+import { PageBundle, ResolvedRoute } from '../../../core/runtime/bundleTypes'
 import { injectToBody, injectToHead } from '../../html/inject'
 import { HtmlTagDescriptor } from '../../html/types'
 import { applyHtmlProcessors, CachePlugin } from '../core/api'
@@ -18,7 +19,6 @@ import clientEntries from './clientEntries'
 import clientStyles from './clientStyles'
 import { context } from './context'
 import { injectDebugBase } from './debugBase'
-import { PageBundle, ResolvedRoute } from './types'
 
 export const providePageBundles: App.Plugin = app => {
   const { config } = app
