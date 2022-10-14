@@ -1,5 +1,5 @@
-import type { ParsedRoute } from '@/routes'
-import { parseRoutePath } from '@utils/parseRoutePath'
+import { parseRoutePath } from '@runtime/parseRoutePath'
+import type { ParsedRoute } from '@runtime/routeTypes'
 import { plural } from '@utils/plural'
 import { debug } from '@vm/debug'
 

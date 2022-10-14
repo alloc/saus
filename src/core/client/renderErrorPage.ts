@@ -1,4 +1,4 @@
-import { renderErrorFallback } from '../app/errorFallback'
+import { renderErrorFallback } from '@runtime/app/errorFallback'
 
 export function renderErrorPage(e: any) {
   const errorElem = document.createElement('div')

@@ -1,7 +1,7 @@
 import { Route, RouteRenderer, RoutesModule } from '@runtime/routeTypes'
 import { murmurHash } from '@utils/murmur3'
+import { ResolveIdHook } from '@utils/rollupTypes'
 import assert from 'assert'
-import { ResolveIdHook } from '../runtime/utils/rollupTypes'
 
 interface Context extends RoutesModule {
   defaultLayout: { id: string; hydrated?: boolean }

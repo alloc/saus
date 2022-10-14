@@ -1,7 +1,7 @@
 import './context'
 
-export * from '@runtime/types/clientTypes'
-export * from '../utils/buffer'
+export * from '@runtime/clientTypes'
+export * from '@utils/buffer'
 export * from './api'
 export * from './baseUrl'
 export * from './defineLayout'

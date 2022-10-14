@@ -1,9 +1,9 @@
 import { globalCache } from '@runtime/cache'
 import { toExpirationTime } from '@runtime/cache/expiration'
-import type { CommonClientProps } from '@runtime/types/clientTypes'
-import { getPageFilename } from '../utils/getPageFilename'
-import { AnyToObject } from '../utils/types'
-import { unwrapDefault } from '../utils/unwrapDefault'
+import { CommonClientProps } from '@runtime/clientTypes'
+import { getPageFilename } from '@utils/getPageFilename'
+import { AnyToObject } from '@utils/types'
+import { unwrapDefault } from '@utils/unwrapDefault'
 
 export function loadPageState<Props extends object = any>(
   pagePath: string,

@@ -1,10 +1,10 @@
+import { bareImportRE } from '@utils/importRegex'
 import createDebug from 'debug'
 import { existsSync } from 'fs'
 import os from 'os'
 import path from 'path'
 import type { PartialResolvedId } from 'rollup'
 import type { vite } from '../core'
-import { bareImportRE } from '../utils/importRegex'
 
 type Promisable<T> = T | Promise<T>
 
