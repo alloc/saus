@@ -1,3 +1,4 @@
+import { resolve } from 'path'
 import { defineConfig } from 'tsup'
 import { PackageJson } from 'type-fest'
 
@@ -27,6 +28,7 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,
+  tsconfig: resolve(__dirname, '../tsconfig.json'),
   dts: true,
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
   noExternal: ['@'],

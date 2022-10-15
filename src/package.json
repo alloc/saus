@@ -54,7 +54,7 @@
     "glob-base": "^0.3.0",
     "quick-lru": "^6.1.1",
     "ts-debounce": "2.0.0",
-    "typescript": "4.8.0-beta"
+    "typescript": "4.8.4"
   },
   "engines": {
     "node": ">=14"
