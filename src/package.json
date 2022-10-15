@@ -1,42 +1,8 @@
 {
-  "name": "saus",
-  "version": "0.4.10",
-  "description": "Radically simple SSG/SSR powered by Vite",
-  "repository": "alloc/saus",
-  "author": "Alec Larson",
-  "bin": "bin/saus",
-  "files": [
-    "src",
-    "dist",
-    "client",
-    "core",
-    "env"
-  ],
-  "exports": {
-    ".": {
-      "types": "./index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./babel": "./node_modules/@utils/babel.js",
-    "./babel/*": "./node_modules/@utils/babel/*.js",
-    "./bundle": "./bundle/index.js",
-    "./client": {
-      "node": "./client/index.cjs",
-      "default": "./client/index.js"
-    },
-    "./deploy": "./deploy/index.js",
-    "./env/*": "./env/*.d.ts",
-    "./core": "./core/index.js",
-    "./html": "./node_modules/@runtime/html/index.js",
-    "./html/*": "./node_modules/@runtime/html/*.js",
-    "./http": "./node_modules/@runtime/http/index.js",
-    "./http/*": "./node_modules/@runtime/http/*.js",
-    "./node/*": "./node_modules/@utils/node/*.js",
-    "./utils/*": "./node_modules/@utils/*.js"
-  },
   "scripts": {
-    "build": "rimraf ../dist && tsup",
-    "dev": "rimraf ../dist && tsup --watch --sourcemap",
+    "clean": "rimraf ./dist && git checkout head -- dist && ln -s node_modules dist/node_modules",
+    "build": "npm run clean && tsup",
+    "dev": "npm run clean && tsup --watch --sourcemap",
     "lint": "tsc --build && eslint . --ext .ts"
   },
   "dependencies": {

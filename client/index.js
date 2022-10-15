@@ -1,1 +1,1 @@
-export * from '../src/core/client'
+export * from '../src/client'

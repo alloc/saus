@@ -1,6 +1,11 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["**/*.ts", "../runtime/types/types.ts", "../utils/buffer.ts"],
+  "include": [
+    "**/*.ts",
+    "../runtime/types/types.ts",
+    "../utils/buffer.ts",
+    "../../client/index.ts"
+  ],
   "exclude": [],
   "compilerOptions": {
     "composite": true,
