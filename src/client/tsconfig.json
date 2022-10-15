@@ -1,16 +1,11 @@
 {
   "extends": "../../tsconfig.json",
-  "include": [
-    "**/*.ts",
-    "../runtime/types/types.ts",
-    "../utils/buffer.ts",
-    "../../client/index.ts"
-  ],
-  "exclude": [],
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.spec.ts"],
   "compilerOptions": {
     "composite": true,
     "lib": ["dom", "esnext"],
     "module": "esnext",
-    "types": ["../../../env/client"]
+    "types": ["../../env/client"]
   }
 }
