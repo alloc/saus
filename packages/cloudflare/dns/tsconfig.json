@@ -1,11 +1,11 @@
 {
-  "include": ["src", "../request/src/request.ts"],
+  "include": ["src"],
   "compilerOptions": {
     "declaration": true,
     "esModuleInterop": true,
     "lib": ["es2018"],
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "noUnusedLocals": false,
     "outDir": "dist",
     "strict": true,

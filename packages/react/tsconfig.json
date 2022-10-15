@@ -6,7 +6,7 @@
     "jsx": "react",
     "lib": ["es2018"],
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "noUnusedLocals": true,
     "outDir": "dist",
     "strict": true,
