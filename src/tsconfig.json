@@ -9,11 +9,11 @@
     "module": "commonjs",
     "moduleResolution": "node16",
     "noUnusedLocals": true,
-    "outDir": "../dist",
+    "outDir": "dist",
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,
     "target": "es2019",
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
   }
 }

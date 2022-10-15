@@ -1,4 +1,7 @@
-import { dataToEsm, endent, Plugin, plural, SausPlugin, vite } from '@/core'
+import { Plugin, SausPlugin, vite } from '@/core'
+import { dataToEsm } from '@runtime/dataToEsm'
+import { plural } from '@utils/plural'
+import endent from 'endent'
 import { green } from 'kleur/colors'
 import { success } from 'misty'
 import path from 'path'

@@ -1,4 +1,4 @@
-import '@/client/context'
+import './context'
 
 export * from '@runtime/clientTypes'
 export * from '@utils/node/buffer'

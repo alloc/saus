@@ -1,9 +1,9 @@
-import { prependBase } from '@/client/prependBase'
 import { Cache, createCache } from '@runtime/cache'
 import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import type { StateModule } from '@runtime/stateModules'
 import { sortObjects } from '@utils/sortObjects'
 import saus from '../context'
+import { prependBase } from '../prependBase'
 
 export const serveCache = createCache()
 

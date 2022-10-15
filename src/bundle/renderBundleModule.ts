@@ -1,5 +1,5 @@
-import { endent } from '@/core'
 import { bundleDir } from '@/paths'
+import endent from 'endent'
 import path from 'path'
 
 export function renderBundleModule(ssrEntryId: string) {

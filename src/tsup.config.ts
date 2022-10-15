@@ -4,7 +4,7 @@ import { PackageJson } from 'type-fest'
 const pkgJson = require('./package.json') as PackageJson
 
 export default defineConfig({
-  outDir: '../dist',
+  outDir: 'dist',
   entry: [
     'cli.ts',
     'index.ts',
