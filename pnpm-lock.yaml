@@ -12,6 +12,7 @@ importers:
       '@typescript-eslint/eslint-plugin': ^5.38.0
       '@typescript-eslint/parser': ^5.38.0
       callsites: ^3.0.0
+      esbuild: ^0.14.15
       eslint: ^8.24.0
       kleur: ^4.1.4
       misty: ^1.6.7
@@ -27,6 +28,7 @@ importers:
       '@typescript-eslint/eslint-plugin': 5.38.0_e5olk4rxq6uq7zt3zklui5loh4
       '@typescript-eslint/parser': 5.38.0_v4fdcmnvm5mpseg3dtvotr6oyi
       callsites: 3.1.0
+      esbuild: 0.14.49
       eslint: 8.24.0
       kleur: 4.1.5
       misty: 1.6.10
@@ -50,7 +52,7 @@ importers:
       react-dom: ^17.0.2
       saus: '*'
     dependencies:
-      '@saus/html': link:../../src/html/dist
+      '@saus/html': 0.0.0
       '@saus/react': link:../../packages/react
       '@saus/test': link:../../packages/test
       '@saus/webp': link:../../packages/webp
@@ -383,23 +385,11 @@ importers:
   src/core:
     specifiers: {}
 
-  src/html:
-    specifiers:
-      css-what: ^6.0.1
-      debug: ^4.3.2
-      magic-string: ^0.25.7
-    dependencies:
-      css-what: 6.1.0
-      debug: 4.3.4
-      magic-string: 0.25.9
-
-  src/html/dist:
-    specifiers: {}
-
   src/runtime:
     specifiers:
       '@cush/relative': ^1.0.0
       '@utils': workspace:@saus/utils@*
+      css-what: ^6.0.1
       debug: ^4.3.2
       endent: ^2.1.0
       etag: ^1.8.1
@@ -409,6 +399,7 @@ importers:
     dependencies:
       '@cush/relative': 1.0.0
       '@utils': link:../utils/dist
+      css-what: 6.1.0
       debug: 4.3.4
       endent: 2.1.0
       etag: 1.8.1
@@ -970,6 +961,10 @@ packages:
     dependencies:
       estree-walker: 2.0.2
       picomatch: 2.3.1
+
+  /@saus/html/0.0.0:
+    resolution: {integrity: sha512-ZgLWU4qwn/u3QnCeG0tHdHNZcBmGT1AlH3Cjk5l9Eg5QR1r0vCy3yGtQ6Uru1fH6ZCc71+lfoZyoYsovB/0lZQ==}
+    dev: false
 
   /@sindresorhus/is/0.7.0:
     resolution: {integrity: sha512-ONhaKPIufzzrlNbqtWFFd+jlnemX6lJAgq9ZeiZtS7I1PIf/la7CW4m83rTXRnVnsMbW2k56pGYu7AUFJD9Pow==}

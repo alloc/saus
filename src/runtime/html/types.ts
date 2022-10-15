@@ -1,5 +1,5 @@
-import MagicString from 'magic-string'
-import type { HtmlProcessorState } from 'saus/core'
+import { MagicString } from '@utils/babel'
+import type { HtmlProcessorState } from './process'
 import type { HtmlTagPath } from './path'
 import type { kTagPath } from './symbols'
 

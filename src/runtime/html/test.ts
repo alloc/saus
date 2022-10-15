@@ -8,9 +8,6 @@ export function traverse(html: string, visitors: HtmlVisitor | HtmlVisitor[]) {
       path: '/',
       html,
       files: [],
-      state: { routePath: '/', routeParams: {} },
-      stateModules: [],
-      routeModuleId: '/main.js',
     },
     config: {
       assetsDir: 'assets',

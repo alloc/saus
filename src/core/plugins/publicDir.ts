@@ -87,7 +87,7 @@ export function copyPublicDir() {
                 id: '@saus/copyPublicDir/renamer.js',
                 // Rewrite HTML references of public files.
                 code: endent`
-                  import {resolveHtmlImports} from "@saus/html"
+                  import {resolveHtmlImports} from "saus/html/resolver"
                   ${dataToEsm(publicDir.renamedFiles, 'const renamedFiles')}
                   resolveHtmlImports(id => renamedFiles[id])
                 `,

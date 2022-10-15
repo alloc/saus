@@ -1,4 +1,4 @@
-import MagicString from 'magic-string'
+import { MagicString } from '@utils/babel'
 import { HtmlTag } from './types'
 import allow from './xss/allow'
 

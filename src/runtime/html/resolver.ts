@@ -1,4 +1,4 @@
-import { EnforcementPhase } from 'saus/core'
+import { EnforcementPhase } from './process'
 import { kVisitorsArray } from './symbols'
 import { findTraverseVisitor, traverseHtml } from './traversal'
 import {

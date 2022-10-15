@@ -8,6 +8,7 @@
   "dependencies": {
     "@cush/relative": "^1.0.0",
     "@utils": "workspace:@saus/utils@*",
+    "css-what": "^6.0.1",
     "debug": "^4.3.2",
     "endent": "^2.1.0",
     "etag": "^1.8.1",

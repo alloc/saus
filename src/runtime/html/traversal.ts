@@ -3,7 +3,7 @@ import {
   EnforcementPhase,
   findHtmlProcessor,
   processHtml,
-} from 'saus/core'
+} from './process'
 import { kVisitorsArray } from './symbols'
 import { HtmlVisitor } from './types'
 import { bindVisitors, TraverseVisitor } from './visitors/bind'

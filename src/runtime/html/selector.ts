@@ -5,7 +5,7 @@ import {
   Selector,
   SelectorType,
 } from 'css-what'
-import { HtmlProcessorState } from 'saus/core'
+import { HtmlProcessorState } from './process'
 import {
   HtmlAttribute,
   HtmlTagPath,

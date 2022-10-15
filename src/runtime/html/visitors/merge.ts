@@ -1,5 +1,6 @@
-import { HtmlProcessorState, limitTime } from 'saus/core'
+import { limitTime } from '@utils/limitTime'
 import { HtmlTagPath } from '../path'
+import { HtmlProcessorState } from '../process'
 import { kRemovedNode } from '../symbols'
 import { HtmlVisitor, HtmlVisitorState } from '../types'
 

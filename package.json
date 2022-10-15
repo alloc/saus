@@ -12,6 +12,7 @@
     "@typescript-eslint/eslint-plugin": "^5.38.0",
     "@typescript-eslint/parser": "^5.38.0",
     "callsites": "^3.0.0",
+    "esbuild": "^0.14.15",
     "eslint": "^8.24.0",
     "kleur": "^4.1.4",
     "misty": "^1.6.7",
