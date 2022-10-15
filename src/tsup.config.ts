@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 import { PackageJson } from 'type-fest'
 
-const pkgJson = require('../package.json') as PackageJson
+const pkgJson = require('./package.json') as PackageJson
 
 export default defineConfig({
   outDir: '../dist',
@@ -10,9 +10,7 @@ export default defineConfig({
     'index.ts',
     // Submodules
     'core/index.ts',
-    'core/babel/index.ts',
     'core/client/node/api.ts',
-    'core/http/index.ts',
     'build/failedPages.ts',
     'build/worker.ts',
     'bundle/html.ts',

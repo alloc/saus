@@ -1,4 +1,4 @@
-import { prompt } from '@saus/utils/node/prompt'
+import { prompt } from '@utils/node/prompt'
 import { green } from 'kleur/colors'
 import { command } from '../../command'
 
