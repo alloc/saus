@@ -84,7 +84,8 @@
     "escalade": "^3.1.1",
     "glob-base": "^0.3.0",
     "quick-lru": "^6.1.1",
-    "ts-debounce": "2.0.0"
+    "ts-debounce": "2.0.0",
+    "typescript": "4.8.0-beta"
   },
   "engines": {
     "node": ">=14"
