@@ -71,6 +71,6 @@
       "types": "./node_modules/@utils/*.d.ts",
       "import": "./node_modules/@utils/*.mjs",
       "default": "./node_modules/@utils/*.js"
-    },
+    }
   }
 }
