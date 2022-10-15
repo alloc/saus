@@ -9,7 +9,18 @@
     "@ampproject/remapping": "^1.1.1",
     "@babel/core": "^7.16.7",
     "@babel/plugin-syntax-typescript": "^7.14.5",
+    "ansi-to-html": "^0.7.2",
+    "convert-source-map": "^1.8.0",
+    "debug": "^4.3.2",
+    "kleur": "^4.1.4",
+    "magic-string": "^0.25.7",
+    "tinypool": "^0.1.1",
+    "type-fest": "^2.13.0"
+  },
+  "devDependencies": {
+    "callsites": "^3.0.0",
+    "escalade": "^3.1.1",
     "ohash": "^0.1.5",
-    "tinypool": "^0.1.1"
+    "ts-debounce": "2.0.0"
   }
 }

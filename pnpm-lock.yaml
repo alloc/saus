@@ -78,7 +78,7 @@ importers:
       '@ampproject/remapping': 1.1.1
       '@babel/code-frame': 7.18.6
       '@saus/deploy-utils': link:packages/deploy-utils
-      '@saus/html': link:packages/html
+      '@saus/html': link:src/html/dist
       ansi-to-html: 0.7.2
       cac: 6.7.12
       convert-source-map: 1.8.0
@@ -157,7 +157,7 @@ importers:
       react-dom: ^17.0.2
       saus: '*'
     dependencies:
-      '@saus/html': link:../../packages/html
+      '@saus/html': link:../../src/html/dist
       '@saus/react': link:../../packages/react
       '@saus/test': link:../../packages/test
       '@saus/webp': link:../../packages/webp
@@ -305,29 +305,6 @@ importers:
       '@types/lodash.merge': 4.6.7
       saus: link:../..
 
-  packages/html:
-    specifiers:
-      '@cush/relative': ^1.0.0
-      '@types/debug': ^4.1.7
-      '@types/node': ^16.10.2
-      css-what: ^6.0.1
-      debug: ^4.3.2
-      magic-string: ^0.25.7
-      misty: ^1.6.2
-      recrawl-sync: ^2.2.1
-      saus: '*'
-    dependencies:
-      '@cush/relative': 1.0.0
-      css-what: 6.1.0
-      debug: 4.3.4
-      magic-string: 0.25.9
-      misty: 1.6.10
-    devDependencies:
-      '@types/debug': 4.1.7
-      '@types/node': 16.11.44
-      recrawl-sync: 2.2.2
-      saus: link:../..
-
   packages/page-store:
     specifiers:
       saus: '*'
@@ -434,11 +411,38 @@ importers:
   src/core:
     specifiers: {}
 
+  src/html:
+    specifiers:
+      css-what: ^6.0.1
+      debug: ^4.3.2
+      magic-string: ^0.25.7
+    dependencies:
+      css-what: 6.1.0
+      debug: 4.3.4
+      magic-string: 0.25.9
+
+  src/html/dist:
+    specifiers: {}
+
   src/runtime:
     specifiers:
+      '@cush/relative': ^1.0.0
       '@utils': workspace:@saus/utils@*
+      debug: ^4.3.2
+      endent: ^2.1.0
+      etag: ^1.8.1
+      kleur: ^4.1.4
+      misty: ^1.6.7
+      type-fest: ^2.13.0
     dependencies:
+      '@cush/relative': 1.0.0
       '@utils': link:../utils/dist
+      debug: 4.3.4
+      endent: 2.1.0
+      etag: 1.8.1
+      kleur: 4.1.5
+      misty: 1.6.10
+      type-fest: 2.16.0
 
   src/runtime/dist:
     specifiers: {}
@@ -448,14 +452,33 @@ importers:
       '@ampproject/remapping': ^1.1.1
       '@babel/core': ^7.16.7
       '@babel/plugin-syntax-typescript': ^7.14.5
+      ansi-to-html: ^0.7.2
+      callsites: ^3.0.0
+      convert-source-map: ^1.8.0
+      debug: ^4.3.2
+      escalade: ^3.1.1
+      kleur: ^4.1.4
+      magic-string: ^0.25.7
       ohash: ^0.1.5
       tinypool: ^0.1.1
+      ts-debounce: 2.0.0
+      type-fest: ^2.13.0
     dependencies:
       '@ampproject/remapping': 1.1.1
       '@babel/core': 7.18.6
       '@babel/plugin-syntax-typescript': 7.18.6_@babel+core@7.18.6
-      ohash: 0.1.5
+      ansi-to-html: 0.7.2
+      convert-source-map: 1.8.0
+      debug: 4.3.4
+      kleur: 4.1.5
+      magic-string: 0.25.9
       tinypool: 0.1.3
+      type-fest: 2.16.0
+    devDependencies:
+      callsites: 3.1.0
+      escalade: 3.1.1
+      ohash: 0.1.5
+      ts-debounce: 2.0.0
 
   src/utils/dist:
     specifiers: {}
@@ -463,8 +486,18 @@ importers:
   src/vm:
     specifiers:
       '@utils': workspace:@saus/utils@*
+      builtin-modules: ^3.2.0
+      debug: ^4.3.2
+      es-module-lexer: ^1.0.5
+      kleur: ^4.1.4
+      type-fest: ^2.13.0
     dependencies:
       '@utils': link:../utils/dist
+      builtin-modules: 3.3.0
+      debug: 4.3.4
+      es-module-lexer: 1.0.5
+      kleur: 4.1.5
+      type-fest: 2.16.0
 
   src/vm/dist:
     specifiers: {}
@@ -1073,6 +1106,7 @@ packages:
 
   /@types/node/16.11.44:
     resolution: {integrity: sha512-gwP6+QDgL5TDBIWh1lbYh3EFPU11pa+8xcamcsA3ROkp3A9X+/3Y5cRgq93VPEEE+CGfxlQnqkg1kkWGBgh3fw==}
+    dev: false
 
   /@types/node/17.0.45:
     resolution: {integrity: sha512-w+tIMs3rq2afQdsPJlODhoUEKzFP1ayaoyl1CcnwtIlsVe7K7bA1NGm4s3PraqTLlXnbIN84zuBlxBWo1u9BLw==}
@@ -1530,7 +1564,6 @@ packages:
   /builtin-modules/3.3.0:
     resolution: {integrity: sha512-zhaCDicdLuWN5UbN5IMnFqNMhNfo919sH85y2/ea+5Yg9TsTkeZxpL+JLbp6cgYFS4sRLp3YV4S6yDuqVWHYOw==}
     engines: {node: '>=6'}
-    dev: true
 
   /bundle-require/3.0.4_esbuild@0.14.49:
     resolution: {integrity: sha512-VXG6epB1yrLAvWVQpl92qF347/UXmncQj7J3U8kZEbdVZ1ZkQyr4hYeL/9RvcE8vVVdp53dY78Fd/3pqfRqI1A==}
@@ -3711,7 +3744,7 @@ packages:
 
   /ohash/0.1.5:
     resolution: {integrity: sha512-qynly1AFIpGWEAW88p6DhMNqok/Swb52/KsiU+Toi7er058Ptvno3tkfTML6wYcEgFgp2GsUziW4Nqn62ciuyw==}
-    dev: false
+    dev: true
 
   /once/1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}

@@ -6,6 +6,11 @@
     "dev": "npm run clean && tsc --incremental -p . --watch --sourcemap"
   },
   "dependencies": {
-    "@utils": "workspace:@saus/utils@*"
+    "@utils": "workspace:@saus/utils@*",
+    "builtin-modules": "^3.2.0",
+    "debug": "^4.3.2",
+    "es-module-lexer": "^1.0.5",
+    "kleur": "^4.1.4",
+    "type-fest": "^2.13.0"
   }
 }
