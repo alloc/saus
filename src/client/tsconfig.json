@@ -5,6 +5,8 @@
   "compilerOptions": {
     "lib": ["dom", "esnext"],
     "module": "esnext",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
     "types": ["../dist/env/client"]
   }
 }

@@ -4,7 +4,7 @@
     "clean": "rimraf ./dist && git checkout head -- dist && ln -s ../node_modules dist/node_modules",
     "build": "npm run clean && tsup",
     "dev": "npm run clean && tsup --watch --sourcemap",
-    "lint": "tsc --build && eslint . --ext .ts"
+    "lint": "tsc -p . --noEmit && eslint . --ext .ts"
   },
   "dependencies": {
     "@": "link:./core",

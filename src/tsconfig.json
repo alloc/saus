@@ -3,6 +3,7 @@
   "exclude": ["bin", "client", "runtime", "utils", "vm"],
   "compilerOptions": {
     "declaration": true,
+    "declarationMap": true,
     "esModuleInterop": true,
     "incremental": true,
     "lib": ["es2019"],
