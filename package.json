@@ -49,9 +49,6 @@
   "dependencies": {
     "@ampproject/remapping": "^1.1.1",
     "@babel/code-frame": "^7.16.7",
-    "@saus/deploy-utils": "workspace:^0.1.0",
-    "@saus/html": "workspace:^0.1.0",
-    "ansi-to-html": "^0.7.2",
     "cac": "^6.0.0",
     "convert-source-map": "^1.8.0",
     "debug": "^4.3.2",
