@@ -4,7 +4,7 @@ import {
   loadResponseCache,
   setResponseCache,
 } from '@runtime/http/responseCache'
-import { RoutesModule } from '@runtime/routeTypes'
+import { RouteRenderer, RoutesModule } from '@runtime/routeTypes'
 import { CompileCache } from '@utils/node/compileCache'
 import type { Falsy } from '@utils/types'
 import { RequireAsyncState } from '@vm/asyncRequire'
@@ -21,7 +21,6 @@ import { toSausPath } from './paths'
 import { ModuleProvider } from './plugins/moduleProvider'
 import { PublicDirOptions } from './publicDir'
 import { RouteClients } from './routeClients'
-import { RouteRenderer } from './routeRenderer'
 import { Plugin, ResolvedConfig, SausConfig, SausPlugin, vite } from './vite'
 import { getConfigEnv, LoadedUserConfig, loadUserConfig } from './vite/config'
 import { ViteFunctions } from './vite/functions'

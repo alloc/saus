@@ -25,6 +25,7 @@ export default defineConfig({
     'secrets/api.ts',
     'test/api.ts',
   ],
+  dts: true,
   format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,
