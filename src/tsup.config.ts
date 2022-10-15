@@ -27,6 +27,7 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,
+  dts: true,
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
   noExternal: ['@'],
   define: { __VERSION__: JSON.stringify(pkgJson.version) },

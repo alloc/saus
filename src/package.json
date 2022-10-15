@@ -1,4 +1,5 @@
 {
+  "private": true,
   "scripts": {
     "clean": "rimraf ./dist && git checkout head -- dist && ln -s ../node_modules dist/node_modules",
     "build": "npm run clean && tsup",

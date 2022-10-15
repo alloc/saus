@@ -5,10 +5,10 @@ export * from './bundle/runtime/api'
 export type { OutputBundle } from './bundle/types'
 export { loadBundle, Plugin, setEnvData, UserConfig, vite } from './core'
 
-export const build = importWhenCalled('build', () => import('./build/api')),
-  deploy = importWhenCalled('deploy', () => import('./deploy/api')),
-  generateBundle = importWhenCalled('bundle', () => import('./bundle/api')),
-  createServer = importWhenCalled('createServer', () => import('./dev/api'))
+export const build = importWhenCalled('build', () => import('./build/api.js')),
+  deploy = importWhenCalled('deploy', () => import('./deploy/api.js')),
+  generateBundle = importWhenCalled('bundle', () => import('./bundle/api.js')),
+  createServer = importWhenCalled('createServer', () => import('./dev/api.js'))
 
 // The type-casting below ensures the "saus" config is type-checked.
 export const defineConfig = vite.defineConfig as (

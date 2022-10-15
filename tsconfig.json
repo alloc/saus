@@ -1,5 +1,5 @@
 {
-  "references": [{ "path": "./src" }, { "path": "./src/core/client" }],
+  "references": [{ "path": "./src" }, { "path": "./src/client" }],
   "compilerOptions": {
     "noEmit": true
   }
