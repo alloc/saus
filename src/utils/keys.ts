@@ -1,3 +1,5 @@
+import { isObject } from './isObject'
+
 export function omitKeys<T extends object, P extends keyof T>(
   obj: T,
   shouldOmit: (value: T[P], key: P) => boolean

@@ -1,5 +1,37 @@
 {
-  "private": true,
+  "name": "saus",
+  "version": "0.4.10",
+  "description": "Radically simple SSG/SSR powered by Vite",
+  "repository": "alloc/saus",
+  "author": "Alec Larson",
+  "bin": "bin/saus",
+  "files": [
+    "src",
+    "dist",
+    "client",
+    "core",
+    "env"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./babel": "./node_modules/@utils/babel.js",
+    "./babel/*": "./node_modules/@utils/babel/*.js",
+    "./bundle": "./bundle/index.js",
+    "./client": {
+      "node": "./client/index.cjs",
+      "default": "./client/index.js"
+    },
+    "./deploy": "./deploy/index.js",
+    "./env/*": "./env/*.d.ts",
+    "./core": "./core/index.js",
+    "./http": "./node_modules/@runtime/http/index.js",
+    "./http/*": "./node_modules/@runtime/http/*.js",
+    "./node/*": "./node_modules/@utils/node/*.js",
+    "./utils/*": "./node_modules/@utils/*.js"
+  },
   "scripts": {
     "build": "rimraf ../dist && tsup",
     "dev": "rimraf ../dist && tsup --watch --sourcemap",
@@ -10,5 +42,8 @@
     "@runtime": "workspace:@saus/runtime@*",
     "@utils": "workspace:@saus/utils@*",
     "@vm": "workspace:@saus/vm@*"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }
