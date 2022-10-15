@@ -12,5 +12,8 @@
     "es-module-lexer": "^1.0.5",
     "kleur": "^4.1.4",
     "type-fest": "^2.13.0"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.18.2"
   }
 }
