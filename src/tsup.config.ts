@@ -24,7 +24,7 @@ export default defineConfig({
     'secrets/api.ts',
     'test/api.ts',
   ],
-  format: ['cjs'],
+  format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
