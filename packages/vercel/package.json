@@ -21,7 +21,8 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/deploy-utils": "workspace:^0.1.0",
+    "@cush/exec": "^1.8.0",
+    "@saus/utils": "workspace:^0.1.0",
     "recrawl-sync": "^2.2.1"
   }
 }

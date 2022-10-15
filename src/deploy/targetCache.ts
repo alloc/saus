@@ -1,5 +1,5 @@
+import exec from '@cush/exec'
 import { deployedEnv } from '@runtime/deployedEnv'
-import { exec } from '@saus/deploy-utils'
 import assert from 'assert'
 import { startTask } from 'misty/task'
 import { getDeployContext } from './context'

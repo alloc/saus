@@ -1,4 +1,4 @@
-import { isObject } from '@saus/deploy-utils'
+import { isObject } from '@saus/utils/isObject'
 import * as CloudForm from 'cloudform-types'
 import {
   addDeployHook,

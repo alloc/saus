@@ -6,7 +6,7 @@ import {
   useCloudFormation,
   Value,
 } from '@saus/cloudform'
-import { mergeArrays } from '@saus/deploy-utils'
+import { mergeArrays } from '@saus/utils/array'
 import { relative } from 'path'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'

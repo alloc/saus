@@ -1,4 +1,4 @@
-import { exec } from '@saus/deploy-utils'
+import exec from '@cush/exec'
 
 /**
  * Get the current branch of `$PWD/.git`

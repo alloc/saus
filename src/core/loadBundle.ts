@@ -1,7 +1,7 @@
 import exec from '@cush/exec'
 import { MutableRuntimeConfig, RuntimeConfig } from '@runtime/config'
-import { isObject } from '@saus/deploy-utils'
 import { callPlugins } from '@utils/callPlugins'
+import { isObject } from '@utils/isObject'
 import { pick } from '@utils/pick'
 import { readJson } from '@utils/readJson'
 import * as base64ArrayBuffer from 'base64-arraybuffer'

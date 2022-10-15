@@ -1,7 +1,9 @@
-import { prompt } from '@saus/deploy-utils'
+import exec from '@cush/exec'
+import { createCommit } from '@saus/utils/node/git/createCommit'
+import { prompt } from '@saus/utils/node/prompt'
+import { pickAllExcept } from '@saus/utils/pick'
 import { AESEncryption } from 'aes-password'
 import { red } from 'kleur/colors'
-import { createCommit, exec, pickAllExcept } from 'saus/core'
 import { File, getDeployContext, SecretMap } from 'saus/deploy'
 
 /**

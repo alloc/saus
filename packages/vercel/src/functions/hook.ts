@@ -1,14 +1,12 @@
-import { bindExec, exec } from '@saus/deploy-utils'
+import exec from '@cush/exec'
+import { bindExec } from '@saus/utils/node/bindExec'
+import { emptyDir } from '@saus/utils/node/emptyDir'
+import { toObjectHash } from '@saus/utils/objectHash'
+import { plural } from '@saus/utils/plural'
 import fs from 'fs'
 import path from 'path'
 import { crawl } from 'recrawl-sync'
-import {
-  emptyDir,
-  esbuild,
-  esbuildViteBridge,
-  plural,
-  toObjectHash,
-} from 'saus/core'
+import { esbuild, esbuildViteBridge } from 'saus/core'
 import { defineDeployHook, DeployContext, getDeployContext } from 'saus/deploy'
 import { Props } from './types'
 

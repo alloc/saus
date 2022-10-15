@@ -1,18 +1,14 @@
 import {
-  isObject,
-  omitKeys,
-  rewriteKeys,
-  rewriteObjectKeys,
-} from '@saus/deploy-utils'
-import * as aws4 from 'aws4'
-import { Agent } from 'https'
-import {
   Headers,
   http,
   HttpMethod,
   HttpRequestOptions,
   Response,
-} from 'saus/http'
+} from '@saus/runtime/http'
+import { isObject } from '@saus/utils/isObject'
+import { omitKeys, rewriteKeys, rewriteObjectKeys } from '@saus/utils/keys'
+import * as aws4 from 'aws4'
+import { Agent } from 'https'
 import { Promisable } from 'type-fest'
 import {
   AmzError,

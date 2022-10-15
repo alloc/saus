@@ -18,9 +18,11 @@
     "type-fest": "^2.13.0"
   },
   "devDependencies": {
+    "@types/prompts": "^2.0.14",
     "callsites": "^3.0.0",
     "escalade": "^3.1.1",
     "ohash": "^0.1.5",
+    "prompts": "^2.4.2",
     "ts-debounce": "2.0.0"
   }
 }

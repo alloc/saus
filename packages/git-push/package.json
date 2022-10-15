@@ -23,7 +23,7 @@
     "saus": "*"
   },
   "dependencies": {
-    "@saus/deploy-utils": "workspace:^0.1.0",
+    "@saus/utils": "workspace:^0.1.0",
     "lodash.merge": "^4.6.2"
   }
 }

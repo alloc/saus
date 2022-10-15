@@ -1,5 +1,4 @@
-import { toArray } from '@saus/deploy-utils'
-import { mergeArrays } from '@utils/array'
+import { mergeArrays, toArray } from '@utils/array'
 import { ascendBranch } from '@utils/ascendBranch'
 import { prependBase } from '@utils/base'
 import { noop } from '@utils/noop'

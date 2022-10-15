@@ -1,6 +1,6 @@
-import { isObject } from '@saus/deploy-utils'
 import { cleanUrl } from '@utils/cleanUrl'
 import { defer } from '@utils/defer'
+import { isObject } from '@utils/isObject'
 import { toInlineSourceMap } from '@utils/node/sourceMap'
 import { StackFrame } from '@utils/parseStackTrace'
 import vm from 'vm'

@@ -1,3 +1,4 @@
+import { prompt } from '@saus/utils/node/prompt'
 import { green } from 'kleur/colors'
 import { command } from '../../command'
 
@@ -28,7 +29,6 @@ async function removeSecrets(opts: { all?: boolean } = {}) {
   if (opts.all) {
     names = Object.keys(context.secrets['_secrets'])
   } else {
-    const { prompt } = await import('@saus/deploy-utils')
     names =
       (
         await prompt({

@@ -1,5 +1,5 @@
-import { isObject } from '@saus/deploy-utils'
-import { escape } from 'saus/core'
+import { escape } from '@saus/utils/escape'
+import { isObject } from '@saus/utils/isObject'
 import { parseXML } from './xml/parse'
 
 export interface XmlDocument {
