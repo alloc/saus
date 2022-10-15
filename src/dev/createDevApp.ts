@@ -25,7 +25,7 @@ export async function createDevApp(
     assetsDir: viteConfig.build.assetsDir,
     base: context.basePath,
     clientCacheId: '@fs' + globalCachePath,
-    clientHelpersId: '@id/saus/src/core/client/helpers.ts',
+    clientHelpersId: '@id/saus/client/helpers.mjs',
     clientRuntimeId: '@id/saus/client',
     command: 'dev',
     defaultLayout: context.defaultLayout,

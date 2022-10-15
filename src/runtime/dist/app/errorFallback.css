@@ -1,0 +1,118 @@
+body,
+:host {
+  padding: 50px 30px;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+h1 {
+  font-size: 30px;
+  color: #150a0a;
+  margin-top: 0;
+  margin-bottom: 6px;
+}
+
+small {
+  display: flex;
+  font-size: 14px;
+  color: #b78585;
+  margin-bottom: 30px;
+}
+
+svg.waiting {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+
+.error {
+  padding: 20px;
+  border-radius: 8px;
+  background: #1b1b1b;
+  color: white;
+  font-family: monospace;
+  font-size: 15px;
+  overflow-x: scroll;
+}
+
+.error-message {
+  width: 80vw;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  margin-bottom: 20px;
+  line-height: 140%;
+}
+
+.stack-frame {
+  font-size: 13px;
+  line-height: 150%;
+}
+
+.stack-frame span {
+  display: inline-block;
+  white-space: nowrap;
+  margin: 0 30px;
+}
+
+a {
+  color: #4e90a7;
+}
+
+a:hover {
+  color: #92cbe0;
+}
+
+.properties {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+table.error-props {
+  width: 40%;
+  min-width: 420px;
+  margin-top: 40px;
+}
+
+table {
+  font-size: 15px;
+  font-family: monospace;
+  line-height: 150%;
+  border-spacing: 6px;
+  white-space: nowrap;
+}
+
+table:not(.error-props) {
+  margin: -6px 0 0 -7px;
+}
+
+table tr {
+  margin: -1px 0 0 -1px;
+}
+
+table td.key {
+  text-align: right;
+  font-weight: bold;
+}
+
+table td {
+  display: inline-block;
+  padding: 0;
+  max-width: min(100%, 30vw);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+table td:not(.object) {
+  border: 1px solid #b7dfed;
+  padding: 6px;
+  overflow-x: scroll;
+}
+
+table td.object {
+  padding-left: 1px;
+  margin-left: -1px;
+}
+
+table td:not(:first-child) {
+  border-left: 0;
+}
+

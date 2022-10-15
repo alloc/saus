@@ -150,6 +150,9 @@ export function getDeployContext() {
 }
 
 export function injectDeployContext(context: DeployContext) {
-  contextPath = path.resolve(__dirname, '../core/context.cjs')
+  // Note: The __dirname here equals the path of the `dist` directory,
+  // because this function is extracted into a common chunk and all
+  // common chunks are stored in the `dist` directory.
+  contextPath = path.resolve(__dirname, './core/context.cjs')
   injectNodeModule(contextPath, context)
 }

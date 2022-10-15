@@ -3,7 +3,6 @@
   "include": ["**/*.ts"],
   "exclude": ["**/*.spec.ts"],
   "compilerOptions": {
-    "composite": true,
     "lib": ["dom", "esnext"],
     "module": "esnext",
     "types": ["../dist/env/client"]

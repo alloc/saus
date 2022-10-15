@@ -2,9 +2,9 @@
   "include": ["**/*.ts"],
   "exclude": ["bin", "client", "runtime", "utils", "vm"],
   "compilerOptions": {
-    "composite": true,
     "declaration": true,
     "esModuleInterop": true,
+    "incremental": true,
     "lib": ["es2019"],
     "module": "commonjs",
     "moduleResolution": "node16",

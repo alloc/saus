@@ -1,4 +1,5 @@
 import { BundleContext, SausContext } from '@/context'
+import { getClientInjection } from '@/injectModules'
 import { clientDir, globalCachePath } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
 import { clientLayoutPlugin } from '@/plugins/clientLayout'
@@ -15,7 +16,6 @@ import { findPackage } from '@utils/node/findPackage'
 import { toInlineSourceMap } from '@utils/node/sourceMap'
 import path from 'path'
 import posixPath from 'path/posix'
-import { getClientInjection } from '../core/injectModules'
 import { injectClientPreloads } from './clientPreloads'
 import { clientRedirects } from './moduleRedirects'
 import { ClientAsset, ClientChunk } from './types'
@@ -87,6 +87,7 @@ export async function compileClients(
     plugins: [
       debugForbiddenImports([
         'vite',
+        // TODO: Ensure these paths are accurate.
         './src/core/index.ts',
         './src/core/context.ts',
       ]),

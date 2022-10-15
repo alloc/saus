@@ -1,4 +1,3 @@
-import { resolve } from 'path'
 import { defineConfig } from 'tsup'
 import { PackageJson } from 'type-fest'
 
@@ -11,7 +10,8 @@ export default defineConfig({
     'index.ts',
     // Submodules
     'core/index.ts',
-    'core/client/node/api.ts',
+    'client/helpers.ts',
+    'client/node/api.ts',
     'build/failedPages.ts',
     'build/worker.ts',
     'bundle/html.ts',
@@ -28,8 +28,6 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,
-  tsconfig: resolve(__dirname, '../tsconfig.json'),
-  dts: true,
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
   noExternal: ['@'],
   define: { __VERSION__: JSON.stringify(pkgJson.version) },

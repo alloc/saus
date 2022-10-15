@@ -181,7 +181,7 @@ async function startServer(
   setupClientInjections(context)
 
   // Make the dev context available to internal functions.
-  injectNodeModule(path.resolve(__dirname, '../../core/context.cjs'), context)
+  injectNodeModule(path.resolve(__dirname, '../core/context.cjs'), context)
 
   // We want to load routes before the `runOptimize` call that's made
   // by Vite internals after `buildStart` hooks have finished.
