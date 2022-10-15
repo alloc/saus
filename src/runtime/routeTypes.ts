@@ -1,4 +1,4 @@
-import type { OneOrMany } from '@utils/types'
+import type { AnyToObject, OneOrMany } from '@utils/types'
 import type { RequireAsync } from '@vm/types'
 import type { Promisable } from 'type-fest'
 import type { CommonServerProps } from './app/types'
@@ -224,4 +224,18 @@ export interface RoutesModule extends HtmlContext {
   ssrRequire: RequireAsync
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
+}
+
+/**
+ * Server-side route entry
+ */
+export interface RouteEntry<
+  Props extends object = any,
+  Module extends object = any,
+  RenderResult = any
+> {
+  layout: RouteLayout<Props, any, Module, RenderResult>
+  routeModule: AnyToObject<Module, RouteModule>
+  /** This exists in server context only. */
+  routes?: string[]
 }

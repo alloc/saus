@@ -3,7 +3,7 @@
   "scripts": {
     "clean": "rimraf dist && git checkout head -- dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc --incremental -p .",
-    "dev": "npm run clean && tsc --incremental -p . --watch --sourcemap"
+    "dev": "tsc --incremental -p . --watch --sourcemap"
   },
   "dependencies": {
     "@cush/relative": "^1.0.0",

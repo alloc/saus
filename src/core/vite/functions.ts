@@ -1,3 +1,4 @@
+import { SourceMap } from '@utils/node/sourceMap'
 import { Script } from '@vm/types'
 import {
   LoadResult,
@@ -8,7 +9,6 @@ import {
 } from 'rollup'
 import { Promisable } from 'type-fest'
 import { compileModule } from '../../vm/compileModule'
-import { SourceMap } from '../node/sourceMap'
 import { vite } from '../vite'
 
 export interface ViteFunctions {

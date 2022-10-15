@@ -1,11 +1,21 @@
 import { globalCache } from '@runtime/cache'
 import { getPagePath } from '@runtime/getPagePath'
-import type { DevContext } from '../../core/context'
+import { Route } from '@runtime/routeTypes'
+import { RequireAsync } from '@vm/types'
 import type { PageClient } from '../pageClient'
 
+interface Context {
+  ssrRequire: RequireAsync
+  routes: Route[]
+  defaultRoute?: Route
+  routeClients: {
+    getClientByRoute: (route: Route) => { url: string }
+  }
+}
+
 export async function loadPageClient(routePath: string, routeParams?: any) {
-  const { ssrRequire, routes, defaultRoute, routeClients }: DevContext =
-    (void 0, require)('../core/context.cjs')
+  const context: Context = (void 0, require)('../core/context.cjs')
+  const { ssrRequire, routes, defaultRoute, routeClients } = context
 
   const route =
     routePath == 'default'

@@ -1,22 +1,6 @@
 import { dataToEsm } from '@runtime/dataToEsm'
-import type { RouteLayout } from '@runtime/layouts'
-import type { RouteModule, RouteRenderer } from '@runtime/routeTypes'
-import { AnyToObject } from '@utils/types'
+import type { RouteRenderer } from '@runtime/routeTypes'
 import endent from 'endent'
-
-/**
- * Server-side route entry
- */
-export interface RouteEntry<
-  Props extends object = any,
-  Module extends object = any,
-  RenderResult = any
-> {
-  layout: RouteLayout<Props, any, Module, RenderResult>
-  routeModule: AnyToObject<Module, RouteModule>
-  /** This exists in server context only. */
-  routes?: string[]
-}
 
 export function renderRouteEntry({
   routes,
