@@ -1,4 +1,4 @@
-import { bundleDir, httpDir } from '@/paths'
+import { bundleDir, httpDir, sausRootDir } from '@/paths'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { vite } from '@/vite'
 import remapping from '@ampproject/remapping'
@@ -110,16 +110,15 @@ export interface RuntimeBundleInfo {
 }
 
 async function compileSsrRuntime(context: BundleContext) {
-  const sausRoot = __dirname
-  const sausVersion = sausRoot.includes('/node_modules/')
-    ? require(path.resolve(sausRoot, '../package.json')).version
-    : require('child_process')
+  const sausVersion = sausRootDir.includes('/node_modules/')
+    ? (void 0, require)(path.resolve(sausRootDir, '../package.json')).version
+    : (void 0, require)('child_process')
         .execSync('git rev-list --no-merges -n 1 HEAD', {
-          cwd: path.dirname(sausRoot),
+          cwd: path.dirname(sausRootDir),
         })
         .toString('utf8')
 
-  const cache = new CompileCache('dist/.runtime', path.dirname(sausRoot))
+  const cache = new CompileCache('dist/.runtime', path.dirname(sausRootDir))
   const buildEntryMap = (entries: Record<string, string>) => {
     const entryMap: Record<string, string> = {}
     for (const name in entries) {
@@ -199,14 +198,14 @@ async function compileSsrRuntime(context: BundleContext) {
           }
 
           const external =
-            !resolved.id.startsWith(sausRoot) ||
+            !resolved.id.startsWith(sausRootDir) ||
             resolved.id.includes('/node_modules/')
 
           if (external) {
             return { path: id, external }
           }
 
-          const moduleId = path.relative(sausRoot, resolved.id)
+          const moduleId = path.relative(sausRootDir, resolved.id)
           if (sausExternals.some(e => moduleId.endsWith(e))) {
             debugger // TODO remove this
           }

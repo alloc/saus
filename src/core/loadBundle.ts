@@ -146,9 +146,7 @@ export async function loadBundle({
       })
     }
   } else {
-    const { bundle } =
-      require('../bundle/api') as typeof import('../bundle/api')
-
+    const { bundle } = await import('../bundle/api.js')
     await options.onBundleStart?.(bundleOptions)
     bundleResult = await bundle(context, bundleOptions)
   }

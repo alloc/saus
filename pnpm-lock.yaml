@@ -303,7 +303,7 @@ importers:
 
   src:
     specifiers:
-      '@': link:./core
+      '@': link:./dist/core
       '@ampproject/remapping': ^1.1.1
       '@babel/code-frame': ^7.16.7
       '@client': link:./node_modules/@saus/client/dist
@@ -354,7 +354,7 @@ importers:
       vite: npm:@alloc/vite@2.6.3-3
       yaml: ^2.1.1
     dependencies:
-      '@': link:core
+      '@': link:dist/core
       '@ampproject/remapping': 1.1.1
       '@babel/code-frame': 7.18.6
       '@cush/exec': 1.8.0

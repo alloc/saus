@@ -52,7 +52,7 @@ export function preferExternal(context: BundleContext): PreferExternal {
         result = { external: false }
       } else {
         // Packages that depend on Saus must be bundled.
-        const pkg = require(pkgPath)
+        const pkg = (void 0, require)(pkgPath)
         external = !(
           'saus' in (pkg.dependencies || {}) ||
           'saus' in (pkg.peerDependencies || {})

@@ -1,4 +1,5 @@
 import { BuildOptions, loadBundle, vite } from '@/core'
+import { toSausPath } from '@/paths'
 import { ProfiledEventHandler } from '@runtime/app/types'
 import { getPagePath } from '@runtime/getPagePath'
 import { generateRoutePaths } from '@runtime/routes/generateRoutePaths'
@@ -128,7 +129,7 @@ async function buildPages(
     })
 
     const pool = new WorkerPool({
-      filename: path.resolve(__dirname, 'build/worker.js'),
+      filename: toSausPath('build/worker.js'),
       workerData,
       maxThreads: options.maxWorkers,
       idleTimeout: Infinity,

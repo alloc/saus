@@ -338,7 +338,7 @@ function rewriteSources(
     if (sourceId[0] == '.' || sourceId.includes('/node_modules/')) {
       const pkgPath = findPackage(path.dirname(sourcePath), true)
       if (pkgPath) {
-        const pkg = require(pkgPath)
+        const pkg = (void 0, require)(pkgPath)
         sourceId = posixPath.join(
           pkg.name + (pkg.version ? '@' + pkg.version : ''),
           slash(path.relative(path.dirname(pkgPath), sourcePath))

@@ -11,7 +11,7 @@
     "prepare": "npm run link"
   },
   "dependencies": {
-    "@": "link:./core",
+    "@": "link:./dist/core",
     "@ampproject/remapping": "^1.1.1",
     "@babel/code-frame": "^7.16.7",
     "@cush/exec": "^1.8.0",

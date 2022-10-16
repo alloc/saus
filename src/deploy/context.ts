@@ -1,4 +1,5 @@
 import { getGitRepoByName } from '@/git'
+import { toSausPath } from '@/paths'
 import { vite } from '@/vite'
 import exec from '@cush/exec'
 import { noop } from '@utils/noop'
@@ -153,6 +154,6 @@ export function injectDeployContext(context: DeployContext) {
   // Note: The __dirname here equals the path of the `dist` directory,
   // because this function is extracted into a common chunk and all
   // common chunks are stored in the `dist` directory.
-  contextPath = path.resolve(__dirname, './core/context.cjs')
+  contextPath = toSausPath('core/context.cjs')
   injectNodeModule(contextPath, context)
 }

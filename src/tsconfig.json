@@ -18,6 +18,9 @@
     "moduleResolution": "node16",
     "noUnusedLocals": true,
     "outDir": "dist",
+    "paths": {
+      "@/*": ["./core/*"]
+    },
     "skipLibCheck": true,
     "strict": true,
     "sourceMap": true,

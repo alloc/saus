@@ -3,6 +3,7 @@ import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
 import { OutputBundle } from '../bundle/types'
+import { toSausPath } from './paths'
 
 export function writeBundle(
   bundle: OutputBundle,
@@ -24,7 +25,7 @@ export function writeBundle(
   fs.writeFileSync(bundle.path, bundle.code)
   if (options.writeIndexTypes) {
     fs.copyFileSync(
-      path.resolve(__dirname, '../bundle/index.d.ts'),
+      toSausPath('bundle/index.d.ts'),
       bundle.path.replace(/(\.[cm]js)?$/, '.d.ts')
     )
   }

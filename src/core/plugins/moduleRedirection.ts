@@ -1,3 +1,4 @@
+import { sausRootDir } from '@/paths'
 import { bareImportRE } from '@utils/importRegex'
 import createDebug from 'debug'
 import fs from 'fs'
@@ -37,10 +38,9 @@ export function moduleRedirection(
   forbiddenModules: string[] = []
 ): vite.Plugin {
   if (isDebug && forbiddenModules.length) {
-    const sausRoot = __dirname
     forbiddenModules.forEach((id, i) => {
       if (id[0] == '.') {
-        forbiddenModules[i] = fs.realpathSync(path.resolve(sausRoot, id))
+        forbiddenModules[i] = fs.realpathSync(path.resolve(sausRootDir, id))
       }
     })
   }
