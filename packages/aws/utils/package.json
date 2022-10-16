@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@saus/utils": "workspace:^0.1.0",
-    "aws4": "^1.11.0"
+    "aws4": "^1.11.0",
+    "type-fest": "^2.13.0"
   }
 }

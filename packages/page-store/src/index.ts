@@ -1,14 +1,11 @@
 import { onResponse, setup } from 'saus'
 import {
   AssetStore,
-  assignDefaults,
   Endpoint,
-  getPageFilename,
   getRequestMetadata,
   injectCachePlugin,
   ParsedUrl,
   parseUrl,
-  pick,
 } from 'saus/core'
 import {
   normalizeHeaders,
@@ -16,6 +13,9 @@ import {
   ResponseHeaders,
   unwrapBody,
 } from 'saus/http'
+import { assignDefaults } from 'saus/utils/assignDefaults'
+import { getPageFilename } from 'saus/utils/getPageFilename'
+import { pick } from 'saus/utils/pick'
 
 export type PageRuleContext = ParsedUrl & {
   headers: Readonly<RequestHeaders>
