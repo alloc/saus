@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "clean": "rimraf ./dist && git checkout HEAD dist && ln -s ../node_modules dist/node_modules",
-    "build": "npm run clean && tsup",
+    "build": "npm run clean && tsup && cd client && npm run build",
     "dev": "tsup --watch --sourcemap",
     "lint": "tsc -p . --noEmit && eslint . --ext .ts"
   },

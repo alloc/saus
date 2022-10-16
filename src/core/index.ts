@@ -1,5 +1,3 @@
-import exec from '@cush/exec'
-
 export * as esbuild from 'esbuild'
 export * from './api'
 export * from './defineClient'
@@ -11,4 +9,3 @@ export * from './vite'
 export * from './vite/esbuildPlugin'
 export * from './vite/functions'
 export * from './writeBundle'
-export { exec }

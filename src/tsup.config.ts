@@ -10,8 +10,6 @@ export default defineConfig({
     'index.ts',
     // Submodules
     'core/index.ts',
-    'client/helpers.ts',
-    'client/node/api.ts',
     'build/failedPages.ts',
     'build/worker.ts',
     'bundle/html.ts',
