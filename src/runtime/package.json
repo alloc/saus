@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@cush/relative": "^1.0.0",
-    "@utils": "workspace:*",
-    "@vm": "workspace:*",
+    "@saus/utils": "workspace:*",
+    "@saus/vm": "workspace:*",
     "css-what": "^6.0.1",
     "debug": "^4.3.2",
     "endent": "^2.1.0",
@@ -19,7 +19,7 @@
     "type-fest": "^2.13.0"
   },
   "devDependencies": {
-    "@saus/utils": "workspace:*",
-    "@saus/vm": "workspace:*"
+    "@utils": "link:./node_modules/@saus/utils/dist",
+    "@vm": "link:./node_modules/@saus/vm/dist"
   }
 }

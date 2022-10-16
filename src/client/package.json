@@ -7,13 +7,13 @@
     "dev": "tsc -p . --watch --sourcemap"
   },
   "dependencies": {
-    "@runtime": "workspace:*",
-    "@utils": "workspace:*",
-    "@vm": "workspace:*"
-  },
-  "devDependencies": {
     "@saus/runtime": "workspace:*",
     "@saus/utils": "workspace:*",
     "@saus/vm": "workspace:*"
+  },
+  "devDependencies": {
+    "@runtime": "link:./node_modules/@saus/runtime/dist",
+    "@utils": "link:./node_modules/@saus/utils/dist",
+    "@vm": "link:./node_modules/@saus/vm/dist"
   }
 }

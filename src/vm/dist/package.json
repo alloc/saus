@@ -1,5 +1,4 @@
 {
-  "name": "@vm",
   "exports": {
     ".": {
       "types": "./index.d.ts",

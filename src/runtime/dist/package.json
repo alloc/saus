@@ -1,5 +1,4 @@
 {
-  "name": "@runtime",
   "exports": {
     "./*": {
       "types": "./*.d.ts",

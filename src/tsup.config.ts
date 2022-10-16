@@ -41,7 +41,6 @@ export default defineConfig({
     'core/constants.ts',
     'secrets/defineSecrets.ts',
   ],
-  dts: true,
   format: ['cjs', 'esm'],
   target: 'node16',
   splitting: true,

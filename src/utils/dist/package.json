@@ -1,5 +1,4 @@
 {
-  "name": "@utils",
   "exports": {
     "./AbortController": {
       "node": "./AbortController/index.node.js",

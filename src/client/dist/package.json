@@ -1,5 +1,4 @@
 {
-  "name": "@client",
   "exports": {
     ".": {
       "node": "./index.cjs",
