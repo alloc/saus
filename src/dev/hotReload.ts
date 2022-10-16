@@ -132,7 +132,7 @@ export function createHotReload(
 
         // Reload the client-side routes map.
         if (handler.clientChange) {
-          handler.clientChange('/@fs' + path.join(clientDir, 'routes.ts'))
+          handler.clientChange('/@fs' + path.join(clientDir, 'routes.mjs'))
         }
       } catch (error: any) {
         routesChanged = false

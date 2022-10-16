@@ -137,8 +137,8 @@ export async function compileClients(
     }
   }
 
-  const baseUrlPath = path.join(clientDir, 'baseUrl.ts')
-  const staticRoutesPath = path.join(clientDir, 'routes.ts')
+  const baseUrlPath = path.join(clientDir, 'baseUrl.mjs')
+  const staticRoutesPath = path.join(clientDir, 'routes.mjs')
 
   const debugChunks: Record<string, string> = {}
   const createDebugChunk = (chunk: OutputChunk) => {

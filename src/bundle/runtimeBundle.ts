@@ -18,14 +18,14 @@ import { internalRedirects } from './moduleRedirects'
 
 // These modules are dynamically defined at build time.
 const sausExternals = [
-  'bundle/runtime/bundle/clientAssets.ts',
-  'bundle/runtime/bundle/clientEntries.ts',
-  'bundle/runtime/bundle/clientModules.ts',
-  'bundle/runtime/bundle/config.ts',
-  'bundle/runtime/bundle/debugBase.ts',
-  'bundle/runtime/bundle/routes.ts',
-  'core/client/baseUrl.ts',
-  'core/client/routes.ts',
+  'bundle/runtime/bundle/clientAssets.mjs',
+  'bundle/runtime/bundle/clientEntries.mjs',
+  'bundle/runtime/bundle/clientModules.mjs',
+  'bundle/runtime/bundle/config.mjs',
+  'bundle/runtime/bundle/debugBase.mjs',
+  'bundle/runtime/bundle/routes.mjs',
+  'client/baseUrl.mjs',
+  'client/routes.mjs',
 ]
 
 // These imports are handled by Rollup.
@@ -208,6 +208,9 @@ async function compileSsrRuntime(context: BundleContext) {
           }
 
           const moduleId = path.relative(sausRoot, resolved.id)
+          if (sausExternals.some(e => moduleId.endsWith(e))) {
+            debugger // TODO remove this
+          }
           if (sausExternals.includes(moduleId)) {
             return {
               path: path.relative(cache.path, resolved.id),

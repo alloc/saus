@@ -30,13 +30,13 @@ export async function compileServerBundle(
 
   if (bundleConfig.clientStore !== 'external')
     injectedModules.addServerModule({
-      id: path.join(bundleDir, 'bundle/clientStore/index.ts'),
+      id: path.join(bundleDir, 'bundle/clientStore/index.mjs'),
       code: `export * from "./${bundleConfig.clientStore}"`,
     })
 
   if (!bundleConfig.debugBase)
     injectedModules.addServerModule({
-      id: path.join(bundleDir, 'bundle/debugBase.ts'),
+      id: path.join(bundleDir, 'bundle/debugBase.mjs'),
       code: `export function injectDebugBase() {}`,
     })
 
@@ -52,12 +52,12 @@ export async function compileServerBundle(
   if (isWorker) {
     workerPlugins.push(
       redirectModule(
-        path.join(httpDir, 'get.ts'),
-        path.join(clientDir, 'http/get.ts')
+        path.join(httpDir, 'get.mjs'),
+        path.join(clientDir, 'http/get.mjs')
       ),
       // Redirect the `debug` package to a stub module.
       !options.isBuild &&
-        overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.ts'))
+        overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.mjs'))
     )
   }
 
