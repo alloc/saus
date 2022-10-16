@@ -60,6 +60,7 @@
     "builtin-modules": "^3.2.0",
     "catch-exit": "^1.2.2",
     "chokidar": "^3.5.3",
+    "concurrently": "^7.4.0",
     "elaps": "^2.4.0",
     "escalade": "^3.1.1",
     "glob-base": "^0.3.0",
