@@ -1,5 +1,18 @@
 {
-  "private": true,
+  "name": "@saus/utils",
+  "version": "0.4.10",
+  "exports": {
+    "./AbortController": {
+      "node": "./dist/AbortController/index.node.js",
+      "types": "./dist/AbortController/index.d.ts",
+      "default": "./dist/AbortController/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.mjs",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",

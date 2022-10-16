@@ -1,5 +1,13 @@
 {
-  "private": true,
+  "name": "@saus/runtime",
+  "version": "0.4.10",
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.mjs",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
@@ -16,9 +24,5 @@
     "kleur": "^4.1.4",
     "misty": "^1.6.7",
     "type-fest": "^2.13.0"
-  },
-  "devDependencies": {
-    "@utils": "link:../utils",
-    "@vm": "link:../vm"
   }
 }

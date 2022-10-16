@@ -1,5 +1,84 @@
 {
-  "private": true,
+  "name": "saus",
+  "version": "0.4.10",
+  "description": "Radically simple SSG/SSR powered by Vite",
+  "repository": "alloc/saus",
+  "author": "Alec Larson",
+  "bin": "bin/saus",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    },
+    "./babel": {
+      "types": "./dist/utils/babel.d.ts",
+      "import": "./dist/utils/babel.mjs",
+      "default": "./dist/utils/babel.js"
+    },
+    "./babel/*": {
+      "types": "./dist/utils/babel/*.d.ts",
+      "import": "./dist/utils/babel/*.mjs",
+      "default": "./dist/utils/babel/*.js"
+    },
+    "./bundle": {
+      "types": "./dist/bundle/index.d.ts",
+      "import": "./dist/bundle/index.mjs",
+      "default": "./dist/bundle/index.js"
+    },
+    "./client": {
+      "node": "./dist/client/index.cjs",
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.mjs",
+      "default": "./dist/client/index.js"
+    },
+    "./deploy": {
+      "types": "./dist/deploy/index.d.ts",
+      "import": "./dist/deploy/index.mjs",
+      "default": "./dist/deploy/index.js"
+    },
+    "./env/*": "./dist/env/*.d.ts",
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.mjs",
+      "default": "./dist/core/index.js"
+    },
+    "./html": {
+      "types": "./dist/runtime/html/index.d.ts",
+      "import": "./dist/runtime/html/index.mjs",
+      "default": "./dist/runtime/html/index.js"
+    },
+    "./html/*": {
+      "types": "./dist/runtime/html/*.d.ts",
+      "import": "./dist/runtime/html/*.mjs",
+      "default": "./dist/runtime/html/*.js"
+    },
+    "./http": {
+      "types": "./dist/runtime/http/index.d.ts",
+      "import": "./dist/runtime/http/index.mjs",
+      "default": "./dist/runtime/http/index.js"
+    },
+    "./http/*": {
+      "types": "./dist/runtime/http/*.d.ts",
+      "import": "./dist/runtime/http/*.mjs",
+      "default": "./dist/runtime/http/*.js"
+    },
+    "./node/*": {
+      "types": "./dist/utils/node/*.d.ts",
+      "import": "./dist/utils/node/*.mjs",
+      "default": "./dist/utils/node/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "import": "./dist/utils/*.mjs",
+      "default": "./dist/utils/*.js"
+    },
+    "./vm/*": {
+      "types": "./dist/vm/*.d.ts",
+      "import": "./dist/vm/*.mjs",
+      "default": "./dist/vm/*.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf ./dist && git checkout HEAD dist",
     "build": "npm run clean && tsup && npm run link",
@@ -37,9 +116,7 @@
     "yaml": "^2.1.1"
   },
   "devDependencies": {
-    "@client": "link:./client",
     "@rollup/pluginutils": "^4.1.2",
-    "@runtime": "link:./runtime",
     "@types/babel__code-frame": "^7.0.3",
     "@types/convert-source-map": "^1.5.2",
     "@types/estree": "^0.0.51",
@@ -47,8 +124,6 @@
     "@types/glob-base": "^0.3.0",
     "@types/node": "^17.0.35",
     "@types/source-map-support": "^0.5.4",
-    "@utils": "link:./utils",
-    "@vm": "link:./vm",
     "arrify": "2.0.1",
     "base64-arraybuffer": "^1.0.2",
     "builtin-modules": "^3.2.0",

@@ -1,5 +1,18 @@
 {
-  "private": true,
+  "name": "@saus/vm",
+  "version": "0.4.10",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.mjs",
+      "default": "./dist/*.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && esbuild *.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
@@ -14,7 +27,6 @@
     "type-fest": "^2.13.0"
   },
   "devDependencies": {
-    "@types/babel__traverse": "^7.18.2",
-    "@utils": "link:../utils"
+    "@types/babel__traverse": "^7.18.2"
   }
 }

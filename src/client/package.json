@@ -1,5 +1,13 @@
 {
-  "private": true,
+  "name": "@saus/client",
+  "version": "0.4.10",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
@@ -9,10 +17,5 @@
     "@runtime": "workspace:@saus/runtime@*",
     "@utils": "workspace:@saus/utils@*",
     "@vm": "workspace:@saus/vm@*"
-  },
-  "devDependencies": {
-    "@runtime": "link:../runtime",
-    "@utils": "link:../utils",
-    "@vm": "link:../vm"
   }
 }
