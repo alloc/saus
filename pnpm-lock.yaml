@@ -28,6 +28,7 @@ importers:
       callsites: ^3.0.0
       concurrently: ^7.4.0
       esbuild: ^0.14.15
+      esbuild-plugin-file-path-extensions: ^1.0.0
       eslint: ^8.24.0
       kleur: ^4.1.4
       misty: ^1.6.7
@@ -48,6 +49,7 @@ importers:
       callsites: 3.1.0
       concurrently: 7.4.0
       esbuild: 0.14.49
+      esbuild-plugin-file-path-extensions: 1.0.0
       eslint: 8.24.0
       kleur: 4.1.5
       misty: 1.6.10
@@ -2443,6 +2445,11 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /esbuild-plugin-file-path-extensions/1.0.0:
+    resolution: {integrity: sha512-v5LpSkml+CbsC0+xAaETEGDECdvKp1wKkD4aXMdI4zLjXP0EYfK4GjGhphumt4N+kjR3A8Q+DIkpgxX1XTqO4Q==}
+    engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
+    dev: true
 
   /esbuild-sunos-64/0.13.15:
     resolution: {integrity: sha512-lbivT9Bx3t1iWWrSnGyBP9ODriEvWDRiweAs69vI+miJoeKwHWOComSRukttbuzjZ8r1q0mQJ8Z7yUsDJ3hKdw==}

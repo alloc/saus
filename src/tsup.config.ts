@@ -1,3 +1,4 @@
+import { esbuildPluginFilePathExtensions } from 'esbuild-plugin-file-path-extensions'
 import { defineConfig } from 'tsup'
 import { PackageJson } from 'type-fest'
 
@@ -47,4 +48,5 @@ export default defineConfig({
   external: Object.keys(pkgJson.dependencies!).concat('fsevents'),
   noExternal: ['@'],
   define: { __VERSION__: JSON.stringify(pkgJson.version) },
+  plugins: [esbuildPluginFilePathExtensions()],
 })

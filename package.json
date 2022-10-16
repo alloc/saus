@@ -16,6 +16,7 @@
     "callsites": "^3.0.0",
     "concurrently": "^7.4.0",
     "esbuild": "^0.14.15",
+    "esbuild-plugin-file-path-extensions": "^1.0.0",
     "eslint": "^8.24.0",
     "kleur": "^4.1.4",
     "misty": "^1.6.7",

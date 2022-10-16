@@ -3,10 +3,8 @@
   "version": "0.4.10",
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
-    "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
-    "dev": "concurrently npm:dev:*",
-    "dev:cjs": "tsc -p . --watch --sourcemap",
-    "dev:mjs": "esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist --watch --sourcemap=external"
+    "build": "npm run clean && tsup-node",
+    "dev": "tsup-node --watch --sourcemap"
   },
   "dependencies": {
     "@ampproject/remapping": "^1.1.1",
