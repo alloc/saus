@@ -1,0 +1,10 @@
+{
+  "name": "@runtime",
+  "exports": {
+    "./*": {
+      "types": "./*.d.ts",
+      "import": "./*.mjs",
+      "default": "./*.js"
+    }
+  }
+}

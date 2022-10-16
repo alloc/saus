@@ -1,0 +1,15 @@
+{
+  "name": "@utils",
+  "exports": {
+    "./AbortController": {
+      "node": "./AbortController/index.node.js",
+      "types": "./AbortController/index.d.ts",
+      "default": "./AbortController/index.js"
+    },
+    "./*": {
+      "types": "./*.d.ts",
+      "import": "./*.mjs",
+      "default": "./*.js"
+    }
+  }
+}
