@@ -6,9 +6,9 @@
     "incremental": true,
     "lib": ["dom", "esnext"],
     "module": "esnext",
-    "outDir": "../dist/client",
+    "outDir": "dist",
     "target": "esnext",
-    "tsBuildInfoFile": "../dist/client/.tsbuildinfo",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
     "types": ["../dist/env/client"]
   }
 }

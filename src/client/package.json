@@ -1,9 +1,8 @@
 {
-  "name": "@saus/client",
-  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "clean": "rimraf ../dist/client && git checkout HEAD ../dist/client",
-    "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=../dist/client && tsc -p .",
+    "clean": "rimraf dist && git checkout HEAD dist",
+    "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
     "dev": "tsc -p . --watch --sourcemap"
   },
   "dependencies": {

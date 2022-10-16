@@ -122,9 +122,11 @@ importers:
       '@types/aws4': ^1.11.2
       aws4: ^1.11.0
       saus: '*'
+      type-fest: ^2.13.0
     dependencies:
       '@saus/utils': link:../../../src/utils/dist
       aws4: 1.11.0
+      type-fest: 2.16.0
     devDependencies:
       '@types/aws4': 1.11.2
       saus: link:../../../src/dist
@@ -304,6 +306,7 @@ importers:
       '@': link:./core
       '@ampproject/remapping': ^1.1.1
       '@babel/code-frame': ^7.16.7
+      '@client': workspace:@saus/client@*
       '@cush/exec': ^1.8.0
       '@rollup/pluginutils': 5.0.1
       '@runtime': workspace:@saus/runtime@*
@@ -350,6 +353,7 @@ importers:
       '@': link:core
       '@ampproject/remapping': 1.1.1
       '@babel/code-frame': 7.18.6
+      '@client': link:client/dist
       '@cush/exec': 1.8.0
       '@runtime': link:runtime/dist
       '@utils': link:utils/dist
@@ -403,6 +407,9 @@ importers:
       '@runtime': link:../runtime/dist
       '@utils': link:../utils/dist
       '@vm': link:../vm/dist
+
+  src/client/dist:
+    specifiers: {}
 
   src/core:
     specifiers: {}
