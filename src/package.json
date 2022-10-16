@@ -37,7 +37,7 @@
       "import": "./dist/deploy/index.mjs",
       "default": "./dist/deploy/index.js"
     },
-    "./env/*": "./dist/env/*.d.ts",
+    "./env/*": "./env/*.d.ts",
     "./core": {
       "types": "./dist/core/index.d.ts",
       "import": "./dist/core/index.mjs",

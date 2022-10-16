@@ -73,7 +73,7 @@ importers:
       navaid: 1.2.0
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/aws/cloudfront:
     specifiers:
@@ -84,7 +84,7 @@ importers:
       '@saus/aws-utils': link:../utils
       mrmime: 1.0.1
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/aws/s3:
     specifiers:
@@ -95,7 +95,7 @@ importers:
       '@saus/aws-utils': link:../utils
       mrmime: 1.0.1
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/aws/s3-website:
     specifiers:
@@ -103,7 +103,6 @@ importers:
       '@saus/aws-s3': workspace:^0.1.0
       '@saus/cloudform': workspace:^0.1.0
       '@saus/page-store': workspace:^0.1.0
-      '@saus/utils': workspace:^0.1.0
       debug: ^4.3.2
       saus: '*'
     dependencies:
@@ -111,25 +110,22 @@ importers:
       '@saus/aws-s3': link:../s3
       '@saus/cloudform': link:../../cloudform
       '@saus/page-store': link:../../page-store
-      '@saus/utils': link:../../../src/utils/dist
       debug: 4.3.4
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/aws/utils:
     specifiers:
-      '@saus/utils': workspace:^0.1.0
       '@types/aws4': ^1.11.2
       aws4: ^1.11.0
       saus: '*'
       type-fest: ^2.13.0
     dependencies:
-      '@saus/utils': link:../../../src/utils/dist
       aws4: 1.11.0
       type-fest: 2.16.0
     devDependencies:
       '@types/aws4': 1.11.2
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/cloudflare/cache:
     specifiers:
@@ -140,7 +136,7 @@ importers:
       '@saus/cloudflare-request': link:../request
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/cloudflare/dns:
     specifiers:
@@ -149,19 +145,19 @@ importers:
     dependencies:
       '@saus/cloudflare-request': link:../request
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/cloudflare/page-rules:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/cloudflare/request:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../../src/dist
+      saus: link:../../../src
 
   packages/cloudform:
     specifiers:
@@ -178,39 +174,35 @@ importers:
       type-fest: 2.16.0
     devDependencies:
       recrawl-sync: 2.2.2
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/cloudimage:
     specifiers:
-      '@saus/utils': workspace:^0.1.0
       '@types/lodash.merge': ^4.6.7
       lodash.merge: ^4.6.2
       saus: '*'
     dependencies:
-      '@saus/utils': link:../../src/utils/dist
       lodash.merge: 4.6.2
     devDependencies:
       '@types/lodash.merge': 4.6.7
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/git-push:
     specifiers:
-      '@saus/utils': workspace:^0.1.0
       '@types/lodash.merge': ^4.6.7
       lodash.merge: ^4.6.2
       saus: '*'
     dependencies:
-      '@saus/utils': link:../../src/utils/dist
       lodash.merge: 4.6.2
     devDependencies:
       '@types/lodash.merge': 4.6.7
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/page-store:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/react:
     specifiers:
@@ -229,17 +221,15 @@ importers:
       '@types/react-dom': 17.0.17
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/secrets:
     specifiers:
       '@cush/exec': ^1.8.0
-      '@saus/utils': workspace:^0.1.0
       aes-password: ^1.0.5
       saus: link:../..
     dependencies:
       '@cush/exec': 1.8.0
-      '@saus/utils': link:../../src/utils/dist
       aes-password: 1.0.5
     devDependencies:
       saus: link:../..
@@ -265,22 +255,20 @@ importers:
       '@types/pixelmatch': 5.2.4
       '@types/react': 17.0.47
       '@types/react-dom': 17.0.17
-      saus: link:../../src/dist
+      saus: link:../../src
       tsup: 5.12.9_typescript@4.8.4
       typescript: 4.8.4
 
   packages/vercel:
     specifiers:
       '@cush/exec': ^1.8.0
-      '@saus/utils': workspace:^0.1.0
       recrawl-sync: ^2.2.1
       saus: '*'
     dependencies:
       '@cush/exec': 1.8.0
-      '@saus/utils': link:../../src/utils/dist
       recrawl-sync: 2.2.2
     devDependencies:
-      saus: link:../../src/dist
+      saus: link:../../src
 
   packages/webp:
     specifiers:
@@ -299,7 +287,7 @@ importers:
       misty: 1.6.10
     devDependencies:
       '@types/imagemin-webp': 7.0.0
-      saus: link:../../src/dist
+      saus: link:../../src
 
   src:
     specifiers:
@@ -310,10 +298,6 @@ importers:
       '@cush/exec': ^1.8.0
       '@rollup/pluginutils': 5.0.1
       '@runtime': workspace:@saus/runtime@*
-      '@saus/_client': link:./client
-      '@saus/_runtime': link:./runtime
-      '@saus/_utils': link:./utils
-      '@saus/_vm': link:./vm
       '@types/babel__code-frame': ^7.0.3
       '@types/convert-source-map': ^1.5.2
       '@types/estree': ^0.0.51
@@ -357,11 +341,11 @@ importers:
       '@': link:core
       '@ampproject/remapping': 1.1.1
       '@babel/code-frame': 7.18.6
-      '@client': link:client/dist
+      '@client': link:client
       '@cush/exec': 1.8.0
-      '@runtime': link:runtime/dist
-      '@utils': link:utils/dist
-      '@vm': link:vm/dist
+      '@runtime': link:runtime
+      '@utils': link:utils
+      '@vm': link:vm
       cac: 6.7.12
       convert-source-map: 1.8.0
       debug: 4.3.4
@@ -383,10 +367,6 @@ importers:
       yaml: 2.1.1
     devDependencies:
       '@rollup/pluginutils': 5.0.1_2qoyzwmpaczaj2mabgmoz6ccpy_rollup@2.79.1
-      '@saus/_client': link:client
-      '@saus/_runtime': link:runtime
-      '@saus/_utils': link:utils
-      '@saus/_vm': link:vm
       '@types/babel__code-frame': 7.0.3
       '@types/convert-source-map': 1.5.2
       '@types/estree': 0.0.51
@@ -409,34 +389,19 @@ importers:
   src/client:
     specifiers:
       '@runtime': workspace:@saus/runtime@*
-      '@saus/_runtime': link:../runtime
-      '@saus/_utils': link:../utils
-      '@saus/_vm': link:../vm
       '@utils': workspace:@saus/utils@*
       '@vm': workspace:@saus/vm@*
     dependencies:
-      '@runtime': link:../runtime/dist
-      '@utils': link:../utils/dist
-      '@vm': link:../vm/dist
-    devDependencies:
-      '@saus/_runtime': link:../runtime
-      '@saus/_utils': link:../utils
-      '@saus/_vm': link:../vm
-
-  src/client/dist:
-    specifiers: {}
+      '@runtime': link:../runtime
+      '@utils': link:../utils
+      '@vm': link:../vm
 
   src/core:
-    specifiers: {}
-
-  src/dist:
     specifiers: {}
 
   src/runtime:
     specifiers:
       '@cush/relative': ^1.0.0
-      '@saus/_utils': link:../utils
-      '@saus/_vm': link:../vm
       '@utils': workspace:@saus/utils@*
       '@vm': workspace:@saus/vm@*
       css-what: ^6.0.1
@@ -448,8 +413,8 @@ importers:
       type-fest: ^2.13.0
     dependencies:
       '@cush/relative': 1.0.0
-      '@utils': link:../utils/dist
-      '@vm': link:../vm/dist
+      '@utils': link:../utils
+      '@vm': link:../vm
       css-what: 6.1.0
       debug: 4.3.4
       endent: 2.1.0
@@ -457,12 +422,6 @@ importers:
       kleur: 4.1.5
       misty: 1.6.10
       type-fest: 2.16.0
-    devDependencies:
-      '@saus/_utils': link:../utils
-      '@saus/_vm': link:../vm
-
-  src/runtime/dist:
-    specifiers: {}
 
   src/utils:
     specifiers:
@@ -505,12 +464,8 @@ importers:
       prompts: 2.4.2
       ts-debounce: 2.0.0
 
-  src/utils/dist:
-    specifiers: {}
-
   src/vm:
     specifiers:
-      '@saus/_utils': link:../utils
       '@types/babel__traverse': ^7.18.2
       '@utils': workspace:@saus/utils@*
       builtin-modules: ^3.2.0
@@ -519,18 +474,14 @@ importers:
       kleur: ^4.1.4
       type-fest: ^2.13.0
     dependencies:
-      '@utils': link:../utils/dist
+      '@utils': link:../utils
       builtin-modules: 3.3.0
       debug: 4.3.4
       es-module-lexer: 1.0.5
       kleur: 4.1.5
       type-fest: 2.16.0
     devDependencies:
-      '@saus/_utils': link:../utils
       '@types/babel__traverse': 7.18.2
-
-  src/vm/dist:
-    specifiers: {}
 
 packages:
 

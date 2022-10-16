@@ -32,7 +32,6 @@
     "@saus/aws-cloudfront": "workspace:^0.1.0",
     "@saus/aws-s3": "workspace:^0.1.0",
     "@saus/cloudform": "workspace:^0.1.0",
-    "@saus/page-store": "workspace:^0.1.0",
-    "@saus/utils": "workspace:^0.1.0"
+    "@saus/page-store": "workspace:^0.1.0"
   }
 }
