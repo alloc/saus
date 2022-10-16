@@ -294,10 +294,10 @@ importers:
       '@': link:./core
       '@ampproject/remapping': ^1.1.1
       '@babel/code-frame': ^7.16.7
-      '@client': workspace:@saus/client@*
+      '@client': workspace:*
       '@cush/exec': ^1.8.0
       '@rollup/pluginutils': 5.0.1
-      '@runtime': workspace:@saus/runtime@*
+      '@runtime': workspace:*
       '@saus/client': workspace:*
       '@types/babel__code-frame': ^7.0.3
       '@types/convert-source-map': ^1.5.2
@@ -306,8 +306,8 @@ importers:
       '@types/glob-base': ^0.3.0
       '@types/node': ^17.0.35
       '@types/source-map-support': ^0.5.4
-      '@utils': workspace:@saus/utils@*
-      '@vm': workspace:@saus/vm@*
+      '@utils': workspace:*
+      '@vm': workspace:*
       arrify: 2.0.1
       base64-arraybuffer: ^1.0.2
       builtin-modules: ^3.2.0
@@ -342,11 +342,11 @@ importers:
       '@': link:core
       '@ampproject/remapping': 1.1.1
       '@babel/code-frame': 7.18.6
-      '@client': link:client
+      '@client': link:client/dist
       '@cush/exec': 1.8.0
-      '@runtime': link:runtime
-      '@utils': link:utils
-      '@vm': link:vm
+      '@runtime': link:runtime/dist
+      '@utils': link:utils/dist
+      '@vm': link:vm/dist
       cac: 6.7.12
       convert-source-map: 1.8.0
       debug: 4.3.4
@@ -390,20 +390,23 @@ importers:
 
   src/client:
     specifiers:
-      '@runtime': workspace:@saus/runtime@*
+      '@runtime': workspace:*
       '@saus/runtime': workspace:*
       '@saus/utils': workspace:*
       '@saus/vm': workspace:*
-      '@utils': workspace:@saus/utils@*
-      '@vm': workspace:@saus/vm@*
+      '@utils': workspace:*
+      '@vm': workspace:*
     dependencies:
-      '@runtime': link:../runtime
-      '@utils': link:../utils
-      '@vm': link:../vm
+      '@runtime': link:../runtime/dist
+      '@utils': link:../utils/dist
+      '@vm': link:../vm/dist
     devDependencies:
       '@saus/runtime': link:../runtime
       '@saus/utils': link:../utils
       '@saus/vm': link:../vm
+
+  src/client/dist:
+    specifiers: {}
 
   src/core:
     specifiers: {}
@@ -413,8 +416,8 @@ importers:
       '@cush/relative': ^1.0.0
       '@saus/utils': workspace:*
       '@saus/vm': workspace:*
-      '@utils': workspace:@saus/utils@*
-      '@vm': workspace:@saus/vm@*
+      '@utils': workspace:*
+      '@vm': workspace:*
       css-what: ^6.0.1
       debug: ^4.3.2
       endent: ^2.1.0
@@ -424,8 +427,8 @@ importers:
       type-fest: ^2.13.0
     dependencies:
       '@cush/relative': 1.0.0
-      '@utils': link:../utils
-      '@vm': link:../vm
+      '@utils': link:../utils/dist
+      '@vm': link:../vm/dist
       css-what: 6.1.0
       debug: 4.3.4
       endent: 2.1.0
@@ -436,6 +439,9 @@ importers:
     devDependencies:
       '@saus/utils': link:../utils
       '@saus/vm': link:../vm
+
+  src/runtime/dist:
+    specifiers: {}
 
   src/utils:
     specifiers:
@@ -478,18 +484,21 @@ importers:
       prompts: 2.4.2
       ts-debounce: 2.0.0
 
+  src/utils/dist:
+    specifiers: {}
+
   src/vm:
     specifiers:
       '@saus/utils': workspace:*
       '@types/babel__traverse': ^7.18.2
-      '@utils': workspace:@saus/utils@*
+      '@utils': workspace:*
       builtin-modules: ^3.2.0
       debug: ^4.3.2
       es-module-lexer: ^1.0.5
       kleur: ^4.1.4
       type-fest: ^2.13.0
     dependencies:
-      '@utils': link:../utils
+      '@utils': link:../utils/dist
       builtin-modules: 3.3.0
       debug: 4.3.4
       es-module-lexer: 1.0.5
@@ -498,6 +507,9 @@ importers:
     devDependencies:
       '@saus/utils': link:../utils
       '@types/babel__traverse': 7.18.2
+
+  src/vm/dist:
+    specifiers: {}
 
 packages:
 
