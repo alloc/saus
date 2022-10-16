@@ -37,6 +37,7 @@ export class HtmlTagPath<
     this.parentNode = parentPath?.node
     this.editor = document.editor
     this.skip = noop
+    this.selfClosing = node.close == null
   }
   readonly parentNode?: HtmlTag
   protected editor: MagicString
@@ -44,7 +45,7 @@ export class HtmlTagPath<
   /**
    * Equals false if a child was added to a self-closing tag.
    */
-  protected selfClosing = this.node.close == null
+  protected selfClosing: boolean
 
   get tagName() {
     return this.node.name

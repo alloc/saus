@@ -4,7 +4,9 @@
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && tsup-node",
-    "dev": "tsup-node --watch --sourcemap"
+    "dev": "concurrently npm:dev:*",
+    "dev:build": "tsup --watch --sourcemap",
+    "dev:types": "tsc -p . --emitDeclarationOnly --watch"
   },
   "dependencies": {
     "@cush/relative": "^1.0.0",

@@ -5,6 +5,5 @@ export default defineConfig({
   entry: ['**/*.ts', '!**/*.spec.ts', '!node_modules/**', '!dist/**'],
   outDir: 'dist',
   format: ['cjs', 'esm'],
-  dts: true,
   plugins: [esbuildPluginFilePathExtensions()],
 })

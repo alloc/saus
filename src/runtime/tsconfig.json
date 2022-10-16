@@ -8,6 +8,7 @@
     "declarationMap": true,
     "incremental": true,
     "moduleResolution": "node",
+    "noEmitOnError": false,
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   }
