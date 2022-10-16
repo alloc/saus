@@ -7,9 +7,9 @@
     "dev": "tsc -p . --watch --sourcemap"
   },
   "dependencies": {
-    "@runtime": "workspace:@saus/runtime@*",
-    "@utils": "workspace:@saus/utils@*",
-    "@vm": "workspace:@saus/vm@*"
+    "@runtime": "workspace:*",
+    "@utils": "workspace:*",
+    "@vm": "workspace:*"
   },
   "devDependencies": {
     "@saus/runtime": "workspace:*",
