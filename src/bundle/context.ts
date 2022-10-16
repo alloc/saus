@@ -170,7 +170,7 @@ export async function loadBundleContext<
       './core/index.mjs',
       './core/context.mjs',
       './deploy/index.mjs',
-      './runtime/babel/index.mjs',
+      './utils/babel/index.mjs',
     ]),
   ]
 
