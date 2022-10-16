@@ -9,14 +9,18 @@ import fs from 'fs'
 import { green } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
-import { BundleOptions, OutputBundle } from '../bundle'
 import {
   BuildContext,
   BundleContext,
   InlineBundleConfig,
   loadBundleContext,
 } from '../bundle/context'
-import { ClientAsset, ClientChunk } from '../bundle/types'
+import {
+  BundleOptions,
+  ClientAsset,
+  ClientChunk,
+  OutputBundle,
+} from '../bundle/types'
 import { DeployContext, getDeployContext } from '../deploy'
 import { getBundleHash } from './getBundleHash'
 import { vite } from './vite'

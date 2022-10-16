@@ -1,7 +1,7 @@
 import type { vite } from '@/vite'
 import { relativeToCwd } from '@utils/node/relativeToCwd'
 import { green } from 'kleur/colors'
-import type { BundleOptions, InlineBundleConfig } from '../../bundle'
+import type { BundleOptions, InlineBundleConfig } from '../../bundle/types'
 import { command } from '../command'
 
 command(bundle, '[outFile]')
