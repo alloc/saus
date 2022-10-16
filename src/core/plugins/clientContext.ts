@@ -1,5 +1,5 @@
+import type { ClientConstants } from '@client/context'
 import path from 'path'
-import type { ClientConstants } from '../../client/context'
 import { Plugin } from '../core'
 import { clientDir } from '../paths'
 

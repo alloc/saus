@@ -1,10 +1,7 @@
 import { babel, t } from '@utils/babel'
 import { prependBase } from '@utils/base'
 import endent from 'endent'
-import path from 'path'
 import { SausContext } from './context'
-
-const clientDir = path.resolve(__dirname, '../client')
 
 export const routeMarker = '__sausRoute'
 
@@ -75,7 +72,7 @@ export async function compileRoutesMap(
   `
 
   if (options.isClient && !options.ssr) {
-    template = `import { BASE_URL } from "${clientDir}"\n` + template
+    template = `import { BASE_URL } from "saus/client"\n` + template
   }
 
   const result = babel.transformSync(template, {

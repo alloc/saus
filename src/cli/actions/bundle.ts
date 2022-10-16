@@ -47,7 +47,7 @@ export async function bundle(outFile: string, options: BundleFlags) {
   }
 
   if (options.load || options.reload) {
-    const { loadBundle } = await import('../../core')
+    const { loadBundle } = await import('../../core/loadBundle.js')
     const bundle = await loadBundle({
       config: viteOptions,
       bundle: bundleOptions,
@@ -73,15 +73,15 @@ export async function bundle(outFile: string, options: BundleFlags) {
       viteOptions.logLevel = 'silent'
     }
 
-    const { bundle } = await import('../../bundle/api')
-    const { loadBundleContext } = await import('../../bundle/context')
+    const { bundle } = await import('../../bundle/api.js')
+    const { loadBundleContext } = await import('../../bundle/context.js')
 
     const context = await loadBundleContext(options, viteOptions)
     let { code, map } = await bundle(context, bundleOptions)
 
     if (writeToStdout) {
       if (map) {
-        const { toInlineSourceMap } = await import('../../core')
+        const { toInlineSourceMap } = await import('@utils/node/sourceMap.js')
         code += toInlineSourceMap(map)
       }
       process.stdout.write(code)

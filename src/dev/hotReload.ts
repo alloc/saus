@@ -1,5 +1,6 @@
 import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
+import { clientDir } from '@/paths'
 import { globalCache, stateModulesByName } from '@runtime/cache'
 import { stateModulesByFile } from '@runtime/stateModules/global'
 import { serveCache } from '@runtime/stateModules/serve'
@@ -17,8 +18,6 @@ import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
 import { DevContext } from './context'
-
-const clientDir = path.resolve(__dirname, '../../client') + '/'
 
 export interface HotReloadFn {
   (file: string, ssr?: boolean): Promise<void>
@@ -178,7 +177,7 @@ export function createHotReload(
       // module when the live exports of the "saus/client" module are
       // changed, since the routes module can't use them anyway.
       const skipRoutesPath =
-        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir)
+        !dirtyFiles.has(context.routesPath) && file.startsWith(clientDir + '/')
 
       const stateModuleFiles = new Set(
         Array.from(stateModulesByFile.keys(), file => moduleMap.get(file)!)

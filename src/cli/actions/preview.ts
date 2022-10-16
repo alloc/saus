@@ -9,7 +9,7 @@ command(preview)
   .option('--open [path]', `[boolean | string] open browser on startup`)
 
 export async function preview(options: PreviewOptions) {
-  const { startPreviewServer } = await import('../../preview/api')
+  const { startPreviewServer } = await import('../../preview/api.js')
   const server = await startPreviewServer(options)
   server.printUrls()
 }

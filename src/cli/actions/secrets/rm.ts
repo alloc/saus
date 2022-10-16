@@ -9,7 +9,7 @@ export { removeSecrets as rm }
 
 async function removeSecrets(opts: { all?: boolean } = {}) {
   const { loadDeployContext, loadSecretSources, selectSource } = await import(
-    '../../../secrets/api'
+    '../../../secrets/api.js'
   )
 
   const context = await loadDeployContext({

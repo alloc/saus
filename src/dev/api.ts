@@ -4,6 +4,7 @@ import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
 import { loadRoutes } from '@/loadRoutes'
 import { clientRedirects } from '@/moduleRedirects'
+import { clientDir } from '@/paths'
 import { clientContextPlugin } from '@/plugins/clientContext'
 import { clientLayoutPlugin } from '@/plugins/clientLayout'
 import { clientStatePlugin } from '@/plugins/clientState'
@@ -382,7 +383,7 @@ async function prepareDevApp(context: DevContext) {
 
 // Some "saus/client" exports depend on project config.
 function setupClientInjections(context: DevContext) {
-  const modulePath = path.resolve(__dirname, '../../client/baseUrl.cjs')
+  const modulePath = path.resolve(clientDir, 'baseUrl.cjs')
   context.liveModulePaths.add(modulePath)
   context.liveModulePaths.add(
     // This module re-exports us, so it's also live.

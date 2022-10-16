@@ -17,6 +17,7 @@ import path from 'path'
 import { SausContext, SausEventEmitter } from './context'
 import { debug } from './debug'
 import { getClientInjection, getServerInjection } from './injectModules'
+import { clientDir } from './paths'
 import { renderRouteClients } from './routeClients'
 import { getRouteRenderers } from './routeRenderer'
 import { compileNodeModule } from './vite/compileNodeModule'
@@ -217,7 +218,7 @@ function injectClientRoutes(context: SausContext) {
     }
   }
 
-  const modulePath = path.resolve(__dirname, '../client/routes.cjs')
+  const modulePath = path.join(clientDir, 'routes.cjs')
   injectNodeModule(modulePath, clientRoutes)
 
   if (context.command == 'serve') {

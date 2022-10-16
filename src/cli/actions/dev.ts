@@ -12,6 +12,6 @@ command(dev)
   )
 
 export async function dev(options: vite.ServerOptions) {
-  const { createServer } = await import('../../dev/api')
+  const { createServer } = await import('../../dev/api.js')
   await createServer({ server: options })
 }
