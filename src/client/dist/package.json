@@ -2,6 +2,7 @@
   "name": "@client",
   "exports": {
     ".": {
+      "node": "./index.cjs",
       "types": "./index.d.ts",
       "import": "./index.mjs",
       "default": "./index.js"
