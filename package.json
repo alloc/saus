@@ -1,8 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "build": "pnpm -r --no-bail --filter './src' --filter './src/*' --workspace-concurrency 1 build",
-    "dev": "pnpm -r --no-bail --filter './src' --filter './src/*' --parallel dev",
+    "build": "pnpm --no-bail --filter './src' --filter './src/*' --workspace-concurrency 1 build",
+    "build:packages": "pnpm --no-bail --filter './packages/**/*' build",
+    "dev": "pnpm --no-bail --filter './src' --filter './src/*' --parallel dev",
+    "dev:packages": "pnpm --no-bail --filter './packages/**/*' --parallel dev",
     "prepare": "pnpm build",
     "test": "vitest"
   },

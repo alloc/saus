@@ -173,6 +173,7 @@ importers:
     specifiers:
       '@saus/aws-utils': workspace:^0.1.0
       cloudform-types: npm:@alloc/cloudform-types@^7.4.3
+      debug: ^4.3.2
       dset: ^3.1.2
       recrawl-sync: ^2.2.1
       saus: '*'
@@ -180,6 +181,7 @@ importers:
     dependencies:
       '@saus/aws-utils': link:../aws/utils
       cloudform-types: /@alloc/cloudform-types/7.4.3
+      debug: 4.3.4
       dset: 3.1.2
       type-fest: 2.16.0
     devDependencies:
