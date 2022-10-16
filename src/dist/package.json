@@ -19,7 +19,6 @@
     },
     "./bundle": {
       "types": "./bundle/index.d.ts",
-      "import": "./bundle/index.mjs",
       "default": "./bundle/index.js"
     },
     "./client": {
