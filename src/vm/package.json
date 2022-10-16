@@ -27,6 +27,7 @@
     "type-fest": "^2.13.0"
   },
   "devDependencies": {
+    "@saus/utils": "workspace:*",
     "@types/babel__traverse": "^7.18.2"
   }
 }

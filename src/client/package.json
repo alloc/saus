@@ -17,5 +17,10 @@
     "@runtime": "workspace:@saus/runtime@*",
     "@utils": "workspace:@saus/utils@*",
     "@vm": "workspace:@saus/vm@*"
+  },
+  "devDependencies": {
+    "@saus/runtime": "workspace:*",
+    "@saus/utils": "workspace:*",
+    "@saus/vm": "workspace:*"
   }
 }

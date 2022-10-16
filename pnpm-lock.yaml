@@ -298,6 +298,7 @@ importers:
       '@cush/exec': ^1.8.0
       '@rollup/pluginutils': 5.0.1
       '@runtime': workspace:@saus/runtime@*
+      '@saus/client': workspace:*
       '@types/babel__code-frame': ^7.0.3
       '@types/convert-source-map': ^1.5.2
       '@types/estree': ^0.0.51
@@ -367,6 +368,7 @@ importers:
       yaml: 2.1.1
     devDependencies:
       '@rollup/pluginutils': 5.0.1_2qoyzwmpaczaj2mabgmoz6ccpy_rollup@2.79.1
+      '@saus/client': link:client
       '@types/babel__code-frame': 7.0.3
       '@types/convert-source-map': 1.5.2
       '@types/estree': 0.0.51
@@ -389,12 +391,19 @@ importers:
   src/client:
     specifiers:
       '@runtime': workspace:@saus/runtime@*
+      '@saus/runtime': workspace:*
+      '@saus/utils': workspace:*
+      '@saus/vm': workspace:*
       '@utils': workspace:@saus/utils@*
       '@vm': workspace:@saus/vm@*
     dependencies:
       '@runtime': link:../runtime
       '@utils': link:../utils
       '@vm': link:../vm
+    devDependencies:
+      '@saus/runtime': link:../runtime
+      '@saus/utils': link:../utils
+      '@saus/vm': link:../vm
 
   src/core:
     specifiers: {}
@@ -402,6 +411,8 @@ importers:
   src/runtime:
     specifiers:
       '@cush/relative': ^1.0.0
+      '@saus/utils': workspace:*
+      '@saus/vm': workspace:*
       '@utils': workspace:@saus/utils@*
       '@vm': workspace:@saus/vm@*
       css-what: ^6.0.1
@@ -422,6 +433,9 @@ importers:
       kleur: 4.1.5
       misty: 1.6.10
       type-fest: 2.16.0
+    devDependencies:
+      '@saus/utils': link:../utils
+      '@saus/vm': link:../vm
 
   src/utils:
     specifiers:
@@ -466,6 +480,7 @@ importers:
 
   src/vm:
     specifiers:
+      '@saus/utils': workspace:*
       '@types/babel__traverse': ^7.18.2
       '@utils': workspace:@saus/utils@*
       builtin-modules: ^3.2.0
@@ -481,6 +496,7 @@ importers:
       kleur: 4.1.5
       type-fest: 2.16.0
     devDependencies:
+      '@saus/utils': link:../utils
       '@types/babel__traverse': 7.18.2
 
 packages:
