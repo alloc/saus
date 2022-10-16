@@ -1,5 +1,5 @@
 import { parseXmlResponse } from '@saus/aws-utils'
-import { controlExecution } from 'saus/core'
+import { controlExecution } from 'saus/utils/controlExecution'
 import { paramsToHeaders } from './api/headers'
 import { signedRequest } from './api/request'
 import { writeThrottler } from './utils/throttle'

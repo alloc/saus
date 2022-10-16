@@ -6,11 +6,11 @@ import {
   useCloudFormation,
   Value,
 } from '@saus/cloudform'
-import { mergeArrays } from '@saus/utils/array'
 import { relative } from 'path'
 import { OutputBundle } from 'saus'
 import { addSecrets, getDeployContext, onDeploy } from 'saus/deploy'
 import { normalizeHeaderKeys } from 'saus/http'
+import { mergeArrays } from 'saus/utils/array'
 import { WebsiteConfig } from './config'
 import secrets from './secrets'
 import { syncStaticFiles } from './sync'

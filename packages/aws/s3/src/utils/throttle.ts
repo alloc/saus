@@ -1,4 +1,4 @@
-import { ExecutionGate } from 'saus/core'
+import { ExecutionGate } from 'saus/utils/controlExecution'
 
 // https://aws.amazon.com/premiumsupport/knowledge-center/s3-request-limit-avoid-throttling/
 const maxWritesPerSecond = 3500

@@ -1,6 +1,6 @@
 import { parseXmlResponse, xml } from '@saus/aws-utils'
 import * as crypto from 'crypto'
-import { controlExecution } from 'saus/core'
+import { controlExecution } from 'saus/utils/controlExecution'
 import { formatAmzHeaders } from './api/headers'
 import { commonParamKeys } from './api/params'
 import { signedRequest } from './api/request'

@@ -1,10 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "clean": "rimraf ./dist && git checkout HEAD dist && npm run link",
-    "build": "npm run clean && tsup && cd client && npm run build",
+    "clean": "rimraf ./dist && git checkout HEAD dist",
+    "build": "npm run clean && tsup && npm run link && cd client && npm run build",
     "dev": "tsup --watch --sourcemap",
-    "link": "cd dist && ln -s ../node_modules/@runtime ./runtime && ln -s ../node_modules/@utils ./utils && ln -s ../node_modules/@vm ./vm",
+    "link": "cd dist && ln -sf ../node_modules/@runtime ./runtime && ln -sf ../node_modules/@utils ./utils && ln -sf ../node_modules/@vm ./vm",
     "lint": "tsc -p . --noEmit && eslint . --ext .ts"
   },
   "dependencies": {
@@ -39,7 +39,6 @@
     "@rollup/pluginutils": "^4.1.2",
     "@types/babel__code-frame": "^7.0.3",
     "@types/convert-source-map": "^1.5.2",
-    "@types/debug": "^4.1.7",
     "@types/estree": "^0.0.51",
     "@types/etag": "^1.8.1",
     "@types/glob-base": "^0.3.0",

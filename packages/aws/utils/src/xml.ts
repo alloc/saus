@@ -1,5 +1,5 @@
-import { escape } from '@saus/utils/escape'
-import { isObject } from '@saus/utils/isObject'
+import { escape } from 'saus/utils/escape'
+import { isObject } from 'saus/utils/isObject'
 import { parseXML } from './xml/parse'
 
 export interface XmlDocument {
