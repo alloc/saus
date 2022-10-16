@@ -239,12 +239,12 @@ importers:
     specifiers:
       '@cush/exec': ^1.8.0
       aes-password: ^1.0.5
-      saus: link:../..
+      saus: '*'
     dependencies:
       '@cush/exec': 1.8.0
       aes-password: 1.0.5
     devDependencies:
-      saus: link:../..
+      saus: link:../../src/dist
 
   packages/test:
     specifiers:

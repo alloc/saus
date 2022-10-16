@@ -1,6 +1,14 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["**/*.spec.ts", "dist", "client", "runtime", "utils", "vm"],
+  "exclude": [
+    "**/*.spec.ts",
+    "dist",
+    "client",
+    "runtime",
+    "utils",
+    "vm",
+    "tsup.config.ts"
+  ],
   "compilerOptions": {
     "declaration": true,
     "declarationMap": true,

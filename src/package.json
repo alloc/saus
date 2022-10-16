@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "clean": "rimraf ./dist && git checkout HEAD dist",
-    "build": "npm run clean && tsup && tsc -p . --emitDeclarationOnly && npm run link",
+    "clean": "rimraf ./dist && git checkout HEAD dist && npm run link",
+    "build": "npm run clean && NODE_ENV=production tsup && tsc -p . --emitDeclarationOnly",
     "dev": "concurrently npm:dev:*",
     "dev:build": "tsup --watch --sourcemap",
     "dev:types": "tsc -p . --emitDeclarationOnly --watch",
