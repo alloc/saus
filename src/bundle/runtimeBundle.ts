@@ -206,9 +206,6 @@ async function compileSsrRuntime(context: BundleContext) {
           }
 
           const moduleId = path.relative(sausRootDir, resolved.id)
-          if (sausExternals.some(e => moduleId.endsWith(e))) {
-            debugger // TODO remove this
-          }
           if (sausExternals.includes(moduleId)) {
             return {
               path: path.relative(cache.path, resolved.id),

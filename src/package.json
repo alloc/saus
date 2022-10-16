@@ -24,7 +24,7 @@
     "debug": "^4.3.2",
     "ee-ts": "2.0.0-rc.6",
     "endent": "^2.1.0",
-    "es-module-lexer": "1.0.5",
+    "es-module-lexer": "0.9.3",
     "esbuild": "^0.14.15",
     "etag": "^1.8.1",
     "kleur": "^4.1.4",
