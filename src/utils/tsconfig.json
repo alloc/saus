@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "include": ["**/*.ts"],
-  "exclude": ["**/*.spec.ts"],
+  "exclude": ["**/*.spec.ts", "dist"],
   "compilerOptions": {
     "composite": false,
     "declaration": true,
