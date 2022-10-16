@@ -10,7 +10,7 @@ import type { StateModule } from '../stateModules'
  */
 export function hydrateState(
   key: string,
-  served: Cache.Entry<any> & { args: readonly any[] },
+  served: StateModule.CacheEntry,
   module: StateModule,
   opts: { deepCopy?: boolean } = {}
 ) {

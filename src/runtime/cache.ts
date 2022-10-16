@@ -14,7 +14,7 @@ export const globalCache = createCache()
  * Data from the server is stored here until a matching state module is
  * loaded by the client. This is only used in a client context.
  */
-export const preHydrateCache = new Map<string, Cache.Entry>()
+export const preHydrateCache = new Map<string, StateModule.CacheEntry>()
 
 /**
  * State modules are stored here for data hydration and hot reloading

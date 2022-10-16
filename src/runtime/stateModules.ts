@@ -217,7 +217,7 @@ export namespace StateModule {
   > = (
     this: void,
     state: Served,
-    entry: Cache.Entry<Served> & { args: Args }
+    entry: StateModule.CacheEntry<Served, Args>
   ) => Hydrated
 
   export type LoadListener = { dispose: () => void }
@@ -226,4 +226,11 @@ export namespace StateModule {
     state: T,
     expiresAt?: Cache.MaxAge
   ) => void
+
+  export type CacheEntry<
+    State = any,
+    Args extends readonly any[] = any
+  > = Cache.Entry<State, Args> & {
+    args: Args
+  }
 }

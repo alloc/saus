@@ -7,7 +7,7 @@ import type { StateModule } from '@runtime/stateModules'
  */
 export function hydrateState(
   key: string,
-  served: Cache.Entry<any> & { args: readonly any[] },
+  served: StateModule.CacheEntry,
   module: StateModule
 ) {
   const hydrate = module['_hydrate']

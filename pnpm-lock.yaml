@@ -391,8 +391,10 @@ importers:
       '@ampproject/remapping': ^1.1.1
       '@babel/core': ^7.16.7
       '@babel/plugin-syntax-typescript': ^7.14.5
+      '@runtime': workspace:@saus/runtime@*
       '@types/babel__core': ^7.1.16
       '@types/prompts': ^2.0.14
+      '@utils': workspace:@saus/utils@*
       ansi-to-html: ^0.7.2
       callsites: ^3.0.0
       convert-source-map: ^1.8.0
@@ -410,7 +412,9 @@ importers:
       '@ampproject/remapping': 1.1.1
       '@babel/core': 7.18.6
       '@babel/plugin-syntax-typescript': 7.18.6_@babel+core@7.18.6
+      '@runtime': link:../runtime/dist
       '@types/babel__core': 7.1.19
+      '@utils': link:../utils/dist
       ansi-to-html: 0.7.2
       convert-source-map: 1.8.0
       debug: 4.3.4

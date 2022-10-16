@@ -28,6 +28,7 @@
     },
     "./client": {
       "node": "./client/index.cjs",
+      "types": "./client/index.d.ts",
       "import": "./client/index.mjs",
       "default": "./client/index.js"
     },
