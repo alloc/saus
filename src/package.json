@@ -11,7 +11,8 @@
     "dev:build": "tsup --watch --sourcemap",
     "dev:types": "tsc -p . --emitDeclarationOnly --watch",
     "link": "cd dist && ln -sf ../node_modules/@client ./client && ln -sf ../node_modules/@runtime ./runtime && ln -sf ../node_modules/@utils ./utils && ln -sf ../node_modules/@vm ./vm",
-    "lint": "tsc -p . --noEmit && eslint . --ext .ts"
+    "lint": "tsc -p . --noEmit && eslint . --ext .ts",
+    "prepare": "npm run link"
   },
   "dependencies": {
     "@": "link:./core",
