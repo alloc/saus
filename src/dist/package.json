@@ -12,14 +12,14 @@
       "default": "./index.js"
     },
     "./babel": {
-      "types": "./node_modules/@utils/babel.d.ts",
-      "import": "./node_modules/@utils/babel.mjs",
-      "default": "./node_modules/@utils/babel.js"
+      "types": "./utils/babel.d.ts",
+      "import": "./utils/babel.mjs",
+      "default": "./utils/babel.js"
     },
     "./babel/*": {
-      "types": "./node_modules/@utils/babel/*.d.ts",
-      "import": "./node_modules/@utils/babel/*.mjs",
-      "default": "./node_modules/@utils/babel/*.js"
+      "types": "./utils/babel/*.d.ts",
+      "import": "./utils/babel/*.mjs",
+      "default": "./utils/babel/*.js"
     },
     "./bundle": {
       "types": "./bundle/index.d.ts",
@@ -44,34 +44,39 @@
       "default": "./core/index.js"
     },
     "./html": {
-      "types": "./node_modules/@runtime/html/index.d.ts",
-      "import": "./node_modules/@runtime/html/index.mjs",
-      "default": "./node_modules/@runtime/html/index.js"
+      "types": "./runtime/html/index.d.ts",
+      "import": "./runtime/html/index.mjs",
+      "default": "./runtime/html/index.js"
     },
     "./html/*": {
-      "types": "./node_modules/@runtime/html/*.d.ts",
-      "import": "./node_modules/@runtime/html/*.mjs",
-      "default": "./node_modules/@runtime/html/*.js"
+      "types": "./runtime/html/*.d.ts",
+      "import": "./runtime/html/*.mjs",
+      "default": "./runtime/html/*.js"
     },
     "./http": {
-      "types": "./node_modules/@runtime/http/index.d.ts",
-      "import": "./node_modules/@runtime/http/index.mjs",
-      "default": "./node_modules/@runtime/http/index.js"
+      "types": "./runtime/http/index.d.ts",
+      "import": "./runtime/http/index.mjs",
+      "default": "./runtime/http/index.js"
     },
     "./http/*": {
-      "types": "./node_modules/@runtime/http/*.d.ts",
-      "import": "./node_modules/@runtime/http/*.mjs",
-      "default": "./node_modules/@runtime/http/*.js"
+      "types": "./runtime/http/*.d.ts",
+      "import": "./runtime/http/*.mjs",
+      "default": "./runtime/http/*.js"
     },
     "./node/*": {
-      "types": "./node_modules/@utils/node/*.d.ts",
-      "import": "./node_modules/@utils/node/*.mjs",
-      "default": "./node_modules/@utils/node/*.js"
+      "types": "./utils/node/*.d.ts",
+      "import": "./utils/node/*.mjs",
+      "default": "./utils/node/*.js"
     },
     "./utils/*": {
-      "types": "./node_modules/@utils/*.d.ts",
-      "import": "./node_modules/@utils/*.mjs",
-      "default": "./node_modules/@utils/*.js"
+      "types": "./utils/*.d.ts",
+      "import": "./utils/*.mjs",
+      "default": "./utils/*.js"
+    },
+    "./vm/*": {
+      "types": "./vm/*.d.ts",
+      "import": "./vm/*.mjs",
+      "default": "./vm/*.js"
     }
   }
 }

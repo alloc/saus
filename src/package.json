@@ -1,9 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "clean": "rimraf ./dist && git checkout HEAD dist && ln -s ../node_modules dist/node_modules",
+    "clean": "rimraf ./dist && git checkout HEAD dist && npm run link",
     "build": "npm run clean && tsup && cd client && npm run build",
     "dev": "tsup --watch --sourcemap",
+    "link": "cd dist && ln -s ../node_modules/@runtime ./runtime && ln -s ../node_modules/@utils ./utils && ln -s ../node_modules/@vm ./vm",
     "lint": "tsc -p . --noEmit && eslint . --ext .ts"
   },
   "dependencies": {
