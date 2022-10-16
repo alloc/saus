@@ -8,6 +8,7 @@
   "dependencies": {
     "@cush/relative": "^1.0.0",
     "@utils": "workspace:@saus/utils@*",
+    "@vm": "workspace:@saus/vm@*",
     "css-what": "^6.0.1",
     "debug": "^4.3.2",
     "endent": "^2.1.0",
@@ -15,5 +16,9 @@
     "kleur": "^4.1.4",
     "misty": "^1.6.7",
     "type-fest": "^2.13.0"
+  },
+  "devDependencies": {
+    "@utils": "link:../utils",
+    "@vm": "link:../vm"
   }
 }

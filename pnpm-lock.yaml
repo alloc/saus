@@ -421,6 +421,7 @@ importers:
     specifiers:
       '@cush/relative': ^1.0.0
       '@utils': workspace:@saus/utils@*
+      '@vm': workspace:@saus/vm@*
       css-what: ^6.0.1
       debug: ^4.3.2
       endent: ^2.1.0
@@ -431,6 +432,7 @@ importers:
     dependencies:
       '@cush/relative': 1.0.0
       '@utils': link:../utils/dist
+      '@vm': link:../vm/dist
       css-what: 6.1.0
       debug: 4.3.4
       endent: 2.1.0

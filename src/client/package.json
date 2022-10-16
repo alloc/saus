@@ -9,5 +9,10 @@
     "@runtime": "workspace:@saus/runtime@*",
     "@utils": "workspace:@saus/utils@*",
     "@vm": "workspace:@saus/vm@*"
+  },
+  "devDependencies": {
+    "@runtime": "link:../runtime",
+    "@utils": "link:../utils",
+    "@vm": "link:../vm"
   }
 }

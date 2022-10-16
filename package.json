@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build": "pnpm -r --no-bail --filter './src/**' build",
+    "build": "pnpm -r --no-bail --filter './src/**' --workspace-concurrency 1 build",
     "dev": "pnpm build && pnpm -r --no-bail --filter './src/**' --parallel dev",
     "prepublishOnly": "yarn build",
     "test": "vitest"

@@ -14,6 +14,7 @@
     "type-fest": "^2.13.0"
   },
   "devDependencies": {
-    "@types/babel__traverse": "^7.18.2"
+    "@types/babel__traverse": "^7.18.2",
+    "@utils": "link:../utils"
   }
 }
