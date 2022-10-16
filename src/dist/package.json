@@ -1,4 +1,5 @@
 {
+  "name": "saus",
   "bin": "bin/saus",
   "exports": {
     ".": {
