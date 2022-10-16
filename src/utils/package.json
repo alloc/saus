@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "clean": "rimraf dist && git checkout HEAD dist",
+    "clean": "rimraf dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
     "dev": "tsc -p . --watch --sourcemap"
   },
