@@ -5,6 +5,10 @@
   "repository": "alloc/saus",
   "author": "Alec Larson",
   "bin": "bin/saus",
+  "files": [
+    "dist",
+    "env"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
