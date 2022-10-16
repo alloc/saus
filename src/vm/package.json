@@ -2,8 +2,8 @@
   "private": true,
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
-    "build": "npm run clean && esbuild *.ts --out-extension:.js=.mjs --outdir=dist && tsc --incremental -p .",
-    "dev": "tsc --incremental -p . --watch --sourcemap"
+    "build": "npm run clean && esbuild *.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
+    "dev": "tsc -p . --watch --sourcemap"
   },
   "dependencies": {
     "@utils": "workspace:@saus/utils@*",

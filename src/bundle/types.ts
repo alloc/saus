@@ -1,4 +1,4 @@
-import type { BufferLike } from '@/http'
+import type { BufferLike } from '@runtime/http'
 import type { SourceMap } from '@utils/node/sourceMap'
 
 export * from '@runtime/bundleTypes'

@@ -340,22 +340,26 @@ async function prepareDevApp(context: DevContext) {
         async finish() {
           let pendingPages: Promise<void> | undefined
           if (routesChanged) {
-            pendingPages = context.pageCache.forEach((pagePath, [[page]]) => {
-              // Emit change events for page state modules.
-              if (routesChanged) {
-                const filename = getPageFilename(pagePath, context.basePath)
-                clientChanges.add('/' + filename + '.js')
+            pendingPages = context.pageCache.forEach(
+              (pagePath, { state: [page] }) => {
+                // Emit change events for page state modules.
+                if (routesChanged) {
+                  const filename = getPageFilename(pagePath, context.basePath)
+                  clientChanges.add('/' + filename + '.js')
+                }
+                // TODO: why is this disabled?
+                // Ensure the generated clients are updated.
+                // if (clientChanged && page?.client) {
+                //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
+                // }
               }
-              // Ensure the generated clients are updated.
-              // if (clientChanged && page?.client) {
-              //   clientChanges.add('\0' + getClientUrl(page.client.id, '/'))
-              // }
-            })
+            )
             context.pageCache.clear()
             await resetDevApp()
           }
 
           // Emit watcher events after the reload promise is resolved.
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           queueMicrotask(async () => {
             await pendingPages
             for (const url of clientChanges) {

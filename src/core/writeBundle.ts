@@ -1,4 +1,4 @@
-import { unwrapBuffer } from '@utils/buffer'
+import { unwrapBuffer } from '@utils/node/buffer'
 import assert from 'assert'
 import fs from 'fs'
 import path from 'path'

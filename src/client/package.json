@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "scripts": {
     "clean": "rimraf ../dist/client && git checkout HEAD ../dist/client",
-    "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=../dist/client && tsc --incremental -p .",
-    "dev": "tsc --incremental -p . --watch --sourcemap"
+    "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=../dist/client && tsc -p .",
+    "dev": "tsc -p . --watch --sourcemap"
   },
   "dependencies": {
     "@runtime": "workspace:@saus/runtime@*",

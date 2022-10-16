@@ -28,7 +28,11 @@
   "prettier": "@alloc/prettier-config",
   "pnpm": {
     "overrides": {
-      "@babel/types": "7.18.8"
+      "@babel/types": "7.18.8",
+      "@rollup/pluginutils": "5.0.1"
+    },
+    "patchedDependencies": {
+      "@rollup/pluginutils@5.0.1": "patches/@rollup__pluginutils@5.0.1.patch"
     }
   }
 }

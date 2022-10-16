@@ -3,11 +3,12 @@
   "include": ["**/*.ts"],
   "exclude": ["**/*.spec.ts"],
   "compilerOptions": {
+    "incremental": true,
     "lib": ["dom", "esnext"],
     "module": "esnext",
     "outDir": "../dist/client",
     "target": "esnext",
-    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "tsBuildInfoFile": "../dist/client/.tsbuildinfo",
     "types": ["../dist/env/client"]
   }
 }

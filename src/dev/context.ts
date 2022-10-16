@@ -1,7 +1,7 @@
 import type { BaseContext } from '@/context'
 import type { vite } from '@/vite'
 import type { App, RenderedFile } from '@runtime/app/types'
-import type { ParsedUrl } from '@utils/node/url'
+import type { ParsedUrl } from '@runtime/url'
 import type { Promisable } from '@utils/types'
 import type { RequireAsync } from '@vm/types'
 import { Merge } from 'type-fest'
