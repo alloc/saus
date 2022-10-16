@@ -165,14 +165,12 @@ async function compileSsrRuntime(context: BundleContext) {
           plugins: [
             moduleRedirection(internalRedirects, [
               'vite',
-              // TODO: Ensure these paths are accurate.
-              './babel/index.js',
-              './client/index.js',
-              './dist/deploy/index.js',
-              './dist/client/index.js',
-              './dist/core/index.js',
-              './dist/core/context.js',
-              './dist/runtime/babel/index.js',
+              './babel/index.mjs',
+              './client/index.mjs',
+              './core/index.mjs',
+              './core/context.mjs',
+              './deploy/index.mjs',
+              './runtime/babel/index.mjs',
             ]),
           ],
           configFile: false,

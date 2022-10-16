@@ -11,52 +11,51 @@ import {
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import path from 'path'
 
-const emptyModule = path.join(runtimeDir, 'emptyModule.ts')
+const emptyModule = path.join(runtimeDir, 'emptyModule.mjs')
 
 // Used when pre-bundling the Saus runtime.
 export const internalRedirects = [
   redirectModule(
-    path.join(clientDir, 'node/pageClient.ts'),
-    path.join(bundleDir, 'client/pageClient.ts')
+    path.join(clientDir, 'node/pageClient.mjs'),
+    path.join(bundleDir, 'client/pageClient.mjs')
   ),
   redirectModule(
-    path.join(coreDir, 'constants.ts'),
-    path.join(bundleDir, 'core/constants.ts')
+    path.join(coreDir, 'constants.mjs'),
+    path.join(bundleDir, 'core/constants.mjs')
   ),
   redirectModule(
-    path.join(utilsDir, 'node/currentModule.ts'),
-    path.join(runtimeDir, 'ssrModules.ts')
+    path.join(utilsDir, 'node/currentModule.mjs'),
+    path.join(runtimeDir, 'ssrModules.mjs')
   ),
   redirectModule(
-    path.join(secretsDir, 'defineSecrets.ts'),
-    path.join(bundleDir, 'defineSecrets.ts')
+    path.join(secretsDir, 'defineSecrets.mjs'),
+    path.join(bundleDir, 'defineSecrets.mjs')
   ),
 ]
 
 export const ssrRedirects = [
-  overrideBareImport('saus', path.join(bundleDir, 'api.ts')),
-  overrideBareImport('saus/client', path.join(bundleDir, 'client/api.ts')),
-  overrideBareImport('saus/core', path.join(bundleDir, 'core/api.ts')),
-  overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
+  overrideBareImport('saus', path.join(bundleDir, 'api.mjs')),
+  overrideBareImport('saus/client', path.join(bundleDir, 'client/api.mjs')),
+  overrideBareImport('saus/core', path.join(bundleDir, 'core/api.mjs')),
+  overrideBareImport('saus/http', path.join(httpDir, 'index.mjs')),
 ]
 
 export const clientRedirects = [
-  overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.ts')),
+  overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.mjs')),
   overrideBareImport('saus', emptyModule),
   overrideBareImport('saus/core', emptyModule),
-  overrideBareImport('saus/http', path.join(httpDir, 'index.ts')),
   redirectModule(
-    path.join(clientDir, 'index.dev.ts'),
-    path.join(clientDir, 'index.prod.ts')
+    path.join(clientDir, 'index.dev.mjs'),
+    path.join(clientDir, 'index.prod.mjs')
   ),
   redirectModule(
-    path.join(utilsDir, 'node/buffer.ts'),
-    path.join(clientDir, 'buffer.ts')
+    path.join(utilsDir, 'node/buffer.mjs'),
+    path.join(clientDir, 'buffer.mjs')
   ),
   redirectModule(
-    path.join(httpDir, 'get.ts'),
-    path.join(clientDir, 'http/get.ts')
+    path.join(httpDir, 'get.mjs'),
+    path.join(clientDir, 'http/get.mjs')
   ),
-  redirectModule(path.join(httpDir, 'httpImport.ts'), emptyModule),
+  redirectModule(path.join(httpDir, 'httpImport.mjs'), emptyModule),
   ...coreRedirects.clientRedirects,
 ]

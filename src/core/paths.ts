@@ -1,7 +1,6 @@
 import fs from 'fs'
 import path from 'path'
 
-// TODO: Ensure these paths are accurate.
 export const bundleDir = toSausPath('bundle/runtime')
 export const clientDir = toSausPath('client')
 export const coreDir = toSausPath('core')

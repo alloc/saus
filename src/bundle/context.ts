@@ -166,14 +166,11 @@ export async function loadBundleContext<
     preBundleSsrRuntime(context),
     moduleRedirection(redirects, [
       'vite',
-      // TODO: Ensure these paths are accurate.
-      './babel/index.js',
-      './client/index.js',
-      './deploy/index.js',
-      './src/core/index.ts',
-      './src/core/babel/index.ts',
-      './src/core/client/index.ts',
-      './src/core/context.ts',
+      './babel/index.mjs',
+      './client/index.mjs',
+      './core/index.mjs',
+      './core/context.mjs',
+      './deploy/index.mjs',
     ]),
   ]
 

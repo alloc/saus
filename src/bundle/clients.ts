@@ -51,10 +51,10 @@ export async function compileClients(
     })
   )
 
-  const clientHelpersEntry = path.join(clientDir, 'helpers.ts')
+  const clientHelpersEntry = path.join(clientDir, 'helpers.mjs')
   entryPaths.push('/@fs/' + clientHelpersEntry)
 
-  const clientRuntimeEntry = path.join(clientDir, 'index.ts')
+  const clientRuntimeEntry = path.join(clientDir, 'index.mjs')
   entryPaths.push('/@fs/' + clientRuntimeEntry)
 
   let sourceMaps = userConfig.build?.sourcemap
@@ -85,12 +85,7 @@ export async function compileClients(
   // debug('Resolving "build" config for client bundle')
   config = await context.resolveConfig({
     plugins: [
-      debugForbiddenImports([
-        'vite',
-        // TODO: Ensure these paths are accurate.
-        './src/core/index.ts',
-        './src/core/context.ts',
-      ]),
+      debugForbiddenImports(['vite', './core/index.mjs', './core/context.mjs']),
       clientModules.provider,
       moduleRedirection(clientRedirects),
       routesPlugin(),
