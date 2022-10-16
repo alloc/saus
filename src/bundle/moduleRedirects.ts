@@ -1,5 +1,13 @@
 import * as coreRedirects from '@/moduleRedirects'
-import { bundleDir, clientDir, coreDir, httpDir, runtimeDir } from '@/paths'
+import {
+  bundleDir,
+  clientDir,
+  coreDir,
+  httpDir,
+  runtimeDir,
+  secretsDir,
+  utilsDir,
+} from '@/paths'
 import { overrideBareImport, redirectModule } from '@/plugins/moduleRedirection'
 import path from 'path'
 
@@ -16,11 +24,11 @@ export const internalRedirects = [
     path.join(bundleDir, 'core/constants.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'node/currentModule.ts'),
+    path.join(utilsDir, 'node/currentModule.ts'),
     path.join(runtimeDir, 'ssrModules.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'runtime/defineSecrets.ts'),
+    path.join(secretsDir, 'defineSecrets.ts'),
     path.join(bundleDir, 'defineSecrets.ts')
   ),
 ]
@@ -42,7 +50,7 @@ export const clientRedirects = [
     path.join(clientDir, 'index.prod.ts')
   ),
   redirectModule(
-    path.join(coreDir, 'node/buffer.ts'),
+    path.join(utilsDir, 'node/buffer.ts'),
     path.join(clientDir, 'buffer.ts')
   ),
   redirectModule(

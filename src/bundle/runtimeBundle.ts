@@ -1,4 +1,4 @@
-import { bundleDir, httpDir, toSausPath } from '@/paths'
+import { bundleDir, httpDir } from '@/paths'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { vite } from '@/vite'
 import remapping from '@ampproject/remapping'
@@ -110,7 +110,7 @@ export interface RuntimeBundleInfo {
 }
 
 async function compileSsrRuntime(context: BundleContext) {
-  const sausRoot = toSausPath('src/')
+  const sausRoot = __dirname
   const sausVersion = sausRoot.includes('/node_modules/')
     ? require(path.resolve(sausRoot, '../package.json')).version
     : require('child_process')
@@ -131,17 +131,17 @@ async function compileSsrRuntime(context: BundleContext) {
 
   const entryMap = buildEntryMap({
     // "saus" entry point
-    saus: path.join(bundleDir, 'api.ts'),
+    saus: path.join(bundleDir, 'api.mjs'),
     // "saus/core" entry point
-    core: path.join(bundleDir, 'core/api.ts'),
+    core: path.join(bundleDir, 'core/api.mjs'),
     // "saus/bundle" entry point
-    bundle: path.join(bundleDir, 'bundle/api.ts'),
+    bundle: path.join(bundleDir, 'bundle/api.mjs'),
     // "saus/client" entry point
-    client: path.join(bundleDir, 'client/api.ts'),
+    client: path.join(bundleDir, 'client/api.mjs'),
     // used by @saus/html
-    html: path.resolve(bundleDir, '../html.ts'),
+    html: path.resolve(bundleDir, '../html.mjs'),
     // "saus/http" entry point
-    http: path.join(httpDir, 'index.ts'),
+    http: path.join(httpDir, 'index.mjs'),
   })
 
   let bundleInfo: RuntimeBundleInfo

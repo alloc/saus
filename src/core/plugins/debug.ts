@@ -6,7 +6,6 @@ export function debugForbiddenImports(imports: string[]): vite.Plugin | false {
   if (!process.env.DEBUG) {
     return false
   }
-  const sausRoot = path.resolve(__dirname, '..')
   return {
     name: 'debugForbiddenImports',
     enforce: 'pre',
@@ -15,7 +14,7 @@ export function debugForbiddenImports(imports: string[]): vite.Plugin | false {
       if (id.startsWith('/@fs/')) {
         id = id.slice(4)
       }
-      const sausId = id.replace(sausRoot, '.')
+      const sausId = id.replace(__dirname, '.')
       if (sausId.startsWith('./') && imports.includes(sausId)) {
         id = path.relative(importer, id)
         debug(`[!] Forbidden import "${id}" from "${importer}"`)
