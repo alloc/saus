@@ -9,6 +9,6 @@
     "outDir": "dist",
     "target": "esnext",
     "tsBuildInfoFile": "dist/.tsbuildinfo",
-    "types": ["../env/client"]
+    "types": ["../dist/env/client"]
   }
 }
