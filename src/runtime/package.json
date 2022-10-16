@@ -4,7 +4,9 @@
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist && tsc -p .",
-    "dev": "tsc -p . --watch --sourcemap"
+    "dev": "concurrently npm:dev:*",
+    "dev:cjs": "tsc -p . --watch --sourcemap",
+    "dev:mjs": "esbuild *.ts **/*.ts --out-extension:.js=.mjs --outdir=dist --watch --sourcemap=external"
   },
   "dependencies": {
     "@cush/relative": "^1.0.0",

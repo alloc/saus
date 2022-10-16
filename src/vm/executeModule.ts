@@ -109,7 +109,11 @@ export function executeModule(
       Object.defineProperty(exports, '__esModule', { value: true })
       resolve(exports)
     })
-    .catch(reject)
+    .catch(e => {
+      const scope = { module, exports, id }
+      debugger
+      reject(e)
+    })
 
   return promise
 }
