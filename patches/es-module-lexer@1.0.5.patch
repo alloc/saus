@@ -1,0 +1,12 @@
+diff --git a/package.json b/package.json
+index 65cd6fcf2e065b1eeac01ce9887bce363d22c3a5..4c93287d338073429ec471489fa94a4496a458fd 100644
+--- a/package.json
++++ b/package.json
+@@ -37,7 +37,6 @@
+     "types",
+     "lexer.js"
+   ],
+-  "type": "module",
+   "repository": {
+     "type": "git",
+     "url": "git+https://github.com/guybedford/es-module-lexer.git"

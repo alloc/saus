@@ -27,7 +27,7 @@
     "debug": "^4.3.2",
     "ee-ts": "2.0.0-rc.6",
     "endent": "^2.1.0",
-    "es-module-lexer": "^1.0.5",
+    "es-module-lexer": "1.0.5",
     "esbuild": "^0.14.15",
     "etag": "^1.8.1",
     "kleur": "^4.1.4",
@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@client": "link:./node_modules/@saus/client/dist",
-    "@rollup/pluginutils": "^4.1.2",
+    "@rollup/pluginutils": "5.0.1",
     "@runtime": "link:./node_modules/@saus/runtime/dist",
     "@types/babel__code-frame": "^7.0.3",
     "@types/convert-source-map": "^1.5.2",
@@ -64,7 +64,7 @@
     "elaps": "^2.4.0",
     "escalade": "^3.1.1",
     "glob-base": "^0.3.0",
-    "quick-lru": "^6.1.1",
+    "quick-lru": "6.1.1",
     "ts-debounce": "2.0.0",
     "typescript": "4.8.4"
   },

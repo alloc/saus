@@ -8,6 +8,12 @@ patchedDependencies:
   '@rollup/pluginutils@5.0.1':
     hash: 2qoyzwmpaczaj2mabgmoz6ccpy
     path: patches/@rollup__pluginutils@5.0.1.patch
+  es-module-lexer@1.0.5:
+    hash: rmpuoclnbc5e743tdxwbpgwxjy
+    path: patches/es-module-lexer@1.0.5.patch
+  quick-lru@6.1.1:
+    hash: bbvkwhzup5ggingrbd545ybakm
+    path: patches/quick-lru@6.1.1.patch
 
 importers:
 
@@ -356,7 +362,7 @@ importers:
       debug: 4.3.4
       ee-ts: 2.0.0-rc.6_typescript@4.8.4
       endent: 2.1.0
-      es-module-lexer: 1.0.5
+      es-module-lexer: 1.0.5_rmpuoclnbc5e743tdxwbpgwxjy
       esbuild: 0.14.49
       etag: 1.8.1
       kleur: 4.1.5
@@ -392,7 +398,7 @@ importers:
       elaps: 2.4.0
       escalade: 3.1.1
       glob-base: 0.3.0
-      quick-lru: 6.1.1
+      quick-lru: 6.1.1_bbvkwhzup5ggingrbd545ybakm
       ts-debounce: 2.0.0
       typescript: 4.8.4
 
@@ -2072,6 +2078,11 @@ packages:
   /es-module-lexer/1.0.5:
     resolution: {integrity: sha512-oxJ+R1DzAw6j4g1Lx70bIKgfoRCX67C51kH2Mx7J4bS7ZzWxkcivXskFspzgKHUj6JUwUTghQgUPy8zTp6mMBw==}
     dev: false
+
+  /es-module-lexer/1.0.5_rmpuoclnbc5e743tdxwbpgwxjy:
+    resolution: {integrity: sha512-oxJ+R1DzAw6j4g1Lx70bIKgfoRCX67C51kH2Mx7J4bS7ZzWxkcivXskFspzgKHUj6JUwUTghQgUPy8zTp6mMBw==}
+    dev: false
+    patched: true
 
   /esbuild-android-64/0.14.49:
     resolution: {integrity: sha512-vYsdOTD+yi+kquhBiFWl3tyxnj2qZJsl4tAqwhT90ktUdnyTizgle7TjNx6Ar1bN7wcwWqZ9QInfdk2WVagSww==}
@@ -4127,10 +4138,11 @@ packages:
   /queue-microtask/1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
-  /quick-lru/6.1.1:
+  /quick-lru/6.1.1_bbvkwhzup5ggingrbd545ybakm:
     resolution: {integrity: sha512-S27GBT+F0NTRiehtbrgaSE1idUAJ5bX8dPAQTdylEyNlrdcH5X4Lz7Edz3DYzecbsCluD5zO8ZNEe04z3D3u6Q==}
     engines: {node: '>=12'}
     dev: true
+    patched: true
 
   /react-dom/17.0.2_react@17.0.2:
     resolution: {integrity: sha512-s4h96KtLDUQlsENhMn1ar8t2bEa+q/YAtj8pPPdIjPDGBDIVNsrD9aXNWqspUe6AzKCIG0C1HZZLqLV7qpOBGA==}
