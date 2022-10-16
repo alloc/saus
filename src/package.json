@@ -1,9 +1,5 @@
 {
-  "name": "saus",
-  "version": "0.4.10",
-  "description": "Radically simple SSG/SSR powered by Vite",
-  "repository": "alloc/saus",
-  "author": "Alec Larson",
+  "private": true,
   "scripts": {
     "clean": "rimraf ./dist && git checkout HEAD dist",
     "build": "npm run clean && tsup && tsc -p . --emitDeclarationOnly && npm run link",

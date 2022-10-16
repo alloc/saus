@@ -79,7 +79,7 @@ importers:
       navaid: 1.2.0
       react: 17.0.2
       react-dom: 17.0.2_react@17.0.2
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/aws/cloudfront:
     specifiers:
@@ -90,7 +90,7 @@ importers:
       '@saus/aws-utils': link:../utils
       mrmime: 1.0.1
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/aws/s3:
     specifiers:
@@ -101,7 +101,7 @@ importers:
       '@saus/aws-utils': link:../utils
       mrmime: 1.0.1
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/aws/s3-website:
     specifiers:
@@ -118,7 +118,7 @@ importers:
       '@saus/page-store': link:../../page-store
       debug: 4.3.4
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/aws/utils:
     specifiers:
@@ -131,7 +131,7 @@ importers:
       type-fest: 2.16.0
     devDependencies:
       '@types/aws4': 1.11.2
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/cloudflare/cache:
     specifiers:
@@ -142,7 +142,7 @@ importers:
       '@saus/cloudflare-request': link:../request
     devDependencies:
       '@alloc/fast-rimraf': 1.0.8
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/cloudflare/dns:
     specifiers:
@@ -151,19 +151,19 @@ importers:
     dependencies:
       '@saus/cloudflare-request': link:../request
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/cloudflare/page-rules:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/cloudflare/request:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../../src
+      saus: link:../../../src/dist
 
   packages/cloudform:
     specifiers:
@@ -180,7 +180,7 @@ importers:
       type-fest: 2.16.0
     devDependencies:
       recrawl-sync: 2.2.2
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/cloudimage:
     specifiers:
@@ -191,7 +191,7 @@ importers:
       lodash.merge: 4.6.2
     devDependencies:
       '@types/lodash.merge': 4.6.7
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/git-push:
     specifiers:
@@ -202,13 +202,13 @@ importers:
       lodash.merge: 4.6.2
     devDependencies:
       '@types/lodash.merge': 4.6.7
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/page-store:
     specifiers:
       saus: '*'
     devDependencies:
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/react:
     specifiers:
@@ -227,7 +227,7 @@ importers:
       '@types/react-dom': 17.0.17
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/secrets:
     specifiers:
@@ -261,7 +261,7 @@ importers:
       '@types/pixelmatch': 5.2.4
       '@types/react': 17.0.47
       '@types/react-dom': 17.0.17
-      saus: link:../../src
+      saus: link:../../src/dist
       tsup: 5.12.9_typescript@4.8.4
       typescript: 4.8.4
 
@@ -274,7 +274,7 @@ importers:
       '@cush/exec': 1.8.0
       recrawl-sync: 2.2.2
     devDependencies:
-      saus: link:../../src
+      saus: link:../../src/dist
 
   packages/webp:
     specifiers:
@@ -293,7 +293,7 @@ importers:
       misty: 1.6.10
     devDependencies:
       '@types/imagemin-webp': 7.0.0
-      saus: link:../../src
+      saus: link:../../src/dist
 
   src:
     specifiers:
@@ -329,7 +329,7 @@ importers:
       ee-ts: 2.0.0-rc.6
       elaps: ^2.4.0
       endent: ^2.1.0
-      es-module-lexer: ^1.0.5
+      es-module-lexer: 1.0.5
       esbuild: ^0.14.15
       escalade: ^3.1.1
       etag: ^1.8.1
@@ -337,7 +337,7 @@ importers:
       kleur: ^4.1.4
       misty: ^1.6.7
       mrmime: ^1.0.0
-      quick-lru: ^6.1.1
+      quick-lru: 6.1.1
       recrawl-sync: ^2.2.1
       rollup: ^2.62.1
       shared-log: ^1.2.8
@@ -509,7 +509,7 @@ importers:
       '@saus/utils': link:../utils
       builtin-modules: 3.3.0
       debug: 4.3.4
-      es-module-lexer: 1.0.5
+      es-module-lexer: 1.0.5_rmpuoclnbc5e743tdxwbpgwxjy
       kleur: 4.1.5
       type-fest: 2.16.0
     devDependencies:
@@ -2073,10 +2073,6 @@ packages:
     resolution: {integrity: sha512-7dFHNmqeFSEt2ZBsCriorKnn3Z2pj+fd9kmI6QoWw4//DL+icEBfc0U7qJCisqrTsKTjw4fNFy2pW9OqStD84g==}
     dependencies:
       is-arrayish: 0.2.1
-    dev: false
-
-  /es-module-lexer/1.0.5:
-    resolution: {integrity: sha512-oxJ+R1DzAw6j4g1Lx70bIKgfoRCX67C51kH2Mx7J4bS7ZzWxkcivXskFspzgKHUj6JUwUTghQgUPy8zTp6mMBw==}
     dev: false
 
   /es-module-lexer/1.0.5_rmpuoclnbc5e743tdxwbpgwxjy:

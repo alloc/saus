@@ -1,5 +1,8 @@
 {
   "name": "saus",
+  "version": "0.4.10",
+  "repository": "alloc/saus",
+  "author": "Alec Larson",
   "bin": "bin/saus",
   "exports": {
     ".": {
