@@ -24,7 +24,7 @@ async function run() {
         compilerOptions: {
           lib: ['lib.dom.d.ts', 'lib.es2019.d.ts'],
           module: ts.ModuleKind.ESNext,
-          types: [path.resolve('env/client')],
+          types: [path.resolve('src/dist/env/client')],
         },
       }),
       reporter,

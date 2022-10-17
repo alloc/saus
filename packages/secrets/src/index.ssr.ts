@@ -1,7 +1,7 @@
 import { AESEncryption } from 'aes-password'
 import { deployedEnv } from 'saus'
-import { getRawGitHubUrl } from 'saus/core'
 import { http } from 'saus/http'
+import { getRawGitHubUrl } from 'saus/node/getRawGitHubUrl'
 
 // This function only exists in SSR bundle.
 export async function loadGitHubSecrets(

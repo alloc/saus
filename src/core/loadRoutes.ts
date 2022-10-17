@@ -1,7 +1,7 @@
 import { upsertPlugin } from '@/vite/upsertPlugin'
 import { setRoutesModule } from '@runtime/global'
-import { MagicString } from '@utils/babel'
 import { callPlugins } from '@utils/callPlugins'
+import { MagicString } from '@utils/magic-string'
 import { servedPathForFile } from '@utils/node/servedPathForFile'
 import { toDebugPath } from '@utils/node/toDebugPath'
 import { noop } from '@utils/noop'

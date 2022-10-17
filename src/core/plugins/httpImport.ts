@@ -1,4 +1,4 @@
-import { MagicString } from '@utils/babel'
+import { MagicString } from '@utils/magic-string'
 import path from 'path'
 import { vite } from '../core'
 import { bundleDir } from '../paths'

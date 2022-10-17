@@ -1,4 +1,4 @@
-import { bundleDir, httpDir, sausRootDir } from '@/paths'
+import { bundleDir, httpDir, isSausPath, sausRootDir } from '@/paths'
 import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { vite } from '@/vite'
 import remapping from '@ampproject/remapping'
@@ -198,8 +198,7 @@ async function compileSsrRuntime(context: BundleContext) {
           }
 
           const external =
-            !resolved.id.startsWith(sausRootDir) ||
-            resolved.id.includes('/node_modules/')
+            !isSausPath(resolved.id) || resolved.id.includes('/node_modules/')
 
           if (external) {
             return { path: id, external }

@@ -1,4 +1,4 @@
-import { MagicString } from '@utils/babel'
+import { MagicString } from '@utils/magic-string'
 import { onChange } from '../onChange'
 import { parseHtml } from '../parser'
 import { HtmlTagPath } from '../path'

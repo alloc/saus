@@ -1,5 +1,5 @@
 import type { Plugin } from '@/core'
-import { MagicString } from '@utils/babel'
+import { MagicString } from '@utils/magic-string'
 import * as esModuleLexer from 'es-module-lexer'
 
 /**

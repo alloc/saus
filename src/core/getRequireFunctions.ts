@@ -2,12 +2,16 @@ import { httpImport } from '@runtime/http/httpImport'
 import { jsonImport } from '@runtime/http/jsonImport'
 import { createAsyncRequire, RequireAsyncConfig } from '@vm/asyncRequire'
 import { dedupeNodeResolve } from '@vm/dedupeNodeResolve'
+import { RequireAsync } from '@vm/types'
 import fs from 'fs'
 import { SausContext, SausEventEmitter } from './context'
 import { compileNodeModule } from './vite/compileNodeModule'
 import { compileSsrModule } from './vite/compileSsrModule'
 
-export function getRequireFunctions(context: SausContext) {
+export function getRequireFunctions(context: SausContext): {
+  require: RequireAsync
+  ssrRequire: RequireAsync
+} {
   const {
     config,
     externalExports,

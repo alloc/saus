@@ -1,5 +1,5 @@
-import { MagicString } from '@utils/babel'
 import { escape } from '@utils/escape'
+import { MagicString } from '@utils/magic-string'
 import { HtmlProcessorState } from './process'
 import { kRemovedNode, kTagPath } from './symbols'
 import { HtmlDocument, HtmlTag, HtmlVisitor, HtmlVisitorState } from './types'

@@ -1,6 +1,6 @@
-import { MagicString } from '@utils/babel'
-import type { HtmlProcessorState } from './process'
+import { MagicString } from '@utils/magic-string'
 import type { HtmlTagPath } from './path'
+import type { HtmlProcessorState } from './process'
 import type { kTagPath } from './symbols'
 
 type Promisable<T> = T | PromiseLike<T>

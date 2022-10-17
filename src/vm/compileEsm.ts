@@ -1,5 +1,6 @@
-import { getBabelProgram, MagicString, NodePath, t } from '@utils/babel'
+import { getBabelProgram, NodePath, t } from '@utils/babel'
 import { combineSourcemaps } from '@utils/combineSourcemaps'
+import { MagicString } from '@utils/magic-string'
 import { SourceMap } from '@utils/node/sourceMap'
 import * as esModuleLexer from 'es-module-lexer'
 import { basename, extname } from 'path'

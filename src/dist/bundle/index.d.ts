@@ -1,21 +1,27 @@
-export { setResponseCache } from '@/http/responseCache';
-export { printFiles } from '@/node/printFiles';
-export { __d as ssrDefine, ssrImport } from '@/runtime/ssrModules';
-import { App, RenderPageOptions, RenderedPage } from '@/app/types';
-export * from '@/app/types';
-import { RuntimeConfig, MutableRuntimeConfig } from '@/runtime/config';
-import { Promisable } from '@/utils/types';
+import { App } from '@runtime/app/types';
+export { App, RenderPageOptions, RenderPageResult, RenderedFile, RenderedPage, ResolvedRoute } from '@runtime/app/types';
+import { PageBundle } from '@runtime/bundleTypes';
+export * from '@runtime/bundleTypes';
+export { setResponseCache } from '@runtime/http/responseCache';
+export { __d as ssrDefine, ssrImport } from '@runtime/ssrModules';
+export { printFiles } from '@utils/node/printFiles';
+import { RuntimeConfig, MutableRuntimeConfig } from '@runtime/config';
+import { Promisable } from '@utils/types';
 import http from 'http';
-import { BufferLike, RenderedFile as RenderedFile$1, App as App$1 } from '@/app';
-import { Headers, HttpRedirect } from '@/http';
+import { BufferLike, RenderedFile, App as App$1 } from '@runtime/app';
+import { Headers, HttpRedirect } from '@runtime/http';
 import QuickLRU, { Options as Options$1 } from 'quick-lru';
-import { ParsedUrl } from '@/node/url';
 
 declare function createApp(plugins?: App.Plugin[]): Promise<App>;
 
 declare function loadModule(id: string): Promise<string>;
 declare function loadAsset(id: string): Promise<Buffer>;
 
+/**
+ * Configures the runtime behavior of the SSR bundle.
+ *
+ * Can be extended by Saus plugins.
+ */
 declare const config: RuntimeConfig;
 
 /**
@@ -50,7 +56,7 @@ declare type BoundHeadersFn = () => Headers | null | undefined;
 declare type HeadersParam = Headers | null | ((url: string) => Headers | null | undefined);
 interface FileCache extends QuickLRU<string, FileCacheEntry> {
     addFile(id: string, content: BufferLike, headers?: Headers | null): void;
-    addFiles(files: RenderedFile$1[], headers?: HeadersParam): void;
+    addFiles(files: RenderedFile[], headers?: HeadersParam): void;
 }
 declare type FileCacheOptions = Options$1<string, FileCacheEntry>;
 declare type FileCacheEntry = [
@@ -89,24 +95,6 @@ interface Options {
 }
 declare function servePublicDir(options?: Options): connect.Middleware;
 
-interface PageBundleOptions extends Pick<RenderPageOptions, 'timeout' | 'onError'> {
-    renderStart?: (url: ParsedUrl) => void;
-    renderFinish?: (url: ParsedUrl, error: Error | null, page?: PageBundle | null) => void;
-    /** @internal */
-    receivePage?: (page: RenderedPage | null, error: any) => void;
-}
-interface PageBundle {
-    id: string;
-    html: string;
-    /** Files generated whilst rendering. */
-    files: RenderedFile[];
-}
-interface RenderedFile {
-    id: string;
-    data: any;
-    mime: string;
-}
-
 /**
  * Write an array of rendered pages to disk. Shared modules are deduplicated.
  *
@@ -115,4 +103,4 @@ interface RenderedFile {
  */
 declare function writePages(pages: ReadonlyArray<PageBundle | null>, outDir: string): Promise<Record<string, number>>;
 
-export { FileCache, FileCacheEntry, FileCacheOptions, PageBundle, PageBundleOptions, RenderedFile, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, loadAsset, loadModule, serveCachedFiles, servePages, servePublicDir, writePages };
+export { FileCache, FileCacheEntry, FileCacheOptions, config, configureBundle, connect, createFileCache, createApp as default, getKnownPaths, loadAsset, loadModule, serveCachedFiles, servePages, servePublicDir, writePages };

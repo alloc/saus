@@ -1,4 +1,13 @@
 // Overrides "saus/bundle" entry in SSR bundles
+export type {
+  App,
+  RenderedFile,
+  RenderedPage,
+  RenderPageOptions,
+  RenderPageResult,
+  ResolvedRoute,
+} from '@runtime/app/types'
+export * from '@runtime/bundleTypes'
 export { setResponseCache } from '@runtime/http/responseCache'
 export { ssrImport, __d as ssrDefine } from '@runtime/ssrModules'
 export { printFiles } from '@utils/node/printFiles'

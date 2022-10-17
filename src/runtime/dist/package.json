@@ -1,9 +1,18 @@
 {
   "exports": {
     "./*": {
-      "types": "./*.d.ts",
-      "import": "./*.mjs",
-      "default": "./*.js"
+      "types": [
+        "./*.d.ts",
+        "./*/index.d.ts"
+      ],
+      "import": [
+        "./*.mjs",
+        "./*/index.mjs"
+      ],
+      "default": [
+        "./*.js",
+        "./*/index.js"
+      ]
     }
   }
 }

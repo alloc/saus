@@ -1,4 +1,4 @@
-import type { RenderedPage, RenderPageOptions } from './app/types'
+import type { RenderedFile, RenderedPage, RenderPageOptions } from './app/types'
 import type { ParsedUrl } from './url'
 
 export interface PageBundleOptions
@@ -18,10 +18,4 @@ export interface PageBundle {
   html: string
   /** Files generated whilst rendering. */
   files: RenderedFile[]
-}
-
-export interface RenderedFile {
-  id: string
-  data: any
-  mime: string
 }

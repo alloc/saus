@@ -1,7 +1,7 @@
 import { relative } from '@cush/relative'
-import { MagicString } from '@utils/babel'
 import { isExternalUrl } from '@utils/isExternalUrl'
 import { limitTime } from '@utils/limitTime'
+import { MagicString } from '@utils/magic-string'
 import { murmurHash } from '@utils/murmur3'
 import { unwrapBuffer } from '@utils/node/buffer'
 import createDebug from 'debug'

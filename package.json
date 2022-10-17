@@ -38,7 +38,8 @@
     },
     "patchedDependencies": {
       "@rollup/pluginutils@5.0.1": "patches/@rollup__pluginutils@5.0.1.patch",
-      "quick-lru@6.1.1": "patches/quick-lru@6.1.1.patch"
+      "quick-lru@6.1.1": "patches/quick-lru@6.1.1.patch",
+      "es-module-lexer@0.9.3": "patches/es-module-lexer@0.9.3.patch"
     }
   }
 }

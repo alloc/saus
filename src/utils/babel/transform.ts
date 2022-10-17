@@ -1,6 +1,6 @@
 import * as babel from '@babel/core'
 import { NodePath, transformFromAstSync, types as t } from '@babel/core'
-import MagicString from 'magic-string'
+import { MagicString } from '../magic-string'
 import { getBabelConfig } from './config'
 import { getTrailingLineBreak, getWhitespaceStart } from './queries'
 
