@@ -2,13 +2,13 @@ import { prependBase } from '@utils/base'
 import { defer } from '@utils/defer'
 import { murmurHash } from '@utils/murmur3'
 import etag from 'etag'
-import { Cache, stateModulesByName } from '../../cache'
+import { stateModulesByName } from '../../cache'
 import { Endpoint } from '../../endpoint'
 import type { Headers } from '../../http'
 import { makeRequestUrl } from '../../makeRequest'
 import { route } from '../../routeHooks'
 import type { Route } from '../../routeTypes'
-import { serveCache } from '../../stateModules/serve'
+import { serveCache, serveState } from '../../stateModules/serve'
 import { ParsedUrl, parseUrl } from '../../url'
 import type { App, RenderPageResult } from '../types'
 
@@ -72,7 +72,6 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
     const stateModule = stateModulesByName.get(name)
     if (stateModule) {
       let args: any
-      let loader: Cache.EntryLoader | undefined
       if (!serveCache.has(cacheKey)) {
         args = req.headers['x-args']
         if (!args) {
@@ -85,9 +84,11 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
           })
         }
         args = JSON.parse(args)
-        loader = () => stateModule.serve(...args)
       }
-      const loaded = await serveCache.access(cacheKey, loader, { args })
+      const loaded = await serveState(stateModule, {
+        args,
+        deepCopy: false,
+      })
       if (loaded) {
         if (Array.isArray(loaded.args)) {
           const module = app.renderStateModule(name, loaded)

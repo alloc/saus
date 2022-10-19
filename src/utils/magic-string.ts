@@ -1,6 +1,5 @@
-export {
-  Bundle as MagicBundle,
+export { Bundle as MagicBundle, default as MagicString } from 'magic-string'
+export type {
   BundleOptions as MagicBundleOptions,
-  default as MagicString,
   MagicStringOptions,
 } from 'magic-string'

@@ -47,8 +47,8 @@ export const getPageStateFactory = (
       (props as CommonServerProps)._ts
     }${maxAge == null ? '' : `, ${maxAge}`})`
 
-    const imports = new Map<string, string[]>()
     const helpers: string[] = []
+    const imports = new Map([[base + ctx.config.clientCacheId, ['setState']]])
 
     if (nestedStateKeys.length) {
       helpers.push('importState')
@@ -70,7 +70,6 @@ export const getPageStateFactory = (
         return app.renderStateModule(name, loaded, true)
       })
 
-      imports.set(base + ctx.config.clientCacheId, ['setState'])
       code = inlined.join('\n') + '\n' + code
     }
 

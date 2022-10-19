@@ -88,6 +88,9 @@ export const wrapEndpoints =
       const body =
         ctx.config.mode == 'development' ? { text: error.stack } : undefined
       response = createResponse(route, headers, 500, body)
+      if (!body) {
+        ctx.onError(error)
+      }
     }
 
     if (response?.status) {

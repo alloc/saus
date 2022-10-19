@@ -19,8 +19,7 @@ import { plural } from '@utils/plural'
 import { warn } from 'misty'
 import { startTask } from 'misty/task'
 import path from 'path'
-import { internalRedirects, ssrRedirects } from './moduleRedirects'
-import { preBundleSsrRuntime } from './runtimeBundle'
+import { internalRedirects, ssrBundleRedirects } from './moduleRedirects'
 
 type InheritedKeys = 'debugBase' | 'entry' | 'format' | 'clientStore' | 'target'
 
@@ -158,12 +157,12 @@ export async function loadBundleContext<
   context.bundleModuleId = '\0saus/bundle.js'
   const redirects = [
     ...internalRedirects,
-    ...ssrRedirects,
+    ...ssrBundleRedirects,
     overrideBareImport('saus/bundle', context.bundleModuleId),
   ]
 
   context.bundlePlugins = [
-    preBundleSsrRuntime(context),
+    // preBundleSsrRuntime(context),
     moduleRedirection(redirects, [
       'vite',
       './client/index.mjs',

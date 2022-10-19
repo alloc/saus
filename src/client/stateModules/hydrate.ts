@@ -2,6 +2,12 @@ import { Cache, globalCache } from '@runtime/cache'
 import type { StateModule } from '@runtime/stateModules'
 
 /**
+ * Data from the server is stored here until a matching state module is
+ * loaded by the client. This is only used in a client context.
+ */
+export const preHydrateCache = new Map<string, StateModule.CacheEntry>()
+
+/**
  * Hydrate the data served for a state module, and inject it into the
  * global cache.
  */

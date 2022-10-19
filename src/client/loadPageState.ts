@@ -4,6 +4,7 @@ import { CommonClientProps } from '@runtime/clientTypes'
 import { getPageFilename } from '@utils/getPageFilename'
 import { AnyToObject } from '@utils/types'
 import { unwrapDefault } from '@utils/unwrapDefault'
+import { dynamicImport } from './dynamicImport'
 
 export function loadPageState<Props extends object = any>(
   pagePath: string,
@@ -21,9 +22,7 @@ export function loadPageState<Props extends object = any>(
           return cached.state as any
         }
       }
-      return import(/* @vite-ignore */ moduleUrl + '?t=' + timestamp).then(
-        unwrapDefault
-      )
+      return dynamicImport(moduleUrl + '?t=' + timestamp).then(unwrapDefault)
     })
     .catch(error => {
       const reason = error.message

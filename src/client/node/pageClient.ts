@@ -1,6 +1,7 @@
 import { globalCache } from '@runtime/cache'
 import { getPagePath } from '@runtime/getPagePath'
 import { Route } from '@runtime/routeTypes'
+import { noop } from '@utils/noop'
 import { RequireAsync } from '@vm/types'
 import type { PageClient } from '../pageClient'
 
@@ -28,7 +29,9 @@ export async function loadPageClient(routePath: string, routeParams?: any) {
   if (routeClient) {
     const pagePath = getPagePath(routePath, routeParams)
     const client: PageClient = await ssrRequire(routeClient.url)
-    client.props = await globalCache.load(pagePath, cache => cache.oldValue!)
+    client.props = await globalCache.load<any>(pagePath, noop, {
+      acceptExpired: true,
+    })
     return client
   }
 

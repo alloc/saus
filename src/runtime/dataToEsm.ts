@@ -89,7 +89,11 @@ function serialize(
 }
 
 function stringify(obj: unknown): string {
-  return JSON.stringify(obj).replace(
+  const json = JSON.stringify(obj)
+  if (json === undefined) {
+    return String(json)
+  }
+  return json.replace(
     /[\u2028\u2029]/g,
     char => `\\u${`000${char.charCodeAt(0).toString(16)}`.slice(-4)}`
   )

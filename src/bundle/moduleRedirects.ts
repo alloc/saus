@@ -33,13 +33,7 @@ export const internalRedirects = [
   ),
 ]
 
-export const ssrRedirects = [
-  overrideBareImport('saus', path.join(bundleDir, 'api.mjs')),
-  overrideBareImport('saus/client', path.join(bundleDir, 'client/api.mjs')),
-  overrideBareImport('saus/core', path.join(bundleDir, 'core/api.mjs')),
-  overrideBareImport('saus/http', path.join(httpDir, 'index.mjs')),
-]
-
+// Only applied to client modules.
 export const clientRedirects = [
   overrideBareImport('debug', path.join(bundleDir, 'bundle/debug.mjs')),
   overrideBareImport('saus', emptyModule),
@@ -53,9 +47,25 @@ export const clientRedirects = [
     path.join(clientDir, 'buffer.mjs')
   ),
   redirectModule(
+    path.join(utilsDir, 'node/textDecoder.mjs'),
+    path.join(clientDir, 'textDecoder.mjs')
+  ),
+  redirectModule(
     path.join(httpDir, 'get.mjs'),
     path.join(clientDir, 'http/get.mjs')
   ),
   redirectModule(path.join(httpDir, 'httpImport.mjs'), emptyModule),
   ...coreRedirects.clientRedirects,
+]
+
+// Only applied when generating a server bundle.
+export const ssrBundleRedirects = [
+  overrideBareImport('saus', path.join(bundleDir, 'api.mjs')),
+  overrideBareImport('saus/client', path.join(bundleDir, 'client/api.mjs')),
+  overrideBareImport('saus/core', path.join(bundleDir, 'core/api.mjs')),
+  overrideBareImport('saus/http', path.join(httpDir, 'index.mjs')),
+  redirectModule(
+    path.join(clientDir, 'pageClient.mjs'),
+    path.join(bundleDir, 'client/pageClient.mjs')
+  ),
 ]

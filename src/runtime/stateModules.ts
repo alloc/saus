@@ -1,11 +1,12 @@
 import { NoInfer } from '@utils/types'
 import { Promisable } from 'type-fest'
-import { Cache, globalCache, setState } from './cache'
+import { Cache, globalCache } from './cache'
 import { getStateModuleKey } from './getStateModuleKey'
 import { getState } from './stateModules/get'
 import { trackStateModule } from './stateModules/global'
 import { hydrateState, hydrateStateListener } from './stateModules/hydrate'
 import { serveState } from './stateModules/serve'
+import { setState } from './stateModules/setState'
 
 type ServerArgs<T> = T extends StateModule.ServeFunction<any, infer Args>
   ? Args

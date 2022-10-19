@@ -58,7 +58,7 @@ export function setupPageStore(config: PageStoreConfig) {
     }
 
     injectCachePlugin({
-      put(name, state, expiresAt) {
+      put(name, entry) {
         const req = parseUrl(
           env.stateModuleBase + name + '.js'
         ) as PageRuleContext
@@ -66,7 +66,7 @@ export function setupPageStore(config: PageStoreConfig) {
 
         return config.store.put(
           req.path.slice(1),
-          app.renderStateModule(name, state, expiresAt),
+          app.renderStateModule(name, entry),
           resolveHeaders(req)
         )
       },

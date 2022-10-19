@@ -3,6 +3,7 @@ import { getPagePath } from '@runtime/getPagePath'
 import { RouteEntry, RouteParams } from '@runtime/routeTypes'
 import { noop } from '@utils/noop'
 import { AnyToObject } from '@utils/types'
+import { dynamicImport } from './dynamicImport'
 import { applyHead, injectLinkTag } from './head'
 import { loadPageState } from './loadPageState'
 import routes from './routes'
@@ -70,7 +71,7 @@ export async function loadPageClient<
     // before executing the route entry.
     applyHead(pagePath)
 
-    const clientModule = await import(/* @vite-ignore */ clientUrl)
+    const clientModule = await dynamicImport(clientUrl)
     return {
       ...clientModule,
       props: pageProps,
@@ -94,6 +95,6 @@ export async function loadPageClient<
 export async function preloadRouteClient(routePath: string) {
   const clientUrl = routes[routePath]
   if (clientUrl) {
-    return import(/* @vite-ignore */ clientUrl).catch(noop)
+    return dynamicImport(clientUrl).catch(noop)
   }
 }

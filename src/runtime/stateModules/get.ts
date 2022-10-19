@@ -1,3 +1,4 @@
+import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import { klona as deepCopy } from '@utils/klona'
 import { Cache } from '../cache'
 import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'
@@ -12,6 +13,7 @@ export function getState<T, Args extends readonly any[]>(
   module: StateModule<T, Args, any>,
   args: Args
 ) {
-  const cached = getLoadedStateOrThrow(cache, module.key, args)
+  const key = getStateModuleKey(module.name, args)
+  const cached = getLoadedStateOrThrow(cache, key, args)
   return deepCopy(cached) as Cache.Entry<T>
 }

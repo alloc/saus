@@ -41,7 +41,7 @@ export function get<State>(
  * The given `loader` is called unless a value is already cached
  * (and not expired).
  */
-export function load<State, LoadResult extends State>(
+export function load<State, LoadResult extends State = State>(
   this: Cache<State>,
   key: string,
   loader: Cache.EntryLoader<LoadResult>,
@@ -54,7 +54,7 @@ export function load<State, LoadResult extends State>(
   )
 }
 
-export function access<State, LoadResult extends State>(
+export function access<State, LoadResult extends State = State>(
   this: Cache<State>,
   cacheKey: string,
   loader: Cache.EntryLoader<LoadResult>,
