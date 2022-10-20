@@ -1,5 +1,6 @@
 import type { Promisable } from 'type-fest'
 import type { Cache } from './cache'
+import { serveCache } from './stateModules/serve'
 
 /**
  * The `CachePlugin` is a normalized data storage layer.
@@ -7,6 +8,8 @@ import type { Cache } from './cache'
  * Only "state modules" are cached with this.
  */
 export interface CachePlugin {
+  /** Set by `injectCachePlugin` if undefined */
+  pendingPuts?: Map<string, Promise<any>>
   /**
    * Retrieve a cache entry by name.
    *
@@ -23,8 +26,6 @@ export interface CachePlugin {
   put?: (cacheKey: string, entry: Cache.Entry<any>) => Promisable<void>
 }
 
-let cachePlugin: CachePlugin | undefined
-
 /**
  * By default, state modules are stored in a LRU cache (in memory). \
  * Call this to extend that behavior. Multiple calls will override
@@ -34,15 +35,14 @@ let cachePlugin: CachePlugin | undefined
  * the same as returning an undefined entry.
  */
 export function injectCachePlugin(plugin: CachePlugin) {
-  cachePlugin = plugin
+  serveCache.plugin = plugin
+  plugin.pendingPuts ||= new Map()
 }
 
-export const CachePlugin = {
-  get get() {
-    return cachePlugin?.get
-  },
-  get put() {
-    return cachePlugin?.put
-  },
-  pendingPuts: new Map<string, Promise<any>>(),
+export function waitForCachePlugin() {
+  if (!serveCache.plugin) {
+    return Promise.resolve()
+  }
+  const { pendingPuts } = serveCache.plugin
+  return Promise.all(pendingPuts!.values())
 }

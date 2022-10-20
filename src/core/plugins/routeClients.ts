@@ -2,7 +2,7 @@ import { Plugin, vite } from '@/vite'
 import { collectCss } from '@/vite/collectCss'
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { CommonServerProps } from '@runtime/app/types'
-import { CachePlugin } from '@runtime/cachePlugin'
+import { waitForCachePlugin } from '@runtime/cachePlugin'
 import { RuntimeConfig } from '@runtime/config'
 import { renderPageScript } from '@runtime/renderPageScript'
 import { prependBase } from '@utils/base'
@@ -150,7 +150,7 @@ export function routeClientsPlugin(): Plugin {
         )
 
         // Wait for pending cache updates that the page may depend on.
-        await Promise.all(CachePlugin.pendingPuts.values())
+        await waitForCachePlugin()
 
         tags.push(...injectedStyles)
         return tags

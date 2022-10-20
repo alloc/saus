@@ -2,7 +2,7 @@ import { getPreloadTagsForModules } from '@/vite/modulePreload'
 import { App, CommonServerProps, ResolvedRoute } from '@runtime/app/types'
 import { PageBundle } from '@runtime/bundleTypes'
 import { toExpirationTime } from '@runtime/cache/expiration'
-import { CachePlugin } from '@runtime/cachePlugin'
+import { waitForCachePlugin } from '@runtime/cachePlugin'
 import { RuntimeConfig } from '@runtime/config'
 import { getLayoutEntry } from '@runtime/getLayoutEntry'
 import { applyHtmlProcessors } from '@runtime/html/process'
@@ -237,7 +237,7 @@ export const providePageBundles: App.Plugin = app => {
         }
 
         // Wait for pending cache updates that the page may depend on.
-        await Promise.all(CachePlugin.pendingPuts.values())
+        await waitForCachePlugin()
 
         const finishedPage: PageBundle = {
           id: filename,

@@ -1,7 +1,6 @@
 import { AbortController } from '@utils/AbortController'
 import { klona } from '@utils/klona'
 import { noop } from '@utils/noop'
-import { CachePlugin } from '../cachePlugin'
 import { debug } from '../stateModules/debug'
 import { EntryContext } from './context'
 import { toExpirationTime } from './expiration'
@@ -110,8 +109,8 @@ export function access<State>(
 
   const abortCtrl = new AbortController()
   const pluginPromise =
-    !options.skipCachePlugin && CachePlugin.get
-      ? CachePlugin.get(cacheKey, abortCtrl.signal)
+    !options.bypassPlugin && this.plugin?.get
+      ? this.plugin.get(cacheKey, abortCtrl.signal)
       : undefined
 
   const context = new EntryContext(cacheKey, entry?.state, abortCtrl.signal)
@@ -156,13 +155,13 @@ export function access<State>(
       }
       if (context.maxAge > 0) {
         this.loaded[cacheKey] = entry
-        if (CachePlugin.put) {
-          CachePlugin.pendingPuts.set(
+        if (!options.bypassPlugin && this.plugin?.put) {
+          this.plugin.pendingPuts!.set(
             cacheKey,
-            Promise.resolve(CachePlugin.put(cacheKey, entry))
+            Promise.resolve(this.plugin.put(cacheKey, entry))
               .catch(console.error)
               .then(() => {
-                CachePlugin.pendingPuts.delete(cacheKey)
+                this.plugin!.pendingPuts!.delete(cacheKey)
               })
           )
         }

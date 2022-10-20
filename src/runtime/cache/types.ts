@@ -1,4 +1,5 @@
 import { Promisable } from 'type-fest'
+import { CachePlugin } from '../cachePlugin'
 import type { StateModule } from '../stateModules'
 import { access, get, has, load } from './access'
 import { clear } from './clear'
@@ -14,6 +15,7 @@ export type Cache<State = unknown> = {
   access: typeof access
   clear: typeof clear
   forEach: typeof forEach
+  plugin?: CachePlugin
 }
 
 export namespace Cache {
@@ -89,11 +91,11 @@ export namespace Cache {
      */
     deepCopy?: boolean
     /**
-     * Skip calling `CachePlugin.get` and `CachePlugin.put` hooks
+     * Skip calling `this.plugin.get` and `this.plugin.put` hooks
      * provided by `injectCachePlugin` call.
      *
      * ⚠️ Used in server context only.
      */
-    skipCachePlugin?: boolean
+    bypassPlugin?: boolean
   }
 }
