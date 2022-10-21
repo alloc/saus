@@ -13,6 +13,7 @@ export default defineDeployHook(ctx => ({
   },
   identify: stack => ({
     name: stack.name,
+    region: stack.region,
   }),
   spawn(stack, onRevert) {
     return ctx.logPlan(
