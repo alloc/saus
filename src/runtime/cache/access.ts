@@ -1,10 +1,13 @@
 import { AbortController } from '@utils/AbortController'
 import { klona } from '@utils/klona'
 import { noop } from '@utils/noop'
+import createDebug from 'debug'
 import { debug } from '../stateModules/debug'
 import { EntryContext } from './context'
 import { toExpirationTime } from './expiration'
 import { Cache } from './types'
+
+const debugCachePlugin = createDebug('saus:cachePlugin')
 
 /**
  * Shortcut for `access` that checks whether a key is
@@ -122,6 +125,9 @@ export function access<State>(
     })
     .then(async entry => {
       if (entry) {
+        if (debugCachePlugin.enabled) {
+          debugCachePlugin(`found "${cacheKey}"`)
+        }
         this.loaded[cacheKey] = entry
         return entry
       }
@@ -156,6 +162,9 @@ export function access<State>(
       if (context.maxAge > 0) {
         this.loaded[cacheKey] = entry
         if (!options.bypassPlugin && this.plugin?.put) {
+          if (debugCachePlugin.enabled) {
+            debugCachePlugin(`saving "${cacheKey}"`)
+          }
           this.plugin.pendingPuts!.set(
             cacheKey,
             Promise.resolve(this.plugin.put(cacheKey, entry))
