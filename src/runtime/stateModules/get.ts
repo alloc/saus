@@ -1,7 +1,7 @@
-import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import { klona as deepCopy } from '@utils/klona'
 import { Cache } from '../cache'
 import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'
+import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
 
 /**
