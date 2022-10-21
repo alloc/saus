@@ -2,6 +2,7 @@ import { prependBase } from '@utils/base'
 import { defer } from '@utils/defer'
 import { murmurHash } from '@utils/murmur3'
 import etag from 'etag'
+import type { Cache } from '../../cache'
 import { stateModulesByName } from '../../cache'
 import { Endpoint } from '../../endpoint'
 import type { Headers } from '../../http'
@@ -71,9 +72,9 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 
     const stateModule = stateModulesByName.get(name)
     if (stateModule) {
-      let args: any
-      if (!serveCache.has(cacheKey)) {
-        args = req.headers['x-args']
+      let promise = serveCache.get(cacheKey) as Promise<Cache.Entry> | undefined
+      if (!promise) {
+        let args: any = req.headers['x-args']
         if (!args) {
           return req.respondWith(404)
         }
@@ -84,14 +85,15 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
           })
         }
         args = JSON.parse(args)
+        promise = serveState(stateModule, {
+          args,
+          deepCopy: false,
+        })
       }
-      const loaded = await serveState(stateModule, {
-        args,
-        deepCopy: false,
-      })
-      if (loaded) {
-        if (Array.isArray(loaded.args)) {
-          const module = app.renderStateModule(name, loaded)
+      const entry = await promise
+      if (entry) {
+        if (Array.isArray(entry.args)) {
+          const module = app.renderStateModule(name, entry)
           return sendModule(req, module)
         }
         console.warn(
