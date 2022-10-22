@@ -5,7 +5,7 @@
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && tsup-node && tsc -p . --emitDeclarationOnly",
     "dev": "concurrently npm:dev:*",
-    "dev:build": "tsup --watch --sourcemap",
+    "dev:build": "tsup-node --watch --sourcemap",
     "dev:types": "tsc -p . --emitDeclarationOnly --watch"
   },
   "dependencies": {
