@@ -3,6 +3,7 @@ import { deployedEnv } from '@runtime/deployedEnv'
 import assert from 'assert'
 import { startTask } from 'misty/task'
 import { getDeployContext } from './context'
+import { debug } from './debug'
 import { YamlFile } from './files'
 import { DeployFile, DeployPlugin, DeployTarget } from './types'
 import { defineTargetId, omitEphemeral } from './utils'
@@ -65,7 +66,13 @@ export function getSavedTargets() {
       targets = targetsByPluginName[plugin.name] || []
       await Promise.all(
         targets.map(async savedTarget => {
+          debug('identifying saved target:', plugin.name)
           defineTargetId(savedTarget, await plugin.identify(savedTarget))
+          debug(
+            'identified saved target: %s (%s)',
+            plugin.name,
+            savedTarget._id.hash
+          )
         })
       )
       savedTargets.byPlugin.set(plugin, targets)
@@ -130,7 +137,9 @@ export async function refreshTargetCache(
     // Ensure the target is identified.
     let targetId = target._id
     if (!targetId) {
+      debug('identifying new target:', plugin.name)
       defineTargetId(target, await plugin.identify(target))
+      debug('identified new target: %s (%s)', plugin.name, target._id.hash)
       targetId = target._id
     }
 

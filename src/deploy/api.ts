@@ -14,6 +14,7 @@ import { startTask } from 'misty/task'
 import path from 'path'
 import yaml from 'yaml'
 import { loadDeployContext } from './context'
+import { debug } from './debug'
 import { loadDeployFile } from './loader'
 import { setLogFunctions } from './logger'
 import { DeployOptions } from './options'
@@ -146,13 +147,16 @@ export async function deploy(
     deploy: try {
       target = await target
       if (plugin.pull) {
+        debug('pulling target:', plugin.name)
         const pulled = await plugin.pull(target)
         if (pulled) {
           Object.assign(target, pulled)
         }
       }
 
+      debug('identifying target:', plugin.name)
       defineTargetId(target, await plugin.identify(target))
+      debug('identified target: %s (%s)', plugin.name, target._id.hash)
 
       let changed: Record<string, any> | undefined
       const changedPaths = process.env.DEBUG ? new Set<string>() : undefined!
@@ -186,14 +190,22 @@ export async function deploy(
 
       if (savedTarget) {
         if (plugin.update) {
+          debug('updating target: %s (%s)', plugin.name, target._id.hash)
           await invokeAction(plugin, 'update', target, changed!)
         } else {
+          debug(
+            'plugin "%s" has no update method, respawning instead',
+            plugin.name
+          )
+          debug('killing target: %s (%s)', plugin.name, target._id.hash)
           await invokeAction(plugin, 'kill', target)
+          debug('spawning target: %s (%s)', plugin.name, target._id.hash)
           await invokeAction(plugin, 'spawn', target)
         }
         updatedTargets.add(target)
         markTargetReused(savedTarget, savedTargets)
       } else {
+        debug('spawning target: %s (%s)', plugin.name, target._id.hash)
         await invokeAction(plugin, 'spawn', target)
         spawnedTargets.add(target)
       }
@@ -319,6 +331,7 @@ export async function deploy(
     if (missingTargets.length) {
       task = task && startTask('Killing obsolete targets...')
       for (const [plugin, target] of missingTargets.reverse()) {
+        debug('killing obsolete target: %s (%s)', plugin.name)
         await invokeAction((activePlugin = plugin), 'kill', target)
       }
     }
