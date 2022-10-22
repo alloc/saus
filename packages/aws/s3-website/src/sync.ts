@@ -80,6 +80,11 @@ export async function syncStaticFiles(
                   bucket: buckets.assets,
                   newBucket: buckets.oldAssets,
                   creds: secrets,
+                }).catch(err => {
+                  if (err.code !== 'NoSuchKey') {
+                    throw err
+                  }
+                  // Ignore missing keys, they were already moved.
                 }),
             })
           )
