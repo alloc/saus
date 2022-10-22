@@ -59,8 +59,9 @@ export function addDeployTarget<
 
 /**
  * Deploy actions only run when `saus deploy` is used.
- * They should return a rollback function in case deployment
- * fails after this action is completed.
+ *
+ * ⚠️ You should call the given `onRevert` function to handle cases
+ * where deployment failed after this action was completed.
  */
 export function onDeploy<T = any>(action: DeployAction<T>) {
   const ctx = getDeployContext()
