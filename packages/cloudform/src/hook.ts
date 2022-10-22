@@ -90,7 +90,7 @@ export default defineDeployHook(ctx => ({
       throw Error('Expected stack.id to exist')
     }
     return ctx.logPlan(
-      `would destroy all ${
+      `destroy all ${
         Object.keys(stack.template.resources).length
       } AWS resources for "${stack.name}" stack`,
       async () => {
