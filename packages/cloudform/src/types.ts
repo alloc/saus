@@ -6,7 +6,6 @@ export * from 'cloudform-types'
 
 export interface Stack<Outputs extends object | void = any> {
   id?: string
-  uri?: string
   name: string
   region: string
   template: {
