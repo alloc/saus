@@ -31,7 +31,7 @@ export async function describeStack(
     region: stack.region,
     creds: secrets,
   })
-  const { stacks } = await describeStacks({ stackName: stack.name }).catch(
+  const { stacks } = await describeStacks({ stackName: stack.uri! }).catch(
     (e: any) => {
       if (!/ does not exist$/.test(e.message)) {
         throw e

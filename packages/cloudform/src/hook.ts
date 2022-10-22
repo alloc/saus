@@ -7,10 +7,15 @@ import { Stack } from './types'
 export default defineDeployHook(ctx => ({
   name: '@saus/cloudform',
   async pull(stack: Stack) {
-    return describeStack(stack, {
+    const props = await describeStack(stack, {
       when: 'settled',
     })
+    return {
+      ...props,
+      uri: stack.name + '-' + stack.region,
+    }
   },
+  ephemeral: ['uri'],
   identify: stack => ({
     name: stack.name,
     region: stack.region,
@@ -19,7 +24,7 @@ export default defineDeployHook(ctx => ({
     return ctx.logPlan(
       `create ${
         Object.keys(stack.template.resources).length
-      } AWS resources for "${stack.name}" stack`,
+      } AWS resources for "${stack.uri}" stack`,
       async () => {
         const spawned = await spawnStack(
           stack,
@@ -45,17 +50,17 @@ export default defineDeployHook(ctx => ({
     const prevTemplate = await getTemplate(stack)
     if (!prevTemplate) {
       throw Error(
-        `Previous template not found for existing stack: ${stack.name}`
+        `Previous template not found for existing stack: ${stack.uri}`
       )
     }
     return ctx.logPlan(
       `update ${
         Object.keys(stack.template.resources).length
-      } AWS resources for "${stack.name}" stack`,
+      } AWS resources for "${stack.uri}" stack`,
       async () => {
         await updateStack(stack, toTemplateString(stack.template))
         onRevert(() =>
-          ctx.logPlan(`revert update for "${stack.name}" stack`, () => {
+          ctx.logPlan(`revert update for "${stack.uri}" stack`, () => {
             return updateStack(stack, prevTemplate)
           })
         )
@@ -70,7 +75,7 @@ export default defineDeployHook(ctx => ({
     return ctx.logPlan(
       `would destroy all ${
         Object.keys(stack.template.resources).length
-      } AWS resources for "${stack.name}" stack`,
+      } AWS resources for "${stack.uri}" stack`,
       async () => {
         const deleteStack = signedRequest.action('DeleteStack', {
           creds: secrets,
@@ -93,7 +98,7 @@ async function spawnStack(stack: Stack, body: string) {
     region: stack.region,
   })
   return spawn({
-    stackName: stack.name,
+    stackName: stack.uri!,
     templateBody: body,
   })
 }
@@ -129,7 +134,7 @@ async function getTemplate(stack: Stack) {
     region: stack.region,
   })
   const resp = await getTemplate({
-    stackName: stack.id || stack.name,
+    stackName: stack.id || stack.uri!,
   })
   return resp.templateBody
 }
