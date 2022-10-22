@@ -71,7 +71,7 @@ export type SmartDeployHook<
   {
     pull: (props: Props) => Promise<State>
   } & Pick<DeployPlugin.Base<Props, State>, keyof DeployPlugin.Base> &
-    Omit<DeployPlugin.Addons<Props, {}>, 'pull'>
+    Omit<DeployPlugin.Addons<Props, State>, 'pull'>
 >
 
 /**
