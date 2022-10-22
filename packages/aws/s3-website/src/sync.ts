@@ -19,8 +19,11 @@ export async function syncStaticFiles(
   config: WebsiteConfig,
   buckets: { assets: string; oldAssets: string; publicDir: string }
 ): Promise<void> {
+  const stackUri = config.name + '-' + config.region
+  const stackDir = `s3-website/${stackUri}`
+
   const syncAssets = () => {
-    const memory = ctx.files.get<AssetList>('s3-website/assets.json')
+    const memory = ctx.files.get<AssetList>(`${stackDir}/assets.json`)
     const oldAssetNames = memory.getData() || []
     const assetNames: AssetList = []
     const uploads = createUploader(ctx)
@@ -94,7 +97,7 @@ export async function syncStaticFiles(
   }
 
   const syncPublicDir = () => {
-    const memory = ctx.files.get<PublicFileHashes>('s3-website/public.json')
+    const memory = ctx.files.get<PublicFileHashes>(`${stackDir}/public.json`)
     const oldHashes = memory.getData() || {}
     const hashes: PublicFileHashes = {}
     const uploads = createUploader(ctx)
