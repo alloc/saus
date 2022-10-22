@@ -21,27 +21,34 @@ export default defineDeployHook(ctx => ({
     region: stack.region,
   }),
   spawn(stack, onRevert) {
-    return ctx.logPlan(
-      `create ${
-        Object.keys(stack.template.resources).length
-      } AWS resources for "${stack.uri}" stack`,
-      async () => {
-        const spawned = await spawnStack(
-          stack,
-          toTemplateString(stack.template)
-        )
-        stack.id = spawned.stackId
-        Object.assign(
-          stack,
-          await describeStack(stack, {
-            action: 'CREATE',
+    return ctx
+      .logPlan(
+        `create ${
+          Object.keys(stack.template.resources).length
+        } AWS resources for "${stack.uri}" stack`,
+        async () => {
+          const spawned = await spawnStack(
+            stack,
+            toTemplateString(stack.template)
+          )
+          stack.id = spawned.stackId
+          Object.assign(
+            stack,
+            await describeStack(stack, {
+              action: 'CREATE',
+            })
+          )
+          onRevert(async () => {
+            await this.kill(stack, onRevert)
           })
-        )
-        onRevert(async () => {
-          await this.kill(stack, onRevert)
-        })
-      }
-    )
+        }
+      )
+      .catch(async err => {
+        if (err.code !== 'AlreadyExistsException') {
+          throw err
+        }
+        await this.update!(stack, null!, onRevert)
+      })
   },
   async update(stack, _, onRevert) {
     if (!stack.id) {
