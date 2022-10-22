@@ -4,9 +4,7 @@
   "scripts": {
     "clean": "rimraf dist && git checkout HEAD dist",
     "build": "npm run clean && tsup-node && tsc -p . --emitDeclarationOnly",
-    "dev": "concurrently npm:dev:*",
-    "dev:build": "tsup --watch --sourcemap",
-    "dev:types": "tsc -p . --emitDeclarationOnly --watch"
+    "dev": "tsup --watch --sourcemap"
   },
   "dependencies": {
     "@saus/runtime": "workspace:*",

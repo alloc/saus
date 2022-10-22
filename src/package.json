@@ -3,9 +3,7 @@
   "scripts": {
     "clean": "rimraf ./dist && git checkout HEAD dist && npm run link",
     "build": "npm run clean && NODE_ENV=production tsup && tsc -p . --emitDeclarationOnly",
-    "dev": "concurrently npm:dev:*",
-    "dev:build": "tsup --watch --sourcemap",
-    "dev:types": "tsc -p . --emitDeclarationOnly --watch",
+    "dev": "tsup --watch --sourcemap",
     "link": "cd dist && ln -sf ../node_modules/@client ./client && ln -sf ../node_modules/@runtime ./runtime && ln -sf ../node_modules/@utils ./utils && ln -sf ../node_modules/@vm ./vm",
     "lint": "tsc -p . --noEmit && eslint . --ext .ts",
     "prepare": "npm run link"
