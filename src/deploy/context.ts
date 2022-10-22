@@ -62,7 +62,7 @@ export interface DeployContext extends BundleContext {
   revertFns: RevertFn[]
   deployHooks: DeployHookRef[]
   deployPlugins: PluginCache<string | DeployHookRef, DeployPlugin>
-  addDeployTarget: (...args: DeployTargetArgs) => Promisable<void>
+  addDeployTarget: (...args: DeployTargetArgs) => any
   addDeployAction: <T>(action: DeployAction<T>) => Promise<T>
   syncDeployCache: () => Promise<void>
   moduleMap: ModuleMap

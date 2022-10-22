@@ -269,7 +269,6 @@ export async function deploy(
     return preDeploySetupPromise
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   ctx.addDeployTarget = async (...args) => {
     await preDeploySetup()
     const index = ctx.targets.push(args) - 1
