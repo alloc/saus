@@ -27,6 +27,7 @@ export async function deployWebsiteToS3(
   const { debugBase = '' } = ctx.bundle
   const { assetsDir } = ctx.config.build
 
+  const stackUri = config.name + '-' + config.region
   const awsInfra = await useCloudFormation({
     name: config.name,
     region: config.region,
@@ -157,7 +158,7 @@ export async function deployWebsiteToS3(
         'DefaultCachePolicy',
         new aws.CloudFront.CachePolicy({
           CachePolicyConfig: {
-            Name: 'DefaultCachePolicy',
+            Name: 'DefaultCachePolicy-' + stackUri,
             ParametersInCacheKeyAndForwardedToOrigin: {
               CookiesConfig: CookiesConfig(config.vary?.cookies),
               HeadersConfig: {
@@ -186,7 +187,7 @@ export async function deployWebsiteToS3(
         'AWSOriginRequestPolicy',
         new aws.CloudFront.OriginRequestPolicy({
           OriginRequestPolicyConfig: {
-            Name: 'AWSOriginRequestPolicy',
+            Name: 'AWSOriginRequestPolicy-' + stackUri,
             CookiesConfig: CookiesConfig(
               mergeArrays(config.forward?.cookies, config.vary?.cookies)
             ),
