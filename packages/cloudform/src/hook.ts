@@ -1,5 +1,6 @@
 import { defineDeployHook } from 'saus/deploy'
 import { describeStack } from './api/describeStack'
+import { describeStackEvents } from './api/describeStackEvents'
 import { signedRequest } from './api/request'
 import secrets from './secrets'
 import { Stack } from './types'
@@ -42,7 +43,19 @@ export default defineDeployHook(ctx => ({
         if (err.code !== 'AlreadyExistsException') {
           throw err
         }
-        await this.update!(stack, null!, onRevert)
+        // If spawning failed and a rollback was performed, the stack is
+        // in a deleted state and needs to be explicitly deleted before
+        // we can spawn it again.
+        const [lastEvent] = await describeStackEvents(stack)
+        if (lastEvent?.resourceStatus == 'ROLLBACK_COMPLETE') {
+          await this.kill(stack, onRevert)
+          await this.spawn(stack, onRevert)
+        } else {
+          // This happens when the deployment cache isn't aware that the
+          // stack already exists. In this case, we can just update the
+          // stack.
+          await this.update!(stack, null!, onRevert)
+        }
       })
   },
   async update(stack, _, onRevert) {
