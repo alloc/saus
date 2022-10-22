@@ -50,11 +50,13 @@ export default defineDeployHook(ctx => ({
         if (lastEvent?.resourceStatus == 'ROLLBACK_COMPLETE') {
           await this.kill(stack, onRevert)
           await this.spawn(stack, onRevert)
-        } else {
+        } else if (!lastEvent?.resourceStatus?.startsWith('DELETE_')) {
           // This happens when the deployment cache isn't aware that the
           // stack already exists. In this case, we can just update the
           // stack.
           await this.update!(stack, null!, onRevert)
+        } else {
+          throw err
         }
       })
   },
