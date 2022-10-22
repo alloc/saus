@@ -1,4 +1,4 @@
-import { unwrapBuffer } from '@utils/buffer'
+import { unwrapBuffer } from '@utils/node/buffer'
 import { AnyBody } from './writeBody'
 
 export function unwrapBody(body: AnyBody) {

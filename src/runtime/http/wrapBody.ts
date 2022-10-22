@@ -1,4 +1,4 @@
-import { Buffer, unwrapBuffer } from '@utils/buffer'
+import { Buffer, unwrapBuffer } from '@utils/node/buffer'
 import { Body } from './writeBody'
 
 export function wrapBody<T>(body: T): ToBody<T>
