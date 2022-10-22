@@ -1,7 +1,9 @@
-import { createFilter } from '@rollup/pluginutils'
+import { createFilter, FilterPattern } from '@rollup/pluginutils'
 import { memoizeFn } from '@utils/memoizeFn'
+import { OneOrMany } from '@utils/types'
 import createDebug from 'debug'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { Promisable } from 'type-fest'
 import { SausContext } from './context'
@@ -85,8 +87,14 @@ export async function scanPublicDir(
     root = path.resolve(context.root, root)
   }
 
+  let exclude: OneOrMany<string | RegExp>[] =
+    os.platform() == 'darwin' ? ['.DS_Store'] : []
+  if (context.publicDir.exclude) {
+    exclude.push(context.publicDir.exclude)
+  }
+  exclude = exclude.flat()
   const isExcluded = createFilter(
-    context.publicDir.exclude || /^$/,
+    exclude.length ? (exclude as FilterPattern) : /^$/,
     undefined,
     { resolve: false }
   )
