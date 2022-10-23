@@ -4,6 +4,7 @@ import { murmurHash } from '@utils/murmur3'
 import etag from 'etag'
 import type { Cache } from '../../cache'
 import { stateModulesByName } from '../../cache'
+import { waitForCachePlugin } from '../../cachePlugin'
 import { Endpoint } from '../../endpoint'
 import type { Headers } from '../../http'
 import { makeRequestUrl } from '../../makeRequest'
@@ -59,6 +60,9 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         const module = `throw Object.assign(Error(), ${JSON.stringify(props)})`
         sendModule(req, module)
       } else if (page?.props) {
+        await waitForCachePlugin(
+          page.props._included.map(loaded => loaded.stateModule.key)
+        )
         const module = app.renderPageState(page)
         sendModule(req, module)
       }
