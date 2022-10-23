@@ -154,6 +154,6 @@ export function injectDeployContext(context: DeployContext) {
   // Note: The __dirname here equals the path of the `dist` directory,
   // because this function is extracted into a common chunk and all
   // common chunks are stored in the `dist` directory.
-  contextPath = toSausPath('core/context.cjs')
+  contextPath = toSausPath('client/node/context.cjs')
   injectNodeModule(contextPath, context)
 }

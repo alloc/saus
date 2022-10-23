@@ -17,7 +17,7 @@ interface Context {
 declare const require: any
 
 export async function loadPageClient(routePath: string, routeParams?: any) {
-  const context: Context = (void 0, require)('../core/context.cjs')
+  const context: Context = (void 0, require)('./context.cjs')
   const { ssrRequire, routes, defaultRoute, routeClients } = context
 
   const route =
