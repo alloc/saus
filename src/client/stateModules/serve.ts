@@ -20,7 +20,7 @@ export function serveState(
   const sortedArgsPayload = JSON.stringify(args, sortObjects)
 
   const key = getStateModuleKey(module, sortedArgsPayload)
-  const loader = async () => {
+  const loader: Cache.EntryLoader = async entry => {
     const stateUrl = prependBase(saus.stateModuleBase + key + '.js')
     const resp = await fetch(stateUrl, {
       headers: { 'x-args': btoa(sortedArgsPayload) },
@@ -44,7 +44,7 @@ export function serveState(
 
     // Skip updating the cache and use the cache entry that was
     // injected by the script we just evaluated.
-    return Symbol.for('skip')
+    entry.skip()
   }
 
   return serveCache.access(key, loader, {
