@@ -31,17 +31,22 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
       : route
 
     const inlinedModules = new Set<StateModule<any, []>>()
-    const inlineState = (module: StateModule<any, []>) => {
-      inlinedModules.add(module)
-      return addStateModule(module)
-    }
-
     const loadedModules = new Map<string, Promise<LoadedStateModule>>()
-    const addStateModule = (module: StateModule<any, []>) => {
+
+    const loadStateModule = (
+      module: StateModule<any, []>,
+      isInlined?: boolean
+    ) => {
       const { key } = module
+      if (isInlined) {
+        inlinedModules.add(module)
+      }
       let promise = loadedModules.get(key)
       if (!promise) {
-        promise = serveState(module).then(served => {
+        promise = serveState(module, {
+          // Inlined modules shouldn't be externally cached.
+          bypassPlugin: isInlined,
+        }).then(served => {
           if (!globalCache.loaded[key]) {
             // Expose the hydrated state to SSR components.
             const hydratedState = hydrateState(key, served, module, {
@@ -73,12 +78,14 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
     )
     for (const included of routeInclude) {
       if (included) {
-        await loadIncludedState(included, request, route, addStateModule)
+        await loadIncludedState(included, request, route, loadStateModule)
       }
     }
 
     if (routeConfig.inline) {
-      await loadIncludedState(routeConfig.inline, request, route, inlineState)
+      await loadIncludedState(routeConfig.inline, request, route, module =>
+        loadStateModule(module, true)
+      )
     }
 
     const clientProps: CommonClientProps = (
@@ -96,7 +103,7 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
 
     const props: CommonServerProps = await loadServerProps(
       clientProps,
-      addStateModule
+      loadStateModule
     )
 
     type InternalProps = Omit<CommonServerProps, keyof CommonClientProps>
