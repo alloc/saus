@@ -72,7 +72,9 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 
     const stateModule = stateModulesByName.get(name)
     if (stateModule) {
-      let promise = serveCache.get(cacheKey) as Promise<Cache.Entry> | undefined
+      let promise = serveCache.access(cacheKey) as
+        | Promise<Cache.Entry>
+        | undefined
       if (!promise) {
         let args: any = req.headers['x-args']
         if (!args) {
