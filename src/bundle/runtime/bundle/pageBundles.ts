@@ -237,7 +237,9 @@ export const providePageBundles: App.Plugin = app => {
         }
 
         // Wait for pending cache updates that the page may depend on.
-        await waitForCachePlugin()
+        await waitForCachePlugin(
+          page.props._included.map(loaded => loaded.stateModule.key)
+        )
 
         const finishedPage: PageBundle = {
           id: filename,

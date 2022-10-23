@@ -39,10 +39,12 @@ export function injectCachePlugin(plugin: CachePlugin) {
   plugin.pendingPuts ||= new Map()
 }
 
-export function waitForCachePlugin() {
+export function waitForCachePlugin(keys?: string[]) {
   if (!serveCache.plugin) {
     return Promise.resolve()
   }
   const { pendingPuts } = serveCache.plugin
-  return Promise.all(pendingPuts!.values())
+  return Promise.all(
+    keys ? keys.map(key => pendingPuts!.get(key)) : pendingPuts!.values()
+  )
 }
