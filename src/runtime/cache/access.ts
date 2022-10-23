@@ -140,7 +140,14 @@ export function access<State>(
       }
       const state = await loader!(context)
       if (context.skipped) {
-        return this.loaded[cacheKey]
+        const cached = this.loaded[cacheKey]
+        if (cached) {
+          return cached
+        }
+        throw Object.assign(
+          Error(`Entry was skipped but not cached: "${cacheKey}"`),
+          { code: 'ENTRY_SKIPPED' }
+        )
       }
       entry.state = state
       entry.maxAge = isFinite(context.maxAge) ? context.maxAge : undefined
