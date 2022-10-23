@@ -17,13 +17,18 @@ export function hydrateState(
   module: StateModule
 ) {
   const hydrate = module['_hydrate']
-  const hydratedState = hydrate ? hydrate(served.state, served) : null!
-  const hydrated = hydrate ? { ...served, state: hydratedState } : served
-  globalCache.loaded[key] = hydrated
-  globalCache.listeners[module.name]?.forEach(callback =>
-    callback(hydratedState, hydrated)
-  )
-  return hydratedState
+  try {
+    const hydratedState = hydrate ? hydrate(served.state, served) : null!
+    const hydrated = hydrate ? { ...served, state: hydratedState } : served
+    globalCache.loaded[key] = hydrated
+    globalCache.listeners[module.name]?.forEach(callback =>
+      callback(hydratedState, hydrated)
+    )
+    return hydratedState
+  } catch (err: any) {
+    err.message = `Error while hydrating state module "${key}": ${err.message}`
+    throw err
+  }
 }
 
 /**
