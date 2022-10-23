@@ -1,6 +1,7 @@
 import type { Cache } from '@runtime/cache'
 import { globalCache, stateModulesByName } from '@runtime/cache'
 import { getStateModuleKey } from '@runtime/getStateModuleKey'
+import { serveCache } from '@runtime/stateModules/serve'
 import { hydrateState, preHydrateCache } from './hydrate'
 
 /**
@@ -14,7 +15,7 @@ export function setState<Args extends readonly any[]>(
   maxAge?: Cache.MaxAge
 ): any {
   const key = getStateModuleKey(name, args)
-  const served = { state, args, timestamp, maxAge }
+  const served = (serveCache.loaded[key] = { state, args, timestamp, maxAge })
 
   // Page state is never hydrated.
   if (name[0] === '/') {
