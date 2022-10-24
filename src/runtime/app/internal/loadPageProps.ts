@@ -2,6 +2,7 @@ import { mergeArrays, toArray } from '@utils/array'
 import { ascendBranch } from '@utils/ascendBranch'
 import { prependBase } from '@utils/base'
 import { noop } from '@utils/noop'
+import createDebug from 'debug'
 import { globalCache } from '../../cache'
 import { CommonClientProps } from '../../clientTypes'
 import { Endpoint } from '../../endpoint'
@@ -17,11 +18,14 @@ import {
   PagePropsLoader,
 } from '../types'
 
+const debug = createDebug('saus:pages')
+
 export function createPagePropsLoader(context: App.Context): PagePropsLoader {
   const { config, profile } = context
   const { debugBase } = config
 
   return async function loadPageProps(url, route) {
+    debug('Loading page props: %s', url)
     const requestUrl = makeRequestUrl(url)
     const request = makeRequest(requestUrl, noop)
 

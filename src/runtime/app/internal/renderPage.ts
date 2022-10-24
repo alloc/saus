@@ -86,9 +86,11 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
   const loadRouteLayout = async (route: Route) => {
     let layoutModule: any
     if (typeof route.layout == 'function') {
+      debug('Loading route layout')
       layoutModule = await route.layout()
     } else {
       const layoutEntry = route.layoutEntry || config.defaultLayout.id
+      debug('Loading route layout: %s', layoutEntry)
       layoutModule = await ctx.ssrRequire(layoutEntry)
     }
     return unwrapDefault<RouteLayout>(layoutModule)
@@ -117,6 +119,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       try {
         props = await promisedProps
         props.error = error
+        debug('Loading route module: %s', route.path)
         routeModule = await route.load()
         routeLayout = await loadRouteLayout(route)
         error = undefined
@@ -155,6 +158,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         await options.setup(route, url)
       }
       try {
+        debug('Loading route module: %s', route.path)
         routeModule = await route.load()
         routeLayout = await loadRouteLayout(route)
       } catch (e) {
