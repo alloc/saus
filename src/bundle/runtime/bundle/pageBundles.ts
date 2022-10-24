@@ -119,7 +119,8 @@ export const providePageBundles: App.Plugin = app => {
 
       const bodyTags: HtmlTagDescriptor[] = []
 
-      // Share the state cache and state modules b/w debug and production views.
+      // Share the state cache and state modules between debug and
+      // production views.
       const stateModuleBase = config.stateModuleBase.slice(1)
 
       // State modules are not renamed for debug view.
@@ -168,9 +169,10 @@ export const providePageBundles: App.Plugin = app => {
       if (isDebug) {
         postHtmlProcessors = [
           ...postHtmlProcessors,
-          // SSR modules are unaware of the `isDebug` value, so they never use
-          // the `debugBase` when rendering local URLs. Therefore, we need to
-          // scan the HTML for links and rewrite them for the debug view.
+          // SSR modules are unaware of the `isDebug` value, so they
+          // never use the `debugBase` when rendering local URLs.
+          // Therefore, we need to scan the HTML for links and rewrite
+          // them for the debug view.
           injectDebugBase(debugBase),
         ]
       }
