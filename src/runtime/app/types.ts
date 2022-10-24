@@ -76,6 +76,7 @@ export type RenderedFile = {
   data: BufferLike
   mime: string
   expiresAt?: number
+  wasCached?: boolean
 }
 
 export type RenderedPage = {

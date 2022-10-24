@@ -4,14 +4,16 @@ import { murmurHash } from '@utils/murmur3'
 import etag from 'etag'
 import type { Cache } from '../../cache'
 import { stateModulesByName } from '../../cache'
-import { waitForCachePlugin } from '../../cachePlugin'
+import { toExpiresHeader } from '../../cache/expiration'
 import { Endpoint } from '../../endpoint'
-import type { Headers } from '../../http'
+import { ResponseHeaders } from '../../http/headers'
 import { makeRequestUrl } from '../../makeRequest'
+import { setRequestMetadata } from '../../requestMetadata'
 import { route } from '../../routeHooks'
 import type { Route } from '../../routeTypes'
 import { serveCache, serveState } from '../../stateModules/serve'
 import { ParsedUrl, parseUrl } from '../../url'
+import { collectStateFiles } from '../collectStateFiles'
 import type { App, RenderPageResult } from '../types'
 
 const indexFileRE = /(^|\/)index$/
@@ -58,13 +60,17 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
       if (error) {
         const props = { message: error.message, stack: error.stack }
         const module = `throw Object.assign(Error(), ${JSON.stringify(props)})`
-        sendModule(req, module)
+        sendModule(req, module, {
+          'cache-control': 'no-store',
+        })
       } else if (page?.props) {
-        await waitForCachePlugin(
-          page.props._included.map(loaded => loaded.stateModule.key)
-        )
+        setRequestMetadata(req, { page })
+        collectStateFiles(page.files, page.props._included, app)
+
         const module = app.renderPageState(page)
-        sendModule(req, module)
+        sendModule(req, module, {
+          expires: toExpiresHeader(page.props._ts, page.props._maxAge),
+        })
       }
     }
   })
@@ -100,7 +106,9 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
       if (entry) {
         if (Array.isArray(entry.args)) {
           const module = app.renderStateModule(name, entry)
-          return sendModule(req, module)
+          return sendModule(req, module, {
+            expires: toExpiresHeader(entry.timestamp, entry.maxAge),
+          })
         }
         console.warn(
           'Cannot render a state module without its arguments: ' + cacheKey
@@ -121,13 +129,19 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
   })
 }
 
-const sendModule = (req: Endpoint.Request, text: string) =>
-  req.respondWith(200, { text, headers: makeModuleHeaders(text) })
-
-const makeModuleHeaders = (text: string): Headers => ({
-  'content-type': 'application/javascript',
-  etag: etag(text, { weak: true }),
-})
+const sendModule = (
+  req: Endpoint.Request,
+  text: string,
+  headers?: ResponseHeaders
+) =>
+  req.respondWith(200, {
+    text,
+    headers: {
+      ...headers,
+      'content-type': 'application/javascript',
+      etag: etag(text, { weak: true }),
+    },
+  })
 
 const parseStateModuleKey = (key: string) => {
   const match = /^(.+?)(?:\.([^.]+))?$/.exec(key)!

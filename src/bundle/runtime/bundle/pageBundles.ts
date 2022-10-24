@@ -1,7 +1,7 @@
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
+import { collectStateFiles } from '@runtime/app/collectStateFiles'
 import { App, CommonServerProps, ResolvedRoute } from '@runtime/app/types'
 import { PageBundle } from '@runtime/bundleTypes'
-import { toExpirationTime } from '@runtime/cache/expiration'
 import { waitForCachePlugin } from '@runtime/cachePlugin'
 import { RuntimeConfig } from '@runtime/config'
 import { getLayoutEntry } from '@runtime/getLayoutEntry'
@@ -124,17 +124,7 @@ export const providePageBundles: App.Plugin = app => {
       const stateModuleBase = config.stateModuleBase.slice(1)
 
       // State modules are not renamed for debug view.
-      for (const loaded of [...page.props._included].reverse()) {
-        const { key, name } = loaded.stateModule
-        const stateModuleUrl = stateModuleBase + key + '.js'
-        const stateModuleText = app.renderStateModule(name, loaded)
-        page.files.push({
-          id: stateModuleUrl,
-          data: stateModuleText,
-          mime: 'application/javascript',
-          expiresAt: toExpirationTime(loaded, undefined),
-        })
-      }
+      collectStateFiles(files, page.props._included, app)
 
       // If the route fails to render, the catch route is used instead.
       route = page.route
@@ -212,7 +202,9 @@ export const providePageBundles: App.Plugin = app => {
           const pageProps = page.props as CommonServerProps
           files.push({
             id: pageStateId,
-            data: app.renderPageState(page),
+            get data() {
+              return app.renderPageState(page)
+            },
             mime: 'application/javascript',
             expiresAt:
               pageProps._maxAge != null
