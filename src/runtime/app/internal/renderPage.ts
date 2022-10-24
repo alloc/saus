@@ -6,6 +6,7 @@ import createDebug from 'debug'
 import { Promisable } from 'type-fest'
 import { RouteLayout } from '../../layouts'
 import { RenderRequest } from '../../renderer'
+import { renderHtml } from '../../renderHtml'
 import { Route, RouteModule } from '../../routeTypes'
 import { ParsedUrl } from '../../url'
 import {
@@ -16,7 +17,6 @@ import {
   RenderPageOptions,
   RenderPageResult,
 } from '../types'
-import { renderHtml } from './renderHtml'
 
 const debug = createDebug('saus:pages')
 
