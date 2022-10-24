@@ -69,7 +69,6 @@ const createPageEndpoint =
     return {
       getEndpoints: (method, route) =>
         method == 'GET' &&
-        route.moduleId !== null &&
         (async (req, headers) => {
           if (req.searchParams.has('html-proxy')) {
             return // handled by vite:html

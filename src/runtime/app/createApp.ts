@@ -45,9 +45,9 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
     if (!endpointMap) {
       endpointMap = route.methods[method] = {}
 
-      if (route.moduleId && app.getEndpoints) {
+      if (route.moduleId && app.getEndpoints.length) {
         route.endpoints ||= []
-        const endpoints = toArray(app.getEndpoints(method, route))
+        const endpoints = app.getEndpoints.map(get => get(method, route)).flat()
         for (const endpoint of endpoints) {
           if (!endpoint) continue
           endpoint.method = method
@@ -127,7 +127,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
   const app = {
     config,
     resolveRoute,
-    getEndpoints: null,
+    getEndpoints: [],
   } as App
 
   defineLazy(app, {
@@ -179,12 +179,20 @@ function prepareApp(app: App, ctx: App.Context, plugins: App.Plugin[]) {
   plugins.forEach(plugin => {
     const overrides = plugin(app)
     if (overrides)
-      for (const [key, value] of Object.entries(overrides)) {
-        Object.defineProperty(app, key, {
-          value,
-          enumerable: true,
-          configurable: true,
-        })
+      for (const [key, value] of Object.entries(overrides) as [
+        keyof App,
+        any
+      ][]) {
+        const origValue = app[key]
+        if (Array.isArray(origValue)) {
+          origValue.push(value)
+        } else {
+          Object.defineProperty(app, key, {
+            value,
+            enumerable: true,
+            configurable: true,
+          })
+        }
       }
   })
 }

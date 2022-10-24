@@ -1,6 +1,7 @@
 import type { Buffer } from '@utils/buffer'
 import type { ParsedHead } from '@utils/parseHead'
 import type { Falsy } from '@utils/types'
+import { Merge } from 'type-fest'
 import type { PageBundle, PageBundleOptions } from '../bundleTypes'
 import type { Cache } from '../cache'
 import type { CommonClientProps } from '../clientTypes'
@@ -16,7 +17,7 @@ export interface App {
   readonly catchRoute: Route | undefined
   readonly defaultRoute: Route | undefined
   resolveRoute: RouteResolver
-  getEndpoints: Endpoint.Generator | null
+  getEndpoints: Endpoint.Generator[]
   callEndpoints(
     url: Endpoint.RequestUrl,
     resolved?: ResolvedRoute
@@ -59,7 +60,11 @@ export interface App {
 }
 
 export namespace App {
-  export type Plugin = (app: App) => Partial<App> | void
+  export type Plugin = (app: App) => Partial<Merge<App, PluginOverrides>> | void
+
+  type PluginOverrides = {
+    getEndpoints: Endpoint.Generator
+  }
 
   export interface Context extends RoutesModule {
     config: RuntimeConfig
