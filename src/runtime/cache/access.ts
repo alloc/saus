@@ -106,8 +106,11 @@ export function access<State>(
     | Cache.EntryPromise<State>
     | undefined
 
-  if (oldPromise || !loader) {
-    return oldPromise && resolveEntry(oldPromise, options, oldPromise.cancel)
+  if (oldPromise) {
+    return resolveEntry(oldPromise, options, oldPromise.cancel)
+  }
+  if (!loader) {
+    return // Nothing cached.
   }
 
   const abortCtrl = new AbortController()
@@ -151,6 +154,7 @@ export function access<State>(
       }
       entry.state = state
       entry.maxAge = isFinite(context.maxAge) ? context.maxAge : undefined
+      options.onLoad?.(entry)
       return entry
     })
 
