@@ -31,11 +31,17 @@
       "default": "./deploy/index.js"
     },
     "./env/*": "./env/*.d.ts",
+    "./app": {
+      "types": "./runtime/app/index.d.ts",
+      "import": "./runtime/app/index.mjs",
+      "default": "./runtime/app/index.js"
+    },
     "./app/*": {
       "types": "./runtime/app/*.d.ts",
       "import": "./runtime/app/*.mjs",
       "default": "./runtime/app/*.js"
     },
+    "./app/internal/*": null,
     "./cache": {
       "types": "./runtime/cache.d.ts",
       "import": "./runtime/cache.mjs",
@@ -61,6 +67,7 @@
       "import": "./runtime/http/*.mjs",
       "default": "./runtime/http/*.js"
     },
+    "./http/internal/*": null,
     "./babel": {
       "types": "./utils/babel.d.ts",
       "import": "./utils/babel.mjs",
@@ -81,6 +88,8 @@
       "import": "./utils/*.mjs",
       "default": "./utils/*.js"
     },
+    "./utils/babel/*": null,
+    "./utils/node/*": null,
     "./vm/*": {
       "types": "./vm/*.d.ts",
       "import": "./vm/*.mjs",

@@ -8,7 +8,6 @@ import { RouteLayout } from '../../layouts'
 import { RenderRequest } from '../../renderer'
 import { Route, RouteModule } from '../../routeTypes'
 import { ParsedUrl } from '../../url'
-import { renderHtml } from '../renderHtml'
 import {
   AnyServerProps,
   App,
@@ -17,6 +16,7 @@ import {
   RenderPageOptions,
   RenderPageResult,
 } from '../types'
+import { renderHtml } from './renderHtml'
 
 const debug = createDebug('saus:pages')
 
