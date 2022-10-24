@@ -9,4 +9,5 @@ export * from '@runtime/routeTypes'
 export * from '@runtime/url'
 export { default as endent } from 'endent'
 export * from './AssetStore'
+export * from './cache'
 

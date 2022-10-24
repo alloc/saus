@@ -25,11 +25,6 @@
       "import": "./core/index.mjs",
       "default": "./core/index.js"
     },
-    "./cache": {
-      "types": "./core/cache.d.ts",
-      "import": "./core/cache.mjs",
-      "default": "./core/cache.js"
-    },
     "./deploy": {
       "types": "./deploy/index.d.ts",
       "import": "./deploy/index.mjs",
