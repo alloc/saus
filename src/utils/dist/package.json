@@ -3,6 +3,7 @@
     "./AbortController": {
       "node": "./AbortController/index.node.js",
       "types": "./AbortController/index.d.ts",
+      "import": "./AbortController/index.mjs",
       "default": "./AbortController/index.js"
     },
     "./*": {
