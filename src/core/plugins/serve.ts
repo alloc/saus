@@ -1,6 +1,6 @@
 import { renderErrorFallback } from '@runtime/app/errorFallback'
 import { createNegotiator } from '@runtime/app/negotiator'
-import { RenderedFile, ResolvedRoute } from '@runtime/app/types'
+import { ResolvedRoute } from '@runtime/app/types'
 import { Endpoint } from '@runtime/endpoint'
 import { writeResponse } from '@runtime/http/writeResponse'
 import { makeRequestUrl } from '@runtime/makeRequest'
@@ -34,7 +34,6 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
   init = new Promise(resolve => (didInit = resolve))
 
   let context: DevContext
-  let fileCache: Record<string, RenderedFile> = {}
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   let serveApp: vite.Connect.NextHandleFunction = (req, res, next) =>
@@ -85,9 +84,12 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           return process.nextTick(next)
         }
         await init
-        if (url in fileCache) {
-          const { data, mime } = fileCache[url]
+        if (url in context.servedFiles) {
+          const { data, mime, expiresAt } = context.servedFiles[url]
           res.setHeader('Content-Type', mime)
+          if (expiresAt) {
+            res.setHeader('Expires', new Date(expiresAt).toUTCString())
+          }
           res.write(typeof data == 'string' ? data : Buffer.from(data.buffer))
           return res.end()
         }

@@ -181,6 +181,7 @@ async function startServer(
   context.injectedModules = createModuleProvider({ watcher })
   context.liveModulePaths = new Set()
   context.pageSetupHooks = []
+  context.servedFiles = {}
   setupClientInjections(context)
 
   // Make the dev context available to internal functions.
