@@ -90,8 +90,10 @@ export type RenderedPage = {
 
 export type LoadedStateModule = Cache.Entry & {
   stateModule: StateModule
-  /** When true, this module was inlined with page-specific state */
-  inlined?: boolean
+  /** When true, this module was already cached. */
+  wasCached: boolean
+  /** When true, this module was inlined with page-specific state. */
+  inlined: boolean
 }
 
 export type ProfiledEvent = {

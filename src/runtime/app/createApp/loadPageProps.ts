@@ -43,10 +43,14 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
       }
       let promise = loadedModules.get(key)
       if (!promise) {
+        let wasCached = true
         promise = serveState(module, {
           // Inlined modules shouldn't be externally cached.
           bypassPlugin: isInlined,
-        }).then(served => {
+          onLoad() {
+            wasCached = false
+          },
+        }).then((served): LoadedStateModule => {
           if (!globalCache.loaded[key]) {
             // Expose the hydrated state to SSR components.
             const hydratedState = hydrateState(key, served, module, {
@@ -60,6 +64,7 @@ export function createPagePropsLoader(context: App.Context): PagePropsLoader {
           return {
             ...served,
             stateModule: module,
+            wasCached,
             get inlined() {
               return inlinedModules.has(module)
             },
