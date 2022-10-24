@@ -13,10 +13,13 @@ import {
   unloadModuleAndImporters,
 } from '@vm/moduleMap'
 import { CompiledModule, isLinkedModule, LinkedModule } from '@vm/types'
+import createDebug from 'debug'
 import { green, yellow } from 'kleur/colors'
 import path from 'path'
 import { Promisable } from 'type-fest'
 import { DevContext } from './context'
+
+const debug = createDebug('saus:hotReload')
 
 export interface HotReloadFn {
   (file: string, ssr?: boolean): Promise<void>
@@ -77,6 +80,7 @@ export function createHotReload(
 
     let stateCleared = 0
     let routesChanged = dirtyFiles.has(context.routesPath)
+    debug(`Starting hot reload of ${dirtyFiles.size} files`)
 
     dirtyFiles.clear()
     dirtyClientModules.clear()
@@ -138,6 +142,7 @@ export function createHotReload(
       }
     }
 
+    debug(`Finished hot reload.`)
     if (handler.finish) {
       await handler.finish()
     }
@@ -158,11 +163,15 @@ export function createHotReload(
 
   async function reloadFile(file: string, ssr = reloadConfig.ssr) {
     const getPendingReload = () => {
+      if (debug.enabled && !pendingReload) {
+        debug(`Hot reload is imminent.`)
+      }
       return (pendingReload ||= defer()).promise
     }
     if (dirtyFiles.has(file)) {
       return getPendingReload()
     }
+    debug(`File needs reload: "${file}"`)
     const moduleMap = context.moduleMap
     const changedModule = moduleMap.get(file) || context.linkedModules[file]
     if (changedModule) {
@@ -241,6 +250,7 @@ export function createHotReload(
                 void reloadFile(importer.id, ssr)
               })
         }
+        debug(`Clearing exports of "${module.id}"`)
         clearExports(module as any)
         if (!isAccepted && !ssr) {
           dirtyClientModules.add(module.id)
