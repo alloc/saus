@@ -116,7 +116,7 @@ export function access<State>(
   const abortCtrl = new AbortController()
   const pluginPromise =
     !options.bypassPlugin && this.plugin?.get
-      ? this.plugin.get(cacheKey, abortCtrl.signal)
+      ? this.plugin.get(cacheKey, options, abortCtrl.signal)
       : undefined
 
   const context = new EntryContext(cacheKey, entry?.state, abortCtrl.signal)

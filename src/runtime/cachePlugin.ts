@@ -18,6 +18,7 @@ export interface CachePlugin {
    */
   get?: (
     cacheKey: string,
+    options: Cache.AccessOptions,
     abortSignal: AbortSignal
   ) => Promisable<Cache.Entry<any> | undefined>
   /**
