@@ -1,4 +1,4 @@
-import { globalCache } from '@runtime/cache'
+import { globalCache } from '@runtime/cache/global'
 import { preCacheState } from './preCacheState'
 import { preHydrateCache } from './stateModules/hydrate'
 

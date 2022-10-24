@@ -1,6 +1,6 @@
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir } from '@/paths'
-import { globalCache, stateModulesByName } from '@runtime/cache'
+import { globalCache, stateModulesByName } from '@runtime/cache/global'
 import { stateModulesByFile } from '@runtime/stateModules/global'
 import { serveCache } from '@runtime/stateModules/serve'
 import { prependBase } from '@utils/base'

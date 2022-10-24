@@ -1,5 +1,5 @@
+import { Cache, createCache } from '@/cache'
 import type { RenderPageResult } from '@runtime/app/types'
-import { Cache, createCache } from '@runtime/cache'
 import {
   loadResponseCache,
   setResponseCache,

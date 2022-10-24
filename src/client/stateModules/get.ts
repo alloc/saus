@@ -1,4 +1,4 @@
-import { Cache } from '@runtime/cache'
+import type { Cache } from '@runtime/cache/types'
 import { getLoadedStateOrThrow } from '@runtime/getLoadedStateOrThrow'
 import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import type { StateModule } from '@runtime/stateModules'

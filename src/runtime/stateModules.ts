@@ -1,6 +1,7 @@
 import { NoInfer } from '@utils/types'
 import { Promisable } from 'type-fest'
-import { Cache, globalCache } from './cache'
+import { globalCache } from './cache/global'
+import { Cache } from './cache/types'
 import { getStateModuleKey } from './getStateModuleKey'
 import { getState } from './stateModules/get'
 import { trackStateModule } from './stateModules/global'

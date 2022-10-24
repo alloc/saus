@@ -1,5 +1,5 @@
 import type { Promisable } from 'type-fest'
-import type { Cache } from './cache'
+import type { Cache } from './cache/types'
 import { serveCache } from './stateModules/serve'
 
 /**

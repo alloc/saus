@@ -1,4 +1,5 @@
-import { Cache, globalCache } from '@runtime/cache'
+import { globalCache } from '@runtime/cache/global'
+import type { Cache } from '@runtime/cache/types'
 import type { StateModule } from '@runtime/stateModules'
 
 /**

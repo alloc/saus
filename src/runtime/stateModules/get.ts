@@ -1,5 +1,5 @@
 import { klona as deepCopy } from '@utils/klona'
-import { Cache } from '../cache'
+import { Cache } from '../cache/types'
 import { getLoadedStateOrThrow } from '../getLoadedStateOrThrow'
 import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'

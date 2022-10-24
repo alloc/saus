@@ -1,5 +1,6 @@
 // HTTP helpers suitable for Node environments.
-import { Cache, globalCache } from '../cache'
+import { globalCache } from '../cache/global'
+import { Cache } from '../cache/types'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
 import { http, HttpRequestOptions } from './http'

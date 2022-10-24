@@ -1,0 +1,6 @@
+export { createCache } from '@runtime/cache/create'
+export * from '@runtime/cache/global'
+export type { Cache } from '@runtime/cache/types'
+export { injectCachePlugin } from '@runtime/cachePlugin'
+export type { CachePlugin } from '@runtime/cachePlugin'
+export { setState } from '@runtime/stateModules/setState'

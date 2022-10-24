@@ -1,4 +1,5 @@
-import { Cache, createCache } from '@runtime/cache'
+import { createCache } from '@runtime/cache/create'
+import type { Cache } from '@runtime/cache/types'
 import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import type { StateModule } from '@runtime/stateModules'
 import { sortObjects } from '@utils/sortObjects'

@@ -1,4 +1,4 @@
-import { globalCache } from '@runtime/cache'
+import { globalCache } from '@runtime/cache/global'
 import { getPagePath } from '@runtime/getPagePath'
 import { Route } from '@runtime/routeTypes'
 import { noop } from '@utils/noop'

@@ -1,4 +1,5 @@
-import { Cache, stateModulesByName } from '../cache'
+import { stateModulesByName } from '../cache/global'
+import type { Cache } from '../cache/types'
 import { getStateModuleKey } from '../getStateModuleKey'
 import { hydrateState } from '../stateModules/hydrate'
 

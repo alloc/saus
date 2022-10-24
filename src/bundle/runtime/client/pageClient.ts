@@ -1,4 +1,4 @@
-import { globalCache } from '@runtime/cache'
+import { globalCache } from '@/cache'
 import { getPagePath } from '@runtime/getPagePath'
 import { ssrImport } from '@runtime/ssrModules'
 import { baseToRegex } from '@utils/base'

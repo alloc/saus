@@ -1,5 +1,5 @@
-import { globalCache } from '@runtime/cache'
 import { toExpirationTime } from '@runtime/cache/expiration'
+import { globalCache } from '@runtime/cache/global'
 import { CommonClientProps } from '@runtime/clientTypes'
 import { getPageFilename } from '@utils/getPageFilename'
 import { AnyToObject } from '@utils/types'

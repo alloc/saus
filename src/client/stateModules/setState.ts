@@ -1,5 +1,5 @@
-import type { Cache } from '@runtime/cache'
-import { globalCache, stateModulesByName } from '@runtime/cache'
+import { globalCache, stateModulesByName } from '@runtime/cache/global'
+import type { Cache } from '@runtime/cache/types'
 import { getStateModuleKey } from '@runtime/getStateModuleKey'
 import { serveCache } from '@runtime/stateModules/serve'
 import { hydrateState, preHydrateCache } from './hydrate'

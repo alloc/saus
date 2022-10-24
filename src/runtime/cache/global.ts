@@ -1,5 +1,5 @@
-import { createCache } from './cache/create'
-import type { StateModule } from './stateModules'
+import type { StateModule } from '../stateModules'
+import { createCache } from './create'
 
 /**
  * All state in the global cache is meant to be used when rendering.
@@ -12,9 +12,3 @@ export const globalCache = createCache()
  * support.
  */
 export const stateModulesByName = new Map<string, StateModule>()
-
-export type { Cache } from './cache/types'
-export { injectCachePlugin } from './cachePlugin'
-export type { CachePlugin } from './cachePlugin'
-export { setState } from './stateModules/setState'
-export { createCache }

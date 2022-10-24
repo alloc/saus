@@ -1,4 +1,5 @@
-import { Cache, createCache } from '../cache'
+import { createCache } from '../cache/create'
+import { Cache } from '../cache/types'
 import { getStateModuleKey } from '../getStateModuleKey'
 import type { StateModule } from '../stateModules'
 import { debug } from './debug'
