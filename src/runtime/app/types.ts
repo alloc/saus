@@ -17,7 +17,7 @@ export interface App {
   readonly catchRoute: Route | undefined
   readonly defaultRoute: Route | undefined
   resolveRoute: RouteResolver
-  getEndpoints: Endpoint.Generator[]
+  getEndpoints: Endpoint.Generator | null
   callEndpoints(
     url: Endpoint.RequestUrl,
     resolved?: ResolvedRoute

@@ -119,10 +119,6 @@ export const providePageBundles: App.Plugin = app => {
 
       const bodyTags: HtmlTagDescriptor[] = []
 
-      // Share the state cache and state modules between debug and
-      // production views.
-      const stateModuleBase = config.stateModuleBase.slice(1)
-
       // State modules are not renamed for debug view.
       collectStateFiles(files, page.props._included, app)
 

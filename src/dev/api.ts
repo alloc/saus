@@ -229,7 +229,9 @@ async function startServer(
   }
 
   await prepareDevApp(context)
-  watcher.prependListener('change', context.hotReload)
+  watcher.prependListener('change', file => {
+    context.hotReload(file).catch(e => events.emit('error', e))
+  })
 
   // Use process.nextTick to ensure whoever is awaiting the `createServer`
   // call can handle this event.
@@ -274,7 +276,7 @@ function listen(
     }
   })
 
-  const listen = async () => {
+  const listen: () => any = async () => {
     try {
       if (await server.listen(undefined, isRestart)) {
         listening = true
