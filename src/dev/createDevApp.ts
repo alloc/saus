@@ -1,6 +1,6 @@
 import { DevContext } from '@/context'
 import { getEntryModules } from '@/getEntryModules'
-import { globalCachePath } from '@/paths'
+import { clientDir, globalCachePath } from '@/paths'
 import { cachePages } from '@runtime/app/cachePages'
 import { createApp } from '@runtime/app/createApp'
 import { renderErrorFallback } from '@runtime/app/errorFallback'
@@ -12,6 +12,7 @@ import { throttle } from '@utils/throttle'
 import { clearExports } from '@vm/moduleMap'
 import createDebug from 'debug'
 import os from 'os'
+import path from 'path'
 import { createHotReload } from './hotReload'
 
 const debug = createDebug('saus:dev')
@@ -25,7 +26,7 @@ export async function createDevApp(
     assetsDir: viteConfig.build.assetsDir,
     base: context.basePath,
     clientCacheId: '@fs' + globalCachePath,
-    clientHelpersId: '@id/saus/client/helpers.mjs',
+    clientHelpersId: '@fs' + path.join(clientDir, 'helpers.mjs'),
     clientRuntimeId: '@id/saus/client',
     command: 'dev',
     defaultLayout: context.defaultLayout,
