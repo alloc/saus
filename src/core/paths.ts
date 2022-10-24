@@ -7,6 +7,7 @@ export const sausRootDir = __DIST__
 export const bundleDir = toSausPath('bundle/runtime')
 export const clientDir = toSausPath('client')
 export const coreDir = toSausPath('core')
+export const emptyModulePath = toSausPath('runtime/emptyModule.mjs')
 export const globalCachePath = toSausPath('core/cache.mjs')
 export const httpDir = toSausPath('runtime/http')
 export const runtimeDir = toSausPath('runtime')
