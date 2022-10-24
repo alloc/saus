@@ -3,7 +3,6 @@ import {
   AssetStore,
   Endpoint,
   getRequestMetadata,
-  injectCachePlugin,
   ParsedUrl,
   parseUrl,
 } from 'saus/core'
@@ -13,6 +12,7 @@ import {
   ResponseHeaders,
   unwrapBody,
 } from 'saus/http'
+import { unwrapBuffer } from 'saus/node/buffer'
 import { assignDefaults } from 'saus/utils/assignDefaults'
 import { getPageFilename } from 'saus/utils/getPageFilename'
 import { pick } from 'saus/utils/pick'
@@ -57,21 +57,6 @@ export function setupPageStore(config: PageStoreConfig) {
       return headers
     }
 
-    injectCachePlugin({
-      put(name, entry) {
-        const req = parseUrl(
-          env.stateModuleBase + name + '.js'
-        ) as PageRuleContext
-        req.headers = {}
-
-        return config.store.put(
-          req.path.slice(1),
-          app.renderStateModule(name, entry),
-          resolveHeaders(req)
-        )
-      },
-    })
-
     const shouldSkipResponse = (
       req: Endpoint.Request,
       res: Endpoint.Response
@@ -88,24 +73,50 @@ export function setupPageStore(config: PageStoreConfig) {
       if (shouldSkipResponse(req, res)) {
         return
       }
+
+      const { page } = getRequestMetadata(req)
+      if (!page) {
+        return // HTML not rendered with Saus.
+      }
+
       const headers = resolveHeaders(req, res.headers.toJSON() || {})
       const body = unwrapBody(res.body!) as string | Buffer
-      // Someone visited a page through client-side routing.
-      if (req.path.endsWith('.html.js')) {
-        config.store.put(req.path.slice(1), body, headers)
-      }
-      // Someone visited a page through external link.
-      else if (res.headers.has('content-type', /^text\/html\b/)) {
-        const { page } = getRequestMetadata(req)
-        if (!page) {
-          return // HTML not rendered with Saus.
-        }
+      const file = req.path.endsWith('.html.js')
+        ? req.path.slice(1)
+        : res.headers.has('content-type', /^text\/html\b/)
+        ? getPageFilename(req.path)
+        : null
 
-        const file = getPageFilename(req.path)
-
-        config.store.put(file, body, headers)
-        config.store.put(file + '.js', app.renderPageState(page), headers)
+      if (!file) {
+        // By default, only .html.js and page requests have the `page`
+        // metadata property set on their request, but nothing will stop
+        // another package or the user from setting it.
+        return
       }
+
+      return Promise.all([
+        config.store.put(file, body, headers),
+        ...page.files
+          .filter(file => !file.wasCached)
+          .map(file => {
+            const fileReq = parseUrl(file.id) as PageRuleContext
+            fileReq.headers = {}
+
+            const expiresAt = Number(file.expiresAt)
+            const headers = resolveHeaders(fileReq, {
+              'content-type': file.mime,
+              expires: isFinite(expiresAt)
+                ? new Date(expiresAt).toUTCString()
+                : undefined,
+            })
+
+            return config.store.put(
+              file.id.slice(1),
+              unwrapBuffer(file.data),
+              headers
+            )
+          }),
+      ]) as Promise<any>
     })
   })
 }
