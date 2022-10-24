@@ -3,7 +3,7 @@ import { EventEmitter } from 'ee-ts'
 
 export interface DevEvents {
   listening(): void
-  restart(): void
+  restart(message?: string): void
   close(): void
   error(e: any): void
 }

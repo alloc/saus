@@ -1,4 +1,3 @@
-import { debug } from '@/debug'
 import { loadRoutes } from '@/loadRoutes'
 import { clientDir } from '@/paths'
 import { globalCache, stateModulesByName } from '@runtime/cache'
@@ -280,8 +279,7 @@ export function createHotReload(
       // Skip SSR reloading by Saus.
       dirtyFiles.clear()
 
-      debug(`Vite config changed. Restarting server.`)
-      return events.emit('restart')
+      return events.emit('restart', 'Vite config changed.')
     }
   }
 

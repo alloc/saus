@@ -1,4 +1,5 @@
 import { loadContext } from '@/context'
+import { debug } from '@/debug'
 import { getEntryModules } from '@/getEntryModules'
 import { getRequireFunctions } from '@/getRequireFunctions'
 import { getSausPlugins } from '@/getSausPlugins'
@@ -78,7 +79,8 @@ export async function createServer(
   // Stop promises from crashing the process.
   process.on('unhandledRejection', onError)
 
-  function restart() {
+  function restart(message?: string) {
+    debug((message ? message + ' ' : '') + 'Restarting server.')
     serverPromise = serverPromise.then(async oldServer => {
       try {
         await oldServer?.close()
