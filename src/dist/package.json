@@ -10,24 +10,9 @@
       "import": "./index.mjs",
       "default": "./index.js"
     },
-    "./babel": {
-      "types": "./utils/babel.d.ts",
-      "import": "./utils/babel.mjs",
-      "default": "./utils/babel.js"
-    },
-    "./babel/*": {
-      "types": "./utils/babel/*.d.ts",
-      "import": "./utils/babel/*.mjs",
-      "default": "./utils/babel/*.js"
-    },
     "./bundle": {
       "types": "./bundle/index.d.ts",
       "default": "./bundle/index.js"
-    },
-    "./cache": {
-      "types": "./runtime/cache.d.ts",
-      "import": "./runtime/cache.mjs",
-      "default": "./runtime/cache.js"
     },
     "./client": {
       "node": "./client/index.cjs",
@@ -35,16 +20,26 @@
       "import": "./client/index.mjs",
       "default": "./client/index.js"
     },
+    "./core": {
+      "types": "./core/index.d.ts",
+      "import": "./core/index.mjs",
+      "default": "./core/index.js"
+    },
     "./deploy": {
       "types": "./deploy/index.d.ts",
       "import": "./deploy/index.mjs",
       "default": "./deploy/index.js"
     },
     "./env/*": "./env/*.d.ts",
-    "./core": {
-      "types": "./core/index.d.ts",
-      "import": "./core/index.mjs",
-      "default": "./core/index.js"
+    "./app/*": {
+      "types": "./runtime/app/*.d.ts",
+      "import": "./runtime/app/*.mjs",
+      "default": "./runtime/app/*.js"
+    },
+    "./cache": {
+      "types": "./runtime/cache.d.ts",
+      "import": "./runtime/cache.mjs",
+      "default": "./runtime/cache.js"
     },
     "./html": {
       "types": "./runtime/html/index.d.ts",
@@ -65,6 +60,16 @@
       "types": "./runtime/http/*.d.ts",
       "import": "./runtime/http/*.mjs",
       "default": "./runtime/http/*.js"
+    },
+    "./babel": {
+      "types": "./utils/babel.d.ts",
+      "import": "./utils/babel.mjs",
+      "default": "./utils/babel.js"
+    },
+    "./babel/*": {
+      "types": "./utils/babel/*.d.ts",
+      "import": "./utils/babel/*.mjs",
+      "default": "./utils/babel/*.js"
     },
     "./node/*": {
       "types": "./utils/node/*.d.ts",
