@@ -59,6 +59,10 @@ export function executeModule(
       return exports
     }
 
+    // Clone the local environment to avoid wrapping the
+    // `env[requireAsyncId]` override with itself.
+    env = { ...env }
+
     const requireAsync = env[requireAsyncId] as (
       id: string,
       framesToPop: number
