@@ -48,19 +48,24 @@ export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
 }
 
 const noCacheDirective = 'no-cache'
+const noStoreDirective = 'no-store'
 const maxAgeDirective = 'max-age'
 
 function parseCacheControl(entry: Cache.EntryContext, header?: string) {
   if (!header) return
 
   const directives = header.split(/, */)
-  if (directives.includes(noCacheDirective)) {
-    entry.maxAge = 0
-  } else {
+  const isCacheable =
+    !directives.includes(noCacheDirective) &&
+    !directives.includes(noStoreDirective)
+
+  if (isCacheable) {
     const maxAge = directives.find(d => d.startsWith(maxAgeDirective))
     if (maxAge) {
       // TODO: support must-revalidate?
       entry.maxAge = Number(maxAge.slice(maxAgeDirective.length + 1))
     }
+  } else {
+    entry.maxAge = 0
   }
 }
