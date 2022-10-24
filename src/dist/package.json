@@ -24,6 +24,11 @@
       "types": "./bundle/index.d.ts",
       "default": "./bundle/index.js"
     },
+    "./cache": {
+      "types": "./runtime/cache.d.ts",
+      "import": "./runtime/cache.mjs",
+      "default": "./runtime/cache.js"
+    },
     "./client": {
       "node": "./client/index.cjs",
       "types": "./client/index.d.ts",
