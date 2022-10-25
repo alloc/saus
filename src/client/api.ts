@@ -2,6 +2,7 @@
 
 export * from '@runtime/cache/create'
 export * from '@runtime/cache/global'
+export * from '@runtime/cache/types'
 export * from '@runtime/getPagePath'
 export * from '@runtime/mapStateModule'
 export * from '@runtime/parseRoutePath'
