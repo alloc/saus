@@ -163,14 +163,16 @@ export async function loadBundleContext<
 
   context.bundlePlugins = [
     // preBundleSsrRuntime(context),
-    moduleRedirection(redirects, [
-      'vite',
-      './client/index.mjs',
-      './core/index.mjs',
-      './core/context.mjs',
-      './deploy/index.mjs',
-      './utils/babel.mjs',
-    ]),
+    moduleRedirection(redirects, {
+      forbid: [
+        'vite',
+        './client/index.mjs',
+        './core/index.mjs',
+        './core/context.mjs',
+        './deploy/index.mjs',
+        './utils/babel.mjs',
+      ],
+    }),
   ]
 
   return context as any

@@ -35,7 +35,13 @@ const isDebug = !!process.env.DEBUG
  */
 export function moduleRedirection(
   inlinePlugins: vite.Plugin[] = [],
-  forbiddenModules: string[] = []
+  {
+    forbid: forbiddenModules = [],
+    ssr: ssrMode,
+  }: {
+    forbid?: string[]
+    ssr?: boolean
+  } = {}
 ): vite.Plugin {
   if (isDebug && forbiddenModules.length) {
     forbiddenModules.forEach((id, i) => {
@@ -75,7 +81,11 @@ export function moduleRedirection(
         )
       )
     },
-    async resolveId(id, importer) {
+    async resolveId(id, importer, opts) {
+      if (ssrMode != null && ssrMode !== Boolean(opts.ssr)) {
+        return // Only ssr or non-ssr modules are redirected.
+      }
+
       if (bareImportRE.test(id))
         for (const plugin of plugins) {
           if (plugin.resolveBareImport) {

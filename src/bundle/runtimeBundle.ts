@@ -162,14 +162,16 @@ async function compileSsrRuntime(context: BundleContext) {
       await vite.resolveConfig(
         {
           plugins: [
-            moduleRedirection(internalRedirects, [
-              'vite',
-              './client/index.mjs',
-              './core/index.mjs',
-              './core/context.mjs',
-              './deploy/index.mjs',
-              './utils/babel.mjs',
-            ]),
+            moduleRedirection(internalRedirects, {
+              forbid: [
+                'vite',
+                './client/index.mjs',
+                './core/index.mjs',
+                './core/context.mjs',
+                './deploy/index.mjs',
+                './utils/babel.mjs',
+              ],
+            }),
           ],
           configFile: false,
           resolve: {

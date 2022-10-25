@@ -64,7 +64,9 @@ export async function createServer(
         clientContextPlugin,
         clientLayoutPlugin,
         clientStatePlugin,
-        moduleRedirection(clientRedirects),
+        moduleRedirection(clientRedirects, {
+          ssr: false,
+        }),
       ],
     })
 
