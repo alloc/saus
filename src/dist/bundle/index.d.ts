@@ -9,7 +9,7 @@ import { RuntimeConfig, MutableRuntimeConfig } from '@runtime/config';
 import { Promisable } from '@utils/types';
 import http from 'http';
 import { BufferLike, RenderedFile, App as App$1 } from '@runtime/app';
-import { Headers, HttpRedirect } from '@runtime/http';
+import { Http } from '@runtime/http';
 import QuickLRU, { Options as Options$1 } from 'quick-lru';
 
 declare function createApp(plugins?: App.Plugin[]): Promise<App>;
@@ -52,15 +52,15 @@ declare namespace connect {
     }
 }
 
-declare type BoundHeadersFn = () => Headers | null | undefined;
-declare type HeadersParam = Headers | null | ((url: string) => Headers | null | undefined);
+declare type BoundHeadersFn = () => Http.Headers | null | undefined;
+declare type HeadersParam = Http.Headers | null | ((url: string) => Http.Headers | null | undefined);
 interface FileCache extends QuickLRU<string, FileCacheEntry> {
-    addFile(id: string, content: BufferLike, headers?: Headers | null): void;
+    addFile(id: string, content: BufferLike, headers?: Http.Headers | null): void;
     addFiles(files: RenderedFile[], headers?: HeadersParam): void;
 }
 declare type FileCacheOptions = Options$1<string, FileCacheEntry>;
 declare type FileCacheEntry = [
-    data: string | Buffer | HttpRedirect,
+    data: string | Buffer | Http.Redirect,
     headers: BoundHeadersFn | null | undefined
 ];
 declare function createFileCache(base: string, options?: FileCacheOptions): FileCache;
