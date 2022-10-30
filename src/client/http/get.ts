@@ -2,7 +2,7 @@
 import type { GetOptions } from '@runtime/http/get'
 import type { Headers } from '@runtime/http/headers'
 import { normalizeHeaders } from '@runtime/http/normalizeHeaders'
-import { Response } from '@runtime/http/response'
+import { HttpResponse } from '@runtime/http/response'
 import { Buffer } from '@utils/buffer'
 
 export async function get(url: string, options?: GetOptions) {
@@ -22,7 +22,7 @@ export async function get(url: string, options?: GetOptions) {
     resp.headers.forEach((value, key) => {
       headers[key] = value
     })
-    return new Response(
+    return new HttpResponse(
       Buffer.from(await resp.arrayBuffer()),
       resp.status,
       normalizeHeaders(headers, true)

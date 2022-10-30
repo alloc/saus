@@ -34,7 +34,8 @@ export type ExtractProps<T, U> = Pick<
 // https://github.com/microsoft/TypeScript/issues/14829#issuecomment-504042546
 export type NoInfer<T> = [T][T extends any ? 0 : never]
 
-type Remap<T> = {} & { [P in keyof T]: T[P] }
+export type Remap<T> = {} & { [P in keyof T]: T[P] }
+
 type ArrayKeys<T> = keyof ExtractProps<T, readonly any[]>
 type ObjectKeys<T> = Exclude<keyof ExtractProps<T, object>, ArrayKeys<T>>
 

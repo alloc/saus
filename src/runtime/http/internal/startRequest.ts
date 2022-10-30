@@ -1,13 +1,11 @@
 import http from 'http'
 import https from 'https'
-import { Response } from '../response'
-import { HttpOptions } from '../types'
 
 export function startRequest(
-  { headers, ...opts }: HttpOptions,
+  { headers, ...opts }: Http.Options,
   trace: Error & { status?: number },
   reject: (e: any) => void,
-  resolve: (resp: Response) => void,
+  resolve: (resp: Http.Response) => void,
   redirectCount: number,
   onRedirect: (url: string) => void,
   retryCount = 0
@@ -34,7 +32,7 @@ export function startRequest(
       const status = resp.statusCode!
       if (opts.allowBadStatus || (status >= 200 && status < 400)) {
         return resolve(
-          new Response(
+          new Http.Response(
             chunks ? Buffer.concat(chunks) : Buffer.alloc(0),
             status,
             resp.headers

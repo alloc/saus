@@ -8,7 +8,7 @@ import createDebug from 'debug'
 import fs from 'fs'
 import { startTask } from 'misty/task'
 import path from 'path'
-import { get, Response } from '../http'
+import { get } from '../http'
 import { setup } from '../setup'
 import { EnforcementPhase } from './process'
 import { $ } from './selector'
@@ -27,7 +27,7 @@ export type DownloadOptions = {
   enforce?: EnforcementPhase
   skip?: (url: string) => boolean
   onRequest?: (url: string) => void
-  onResponse?: (url: string, response: Response) => void
+  onResponse?: (url: string, response: Http.Response) => void
   onWriteFile?: (fileName: string) => void
   /**
    * Override the default behavior of writing to the `outDir`.

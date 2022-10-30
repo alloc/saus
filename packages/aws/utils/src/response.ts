@@ -1,14 +1,14 @@
-import { Response, ResponseHeaders } from 'saus/http'
+import { Http } from 'saus/http'
 import { rewriteObjectKeys } from 'saus/utils/keys'
 import { camelize } from './utils'
 import { xml } from './xml'
 import { XmlParserOptions } from './xml/parse'
 
-const xmlOptionsMap = new WeakMap<Response, XmlParserOptions>()
+const xmlOptionsMap = new WeakMap<Http.Response, XmlParserOptions>()
 const xmlParsedMap = new WeakMap<XmlParserOptions, any>()
 
 export function cacheParsedXml(
-  res: Response,
+  res: Http.Response,
   options: XmlParserOptions,
   data: any
 ) {
@@ -17,7 +17,7 @@ export function cacheParsedXml(
 }
 
 export function parseXmlResponse(
-  res: Response,
+  res: Http.Response,
   options = xmlOptionsMap.get(res)
 ) {
   if (options) {
@@ -29,7 +29,7 @@ export function parseXmlResponse(
   return xml.parse(res.data.toString(), options)
 }
 
-export function normalizeObjectResponse(data: any, res: Response) {
+export function normalizeObjectResponse(data: any, res: Http.Response) {
   data = rewriteObjectKeys(data, camelize)
   data._status = res.status
   data._headers = res.headers
@@ -42,5 +42,5 @@ export interface AmzError extends Error {
   resource?: string
   requestId?: string
   _status: number
-  _headers: ResponseHeaders
+  _headers: Http.ResponseHeaders
 }

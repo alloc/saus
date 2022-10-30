@@ -3,7 +3,6 @@ import { unwrapBuffer } from '@utils/node/buffer'
 import { readJson } from '@utils/readJson'
 import fs from 'fs'
 import { dirname, resolve } from 'path'
-import { Response } from './response'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}
 
@@ -41,7 +40,7 @@ export function loadResponseCache(root: string) {
         },
       }
     },
-    write(cacheKey: string, resp: Response, maxAge: number) {
+    write(cacheKey: string, resp: Http.Response, maxAge: number) {
       const entry = metadata[cacheKey]
       const fileName = entry?.[0] || String(murmurHash(cacheKey))
       const filePath = resolve(cacheDir, fileName)
@@ -57,7 +56,7 @@ export function loadResponseCache(root: string) {
 
 const delimiter = /* @__PURE__ */ Buffer.from('\r\n')
 
-function encodeResponse(resp: Response) {
+function encodeResponse(resp: Http.Response) {
   return Buffer.concat([
     Buffer.from(JSON.stringify(resp.headers)),
     delimiter,
@@ -75,7 +74,7 @@ function decodeResponse(data: Buffer) {
     }
   }
   const headers = JSON.parse(data.slice(0, indices[0]).toString('utf8'))
-  return new Response(data.slice(indices[1]), 200, headers)
+  return new Http.Response(data.slice(indices[1]), 200, headers)
 }
 
 function isDelimiter(data: Buffer, offset: number) {

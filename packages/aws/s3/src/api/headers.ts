@@ -1,4 +1,3 @@
-import { RequestHeaders } from 'saus/http'
 import { pick, pickAllExcept } from '../utils/pick'
 import { commonParamKeys } from './params'
 
@@ -9,7 +8,7 @@ import { commonParamKeys } from './params'
 export function paramsToHeaders<Params extends object>(
   params: Params,
   ignore: (string & keyof Params)[] = []
-): RequestHeaders {
+): Http.RequestHeaders {
   return {
     ...pick(params, httpHeaderParams as any, Boolean),
     ...formatAmzHeaders(
@@ -30,7 +29,7 @@ export function formatHeaders(
   values: Record<string, any>,
   transformKey: (key: string) => string = toDashCase
 ) {
-  const headers: RequestHeaders = {}
+  const headers: Http.RequestHeaders = {}
   for (const key in values) {
     const value = values[key]
     if (value !== undefined) {

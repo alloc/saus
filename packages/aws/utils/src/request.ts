@@ -1,12 +1,6 @@
 import * as aws4 from 'aws4'
 import { Agent } from 'https'
-import {
-  Headers,
-  http,
-  HttpMethod,
-  HttpRequestOptions,
-  Response,
-} from 'saus/http'
+import { Headers, http, Http, HttpRequestOptions } from 'saus/http'
 import { isObject } from 'saus/utils/isObject'
 import { omitKeys, rewriteKeys, rewriteObjectKeys } from 'saus/utils/keys'
 import { Promisable } from 'type-fest'
@@ -32,7 +26,7 @@ export interface AmzCredentials {
 export interface AmzRequestOptions extends HttpRequestOptions {
   /** AWS region */
   region?: string
-  method?: HttpMethod
+  method?: Http.Method
   creds?: AmzCredentials
 }
 
@@ -40,7 +34,7 @@ export interface AmzRequestOverrides {
   /** Set the default credentials. */
   creds?: AmzCredentials
   /** Override the default HTTP method. */
-  method?: HttpMethod
+  method?: Http.Method
   /** Prepend a subdomain to the default hostname. */
   subdomain?: string
   /** Set the pathname of the URL. */
@@ -69,7 +63,7 @@ export type AmzCoerceResponseFn<
   Actions extends ActionMap,
   Action extends keyof Actions = keyof Actions
 > = (
-  resp: Response,
+  resp: Http.Response,
   params: {
     Action: Action | keyof Actions
   } & (keyof Actions extends infer Action
@@ -112,7 +106,7 @@ export function createAmzRequestFn<Actions extends ActionMap>(
   type ActionResult<Action> = Action extends keyof Actions
     ? Actions[Action]['result'] extends infer T
       ? [T] extends [void]
-        ? Response
+        ? Http.Response
         : T extends object
         ? CamelCasedPropertiesDeep<T> & { _status: number; _headers: Headers }
         : T

@@ -3,13 +3,7 @@ import type { httpMethods } from '@utils/httpMethods'
 import type { AnyToObject, Falsy, Promisable } from '@utils/types'
 import { Simplify, UnionToIntersection } from 'type-fest'
 import type { App } from './app/types'
-import type {
-  DeclaredHeaders,
-  HttpRedirect,
-  RequestHeaders,
-  Response as HttpResponse,
-  ResponseHeaders,
-} from './http'
+import type { DeclaredHeaders, Http } from './http'
 import type { InferRouteParams, Route, RouteParams } from './routeTypes'
 import type { ParsedUrl } from './url'
 
@@ -62,7 +56,7 @@ export namespace Endpoint {
     }
   }
 
-  export type Result = HttpResponse | HttpRedirect | null | void
+  export type Result = Http.Response | Http.Redirect | null | void
 
   /**
    * Endpoints ending in `.json` don't have to wrap their
@@ -97,7 +91,7 @@ export namespace Endpoint {
 
   export interface ResponseStream extends NodeJS.ReadableStream {
     statusCode?: number
-    headers?: ResponseHeaders
+    headers?: Http.ResponseHeaders
   }
 
   export type ResponsePromise = Promise<ResponseTuple | [ResponseStream] | null>
@@ -118,7 +112,7 @@ export namespace Endpoint {
   export interface RequestUrl<Params extends object = any>
     extends ParsedUrl<Params> {
     readonly method: string
-    readonly headers: Readonly<RequestHeaders>
+    readonly headers: Readonly<Http.RequestHeaders>
     readonly read: RequestReader
     readonly json: <T = any>() => Promise<T>
     /**
@@ -146,13 +140,13 @@ export namespace Endpoint {
     ok: boolean
     route?: Route
     status: number
-    headers: DeclaredHeaders<ResponseHeaders | null>
+    headers: DeclaredHeaders
     body?: AnyBody
   }
 
   export type ResponseTuple = [
     status?: number,
-    body?: Body & { headers?: ResponseHeaders | null }
+    body?: Body & { headers?: Http.ResponseHeaders | null }
   ]
 
   export type Body =

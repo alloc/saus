@@ -1,4 +1,4 @@
-import type { Headers } from './headers'
+import { Http } from './types'
 
 const kNormalized = Symbol.for('saus:normalized')
 
@@ -12,16 +12,19 @@ export function normalizeHeaderKeys(names: readonly string[]) {
 /**
  * Ensure all header names are lowercase.
  */
-export function normalizeHeaders(headers: Headers, trust?: boolean): Headers
-export function normalizeHeaders(
-  headers: Headers | null | undefined,
+export function normalizeHeaders<T extends Http.Headers>(
+  headers: T,
   trust?: boolean
-): Headers | undefined
+): T
+export function normalizeHeaders<T extends Http.Headers>(
+  headers: T | null | undefined,
+  trust?: boolean
+): T | undefined
 
 export function normalizeHeaders(
-  headers: (Headers & { [kNormalized]?: true }) | null | undefined,
+  headers: (Http.Headers & { [kNormalized]?: true }) | null | undefined,
   trust?: boolean
-): Headers | undefined {
+): Http.Headers | undefined {
   if (!headers) return
   if (headers[kNormalized]) {
     return headers
@@ -33,7 +36,7 @@ export function normalizeHeaders(
       headers = names.reduce((normalized, name) => {
         normalized[name.toLowerCase()] = headers![name]
         return normalized
-      }, {} as Headers)
+      }, {} as Http.Headers)
     }
   }
 

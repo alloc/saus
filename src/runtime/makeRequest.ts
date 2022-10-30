@@ -2,7 +2,6 @@ import { assignDefaults } from '@utils/assignDefaults'
 import { defer } from '@utils/defer'
 import { emptyHeaders } from './app/constants'
 import type { Endpoint } from './endpoint'
-import type { RequestHeaders } from './http'
 import { ParsedUrl } from './url'
 
 const emptyBody = Buffer.from(globalThis.Buffer.alloc(0).buffer)
@@ -23,7 +22,7 @@ export function makeRequestUrl<Params extends {}>(
   url: ParsedUrl<Params>,
   props: {
     method?: string
-    headers?: Readonly<RequestHeaders>
+    headers?: Readonly<Http.RequestHeaders>
     read?: (encoding?: BufferEncoding) => Promise<string | Buffer>
     object?: any
   } = {}

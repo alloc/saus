@@ -72,10 +72,10 @@ export namespace Payload {
   }
 
   export interface OriginBehavior {
-    requestHeaders: RequestHeaders
+    requestHeaders: Http.RequestHeaders
   }
 
-  export interface RequestHeaders {}
+  export interface Http.RequestHeaders {}
 
   export interface OriginPrefix {
     method: string

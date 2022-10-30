@@ -6,24 +6,19 @@ import {
   ParsedUrl,
   parseUrl,
 } from 'saus/core'
-import {
-  normalizeHeaders,
-  RequestHeaders,
-  ResponseHeaders,
-  unwrapBody,
-} from 'saus/http'
+import { normalizeHeaders, unwrapBody } from 'saus/http'
 import { unwrapBuffer } from 'saus/node/buffer'
 import { assignDefaults } from 'saus/utils/assignDefaults'
 import { getPageFilename } from 'saus/utils/getPageFilename'
 import { pick } from 'saus/utils/pick'
 
 export type PageRuleContext = ParsedUrl & {
-  headers: Readonly<RequestHeaders>
+  headers: Readonly<Http.RequestHeaders>
 }
 
 export interface PageRule {
   pathPattern: RegExp
-  headers: (req: PageRuleContext) => ResponseHeaders
+  headers: (req: PageRuleContext) => Http.ResponseHeaders
 }
 
 export interface PageStoreConfig {
@@ -40,7 +35,7 @@ export function setupPageStore(config: PageStoreConfig) {
 
     const resolveHeaders = (
       req: PageRuleContext,
-      headers: ResponseHeaders = {}
+      headers: Http.ResponseHeaders = {}
     ) => {
       const pageRules = config.pageRules?.filter(rule =>
         rule.pathPattern.test(req.path)

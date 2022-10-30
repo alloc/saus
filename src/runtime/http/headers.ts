@@ -1,142 +1,27 @@
 import { pick } from '@utils/pick'
-import { AnyToObject, PickResult, PossibleKeys } from '@utils/types'
+import { PickResult } from '@utils/types'
 import { CamelCase } from 'type-fest'
 import { normalizeHeaders } from './normalizeHeaders'
+import { Http } from './types'
 import { writeHeaders } from './writeHeaders'
-
-export interface CommonHeaders
-  extends CommonRequestHeaders,
-    CommonResponseHeaders {}
-
-export interface CommonRequestHeaders {
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept */
-  accept: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Charset */
-  'accept-charset': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding */
-  'accept-encoding': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language */
-  'accept-language': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization */
-  authorization: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cookie */
-  cookie: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Match */
-  'if-match': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since */
-  'if-modified-since': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-None-Match */
-  'if-none-match': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Unmodified-Since */
-  'if-unmodified-since': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Origin */
-  origin: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer */
-  referer: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent */
-  'user-agent': string
-}
-
-export interface CommonResponseHeaders {
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control */
-  'cache-control': string
-  /** @link https://developers.cloudflare.com/cache/about/cdn-cache-control */
-  'cdn-cache-control': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding */
-  'content-encoding': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language */
-  'content-language': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length */
-  'content-length': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type */
-  'content-type': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag */
-  etag: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires */
-  expires: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified */
-  'last-modified': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Link */
-  link: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Location */
-  location: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie */
-  'set-cookie': string | string[]
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding */
-  'transfer-encoding': string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary */
-  vary: string
-}
-
-export type Headers = RequestHeaders | ResponseHeaders
-
-export type RequestHeaders = Partial<CommonRequestHeaders> &
-  Record<string, string | string[] | undefined>
-
-export type ResponseHeaders = Partial<CommonResponseHeaders> &
-  Record<string, string | string[] | undefined>
-
-export interface ContentHeaders {
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding */
-  encoding?: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Length */
-  length?: number | string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type */
-  type?: string
-}
-
-export interface AccessControlHeaders {
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials */
-  allowCredentials?: boolean
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers */
-  allowHeaders?: '*' | string[]
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Methods */
-  allowMethods?: '*' | string[]
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin */
-  allowOrigin?: string
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Headers */
-  exposeHeaders?: string[]
-  /** @link https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age */
-  maxAge?: number | string
-}
-
-const omitFalseNames = ['allowCredentials']
-const commaDelimitedNames = ['allowHeaders', 'allowMethods', 'exposeHeaders']
-
-const shortcutHeaderNames: (keyof ShortcutHeaders)[] = [
-  'accessControl',
-  'content',
-]
-
-export interface ShortcutHeaders {
-  accessControl: AccessControlHeaders
-  content: ContentHeaders
-}
-
-const toDashCase = (input: string) =>
-  input
-    .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
-    .toLowerCase()
-
-type WrappedHeaders = Partial<CommonHeaders> | null
 
 /**
  * This function provides a builder for defining headers in a more
  * functional style via this-chaining. The methods mutate the given
  * `headers` object, so chaining the calls is not strictly required.
  */
-export class DeclaredHeaders<T extends WrappedHeaders = any> {
-  private proxy: DeclaredHeaders<T>
-  private headers: Record<string, string | string[]> | null
+export class DeclaredHeaders {
+  private proxy: DeclaredHeaders
+  private headers: Http.ResponseHeaders | null
   constructor(
-    headers: AnyToObject<T, WrappedHeaders>,
+    headers: Http.ResponseHeaders | null,
     private filter: (
       name: string,
       newValue: string | string[] | undefined,
-      headers: Exclude<AnyToObject<T, WrappedHeaders>, null>
+      headers: Http.ResponseHeaders
     ) => boolean = () => true
   ) {
-    this.headers = headers as any
+    this.headers = headers
     return (this.proxy = new Proxy(this, {
       get(self: any, key: string, proxy: any) {
         if (self[key] || self.hasOwnProperty(key)) {
@@ -175,12 +60,12 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
   }
   /** Coerce to a `Headers` object or null. */
   toJSON() {
-    return this.headers as Headers | null
+    return this.headers
   }
   /** Get a new object with only the given header names. */
-  pick<P extends PossibleKeys<T>>(
+  pick<P extends keyof Http.ResponseHeaders>(
     names: P[]
-  ): PickResult<AnyToObject<T, WrappedHeaders>, P> {
+  ): PickResult<Http.ResponseHeaders, P> {
     return pick(this.headers || {}, names, Boolean) as any
   }
   /**
@@ -202,16 +87,19 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
     }
     return false
   }
-  get<P extends keyof Extract<T, object>>(name: P): Extract<T, object>[P]
-  get(name: string): string | string[] | undefined
-  get(name: string) {
+  get<P extends keyof Http.ResponseHeaders>(name: P): Http.ResponseHeaders[P] {
     return this.headers?.[name]
   }
   /**
    * Set any header.
    */
-  set(name: string, value: string | string[] | undefined) {
+  set<K extends string>(name: K, value: Http.ResponseHeaders[K]): this
+  set<K extends string>(name: K, ...params: ResponseInputParams<K>): this
+  set(name: string, value: any) {
     if (value !== undefined) {
+      if (name in responseInputParsers) {
+        value = responseInputParsers[name as keyof ResponseInputParsers](value)
+      }
       const headers: any = this.headers || {}
       if (this.filter(name, value, headers)) {
         this.headers ||= headers
@@ -227,7 +115,7 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
     return this.proxy
   }
   /** Merge headers defined in the given object. */
-  merge(values: RequestHeaders | null | undefined) {
+  merge(values: Http.RequestHeaders | null | undefined) {
     if (values) {
       values = normalizeHeaders(values)
       for (const [key, value] of Object.entries(values)) {
@@ -245,7 +133,9 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
       writeHeaders(response, this.headers)
     }
   }
-  /** The next calls will be skipped if the header is already defined. */
+  /**
+   * The next calls will be skipped if the header is already defined.
+   */
   get defaults() {
     const headers = (this.headers ||= {})
     return new DeclaredHeaders(headers, name => {
@@ -254,15 +144,66 @@ export class DeclaredHeaders<T extends WrappedHeaders = any> {
   }
 }
 
-export interface DeclaredHeaders<T extends WrappedHeaders = any>
-  extends GeneratedMethods<T> {}
+export interface DeclaredHeaders extends ProxyMethods {}
 
-type GeneratedMethods<T extends WrappedHeaders = any> = {
-  readonly [P in keyof CommonHeaders as CamelCase<P>]: (
-    value: CommonHeaders[P] | undefined
-  ) => DeclaredHeaders<T>
+type ProxyMethods = {
+  readonly [K in keyof Http.CommonResponseHeaders as CamelCase<K>]: {
+    (value: Http.ResponseHeaders[K] | undefined): DeclaredHeaders
+    (...params: ResponseInputParams<CamelCase<K>>): DeclaredHeaders
+  }
 } & {
-  readonly [P in keyof ShortcutHeaders]: (
-    value: ShortcutHeaders[P] | undefined
-  ) => DeclaredHeaders<T>
+  readonly [K in keyof ShortcutHeaders]: (
+    value: ShortcutHeaders[K] | undefined
+  ) => DeclaredHeaders
+}
+
+const omitFalseNames = ['allowCredentials']
+const commaDelimitedNames = ['allowHeaders', 'allowMethods', 'exposeHeaders']
+
+const shortcutHeaderNames: (keyof ShortcutHeaders)[] = [
+  'accessControl',
+  'content',
+]
+
+export interface ShortcutHeaders {
+  accessControl: Http.AccessControlHeaders
+  content: Http.ContentHeaders
+}
+
+const toDashCase = (input: string) =>
+  input
+    .replace(/[a-z][A-Z]/g, ([prev, curr]) => prev + '-' + curr.toLowerCase())
+    .toLowerCase()
+
+type ResponseInputParsers = typeof responseInputParsers
+type ResponseInputParams<K extends string> =
+  K extends keyof ResponseInputParsers
+    ? Parameters<ResponseInputParsers[K]>
+    : [Http.ResponseHeaders[K]]
+
+/**
+ * Values passed to `DeclaredHeaders#set` are coerced to strings by
+ * these parsing functions.
+ */
+const responseInputParsers = {
+  cacheControl(...args: Http.CacheControl[]): string {
+    const parsed = args.map(function parse(arg): string {
+      if (typeof arg == 'string') {
+        return arg
+      }
+      let parsed: string[]
+      if (Array.isArray(arg)) {
+        parsed = arg.map(parse)
+      } else {
+        parsed = []
+        for (const [key, value] of Object.entries(arg)) {
+          if (value !== undefined && value !== false) {
+            parsed.push(toDashCase(key) + (value !== true ? '=' + value : ''))
+          }
+        }
+      }
+      return parsed.join(', ')
+    })
+    return parsed.join(', ')
+  },
 }

@@ -6,7 +6,6 @@ import { toExpiresHeader } from '../../cache/expiration'
 import { stateModulesByName } from '../../cache/global'
 import type { Cache } from '../../cache/types'
 import { Endpoint } from '../../endpoint'
-import { ResponseHeaders } from '../../http/headers'
 import { makeRequestUrl } from '../../makeRequest'
 import { setRequestMetadata } from '../../requestMetadata'
 import { route } from '../../routeHooks'
@@ -132,7 +131,7 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
 const sendModule = (
   req: Endpoint.Request,
   text: string,
-  headers?: ResponseHeaders
+  headers?: Http.ResponseHeaders
 ) =>
   req.respondWith(200, {
     text,

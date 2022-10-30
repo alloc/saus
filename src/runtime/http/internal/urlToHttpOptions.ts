@@ -1,8 +1,8 @@
-import { HttpOptions, URL } from '../types'
+import { URL } from '../types'
 
 // https://github.com/nodejs/node/blob/0de6a6341a566f990d0058b28a0a3cb5b052c6b3/lib/internal/url.js#L1388
 export function urlToHttpOptions(url: URL) {
-  const options: HttpOptions = {
+  const options: Http.Options = {
     protocol: url.protocol,
     hostname: url.hostname.startsWith('[')
       ? url.hostname.slice(1, -1)

@@ -1,4 +1,5 @@
 import { MagicString } from '@utils/magic-string'
+import { Remap } from '@utils/types'
 import type { HtmlTagPath } from './path'
 import type { HtmlProcessorState } from './process'
 import type { kTagPath } from './symbols'
@@ -11,8 +12,6 @@ type HtmlTagState<State extends HtmlVisitor.BaseState = any> = {
   /** The URL attribute being resolved */
   attr: string
 }
-
-type Remap<T> = {} & { [P in keyof T]: T[P] }
 
 export namespace HtmlResolver {
   export type BaseState = Partial<HtmlVisitorState & HtmlTagState>

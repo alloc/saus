@@ -1,5 +1,5 @@
 import { vite } from 'saus/core'
-import { http, HttpMethod, HttpRequestOptions } from 'saus/http'
+import { http, HttpRequestOptions } from 'saus/http'
 import { joinUrl } from 'saus/utils/joinUrl'
 
 export function createRequestFn(config: {
@@ -7,7 +7,7 @@ export function createRequestFn(config: {
   logger: Pick<vite.Logger, 'info'>
 }) {
   return async <T = any>(
-    method: HttpMethod,
+    method: Http.Method,
     uri: string,
     opts?: HttpRequestOptions
   ): Promise<T> => {

@@ -1,4 +1,4 @@
-import { HttpRedirect } from '@runtime/http/redirect'
+import { Http } from '@runtime/http'
 import etag from 'etag'
 import * as mime from 'mrmime'
 import { connect } from './connect'
@@ -16,7 +16,7 @@ export const serveCachedFiles =
     }
 
     const [file, headers] = entry
-    if (file instanceof HttpRedirect) {
+    if (file instanceof Http.Redirect) {
       res.writeHead(file.status, {
         Location: file.location,
       })

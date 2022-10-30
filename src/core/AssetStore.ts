@@ -1,4 +1,4 @@
-import { ResponseHeaders } from '@runtime/http'
+import { Http } from '@runtime/http'
 import { Promisable } from 'type-fest'
 
 /**
@@ -12,7 +12,7 @@ export interface AssetStore {
   put(
     name: string,
     data: string | Buffer,
-    headers?: ResponseHeaders
+    headers?: Http.ResponseHeaders
   ): Promisable<void>
   /**
    * Remove an asset by its name.

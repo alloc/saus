@@ -1,15 +1,18 @@
 import type { Buffer } from '@utils/buffer'
-import type { ResponseHeaders } from './headers'
 import { normalizeHeaders } from './normalizeHeaders'
+import { Http } from './types'
 
-export class Response {
-  readonly headers: ResponseHeaders
+/**
+ * An HTTP response received from the server.
+ */
+export class HttpResponse {
+  readonly headers: Http.ResponseHeaders
   readonly ok: boolean
 
   constructor(
     readonly data: Buffer,
     readonly status: number,
-    headers: ResponseHeaders
+    headers: Http.ResponseHeaders
   ) {
     this.headers = normalizeHeaders(headers)
     this.ok = status >= 200 && status < 400

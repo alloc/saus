@@ -1,22 +1,22 @@
 import { BufferLike, RenderedFile } from '@runtime/app'
-import { Headers, HttpRedirect, normalizeHeaders } from '@runtime/http'
+import { Http, normalizeHeaders } from '@runtime/http'
 import QuickLRU, { Options } from 'quick-lru'
 
-type BoundHeadersFn = () => Headers | null | undefined
+type BoundHeadersFn = () => Http.Headers | null | undefined
 type HeadersParam =
-  | Headers
+  | Http.Headers
   | null
-  | ((url: string) => Headers | null | undefined)
+  | ((url: string) => Http.Headers | null | undefined)
 
 export interface FileCache extends QuickLRU<string, FileCacheEntry> {
-  addFile(id: string, content: BufferLike, headers?: Headers | null): void
+  addFile(id: string, content: BufferLike, headers?: Http.Headers | null): void
   addFiles(files: RenderedFile[], headers?: HeadersParam): void
 }
 
 export type FileCacheOptions = Options<string, FileCacheEntry>
 
 export type FileCacheEntry = [
-  data: string | Buffer | HttpRedirect,
+  data: string | Buffer | Http.Redirect,
   headers: BoundHeadersFn | null | undefined
 ]
 
@@ -56,7 +56,7 @@ function resolveHeaders(
   headers: HeadersParam | undefined,
   url: string,
   mime?: string
-): Headers | null | undefined {
+): Http.Headers | null | undefined {
   if (typeof headers == 'function') {
     headers = headers(url)
   }

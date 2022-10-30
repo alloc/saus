@@ -2,8 +2,8 @@ import { mergeArrays } from '@utils/array'
 import { ascendBranch } from '@utils/ascendBranch'
 import { pickAllExcept } from '@utils/pick'
 import { Endpoint } from '../../endpoint'
-import { DeclaredHeaders, ResponseHeaders } from '../../http/headers'
-import { HttpRedirect } from '../../http/redirect'
+import { Http } from '../../http'
+import { DeclaredHeaders } from '../../http/headers'
 import { makeRequest } from '../../makeRequest'
 import { Route } from '../../routeTypes'
 import { App } from '../types'
@@ -14,7 +14,7 @@ export const wrapEndpoints =
     let route = resolved.route
     let promise: Endpoint.ResponsePromise | undefined
     let response: Endpoint.Response | undefined
-    let headers = new DeclaredHeaders(null as ResponseHeaders | null)
+    let headers = new DeclaredHeaders(null)
     let request = makeRequest(
       url,
       function respondWith(arg1, body?: Endpoint.ResponseTuple[1]) {
@@ -45,7 +45,7 @@ export const wrapEndpoints =
           }
         }
         if (returned) {
-          if (returned instanceof HttpRedirect) {
+          if (returned instanceof Http.Redirect) {
             headers.location(returned.location)
             response = createResponse(route, headers, returned.status)
           } else {
@@ -115,7 +115,7 @@ export const wrapEndpoints =
 
 function createResponse(
   route: Route | undefined,
-  headers: DeclaredHeaders<ResponseHeaders | null>,
+  headers: DeclaredHeaders,
   arg1: number | Endpoint.ResponseTuple | Endpoint.ResponseStream | undefined,
   body?: Endpoint.ResponseTuple[1]
 ): Endpoint.Response {

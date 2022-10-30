@@ -4,7 +4,6 @@ import { Cache } from '../cache/types'
 import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
 import { http, HttpRequestOptions } from './http'
-import { Response } from './response'
 import { responseCache } from './responseCache'
 import { URL } from './types'
 
@@ -15,7 +14,10 @@ export interface GetOptions extends Omit<HttpRequestOptions, 'body'> {}
  *
  * Send a GET request, receive a `Promise<Buffer>` object.
  */
-export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
+export function get(
+  url: string | URL,
+  opts?: GetOptions
+): Promise<Http.Response> {
   const cacheKey = getCacheKey(
     typeof url == 'string' ? url : url.href,
     opts?.headers
@@ -28,7 +30,7 @@ export function get(url: string | URL, opts?: GetOptions): Promise<Response> {
       return Promise.resolve(cachedResponse.object)
     }
 
-    const cacheResponse = (resp: Response) => {
+    const cacheResponse = (resp: Http.Response) => {
       if (resp.status == 200) {
         parseCacheControl(entry, resp.headers['cache-control'] as string)
         if (responseCache && isFinite(entry.maxAge)) {

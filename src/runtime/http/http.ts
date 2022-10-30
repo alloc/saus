@@ -1,12 +1,10 @@
 import { joinUrl } from '@utils/joinUrl'
 import { Endpoint } from '../endpoint'
-import { RequestHeaders } from './headers'
 import { requestHook, responseHook } from './hooks'
 import { startRequest } from './internal/startRequest'
 import { urlToHttpOptions } from './internal/urlToHttpOptions'
 import { normalizeHeaders } from './normalizeHeaders'
-import { Response } from './response'
-import { HttpMethod, HttpOptions, URL } from './types'
+import { Http, URL } from './types'
 import { writeBody } from './writeBody'
 
 type ForwardedKeys =
@@ -17,25 +15,25 @@ type ForwardedKeys =
   | 'sink'
   | 'timeout'
 
-export interface HttpRequestOptions extends Pick<HttpOptions, ForwardedKeys> {
+export interface HttpRequestOptions extends Pick<Http.Options, ForwardedKeys> {
   /**
    * Prepend this string to the requested URL.
    */
   base?: string
   body?: Endpoint.Body
-  headers?: RequestHeaders
+  headers?: Http.RequestHeaders
 }
 
 /**
  * Note: GET responses are not cached when received with this function.
  */
 export function http(
-  method: HttpMethod,
+  method: Http.Method,
   url: string | URL,
   opts?: HttpRequestOptions
 ) {
   const trace = Error()
-  return new Promise<Response>((resolve, reject) => {
+  return new Promise<Http.Response>((resolve, reject) => {
     const req = createRequest(url, opts)
     req.method = method
 
@@ -51,7 +49,7 @@ export function http(
     }
 
     Promise.resolve(requestHook.current(req, opts?.body)).then(resp => {
-      const onResponse = (resp: Response) =>
+      const onResponse = (resp: Http.Response) =>
         void Promise.resolve(responseHook.current(req, resp)).then(
           () => resolve(resp),
           reject
@@ -61,7 +59,7 @@ export function http(
         return onResponse(resp)
       }
 
-      const continueRequest = (req: HttpOptions, redirects: number) => {
+      const continueRequest = (req: Http.Options, redirects: number) => {
         try {
           const client = startRequest(
             req,
