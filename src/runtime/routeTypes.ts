@@ -201,7 +201,33 @@ export namespace Route {
      * In the given callback, you can add routes that have this route's
      * path automatically prepended to theirs.
      */
-    extend: (extension: () => void) => API<Params>
+    extend: (
+      extension: (route: DefineRouteExtension<Params>) => void
+    ) => API<Params>
+  }
+  interface DefineRouteExtension<InheritedParams extends object> {
+    /** Define a catch route */
+    <Module extends object>(
+      path: 'error',
+      load: RouteLoader<Module>,
+      config?: RouteConfig<Module, InheritedParams & { error: any }>
+    ): void
+
+    /** Define a route */
+    <RoutePath extends string, Module extends object>(
+      path: RoutePath,
+      load?: RouteLoader<Module>,
+      config?: RouteConfig<
+        Module,
+        InheritedParams & InferRouteParams<RoutePath>
+      >
+    ): Route.API<InheritedParams & InferRouteParams<RoutePath>>
+
+    /** Define a route */
+    <RoutePath extends string, Module extends object>(
+      path: RoutePath,
+      config: RouteConfig<Module, InheritedParams & InferRouteParams<RoutePath>>
+    ): Route.API<InheritedParams & InferRouteParams<RoutePath>>
   }
 }
 

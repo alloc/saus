@@ -148,7 +148,7 @@ function createRouteAPI(parent: Route) {
     extend(extension) {
       const restoreContext = useParentRoute(parent)
       try {
-        extension()
+        extension(route)
       } finally {
         restoreContext()
       }
