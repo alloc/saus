@@ -43,6 +43,9 @@ export function defineStateModule<
   return module
 }
 
+export type Hydrated<T extends StateModule> = //
+  T extends StateModule<infer State> ? State : never
+
 export class StateModule<
   Hydrated = any,
   Args extends readonly any[] = any,
