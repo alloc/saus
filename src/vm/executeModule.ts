@@ -92,9 +92,9 @@ export function executeModule(
       clearTimeout(timeout)
 
       if (isCommonJS) {
-        // Use the `module.exports` property as the ESM exports
-        // if it equals a plain object. Otherwise, it gets wrapped
-        // as the `default` export.
+        // Use the `module.exports` property as the ESM exports if it
+        // equals a plain object. Otherwise, it gets wrapped as the
+        // `default` export.
         exports = env.module.exports
         exports = isObject(exports) ? exports : {}
 

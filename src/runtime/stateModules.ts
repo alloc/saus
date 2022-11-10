@@ -135,6 +135,8 @@ export class StateModule<
   /**
    * Synchronously access a specific instance of this module. If such an
    * instance is not yet loaded, this method will throw.
+   *
+   * ⚠️ Accessed data may be stale.
    */
   get(...args: Args): Hydrated {
     return getState(globalCache, this, args).state
