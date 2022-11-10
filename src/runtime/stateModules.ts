@@ -155,6 +155,19 @@ export class StateModule<
   }
 
   /**
+   * Like the `load` method, but the local cache is used if possible.
+   *
+   * ⚠️ Accessed data may be stale.
+   */
+  access(...args: Args): Promise<Hydrated> {
+    try {
+      return Promise.resolve(this.get(...args))
+    } catch {
+      return this.load(...args)
+    }
+  }
+
+  /**
    * Load the served data for this module. This data won't be hydrated.
    */
   async serve(...args: Args): Promise<Served> {
