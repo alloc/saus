@@ -89,7 +89,7 @@ export function getRequireFunctions(context: SausContext): {
             context
           )
         }
-        return compileSsrModule(id, context, virtualId)
+        return compileSsrModule(id, context, virtualId, /* isHybrid */ true)
       },
       get shouldReload() {
         return context.ssrForceReload
