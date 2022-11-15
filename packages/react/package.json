@@ -43,6 +43,6 @@
   },
   "dependencies": {
     "@types/babel__core": "^7.1.16",
-    "@vitejs/plugin-react": "^1.0.1"
+    "@vitejs/plugin-react": "3.0.0-alpha.0"
   }
 }
