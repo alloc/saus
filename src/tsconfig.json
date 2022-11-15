@@ -16,7 +16,7 @@
     "incremental": true,
     "lib": ["es2019"],
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "noUnusedLocals": true,
     "outDir": "dist",
     "paths": {
