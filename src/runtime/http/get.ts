@@ -5,7 +5,7 @@ import { getCacheKey } from './cacheKey'
 import { debug } from './debug'
 import { http, HttpRequestOptions } from './http'
 import { responseCache } from './responseCache'
-import { URL } from './types'
+import { Http, URL } from './types'
 
 export interface GetOptions extends Omit<HttpRequestOptions, 'body'> {}
 

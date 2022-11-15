@@ -1,5 +1,6 @@
 import http from 'http'
 import https from 'https'
+import { Http } from '../types'
 
 export function startRequest(
   { headers, ...opts }: Http.Options,

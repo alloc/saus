@@ -2,7 +2,7 @@ import { Falsy } from '@utils/types'
 import * as kleur from 'kleur/colors'
 import { Endpoint } from '../endpoint'
 import { onRequest, onResponse } from '../endpointHooks'
-import type { Headers } from '../http'
+import type { Http } from '../http'
 import { setup } from '../setup'
 
 /**
@@ -80,7 +80,7 @@ export const logRequests = (
     })
   })
 
-function printHeaders(headers: Headers) {
+function printHeaders(headers: Http.Headers) {
   const names = Object.keys(headers)
   if (names.length)
     console.log(

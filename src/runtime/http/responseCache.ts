@@ -3,6 +3,7 @@ import { unwrapBuffer } from '@utils/node/buffer'
 import { readJson } from '@utils/readJson'
 import fs from 'fs'
 import { dirname, resolve } from 'path'
+import { Http } from './types'
 
 export interface ResponseCache extends ReturnType<typeof loadResponseCache> {}
 

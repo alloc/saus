@@ -1,10 +1,10 @@
 import { murmurHash } from '@utils/murmur3'
-import { Headers } from './headers'
+import type { Http } from './types'
 
 /**
  * Generate a cache key for a GET request.
  */
-export function getCacheKey(url: string, headers?: Headers) {
+export function getCacheKey(url: string, headers?: Http.Headers) {
   let cacheKey = 'GET ' + url
   if (headers) {
     const keys = Object.keys(headers)

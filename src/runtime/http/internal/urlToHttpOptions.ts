@@ -1,4 +1,4 @@
-import { URL } from '../types'
+import { Http, URL } from '../types'
 
 // https://github.com/nodejs/node/blob/0de6a6341a566f990d0058b28a0a3cb5b052c6b3/lib/internal/url.js#L1388
 export function urlToHttpOptions(url: URL) {
