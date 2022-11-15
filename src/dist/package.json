@@ -85,6 +85,11 @@
     },
     "./utils/babel/*": null,
     "./utils/node/*": null,
+    "./vite": {
+      "types": "./vite/index.d.ts",
+      "import": "./vite/index.mjs",
+      "default": "./vite/index.js"
+    },
     "./vm/*": {
       "types": "./vm/*.d.ts",
       "import": "./vm/*.mjs",
