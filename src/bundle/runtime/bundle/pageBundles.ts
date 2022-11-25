@@ -1,6 +1,5 @@
 import { getPreloadTagsForModules } from '@/vite/modulePreload'
-import { collectStateFiles } from '@runtime/app/collectStateFiles'
-import { App, CommonServerProps, ResolvedRoute } from '@runtime/app/types'
+import { App, ResolvedRoute } from '@runtime/app/types'
 import { PageBundle } from '@runtime/bundleTypes'
 import { waitForCachePlugin } from '@runtime/cachePlugin'
 import { RuntimeConfig } from '@runtime/config'
@@ -119,9 +118,6 @@ export const providePageBundles: App.Plugin = app => {
 
       const bodyTags: HtmlTagDescriptor[] = []
 
-      // State modules are not renamed for debug view.
-      collectStateFiles(files, page.props._included, app)
-
       // If the route fails to render, the catch route is used instead.
       route = page.route
 
@@ -190,23 +186,6 @@ export const providePageBundles: App.Plugin = app => {
           if (!existingLinks.has(assetUrl)) {
             page.head.prefetch.push({ value: assetUrl, start: -1, end: -1 })
           }
-        }
-
-        // The page's state module is rendered after HTML post
-        // processors run to ensure all <link> tags are included.
-        if (pageStateId) {
-          const pageProps = page.props as CommonServerProps
-          files.push({
-            id: pageStateId,
-            get data() {
-              return app.renderPageState(page)
-            },
-            mime: 'application/javascript',
-            expiresAt:
-              pageProps._maxAge != null
-                ? pageProps._ts + pageProps._maxAge
-                : undefined,
-          })
         }
 
         const headTags: HtmlTagDescriptor[] = []

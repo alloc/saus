@@ -26,15 +26,16 @@ export function debugForbiddenImports(imports: string[]): vite.Plugin | false {
 }
 
 export function debugSymlinkResolver(): vite.Plugin {
-  return {
+  const self: vite.Plugin = {
     name: 'debugSymlinkResolver',
     configResolved(config) {
       const { symlinkResolver } = config
-      this.generateBundle = () => {
+      self.generateBundle = () => {
         console.log('cacheSize: %O', symlinkResolver.cacheSize)
         console.log('cacheHits: %O', symlinkResolver.cacheHits)
         console.log('fsCalls:   %O', symlinkResolver.fsCalls)
       }
     },
   }
+  return self
 }

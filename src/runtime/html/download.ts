@@ -62,7 +62,7 @@ function installHtmlHook({
   ...options
 }: DownloadOptions = {}) {
   // Reuse `fetch` calls between pages.
-  const requests: { [url: string]: Promise<Buffer> } = {}
+  const requests: { [url: string]: Promise<Buffer> | undefined } = {}
 
   // Exists when writing is in progress.
   let schedule: ((entry: [string, File]) => void) | undefined

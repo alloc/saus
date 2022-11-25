@@ -28,6 +28,10 @@ export function routeClientsPlugin(): Plugin {
     configureServer(s) {
       server = s
     },
+    // Both `resolveId` and `load` are set in `saus.receiveRoutes` hook,
+    // but we have to define them now so this plugin is used by Vite.
+    resolveId() {},
+    load() {},
     saus(c) {
       const plugin = this
       context = c as DevContext
@@ -71,7 +75,7 @@ export function routeClientsPlugin(): Plugin {
 
         const base = context.basePath
         const timestamp = (page.props as CommonServerProps)._ts || 0
-        const pageStateId = base + filename + '.js?t=' + timestamp
+        const pageStateId = page.files[0].id + '?t=' + timestamp
         const sausClientId = base + '@id/saus/client'
 
         // TODO: preload transient dependencies?
@@ -138,7 +142,7 @@ export function routeClientsPlugin(): Plugin {
               injectTo: 'head',
               tag: 'style',
               attrs: {
-                'data-id': mod.id,
+                'data-id': mod.id!,
               },
               children:
                 '\n' +

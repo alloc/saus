@@ -9,13 +9,13 @@ const layoutExport = /\bexport default defineLayout\b/
  * Transform `defineLayout` calls for client-side use.
  */
 export function clientLayoutPlugin(): vite.Plugin {
-  return {
+  const self: vite.Plugin = {
     name: 'saus:layout:client',
     enforce: 'pre',
     configResolved({ mode }) {
       const isProduction = mode == 'production'
 
-      this.transform = (code, id, opts) => {
+      self.transform = (code, id, opts) => {
         if (opts?.ssr) {
           return
         }
@@ -106,6 +106,7 @@ export function clientLayoutPlugin(): vite.Plugin {
       }
     },
   }
+  return self
 }
 
 function getPropertyKey(prop: NodePath) {

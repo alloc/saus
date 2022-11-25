@@ -1,3 +1,5 @@
+import { prependBase } from '@utils/base'
+import { getPageFilename } from '@utils/getPageFilename'
 import { limitTime } from '@utils/limitTime'
 import { noop } from '@utils/noop'
 import { parseHead } from '@utils/parseHead'
@@ -9,6 +11,7 @@ import { RenderRequest } from '../../renderer'
 import { renderHtml } from '../../renderHtml'
 import { Route, RouteModule } from '../../routeTypes'
 import { ParsedUrl } from '../../url'
+import { collectStateFiles } from '../collectStateFiles'
 import {
   AnyServerProps,
   App,
@@ -205,7 +208,29 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       `Page "${url}" rendering took too long`
     )
       .then((page): Promisable<RenderPageResult> => {
-        if (!page) {
+        if (page) {
+          collectStateFiles(page.files, page.props._included, app)
+          if (route.moduleId) {
+            const isDefaultPage = page.props.routePath == 'default'
+            const filename = getPageFilename(
+              isDefaultPage
+                ? prependBase(config.defaultPath, app.config.base)
+                : url.path
+            )
+            // The page state is always the first file.
+            page.files.unshift({
+              id: '/' + filename + '.js',
+              get data() {
+                return app.renderPageState(page)
+              },
+              mime: 'application/javascript',
+              expiresAt:
+                page.props._maxAge != null
+                  ? page.props._ts + page.props._maxAge
+                  : undefined,
+            })
+          }
+        } else {
           if (options.defaultRoute) {
             debug(`Falling back to default route: %s`, url)
             const { defaultRoute, ...rest } = options

@@ -17,8 +17,9 @@ export function toExpirationTime(entry: Expirable, defaultAge?: number) {
   return entry.timestamp + entry.maxAge * 1000
 }
 
-export function toExpiresHeader(ts: number, maxAge?: Cache.MaxAge) {
-  return maxAge != null && isFinite(maxAge)
-    ? new Date(ts + maxAge).toUTCString()
-    : undefined
+export function toExpiresHeader(ts: number | undefined, maxAge?: Cache.MaxAge) {
+  if (ts == null) return
+  if (arguments.length == 1 || (maxAge != null && isFinite(maxAge))) {
+    return new Date(ts + (maxAge || 0)).toUTCString()
+  }
 }

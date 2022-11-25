@@ -162,7 +162,6 @@ export async function loadBundleContext<
   ]
 
   context.bundlePlugins = [
-    // preBundleSsrRuntime(context),
     moduleRedirection(redirects, {
       forbid: [
         'vite',

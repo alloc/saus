@@ -10,13 +10,13 @@ const contextModuleId = path.join(clientDir, 'context.mjs')
  * which is injected at build time.
  */
 export function clientContextPlugin(): Plugin {
-  return {
+  const self: Plugin = {
     name: 'saus:context:client',
     config(config, env) {
       const isBuild = env.command == 'build'
       const sausConfig = config.saus!
 
-      this.transform = (code, id) => {
+      self.transform = (code, id) => {
         if (id == contextModuleId) {
           const clientContext: ClientConstants = {
             defaultPath: sausConfig.defaultPath!,
@@ -43,4 +43,5 @@ export function clientContextPlugin(): Plugin {
       }
     },
   }
+  return self
 }

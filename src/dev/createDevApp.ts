@@ -53,6 +53,9 @@ export async function createDevApp(
   return createApp(
     {
       ...context,
+      viteTransformHtml(path, html) {
+        return context.server.transformIndexHtml(path, html)
+      },
       profile(type, event) {
         debug(type, event)
       },
@@ -107,10 +110,6 @@ const createPageEndpoint =
             for (const file of page.files) {
               context.servedFiles[file.id] = file
             }
-            page.html = await server.transformIndexHtml(req.path, page.html)
-            if (!error && app.postProcessHtml) {
-              page.html = await app.postProcessHtml(page)
-            }
             headers.content({
               type: 'text/html; charset=utf-8',
               length: Buffer.byteLength(page.html),
@@ -134,9 +133,9 @@ function isolatePages(context: DevContext): App.Plugin {
     // TODO: reset this cache when routes module is changed?
     entryPaths ||= await getEntryModules(context)
 
-    // Reset all modules used by every route or layout, because we can't know
-    // which modules have side effects and are also used by the route matched
-    // for the currently rendering page.
+    // Reset all modules used by every route or layout, because we can't
+    // know which modules have side effects and are also used by the
+    // route matched for the currently rendering page.
     for (const entryPath of entryPaths) {
       const entryModule = context.moduleMap.get(entryPath)
       if (entryModule) {

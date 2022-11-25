@@ -10,6 +10,7 @@ import { moduleRedirection } from '@/plugins/moduleRedirection'
 import { routesPlugin } from '@/plugins/routes'
 import { vite } from '@/vite'
 import { RuntimeConfig } from '@runtime/config'
+import { toArray } from '@utils/array'
 import { prependBase } from '@utils/base'
 import { combineSourcemaps } from '@utils/combineSourcemaps'
 import { findPackage } from '@utils/node/findPackage'
@@ -124,8 +125,14 @@ export async function compileClients(
     },
   })
 
-  const buildResult = (await vite.build(config)) as vite.ViteBuild
-  const { output } = buildResult.output[0]
+  const buildResult = await vite.build(config)
+
+  // vite.build may return a watcher instance
+  if ('close' in buildResult) {
+    throw Error('Watch mode not supported')
+  }
+
+  const { output } = toArray(buildResult)[0]
 
   const fileMap: Record<string, OutputChunk | OutputAsset> = {}
   const assets = output.filter(chunk => chunk.type == 'asset') as OutputAsset[]
@@ -197,7 +204,10 @@ export async function compileClients(
 
     // Restore imports that Vite removed, unless the imported
     // module is empty because of Rollup optimizations.
-    const importedAssets = [...chunk.importedAssets, ...chunk.importedCss]
+    const importedAssets = [
+      ...chunk.viteMetadata.importedAssets,
+      ...chunk.viteMetadata.importedCss,
+    ]
     importedAssets.forEach(
       fileName => fileName in fileMap && chunk.imports.push(fileName)
     )

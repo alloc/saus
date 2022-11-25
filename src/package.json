@@ -23,7 +23,7 @@
     "ee-ts": "2.0.0-rc.6",
     "endent": "^2.1.0",
     "es-module-lexer": "0.9.3",
-    "esbuild": "^0.14.15",
+    "esbuild": "^0.15.9",
     "etag": "^1.8.1",
     "kleur": "^4.1.4",
     "misty": "^1.6.7",

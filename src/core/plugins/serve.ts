@@ -5,6 +5,7 @@ import { Endpoint } from '@runtime/endpoint'
 import { writeResponse } from '@runtime/http/writeResponse'
 import { makeRequestUrl } from '@runtime/makeRequest'
 import { parseUrl } from '@runtime/url'
+import { splitFileAndPostfix } from '@utils/splitFileAndPostfix'
 import { streamToBuffer } from '@utils/streamToBuffer'
 import { stripHtmlSuffix } from '@utils/stripHtmlSuffix'
 import { IncomingMessage, ServerResponse } from 'http'
@@ -70,6 +71,27 @@ export const servePlugin = (onError: (e: any) => void) => (): Plugin => {
           init = { then }
           didInit()
         },
+      }
+    },
+    resolveId(id, importer) {
+      if (importer?.includes('?html-proxy')) {
+        const { file, postfix } = splitFileAndPostfix(id)
+        const fileId = context.servedFiles[file]?.id
+        if (fileId) {
+          return {
+            id: fileId,
+            meta: { servedFile: true, postfix },
+          }
+        }
+      }
+    },
+    load(id) {
+      const moduleInfo = this.getModuleInfo(id)
+      if (moduleInfo?.meta?.servedFile) {
+        const { data } = context.servedFiles[id]
+        if (typeof data == 'string') {
+          return data
+        }
       }
     },
     configureServer: server => {

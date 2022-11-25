@@ -146,7 +146,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
       ]),
     postProcessHtml() {
       const htmlPostProcessors = ctx.htmlProcessors?.post
-      return (
+      const postProcessHtml =
         htmlPostProcessors &&
         ((page: RenderedPage, timeout = config.htmlTimeout) =>
           applyHtmlProcessors(
@@ -155,7 +155,15 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
             { page, config },
             timeout
           ))
-      )
+
+      const { viteTransformHtml } = ctx
+      if (viteTransformHtml) {
+        return async (page: RenderedPage, timeout?: number) => {
+          page.html = await viteTransformHtml(page.path, page.html)
+          return postProcessHtml?.(page, timeout) ?? page.html
+        }
+      }
+      return postProcessHtml
     },
   })
 

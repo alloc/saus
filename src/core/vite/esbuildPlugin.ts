@@ -19,7 +19,9 @@ export async function esbuildViteBridge(
   }
 
   // @ts-expect-error 2540
-  config.plugins = config.plugins.filter(p => p.name !== 'vite:reporter')
+  config.plugins = config.plugins.filter(
+    p => p.name !== 'vite:reporter' && p.name !== 'vite:import-analysis'
+  )
 
   const pluginContainer = await vite.createPluginContainer(config)
   const { resolveId, ...compiler } = getViteFunctions(pluginContainer, {

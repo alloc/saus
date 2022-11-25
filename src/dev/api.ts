@@ -220,7 +220,7 @@ async function startServer(
     if (logger.isLogged('info')) {
       logger.info('')
       server.printUrls()
-      server.bindShortcuts()
+      // server.bindShortcuts()
       logger.info('')
     }
   }

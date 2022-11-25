@@ -13,7 +13,6 @@ import { route } from '../../routeHooks'
 import type { Route } from '../../routeTypes'
 import { serveCache, serveState } from '../../stateModules/serve'
 import { ParsedUrl, parseUrl } from '../../url'
-import { collectStateFiles } from '../collectStateFiles'
 import type { App, RenderPageResult } from '../types'
 
 const indexFileRE = /(^|\/)index$/
@@ -63,14 +62,13 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         sendModule(req, module, {
           'cache-control': 'no-store',
         })
-      } else if (page?.props) {
+      } else if (page) {
         setRequestMetadata(req, { page })
-        collectStateFiles(page.files, page.props._included, app)
-
-        const module = app.renderPageState(page)
-        sendModule(req, module, {
-          expires: toExpiresHeader(page.props._ts, page.props._maxAge),
-        })
+        if (page.props) {
+          sendModule(req, page.files[0].data as string, {
+            expires: toExpiresHeader(page.files[0].expiresAt),
+          })
+        }
       }
     }
   })

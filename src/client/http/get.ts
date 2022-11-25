@@ -1,8 +1,8 @@
 // HTTP helpers suitable for browser and web worker environments.
 import type { GetOptions } from '@runtime/http/get'
-import type { Headers } from '@runtime/http/headers'
 import { normalizeHeaders } from '@runtime/http/normalizeHeaders'
 import { HttpResponse } from '@runtime/http/response'
+import type { Http } from '@runtime/http/types'
 import { Buffer } from '@utils/buffer'
 
 export async function get(url: string, options?: GetOptions) {
@@ -18,7 +18,7 @@ export async function get(url: string, options?: GetOptions) {
     signal,
   })
   if (resp.status >= 200 && resp.status < 400) {
-    const headers: Headers = {}
+    const headers: Http.ResponseHeaders = {}
     resp.headers.forEach((value, key) => {
       headers[key] = value
     })

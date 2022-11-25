@@ -37,6 +37,8 @@ export async function loadUserConfig(
     },
     ssr: {
       noExternal: inServeMode ? ['saus/client'] : true,
+      optimizeDeps: { disabled: true },
+      skipImportAnalysis: true,
     },
     build: {
       ssr: true,
