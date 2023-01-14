@@ -159,7 +159,7 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
       const { viteTransformHtml } = ctx
       if (viteTransformHtml) {
         return async (page: RenderedPage, timeout?: number) => {
-          page.html = await viteTransformHtml(page.path, page.html)
+          page.html = await viteTransformHtml(page)
           return postProcessHtml?.(page, timeout) ?? page.html
         }
       }

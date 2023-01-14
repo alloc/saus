@@ -8,7 +8,6 @@ import { renderPageScript } from '@runtime/renderPageScript'
 import { prependBase } from '@utils/base'
 import { getPageFilename } from '@utils/getPageFilename'
 import { DevContext } from '../context'
-import { debug } from '../debug'
 import { RouteClients } from '../routeClients'
 import { renderRouteEntry } from '../routeEntries'
 
@@ -59,18 +58,11 @@ export function routeClientsPlugin(): Plugin {
     },
     transformIndexHtml: {
       enforce: 'pre',
-      async transform(_, { filename, path: pagePath }) {
+      async transform(_, { filename, meta: { page } }) {
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
-          filename = getPageFilename(pagePath.replace(/\?.*$/, ''))
-        }
-
-        const [page, error] = (await context.pageCache.get(pagePath)) || []
-
-        if (error) return
-        if (!page) {
-          return debug('Page %s not found, skipping transform', pagePath)
+          filename = getPageFilename(page.path.replace(/\?.*$/, ''))
         }
 
         const base = context.basePath

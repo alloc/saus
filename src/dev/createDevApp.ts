@@ -53,8 +53,13 @@ export async function createDevApp(
   return createApp(
     {
       ...context,
-      viteTransformHtml(path, html) {
-        return context.server.transformIndexHtml(path, html)
+      viteTransformHtml(page) {
+        return context.server.transformIndexHtml(
+          page.path,
+          page.html,
+          undefined,
+          { page }
+        )
       },
       profile(type, event) {
         debug(type, event)

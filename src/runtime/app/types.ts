@@ -71,7 +71,7 @@ export namespace App {
     pageCache: Cache<RenderPageResult>
     onError: (e: any) => void
     profile?: ProfiledEventHandler
-    viteTransformHtml?: (path: string, html: string) => Promise<string>
+    viteTransformHtml?: (page: RenderedPage) => Promise<string>
   }
 }
 

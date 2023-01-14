@@ -1,4 +1,4 @@
-import { App } from '@runtime/app/types'
+import { App, RenderedPage } from '@runtime/app/types'
 import type { RuntimeConfig } from '@runtime/config'
 import type { Endpoint } from '@runtime/endpoint'
 import type { AbortSignal } from '@utils/AbortController'
@@ -232,6 +232,10 @@ declare module 'vite' {
           context: SausContext,
           config: vite.ResolvedConfig
         ) => Promisable<SausPlugin | void>)
+  }
+
+  interface IndexHtmlTransformMetadata {
+    page: RenderedPage
   }
 }
 
