@@ -229,6 +229,9 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
                   : undefined,
             })
           }
+          if (app.postProcessHtml) {
+            page.html = await app.postProcessHtml(page, config.htmlTimeout)
+          }
         } else {
           if (options.defaultRoute) {
             debug(`Falling back to default route: %s`, url)
