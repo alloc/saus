@@ -175,6 +175,7 @@ export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   defaultState?: RouteIncludeOption<T>[]
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
+  errorHooks?: Endpoint.ErrorHook[]
   /**
    * This is generated on-demand when the route is matched.
    */
@@ -250,6 +251,7 @@ export interface RoutesModule extends HtmlContext {
   ssrRequire: RequireAsync
   requestHooks?: Endpoint.RequestHook[]
   responseHooks?: Endpoint.ResponseHook[]
+  errorHooks?: Endpoint.ErrorHook[]
 }
 
 /**

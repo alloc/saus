@@ -82,9 +82,22 @@ export const wrapEndpoints =
     )
 
     try {
-      await callFunctions(functions)
+      await callFunctions(functions).catch(async error => {
+        const errorHooks = mergeArrays(
+          // First bottom-up route-specific hooks.
+          ...ascendBranch(resolved.route!, 'parent', route => route.errorHooks),
+          // Then global error hooks.
+          ctx.errorHooks
+        )
+        for (const errorHook of errorHooks) {
+          await errorHook(error, request, headers, app)
+          if (response) {
+            return
+          }
+        }
+        throw error
+      })
     } catch (error: any) {
-      // TODO: allow customization here
       const body =
         ctx.config.mode == 'development' ? { text: error.stack } : undefined
       response = createResponse(route, headers, 500, body)

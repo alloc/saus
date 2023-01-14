@@ -136,6 +136,16 @@ export namespace Endpoint {
     priority?: number
   }
 
+  export interface ErrorHook {
+    (
+      error: unknown,
+      request: Request<Record<string, string>>,
+      responseHeaders: DeclaredHeaders,
+      app: App
+    ): Promisable<void>
+    priority?: number
+  }
+
   export type Response = {
     ok: boolean
     route?: Route

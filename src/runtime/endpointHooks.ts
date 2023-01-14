@@ -19,6 +19,18 @@ export function onResponse(
   addHook((routesModule.responseHooks ||= []), arg1, hook!)
 }
 
+export function onUncaughtError(hook: Endpoint.ErrorHook): void
+export function onUncaughtError(
+  priority: number,
+  hook: Endpoint.ErrorHook
+): void
+export function onUncaughtError(
+  arg1: number | Endpoint.ErrorHook,
+  hook?: Endpoint.ErrorHook
+): void {
+  addHook((routesModule.errorHooks ||= []), arg1, hook!)
+}
+
 function addHook<T extends { priority?: number }>(
   hooks: T[],
   arg1: number | T,
