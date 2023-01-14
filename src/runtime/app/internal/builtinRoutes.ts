@@ -90,9 +90,18 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         }
         args = Buffer.from(args, 'base64').toString()
         if (hash !== murmurHash(args)) {
-          return req.respondWith(400, {
-            json: { message: 'x-args hash mismatch' },
-          })
+          if (context.config.mode != 'development') {
+            return req.respondWith(400, {
+              json: { message: 'x-args hash mismatch' },
+            })
+          }
+          context.onError(
+            Object.assign(new Error('x-args hash mismatch'), {
+              name,
+              hash,
+              args,
+            })
+          )
         }
         args = JSON.parse(args)
         promise = serveState(stateModule, {
