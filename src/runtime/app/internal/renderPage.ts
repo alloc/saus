@@ -5,7 +5,6 @@ import { noop } from '@utils/noop'
 import { parseHead } from '@utils/parseHead'
 import { unwrapDefault } from '@utils/unwrapDefault'
 import createDebug from 'debug'
-import { Promisable } from 'type-fest'
 import { RouteLayout } from '../../layouts'
 import { RenderRequest } from '../../renderer'
 import { renderHtml } from '../../renderHtml'
@@ -207,7 +206,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       options.timeout || 0,
       `Page "${url}" rendering took too long`
     )
-      .then((page): Promisable<RenderPageResult> => {
+      .then(async (page): Promise<RenderPageResult> => {
         if (page) {
           collectStateFiles(page.files, page.props._included, app)
           if (route.moduleId) {
