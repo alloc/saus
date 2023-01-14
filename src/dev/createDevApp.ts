@@ -73,59 +73,56 @@ export async function createDevApp(
 
 const createPageEndpoint =
   (context: DevContext, onError: (e: any) => void): App.Plugin =>
-  app => {
-    const { server } = context
-    return {
-      getEndpoints: (method, route) =>
-        method == 'GET' &&
-        route.moduleId !== null &&
-        (async (req, headers) => {
-          if (req.searchParams.has('html-proxy')) {
-            return // handled by vite:html
+  app => ({
+    getEndpoints: (method, route) =>
+      method == 'GET' &&
+      route.moduleId !== null &&
+      (async (req, headers) => {
+        if (req.searchParams.has('html-proxy')) {
+          return // handled by vite:html
+        }
+        let [page, error] = await app.renderPage(req, route, {
+          // Skip default route if an extension is present.
+          defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,
+        })
+
+        if (error) {
+          // Since no catch route exists, we should render a page with the Vite client
+          // attached so it can reload the page on the next update.
+          let html: string
+
+          for (const plugin of context.plugins) {
+            if (!plugin.renderErrorReport) continue
+            html = await plugin.renderErrorReport(req, error)
+            break
           }
-          let [page, error] = await app.renderPage(req, route, {
-            // Skip default route if an extension is present.
-            defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,
+
+          html ||= renderErrorFallback(error, {
+            homeDir: os.homedir(),
+            root: context.root,
+            ssr: true,
           })
 
-          if (error) {
-            // Since no catch route exists, we should render a page with the Vite client
-            // attached so it can reload the page on the next update.
-            let html: string
+          page = { html, files: [] } as any
 
-            for (const plugin of context.plugins) {
-              if (!plugin.renderErrorReport) continue
-              html = await plugin.renderErrorReport(req, error)
-              break
-            }
+          error.req = req
+          onError(error)
+        }
 
-            html ||= renderErrorFallback(error, {
-              homeDir: os.homedir(),
-              root: context.root,
-              ssr: true,
-            })
-
-            page = { html, files: [] } as any
-
-            error.req = req
-            onError(error)
+        if (page) {
+          for (const file of page.files) {
+            context.servedFiles[file.id] = file
           }
-
-          if (page) {
-            for (const file of page.files) {
-              context.servedFiles[file.id] = file
-            }
-            headers.content({
-              type: 'text/html; charset=utf-8',
-              length: Buffer.byteLength(page.html),
-            })
-            req.respondWith(200, {
-              text: page.html,
-            })
-          }
-        }),
-    }
-  }
+          headers.content({
+            type: 'text/html; charset=utf-8',
+            length: Buffer.byteLength(page.html),
+          })
+          req.respondWith(200, {
+            text: page.html,
+          })
+        }
+      }),
+  })
 
 /**
  * Reload SSR modules before a page is rendered, so pages can't share
