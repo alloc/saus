@@ -26,7 +26,12 @@ export function serveState(
     const resp = await fetch(stateUrl, {
       headers: { 'x-args': btoa(sortedArgsPayload) },
     })
+
     if (resp.status !== 200) {
+      const reason = await resp.text()
+      if (reason) {
+        console.error(reason)
+      }
       throw Error(`[${resp.status}] Failed to load state module "${stateUrl}"`)
     }
 
