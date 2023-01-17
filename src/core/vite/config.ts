@@ -54,6 +54,9 @@ export async function loadUserConfig(
     .normalizePath(resolve(inlineConfig.root || './'))
     .replace(/\/$/, ''))
 
+  // Allow serving files from the project root.
+  inlineConfig.server!.fs!.allow!.push(root)
+
   const loadResult = await loadConfigFile(command, undefined, inlineConfig)
 
   let config = inlineConfig as vite.UserConfig & { configFile?: string }
