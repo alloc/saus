@@ -59,6 +59,10 @@ export function routeClientsPlugin(): Plugin {
     transformIndexHtml: {
       enforce: 'pre',
       async transform(_, { filename, meta: { page } }) {
+        if (!page) {
+          return // This page was not dynamically rendered.
+        }
+
         const tags: vite.HtmlTagDescriptor[] = []
 
         if (!filename.endsWith('.html')) {
