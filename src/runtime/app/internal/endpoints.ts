@@ -1,6 +1,9 @@
 import { mergeArrays } from '@utils/array'
 import { ascendBranch } from '@utils/ascendBranch'
+import { loadSourceMap } from '@utils/node/sourceMap'
+import { resolveStackTrace } from '@utils/node/stack'
 import { pickAllExcept } from '@utils/pick'
+import fs from 'fs'
 import { Endpoint } from '../../endpoint'
 import { Http } from '../../http'
 import { DeclaredHeaders } from '../../http/headers'
@@ -98,8 +101,21 @@ export const wrapEndpoints =
         throw error
       })
     } catch (error: any) {
-      const body =
-        ctx.config.mode == 'development' ? { text: error.stack } : undefined
+      let body: Endpoint.ResponseTuple[1] | undefined
+      if (ctx.config.mode == 'development') {
+        const stack = resolveStackTrace(error.stack, file => {
+          if (file.startsWith('node:')) {
+            return null
+          }
+          try {
+            const code = fs.readFileSync(file, 'utf8')
+            return loadSourceMap(code, file) || null
+          } catch {
+            return null
+          }
+        })
+        body = { text: stack }
+      }
       response = createResponse(route, headers, 500, body)
       if (!body) {
         ctx.onError(error)
