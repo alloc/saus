@@ -1,4 +1,5 @@
 import { SourceMapConsumer } from 'source-map'
+import { resolve } from 'path'
 import { StackFrame } from '../../parseStackTrace'
 import { SourceMap } from '../sourceMap'
 
@@ -19,11 +20,13 @@ export function traceStackFrame(frame: StackFrame, map: SourceMap) {
     }
   }
   if (traced.source) {
+    const sourcePath = resolve(frame.file, '..', traced.source)
     frame.line = traced.line
     frame.column = traced.column + 1
     frame.text = frame.text
-      .replace(frame.file, (frame.file = traced.source))
+      .replace(frame.file, sourcePath)
       .replace(/:\d+(:\d+)?/, ':' + frame.line + ':' + frame.column)
+    frame.file = sourcePath
   }
   return frame
 }
