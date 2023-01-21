@@ -1,5 +1,6 @@
 import { NoInfer } from '@utils/types'
 import { Promisable } from 'type-fest'
+import { toExpirationTime } from './cache/expiration'
 import { globalCache } from './cache/global'
 import { Cache } from './cache/types'
 import { getStateModuleKey } from './getStateModuleKey'
@@ -201,12 +202,19 @@ export class StateModule<
    * change how the UI is rendered.
    */
   onLoad(
-    listener: StateModule.LoadCallback<Hydrated, Args>
+    onLoad: StateModule.LoadCallback<Hydrated, Args>
   ): StateModule.LoadListener {
     const { name } = this
+    const listener: Cache.Listener = (state, entry) => {
+      onLoad(
+        entry.args,
+        state as Hydrated,
+        entry.maxAge != null ? toExpirationTime(entry) : undefined
+      )
+    }
     globalCache.listeners[name] ||= new Set()
-    globalCache.listeners[name].add(listener as any)
-    hydrateStateListener(name, listener as any)
+    globalCache.listeners[name].add(listener)
+    hydrateStateListener(name, listener)
     return {
       dispose() {
         globalCache.listeners[name].delete(listener as any)
