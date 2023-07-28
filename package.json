@@ -27,7 +27,7 @@
     "rollup-plugin-dts": "^4.1.0",
     "tsup": "^5.12.8",
     "typescript": "4.8.4",
-    "vite": "npm:@alloc/vite@4.0.0-alpha.2",
+    "vite": "npm:@alloc/vite@alpha",
     "vitest": "*"
   },
   "prettier": "@alloc/prettier-config",
