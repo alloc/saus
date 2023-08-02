@@ -39,6 +39,13 @@ describe('compileEsm', () => {
       }"
     `)
   })
+  test('new operator with default import', async () => {
+    let result = await transform`
+      import foo from 'foo'
+      new foo()
+    `
+    expect(result).toMatchInlineSnapshot()
+  })
   test('preserved imports', async () => {
     let result = await transform`
       import {render} from './render'
