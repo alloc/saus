@@ -27,13 +27,13 @@
     "rollup-plugin-dts": "^4.1.0",
     "tsup": "^5.12.8",
     "typescript": "4.8.4",
-    "vite": "npm:@alloc/vite@alpha",
-    "vitest": "*"
+    "vite": "npm:@alloc/vite@*",
+    "vitest": "^0.34.1"
   },
   "prettier": "@alloc/prettier-config",
   "pnpm": {
     "overrides": {
-      "@babel/types": "7.18.8",
+      "@babel/types": "7",
       "@rollup/pluginutils": "5.0.1"
     },
     "patchedDependencies": {

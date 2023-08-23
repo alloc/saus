@@ -6,7 +6,7 @@
     "dev": "tsup --watch --sourcemap",
     "link": "cd dist && ln -sf ../node_modules/@client ./client && ln -sf ../node_modules/@runtime ./runtime && ln -sf ../node_modules/@utils ./utils && ln -sf ../node_modules/@vm ./vm",
     "lint": "tsc -p . --noEmit && eslint . --ext .ts",
-    "prepare": "npm run link"
+    "postinstall": "npm run link"
   },
   "dependencies": {
     "@": "link:./dist/core",
@@ -34,7 +34,7 @@
     "source-map-support": "^0.5.21",
     "terser": "^5.10.0",
     "type-fest": "^2.13.0",
-    "vite": "npm:@alloc/vite@4.0.0-alpha.2",
+    "vite": "npm:@alloc/vite@*",
     "yaml": "^2.1.1"
   },
   "devDependencies": {

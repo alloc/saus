@@ -93,6 +93,8 @@
       "types": "./vm/*.d.ts",
       "import": "./vm/*.mjs",
       "default": "./vm/*.js"
-    }
+    },
+    "./runtime/app/errorFallback.css": "./runtime/app/errorFallback.css",
+    "./runtime/app/errorFallbackClient.js": "./runtime/app/errorFallbackClient.js"
   }
 }

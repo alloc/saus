@@ -46,7 +46,14 @@ export function renderRouteClients(
     if (!layout.hydrator) {
       return null
     }
-    const hydratorId = (await context.resolveId(layout.hydrator, clientId))?.id
+    console.log(
+      'hydrator: %s (imported by %s)',
+      layout.hydrator,
+      layoutModuleId
+    )
+    const hydratorId = (
+      await context.resolveId(layout.hydrator, layoutModuleId)
+    )?.id
     if (!hydratorId) {
       throw Error(`Hydrator module not found: "${layout.hydrator}"`)
     }

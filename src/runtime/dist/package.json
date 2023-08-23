@@ -1,4 +1,5 @@
 {
+  "name": "@saus/runtime",
   "exports": {
     "./*": {
       "types": [
