@@ -111,7 +111,11 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
         const functions = resolveEndpoints(route, url.method, negotiate)
         if (functions) {
           url.routeParams = params
-          return { route, functions, remainingRoutes: routes.slice(i + 1) }
+          return {
+            route,
+            functions,
+            remainingRoutes: routes.slice(0, i),
+          }
         }
       }
     }
