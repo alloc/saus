@@ -46,11 +46,6 @@ export function renderRouteClients(
     if (!layout.hydrator) {
       return null
     }
-    console.log(
-      'hydrator: %s (imported by %s)',
-      layout.hydrator,
-      layoutModuleId
-    )
     const hydratorId = (
       await context.resolveId(layout.hydrator, layoutModuleId)
     )?.id
