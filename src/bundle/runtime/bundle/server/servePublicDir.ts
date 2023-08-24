@@ -1,25 +1,14 @@
+import {
+  ServePublicFileOptions,
+  servePublicFile,
+} from '@runtime/servePublicFile'
 import etag from 'etag'
-import fs from 'fs'
 import { gray } from 'kleur/colors'
-import * as mime from 'mrmime'
-import path from 'path'
 import runtimeConfig from '../config'
 import { connect } from './connect'
 import { debug } from './debug'
 
-interface Options {
-  /** @default runtimeConfig.publicDir */
-  root?: string
-  /**
-   * When defined, only files matching this can be served
-   * by this middleware.
-   */
-  include?: RegExp
-  /**
-   * When defined, files matching this cannot be served
-   * by this middleware.
-   */
-  ignore?: RegExp
+type Options = ServePublicFileOptions & {
   /**
    * Set the `max-age` Cache-Control directive. \
    * Set to `Infinity` to use the `immutable` directive.
@@ -31,32 +20,25 @@ interface Options {
 
 export function servePublicDir(options: Options = {}): connect.Middleware {
   const cacheControl = resolveCacheControl(options)
-  const {
-    root: publicDir = runtimeConfig.publicDir,
-    include = /./,
-    ignore = /^$/,
-  } = options
 
-  return async function servePublicFile(req, res, next) {
-    const fileName = req.url.slice(runtimeConfig.base.length)
-    if (ignore.test(fileName) || !include.test(fileName)) {
-      return next()
-    }
-    try {
-      const content = fs.readFileSync(path.join(publicDir, fileName))
+  return async function servePublicDir(req, res, next) {
+    const file = servePublicFile(req.url, runtimeConfig, options)
+    if (file) {
       debug(gray('read'), req.url)
-      res.writeHead(200, {
-        ETag: etag(content, { weak: true }),
-        'Content-Type': mime.lookup(req.url) || 'application/octet-stream',
-        'Cache-Control': cacheControl,
-      })
-      res.write(content)
-      res.end()
-    } catch (e: any) {
-      if (e.code == 'ENOENT' || e.code == 'EISDIR') {
-        return next()
+      const entityTag = etag(file.data, { weak: true })
+      if (req.headers['if-none-match'] == entityTag) {
+        res.statusCode = 304
+      } else {
+        res.writeHead(200, {
+          etag: entityTag,
+          'content-type': file.mime,
+          'cache-control': cacheControl,
+        })
+        res.write(file.data)
       }
-      throw e
+      res.end()
+    } else {
+      next()
     }
   }
 }

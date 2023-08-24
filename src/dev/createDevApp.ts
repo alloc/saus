@@ -7,10 +7,13 @@ import { renderErrorFallback } from '@runtime/app/errorFallback'
 import { throttleRender } from '@runtime/app/throttleRender'
 import { App, RenderPageOptions } from '@runtime/app/types'
 import { RuntimeConfig } from '@runtime/config'
+import { route } from '@runtime/routeHooks'
+import { servePublicFile } from '@runtime/servePublicFile'
 import { callPlugins } from '@utils/callPlugins'
 import { throttle } from '@utils/throttle'
 import { clearExports } from '@vm/moduleMap'
 import createDebug from 'debug'
+import etag from 'etag'
 import os from 'os'
 import path from 'path'
 import { createHotReload } from './hotReload'
@@ -48,6 +51,7 @@ export async function createDevApp(
     throttleRender({
       onError: error => [null, error],
     }),
+    servePublicDir(runtimeConfig),
   ]
 
   return createApp(
@@ -187,3 +191,24 @@ function isolatePages(context: DevContext): App.Plugin {
     }
   }
 }
+
+/**
+ * If a custom route is configured to serve a pathname that overlaps a directory
+ * or file in the public directory, this plugin will prefer the public file.
+ */
+const servePublicDir =
+  (runtimeConfig: RuntimeConfig): App.Plugin =>
+  () => {
+    route(`/*`).get(async (req, headers) => {
+      const file = servePublicFile(req.path, runtimeConfig)
+      if (file) {
+        const entityTag = etag(file.data, { weak: true })
+        if (req.headers['if-none-match'] === entityTag) {
+          req.respondWith(304)
+        } else {
+          headers.etag(entityTag).contentType(file.mime)
+          req.respondWith(200, { buffer: file.data })
+        }
+      }
+    })
+  }
