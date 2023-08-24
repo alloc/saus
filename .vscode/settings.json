@@ -5,15 +5,6 @@
     "**/dist": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
-  "searchEverywhere.shouldDisplayNotificationInStatusBar": true,
-  "searchEverywhere.exclude": [
-    "**/.git",
-    "**/.DS_Store",
-    "**/pnpm-lock.yaml",
-    "**/node_modules/**",
-    "**/vendor/**",
-    "**/dist/**"
-  ],
-  "tsimporter.emitSemicolon": false,
-  "tsimporter.filesToExclude": ["**/vendor/**", "**/dist/**"]
+  "editor.wordWrapColumn": 100,
+  "rewrap.wrappingColumn": 80
 }
