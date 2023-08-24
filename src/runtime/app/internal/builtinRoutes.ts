@@ -13,7 +13,7 @@ import { route } from '../../routeHooks'
 import type { Route } from '../../routeTypes'
 import { serveCache, serveState } from '../../stateModules/serve'
 import { ParsedUrl, parseUrl } from '../../url'
-import type { App, RenderPageResult } from '../types'
+import type { App, RenderPageResult, ResolvedRoute } from '../types'
 
 const indexFileRE = /(^|\/)index$/
 
@@ -48,13 +48,21 @@ export function defineBuiltinRoutes(app: App, context: App.Context) {
         ? prependBase(pagePath, debugBase)
         : pagePath
     )
-    const { route } = app.resolveRoute(
-      makeRequestUrl(pageUrl, {
-        headers: { accept: 'text/html' },
-      })
-    )
-    if (route) {
-      const [page, error] = await renderPage(pageUrl, route)
+
+    const routeRequest = makeRequestUrl(pageUrl, {
+      headers: { accept: 'text/html' },
+    })
+
+    // Use the first route with a module loader.
+    let resolved: ResolvedRoute | undefined
+    while (!resolved?.route?.load) {
+      if (!resolved || resolved.remainingRoutes.length) {
+        resolved = app.resolveRoute(routeRequest, resolved?.remainingRoutes)
+      } else break
+    }
+
+    if (resolved.route) {
+      const [page, error] = await renderPage(pageUrl, resolved.route)
 
       if (error) {
         const props = { message: error.message, stack: error.stack }

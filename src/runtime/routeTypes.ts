@@ -159,7 +159,7 @@ export interface ParsedRoute {
 
 export interface BareRoute<T extends object = RouteModule> extends ParsedRoute {
   path: string
-  load: RouteLoader<T>
+  load: RouteLoader<T> | undefined
   moduleId: string | null
   layoutEntry?: string
   /**

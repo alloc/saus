@@ -85,6 +85,10 @@ const createPageEndpoint =
         if (req.searchParams.has('html-proxy')) {
           return // handled by vite:html
         }
+        if (!route.load) {
+          return // just an API route
+        }
+
         let [page, error] = await app.renderPage(req, route, {
           // Skip default route if an extension is present.
           defaultRoute: !/\.[^./]+$/.test(req.path) && context.defaultRoute,

@@ -6,18 +6,18 @@ import { parseHead } from '@utils/parseHead'
 import { unwrapDefault } from '@utils/unwrapDefault'
 import createDebug from 'debug'
 import { RouteLayout } from '../../layouts'
-import { RenderRequest } from '../../renderer'
 import { renderHtml } from '../../renderHtml'
+import { RenderRequest } from '../../renderer'
 import { Route, RouteModule } from '../../routeTypes'
 import { ParsedUrl } from '../../url'
 import { collectStateFiles } from '../collectStateFiles'
 import {
   AnyServerProps,
   App,
-  RenderedPage,
   RenderPageFn,
   RenderPageOptions,
   RenderPageResult,
+  RenderedPage,
 } from '../types'
 
 const debug = createDebug('saus:pages')
@@ -122,7 +122,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         props = await promisedProps
         props.error = error
         debug('Loading route module: %s', route.path)
-        routeModule = await route.load()
+        routeModule = await (route.load || noRouteLoader(route))()
         routeLayout = await loadRouteLayout(route)
         error = undefined
       } catch (e) {
@@ -161,7 +161,7 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
       }
       try {
         debug('Loading route module: %s', route.path)
-        routeModule = await route.load()
+        routeModule = await (route.load || noRouteLoader(route))()
         routeLayout = await loadRouteLayout(route)
       } catch (e) {
         error = e
@@ -254,4 +254,8 @@ export function getPageFactory(app: App, ctx: App.Context): RenderPageFn {
         return [null, error]
       })
   }
+}
+
+function noRouteLoader(route: Route): never {
+  throw Error(`Route "${route.path}" has no module defined`)
 }

@@ -91,10 +91,6 @@ export function route(
     const importer = getCurrentModule()
     const { ssrRequire } = routesModule
     load = () => ssrRequire(id, importer, true)
-  } else {
-    load = () => {
-      throw Error(`Route "${path}" has no module defined`)
-    }
   }
 
   const isPublic = path[0] === '/'
