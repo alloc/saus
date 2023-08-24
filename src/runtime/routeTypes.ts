@@ -68,6 +68,10 @@ export interface RouteConfig<
    */
   paths?: () => Promisable<readonly StaticPageParams<Params>[]>
   /**
+   * If true, this route will run after every route already declared.
+   */
+  matchLast?: boolean
+  /**
    * If intermediate state is shared between the `state`, `include`,
    * and/or `headProps` options, define a `config` function to avoid
    * work duplication.

@@ -119,7 +119,11 @@ export function route(
   }
 
   if (isPublic) {
-    routesModule.routes.push(self)
+    if (self.matchLast) {
+      routesModule.routes.unshift(self)
+    } else {
+      routesModule.routes.push(self)
+    }
   } else {
     // TODO: support nesting of catch-all and error routes
     if (routeStack.length)
