@@ -9,8 +9,8 @@ import { debug } from '../debug'
 import { Endpoint } from '../endpoint'
 import { setRoutesModule } from '../global'
 import { applyHtmlProcessors, mergeHtmlProcessors } from '../html/process'
-import { matchRoute } from '../routes/matchRoute'
 import { Route, RouteEndpointMap } from '../routeTypes'
+import { matchRoute } from '../routes/matchRoute'
 import { emptyArray } from './constants'
 import { defineBuiltinRoutes } from './internal/builtinRoutes'
 import { wrapEndpoints } from './internal/endpoints'
@@ -80,8 +80,12 @@ export function createApp(ctx: App.Context, plugins: App.Plugin[] = []): App {
       return endpoints || emptyArray
     }
 
-    endpoints = negotiate(Object.keys(endpointMap))
-      .concat('*/*')
+    let negotiatedTypes = negotiate(Object.keys(endpointMap))
+    if (!negotiatedTypes.includes('*/*')) {
+      negotiatedTypes = [...negotiatedTypes, '*/*']
+    }
+
+    endpoints = negotiatedTypes
       .map(type => endpointMap[type as Endpoint.ContentType] || emptyArray)
       .flat()
 
