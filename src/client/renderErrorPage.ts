@@ -1,6 +1,7 @@
 import { renderErrorFallback } from '@runtime/app/errorFallback'
 
 export function renderErrorPage(e: any) {
+  console.error(e)
   const errorElem = document.createElement('div')
   const style = [
     'visibility: hidden',
